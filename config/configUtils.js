@@ -265,7 +265,7 @@ function initConfig(force = false) {
 			configDoc = parseYamlDoc(configFilePath);
 		} catch (err) {
 			if (err.code === hdbTerms.NODE_ERROR_CODES.ENOENT) {
-				logger.trace(`HarperDB config file not found at ${configFilePath}. 
+				logger.trace(`HarperDB config file not found at ${configFilePath}.
 				This can occur during early stages of install where the config file has not yet been created`);
 				return;
 			} else {

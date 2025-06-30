@@ -69,15 +69,16 @@ const FLOAT_BUFFER = new Uint8Array(FLOAT_TARGET.buffer);
 let DEFAULT_AUDIT_CLEANUP_DELAY = 10000; // default delay of 10 seconds
 let timestampErrored = false;
 export function openAuditStore(rootStore) {
-	let auditStore = (rootStore.auditStore = rootStore.openDB(AUDIT_STORE_NAME, {
+	let auditStore = rootStore.openDB(AUDIT_STORE_NAME, {
 		create: false,
 		...AUDIT_STORE_OPTIONS,
-	}));
+	});
 	if (!auditStore) {
 		// this means we are creating a new audit store. Initialize with the last removed timestamp (we don't want to put this in legacy audit logs since we don't know if they have had deletions or not).
-		auditStore = rootStore.auditStore = rootStore.openDB(AUDIT_STORE_NAME, AUDIT_STORE_OPTIONS);
+		auditStore = rootStore.openDB(AUDIT_STORE_NAME, AUDIT_STORE_OPTIONS);
 		updateLastRemoved(auditStore, 1);
 	}
+	rootStore.auditStore = auditStore;
 	auditStore.rootStore = rootStore;
 	auditStore.tableStores = [];
 	const deleteCallbacks = [];

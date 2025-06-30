@@ -24,9 +24,11 @@ import { handleLocalTimeForGets } from './RecordEncoder.ts';
 import { deleteRootBlobPathsForDB } from './blob.ts';
 import { CUSTOM_INDEXES } from './indexes/customIndexes.ts';
 import * as OpenDBIObjectModule from '../utility/lmdb/OpenDBIObject.js';
+import { RocksDatabase } from '@harperdb/rocksdb-js';
+
 function OpenDBIObject(dupSort, isPrimary) {
 	// what is going on with esbuild, it suddenly is randomly flip-flopping the module record for OpenDBIObject, sometimes return the correct exports object and sometimes returning the exports as the `default`.
-	let OpenDBIObject = OpenDBIObjectModule.OpenDBIObject ?? OpenDBIObjectModule.default.OpenDBIObject;
+	const OpenDBIObject = OpenDBIObjectModule.OpenDBIObject ?? OpenDBIObjectModule.default.OpenDBIObject;
 	return new OpenDBIObject(dupSort, isPrimary);
 }
 const logger = forComponent('storage');
@@ -49,28 +51,49 @@ export const NON_REPLICATING_SYSTEM_TABLES = [
 export type Table = ReturnType<typeof makeTable>;
 export interface Tables {
 	[tableName: string]: Table;
+	[DEFINED_TABLES]?: Set<string>;
 }
 export interface Databases {
 	[databaseName: string]: Tables;
 }
 
+// technically, this is either a `LMDBStore` or a `CachingStore`
+type LMDBDatabase = ReturnType<typeof open> & {
+	isLegacy?: boolean;
+	openDB: (name: string, options?: any) => LMDBDatabase;
+};
+type DatabaseDescriptor = (LMDBDatabase | RocksDatabase) & {
+	auditStore?: LMDBDatabase;
+	databaseName?: string;
+	dbisDb?: LMDBDatabase;
+	isLegacy?: boolean;
+	needsDeletion?: boolean;
+};
+
 export const tables: Tables = Object.create(null);
 export const databases: Databases = Object.create(null);
+export const databaseEnvs = new Map<string, DatabaseDescriptor>();
+
+// set the following in both global and exports
 _assignPackageExport('databases', databases);
 _assignPackageExport('tables', tables);
+
 const NEXT_TABLE_ID = Symbol.for('next-table-id');
 const tableListeners = [];
 const dbRemovalListeners = [];
 let loadedDatabases; // indicates if we have loaded databases from the file system yet
-export const databaseEnvs = new Map<string, any>();
+
 // This is used to track all the databases that are found when iterating through the file system so that anything that is missing
 // can be removed:
 let definedDatabases;
+
 /**
  * This gets the set of tables from the default database ("data").
  */
 export function getTables(): Tables {
-	if (!loadedDatabases) getDatabases();
+	if (!loadedDatabases) {
+		getDatabases();
+	}
 	return tables || {};
 }
 
@@ -84,11 +107,18 @@ export function getTables(): Tables {
  * can span any tables in the database.
  */
 export function getDatabases(): Databases {
-	if (loadedDatabases) return databases;
+	debugger;
+	if (loadedDatabases) {
+		return databases;
+	}
 	loadedDatabases = true;
+
 	definedDatabases = new Map();
-	let databasePath = getHdbBasePath() && join(getHdbBasePath(), DATABASES_DIR_NAME);
+	const hdbBasePath = getHdbBasePath();
+	let databasePath = hdbBasePath && join(hdbBasePath, DATABASES_DIR_NAME);
 	const schemaConfigs = envGet(CONFIG_PARAMS.DATABASES) || {};
+	const rocksdb = envGet(CONFIG_PARAMS.STORAGE_ENGINE) === 'rocksdb';
+
 	// not sure why this doesn't work with the environmemt manager
 	if (process.env.SCHEMAS_DATA_PATH) schemaConfigs.data = { path: process.env.SCHEMAS_DATA_PATH };
 	databasePath =
@@ -96,17 +126,37 @@ export function getDatabases(): Databases {
 		envGet(CONFIG_PARAMS.STORAGE_PATH) ||
 		(databasePath && (existsSync(databasePath) ? databasePath : join(getHdbBasePath(), LEGACY_DATABASES_DIR_NAME)));
 	if (!databasePath) return;
+
 	if (existsSync(databasePath)) {
 		// First load all the databases from our main database folder
 		// TODO: Load any databases defined with explicit storage paths from the config
 		for (const databaseEntry of readdirSync(databasePath, { withFileTypes: true })) {
 			const dbName = basename(databaseEntry.name, '.mdb');
+			const dbPath = join(databasePath, databaseEntry.name);
+
 			if (
 				databaseEntry.isFile() &&
 				extname(databaseEntry.name).toLowerCase() === '.mdb' &&
 				!schemaConfigs[dbName]?.path
 			) {
-				readMetaDb(join(databasePath, databaseEntry.name), null, dbName);
+				logger.trace(`loading lmdb database: ${dbPath}`);
+				readMetaDb(dbPath, null, dbName);
+			}
+
+			if (rocksdb) {
+				try {
+					const files = readdirSync(dbPath, { withFileTypes: true });
+					if (
+						files.find((file) => file.name === 'CURRENT')?.isFile() &&
+						files.some((file) => file.name.startsWith('MANIFEST-'))
+					) {
+						logger.trace(`loading rocksdb database: ${dbPath}`);
+						const db = new RocksDatabase(dbPath);
+						databaseEnvs.set(dbPath, db);
+					}
+				} catch {
+					// skip
+				}
 			}
 		}
 	}
@@ -236,19 +286,21 @@ export function readMetaDb(
 	const envInit = new OpenEnvironmentObject(path, false);
 	try {
 		let rootStore = databaseEnvs.get(path);
-		if (rootStore) rootStore.needsDeletion = false;
-		else {
-			rootStore = open(envInit);
+		if (rootStore) {
+			rootStore.needsDeletion = false;
+		} else {
+			rootStore = open(envInit) as DatabaseDescriptor;
 			databaseEnvs.set(path, rootStore);
 		}
 		const internalDbiInit = new OpenDBIObject(false);
 		const dbisStore = rootStore.dbisDb || (rootStore.dbisDb = rootStore.openDB(INTERNAL_DBIS_NAME, internalDbiInit));
+
 		let auditStore = rootStore.auditStore;
 		if (!auditStore) {
 			if (auditPath) {
 				if (existsSync(auditPath)) {
 					envInit.path = auditPath;
-					auditStore = open(envInit);
+					auditStore = open(envInit) as LMDBDatabase;
 					auditStore.isLegacy = true;
 				}
 			} else {
@@ -258,8 +310,10 @@ export function readMetaDb(
 
 		const tables = ensureDB(databaseName);
 		const definedTables = tables[DEFINED_TABLES];
-		const tablesToLoad = new Map();
-		for (const { key, value } of dbisStore.getRange({ start: false })) {
+		const tablesToLoad = new Map<string, any>();
+
+		for (const result of dbisStore.getRange({ start: false })) {
+			const { key, value } = result as { key: string; value: any };
 			let [tableName, attribute_name] = key.toString().split('/');
 			if (attribute_name === '') {
 				// primary key
@@ -275,9 +329,16 @@ export function readMetaDb(
 			}
 			definedTables?.add(tableName);
 			let tableDef = tablesToLoad.get(tableName);
-			if (!tableDef) tablesToLoad.set(tableName, (tableDef = { attributes: [] }));
-			if (attribute_name == null || value.is_hash_attribute) tableDef.primary = value;
-			if (attribute_name != null) tableDef.attributes.push(value);
+			if (!tableDef) {
+				tableDef = { attributes: [] };
+				tablesToLoad.set(tableName, tableDef);
+			}
+			if (attribute_name == null || value.is_hash_attribute) {
+				tableDef.primary = value;
+			}
+			if (attribute_name != null) {
+				tableDef.attributes.push(value);
+			}
 			Object.defineProperty(value, 'key', { value: key, configurable: true });
 		}
 
@@ -501,7 +562,7 @@ export function database({ database: databaseName, table: tableName }) {
 	if (!rootStore || rootStore.status === 'closed') {
 		// TODO: validate database name
 		const envInit = new OpenEnvironmentObject(path, false);
-		rootStore = open(envInit);
+		rootStore = open(envInit) as DatabaseDescriptor;
 		databaseEnvs.set(path, rootStore);
 	}
 	if (!rootStore.auditStore) {
@@ -575,7 +636,6 @@ function openIndex(dbiKey: string, rootStore: Database, attribute: any): Databas
  * @param replicate
  */
 export function table<TableResourceType>(tableDefinition: TableDefinition): TableResourceType {
-	// eslint-disable-next-line prefer-const
 	let {
 		table: tableName,
 		database: databaseName,
