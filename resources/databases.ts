@@ -117,7 +117,7 @@ export function getDatabases(): Databases {
 	const hdbBasePath = getHdbBasePath();
 	let databasePath = hdbBasePath && join(hdbBasePath, DATABASES_DIR_NAME);
 	const schemaConfigs = envGet(CONFIG_PARAMS.DATABASES) || {};
-	const rocksdb = envGet(CONFIG_PARAMS.STORAGE_ENGINE) === 'rocksdb';
+	const rocksdb = envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb';
 
 	// not sure why this doesn't work with the environmemt manager
 	if (process.env.SCHEMAS_DATA_PATH) schemaConfigs.data = { path: process.env.SCHEMAS_DATA_PATH };
