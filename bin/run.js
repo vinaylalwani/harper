@@ -160,6 +160,7 @@ async function main(calledByInstall = false) {
 		if (cmdArgs.ROOTPATH) {
 			configUtils.updateConfigObject('settings_path', path.join(cmdArgs.ROOTPATH, terms.HDB_CONFIG_FILE));
 		}
+
 		await initialize(calledByInstall, true);
 
 		if (env.get(terms.CONFIG_PARAMS.STORAGE_COMPACTONSTART)) await compactOnStart();

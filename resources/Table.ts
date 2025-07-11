@@ -184,7 +184,7 @@ export function makeTable(options) {
 	const MAX_PREFETCH_SEQUENCE = 10;
 	const MAX_PREFETCH_BUNDLE = 6;
 	if (audit) addDeleteRemoval();
-	onStorageReclamation(primaryStore.env.path, (priority: number) => {
+	onStorageReclamation(primaryStore.path ?? primaryStore.env.path, (priority: number) => {
 		if (hasSourceGet) return scheduleCleanup(priority);
 	});
 

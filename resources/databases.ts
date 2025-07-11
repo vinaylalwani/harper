@@ -1,6 +1,6 @@
 import { initSync, getHdbBasePath, get as envGet } from '../utility/environment/environmentManager.js';
 import { INTERNAL_DBIS_NAME } from '../utility/lmdb/terms.js';
-import { open, compareKeys, type Database } from 'lmdb';
+import { open, compareKeys, type Database, type RootDatabase } from 'lmdb';
 import { join, extname, basename } from 'path';
 import { existsSync, readdirSync } from 'fs';
 import {
@@ -48,7 +48,11 @@ export const NON_REPLICATING_SYSTEM_TABLES = [
 	'hdb_info',
 ];
 
-export type Table = ReturnType<typeof makeTable>;
+export type Table = ReturnType<typeof makeTable> & {
+	indexingOperation?: any;
+	origin?: string;
+	schemaVersion?: number;
+};
 export interface Tables {
 	[tableName: string]: Table;
 	[DEFINED_TABLES]?: Set<string>;
@@ -57,22 +61,33 @@ export interface Databases {
 	[databaseName: string]: Tables;
 }
 
-// technically, this is either a `LMDBStore` or a `CachingStore`
-type LMDBDatabase = ReturnType<typeof open> & {
-	isLegacy?: boolean;
-	openDB: (name: string, options?: any) => LMDBDatabase;
-};
-type DatabaseDescriptor = (LMDBDatabase | RocksDatabase) & {
-	auditStore?: LMDBDatabase;
+export const tables: Tables = Object.create(null);
+export const databases: Databases = Object.create(null);
+
+// note: technically `Database` is either a `LMDBStore` or a `CachingStore`
+interface LMDBDatabase extends Database {
+	customIndex?: any;
+	isIndexing?: boolean;
+	indexNulls?: boolean;
+}
+interface LMDBRootDatabase extends RootDatabase {
+	auditStore?: LMDBRootDatabase;
 	databaseName?: string;
 	dbisDb?: LMDBDatabase;
 	isLegacy?: boolean;
 	needsDeletion?: boolean;
-};
+	status?: 'open' | 'closed';
+}
 
-export const tables: Tables = Object.create(null);
-export const databases: Databases = Object.create(null);
-export const databaseEnvs = new Map<string, DatabaseDescriptor>();
+interface RocksRootDatabase extends RocksDatabase {
+	databaseName?: string;
+	dbisDb?: RocksDatabase;
+	status?: 'open' | 'closed';
+}
+
+const databaseEnvs = new Map<string, LMDBRootDatabase | RocksDatabase>();
+const lmdbDatabaseEnvs = new Map<string, LMDBRootDatabase>();
+const rocksdbDatabaseEnvs = new Map<string, RocksDatabase>();
 
 // set the following in both global and exports
 _assignPackageExport('databases', databases);
@@ -107,7 +122,6 @@ export function getTables(): Tables {
  * can span any tables in the database.
  */
 export function getDatabases(): Databases {
-	debugger;
 	if (loadedDatabases) {
 		return databases;
 	}
@@ -117,7 +131,7 @@ export function getDatabases(): Databases {
 	const hdbBasePath = getHdbBasePath();
 	let databasePath = hdbBasePath && join(hdbBasePath, DATABASES_DIR_NAME);
 	const schemaConfigs = envGet(CONFIG_PARAMS.DATABASES) || {};
-	const rocksdb = envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb';
+	const useRocksdb = envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb';
 
 	// not sure why this doesn't work with the environmemt manager
 	if (process.env.SCHEMAS_DATA_PATH) schemaConfigs.data = { path: process.env.SCHEMAS_DATA_PATH };
@@ -141,9 +155,10 @@ export function getDatabases(): Databases {
 			) {
 				logger.trace(`loading lmdb database: ${dbPath}`);
 				readMetaDb(dbPath, null, dbName);
+				continue;
 			}
 
-			if (rocksdb) {
+			if (useRocksdb) {
 				try {
 					const files = readdirSync(dbPath, { withFileTypes: true });
 					if (
@@ -151,8 +166,9 @@ export function getDatabases(): Databases {
 						files.some((file) => file.name.startsWith('MANIFEST-'))
 					) {
 						logger.trace(`loading rocksdb database: ${dbPath}`);
-						const db = new RocksDatabase(dbPath);
+						const db = RocksDatabase.open(dbPath);
 						databaseEnvs.set(dbPath, db);
+						rocksdbDatabaseEnvs.set(dbPath, db);
 					}
 				} catch {
 					// skip
@@ -160,11 +176,13 @@ export function getDatabases(): Databases {
 			}
 		}
 	}
+
 	// now we load databases from the legacy "schema" directory folder structure
-	if (existsSync(getBaseSchemaPath())) {
-		for (const schemaEntry of readdirSync(getBaseSchemaPath(), { withFileTypes: true })) {
+	const baseSchemaPath = getBaseSchemaPath();
+	if (existsSync(baseSchemaPath)) {
+		for (const schemaEntry of readdirSync(baseSchemaPath, { withFileTypes: true })) {
 			if (!schemaEntry.isFile()) {
-				const schemaPath = join(getBaseSchemaPath(), schemaEntry.name);
+				const schemaPath = join(baseSchemaPath, schemaEntry.name);
 				const schemaAuditPath = join(getTransactionAuditStoreBasePath(), schemaEntry.name);
 				for (const tableEntry of readdirSync(schemaPath, { withFileTypes: true })) {
 					if (tableEntry.isFile() && extname(tableEntry.name).toLowerCase() === '.mdb') {
@@ -181,6 +199,7 @@ export function getDatabases(): Databases {
 			}
 		}
 	}
+
 	if (schemaConfigs) {
 		for (const dbName in schemaConfigs) {
 			const schemaConfig = schemaConfigs[dbName];
@@ -245,16 +264,18 @@ export function getDatabases(): Databases {
 	definedDatabases = null;
 	return databases;
 }
+
 export function resetDatabases() {
 	loadedDatabases = false;
-	for (const [, store] of databaseEnvs) {
+	for (const store of Object.values(lmdbDatabaseEnvs)) {
 		store.needsDeletion = true;
 	}
 	getDatabases();
-	for (const [path, store] of databaseEnvs) {
+	for (const [path, store] of lmdbDatabaseEnvs) {
 		if (store.needsDeletion && !path.endsWith('system.mdb')) {
 			store.close();
 			databaseEnvs.delete(path);
+			lmdbDatabaseEnvs.delete(path);
 			const db = databases[store.databaseName];
 			for (const tableName in db) {
 				const table = db[tableName];
@@ -285,22 +306,28 @@ export function readMetaDb(
 ) {
 	const envInit = new OpenEnvironmentObject(path, false);
 	try {
-		let rootStore = databaseEnvs.get(path);
+		let rootStore = lmdbDatabaseEnvs.get(path);
 		if (rootStore) {
 			rootStore.needsDeletion = false;
 		} else {
-			rootStore = open(envInit) as DatabaseDescriptor;
+			rootStore = open(envInit);
 			databaseEnvs.set(path, rootStore);
+			lmdbDatabaseEnvs.set(path, rootStore);
 		}
+
 		const internalDbiInit = new OpenDBIObject(false);
-		const dbisStore = rootStore.dbisDb || (rootStore.dbisDb = rootStore.openDB(INTERNAL_DBIS_NAME, internalDbiInit));
+		let dbisStore = rootStore.dbisDb;
+		if (!dbisStore) {
+			dbisStore = rootStore.openDB(INTERNAL_DBIS_NAME, internalDbiInit);
+			rootStore.dbisDb = dbisStore;
+		}
 
 		let auditStore = rootStore.auditStore;
 		if (!auditStore) {
 			if (auditPath) {
 				if (existsSync(auditPath)) {
 					envInit.path = auditPath;
-					auditStore = open(envInit) as LMDBDatabase;
+					auditStore = open(envInit);
 					auditStore.isLegacy = true;
 				}
 			} else {
@@ -521,7 +548,7 @@ function ensureDB(databaseName) {
 		}
 	}
 	if (definedDatabases && !definedDatabases.has(databaseName)) {
-		const definedTables = new Set(); // we create this so we can determine what was found in a reset and remove any removed dbs/tables
+		const definedTables = new Set<string>(); // we create this so we can determine what was found in a reset and remove any removed dbs/tables
 		dbTables[DEFINED_TABLES] = definedTables;
 		definedDatabases.set(databaseName, definedTables);
 	}
@@ -546,27 +573,47 @@ function setTable(tables, tableName, Table) {
 export function database({ database: databaseName, table: tableName }) {
 	if (!databaseName) databaseName = DEFAULT_DATABASE_NAME;
 	getDatabases();
-	const database = ensureDB(databaseName);
-	let databasePath = join(getHdbBasePath(), DATABASES_DIR_NAME);
+	ensureDB(databaseName);
+
 	const databaseConfig = envGet(CONFIG_PARAMS.DATABASES) || {};
-	if (process.env.SCHEMAS_DATA_PATH) databaseConfig.data = { path: process.env.SCHEMAS_DATA_PATH };
+	if (process.env.SCHEMAS_DATA_PATH) {
+		databaseConfig.data = { path: process.env.SCHEMAS_DATA_PATH };
+	}
+
 	const tablePath = tableName && databaseConfig[databaseName]?.tables?.[tableName]?.path;
-	databasePath =
+
+	const hdbBasePath = getHdbBasePath();
+	const databasePath =
 		tablePath ||
 		databaseConfig[databaseName]?.path ||
 		process.env.STORAGE_PATH ||
 		envGet(CONFIG_PARAMS.STORAGE_PATH) ||
-		(existsSync(databasePath) ? databasePath : join(getHdbBasePath(), LEGACY_DATABASES_DIR_NAME));
-	const path = join(databasePath, (tablePath ? tableName : databaseName) + '.mdb');
-	let rootStore = databaseEnvs.get(path);
-	if (!rootStore || rootStore.status === 'closed') {
-		// TODO: validate database name
-		const envInit = new OpenEnvironmentObject(path, false);
-		rootStore = open(envInit) as DatabaseDescriptor;
-		databaseEnvs.set(path, rootStore);
-	}
-	if (!rootStore.auditStore) {
-		rootStore.auditStore = openAuditStore(rootStore);
+		(existsSync(join(hdbBasePath, DATABASES_DIR_NAME)) ? join(hdbBasePath, DATABASES_DIR_NAME) : join(hdbBasePath, LEGACY_DATABASES_DIR_NAME));
+
+	const useRocksdb = envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb';
+
+	let rootStore: LMDBRootDatabase | RocksRootDatabase;
+	if (useRocksdb) {
+		const path = join(databasePath, tablePath ? tableName : databaseName);
+		rootStore = rocksdbDatabaseEnvs.get(path);
+		if (!rootStore || rootStore.status === 'closed') {
+			rootStore = RocksDatabase.open(path);
+			databaseEnvs.set(path, rootStore);
+			rocksdbDatabaseEnvs.set(path, rootStore);
+		}
+	} else {
+		const path = join(databasePath, `${tablePath ? tableName : databaseName}.mdb`);
+		rootStore = lmdbDatabaseEnvs.get(path);
+		if (!rootStore || rootStore.status === 'closed') {
+			// TODO: validate database name
+			const envInit = new OpenEnvironmentObject(path, false);
+			rootStore = open(envInit);
+			databaseEnvs.set(path, rootStore);
+			lmdbDatabaseEnvs.set(path, rootStore);
+		}
+		if (!rootStore.auditStore) {
+			rootStore.auditStore = openAuditStore(rootStore);
+		}
 	}
 	return rootStore;
 }
@@ -581,7 +628,11 @@ export async function dropDatabase(databaseName) {
 	for (const tableName in dbTables) {
 		const table = dbTables[tableName];
 		rootStore = table.primaryStore.rootStore;
+
 		databaseEnvs.delete(rootStore.path);
+		lmdbDatabaseEnvs.delete(rootStore.path);
+		rocksdbDatabaseEnvs.delete(rootStore.path);
+
 		if (rootStore.status === 'open') {
 			await rootStore.close();
 			await fs.remove(rootStore.path);
@@ -605,11 +656,16 @@ export async function dropDatabase(databaseName) {
 	await deleteRootBlobPathsForDB(rootStore);
 }
 // opens an index, consulting with custom indexes that may use alternate store configuration
-function openIndex(dbiKey: string, rootStore: Database, attribute: any): Database {
+function openIndex(dbiKey: string, rootStore: LMDBRootDatabase | RocksRootDatabase, attribute: any) {
 	const objectStorage =
 		attribute.is_hash_attribute || (attribute.indexed.type && CUSTOM_INDEXES[attribute.indexed.type]?.useObjectStore);
 	const dbiInit = new OpenDBIObject(!objectStorage, objectStorage);
-	const dbi = rootStore.openDB(dbiKey, dbiInit);
+	let dbi: LMDBDatabase | RocksDatabase & { customIndex?: any; isIndexing?: boolean; indexNulls?: boolean };
+	if (rootStore instanceof RocksDatabase) {
+		dbi = RocksDatabase.open(rootStore.path, { ...dbiInit, name: dbiKey });
+	} else {
+		dbi = rootStore.openDB(dbiKey, dbiInit);
+	}
 	if (attribute.indexed.type) {
 		const CustomIndex = CUSTOM_INDEXES[attribute.indexed.type];
 		if (CustomIndex) {
@@ -684,7 +740,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 		if (splitSegments == undefined) splitSegments = Table.splitSegments;
 		Table.attributes.splice(0, Table.attributes.length, ...attributes);
 	} else {
-		const auditStore = rootStore.auditStore;
+		const auditStore = 'auditStore' in rootStore ? rootStore.auditStore : undefined;
 		primaryKeyAttribute = attributes.find((attribute) => attribute.isPrimaryKey) || {};
 		primaryKey = primaryKeyAttribute.name;
 		primaryKeyAttribute.is_hash_attribute = primaryKeyAttribute.isPrimaryKey = true;
@@ -707,7 +763,13 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 		const dbiInit = new OpenDBIObject(false, true);
 		dbiInit.compression = primaryKeyAttribute.compression;
 		const dbiName = tableName + '/';
-		attributesDbi = rootStore.dbisDb = rootStore.openDB(INTERNAL_DBIS_NAME, internalDbiInit);
+
+		if (rootStore instanceof RocksDatabase) {
+			attributesDbi = rootStore.dbisDb = RocksDatabase.open(rootStore.path, { ...internalDbiInit, name: INTERNAL_DBIS_NAME });
+		} else {
+			attributesDbi = rootStore.dbisDb = rootStore.openDB(INTERNAL_DBIS_NAME, internalDbiInit);
+		}
+
 		startTxn(); // get an exclusive lock on the database so we can verify that we are the only thread creating the table (and assigning the table id)
 		if (attributesDbi.get(dbiName)) {
 			// table was created while we were setting up
@@ -715,7 +777,14 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 			resetDatabases();
 			return table(tableDefinition);
 		}
-		const primaryStore = handleLocalTimeForGets(rootStore.openDB(dbiName, dbiInit), rootStore);
+
+		debugger;
+		let primaryStore;
+		if (rootStore instanceof RocksDatabase) {
+			primaryStore = RocksDatabase.open(rootStore.path, { ...internalDbiInit, name: dbiName });
+		} else {
+			primaryStore = handleLocalTimeForGets(rootStore.openDB(dbiName, dbiInit), rootStore);
+		}
 		rootStore.databaseName = databaseName;
 		primaryStore.tableId = attributesDbi.get(NEXT_TABLE_ID);
 		logger.trace(`Assigning new table id ${primaryStore.tableId} for ${tableName}`);
@@ -753,7 +822,14 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 		attributesDbi.put(dbiName, primaryKeyAttribute);
 	}
 	const indices = Table.indices;
-	attributesDbi = attributesDbi || (rootStore.dbisDb = rootStore.openDB(INTERNAL_DBIS_NAME, internalDbiInit));
+	if (!attributesDbi) {
+		if (rootStore instanceof RocksDatabase) {
+			rootStore.dbisDb = RocksDatabase.open(rootStore.path, { ...internalDbiInit, name: INTERNAL_DBIS_NAME });
+		} else {
+			rootStore.dbisDb = rootStore.openDB(INTERNAL_DBIS_NAME, internalDbiInit);
+		}
+		attributesDbi = rootStore.dbisDb;
+	}
 	Table.dbisDB = attributesDbi;
 	const indicesToRemove = [];
 	for (const { key, value } of attributesDbi.getRange({ start: true })) {
@@ -1033,7 +1109,7 @@ export function dropTableMeta({ table: tableName, database: databaseName }) {
 	const removals = [];
 	const dbisDb = rootStore.dbisDb;
 	for (const key of dbisDb.getKeys({ start: tableName + '/', end: tableName + '0' })) {
-		removals.push(dbisDb.remove(key));
+		removals.push(dbisDb.remove(key as any));
 	}
 	return Promise.all(removals);
 }

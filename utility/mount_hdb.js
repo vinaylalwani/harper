@@ -22,14 +22,14 @@ async function mountHdb(hdbPath) {
 	makeDirectory(path.join(hdbPath, 'components'));
 	copySync(path.resolve(__dirname, '../../static/README.md'), path.join(hdbPath, 'README.md'));
 
-	await createLMDBTables();
+	await createTables();
 }
 
 /**
  * creates the environments & dbis needed for lmdb  based on the systemSchema
  * @returns {Promise<void>}
  */
-async function createLMDBTables() {
+async function createTables() {
 	// eslint-disable-next-line global-require
 	const CreateTableObject = require('../dataLayer/CreateTableObject.js');
 
