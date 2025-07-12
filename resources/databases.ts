@@ -778,7 +778,6 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 			return table(tableDefinition);
 		}
 
-		debugger;
 		let primaryStore;
 		if (rootStore instanceof RocksDatabase) {
 			primaryStore = RocksDatabase.open(rootStore.path, { ...internalDbiInit, name: dbiName });
@@ -789,7 +788,9 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 		primaryStore.tableId = attributesDbi.get(NEXT_TABLE_ID);
 		logger.trace(`Assigning new table id ${primaryStore.tableId} for ${tableName}`);
 		if (!primaryStore.tableId) primaryStore.tableId = 1;
+		debugger;
 		attributesDbi.put(NEXT_TABLE_ID, primaryStore.tableId + 1);
+		debugger;
 
 		primaryKeyAttribute.tableId = primaryStore.tableId;
 		Table = setTable(
