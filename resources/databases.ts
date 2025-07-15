@@ -64,6 +64,8 @@ export interface Databases {
 export const tables: Tables = Object.create(null);
 export const databases: Databases = Object.create(null);
 
+const useRocksdb = false; //envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb';
+
 // note: technically `Database` is either a `LMDBStore` or a `CachingStore`
 interface LMDBDatabase extends Database {
 	customIndex?: any;
@@ -131,7 +133,6 @@ export function getDatabases(): Databases {
 	const hdbBasePath = getHdbBasePath();
 	let databasePath = hdbBasePath && join(hdbBasePath, DATABASES_DIR_NAME);
 	const schemaConfigs = envGet(CONFIG_PARAMS.DATABASES) || {};
-	const useRocksdb = envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb';
 
 	// not sure why this doesn't work with the environmemt manager
 	if (process.env.SCHEMAS_DATA_PATH) schemaConfigs.data = { path: process.env.SCHEMAS_DATA_PATH };
@@ -590,8 +591,6 @@ export function database({ database: databaseName, table: tableName }) {
 		envGet(CONFIG_PARAMS.STORAGE_PATH) ||
 		(existsSync(join(hdbBasePath, DATABASES_DIR_NAME)) ? join(hdbBasePath, DATABASES_DIR_NAME) : join(hdbBasePath, LEGACY_DATABASES_DIR_NAME));
 
-	const useRocksdb = envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb';
-
 	let rootStore: LMDBRootDatabase | RocksRootDatabase;
 	if (useRocksdb) {
 		const path = join(databasePath, tablePath ? tableName : databaseName);
@@ -788,9 +787,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 		primaryStore.tableId = attributesDbi.get(NEXT_TABLE_ID);
 		logger.trace(`Assigning new table id ${primaryStore.tableId} for ${tableName}`);
 		if (!primaryStore.tableId) primaryStore.tableId = 1;
-		debugger;
 		attributesDbi.put(NEXT_TABLE_ID, primaryStore.tableId + 1);
-		debugger;
 
 		primaryKeyAttribute.tableId = primaryStore.tableId;
 		Table = setTable(
@@ -820,6 +817,8 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 		Table.schemaVersion = 1;
 		hasChanges = true;
 
+		debugger;
+		console.log('table() putting primaryKeyAttribute', dbiName, primaryKeyAttribute);
 		attributesDbi.put(dbiName, primaryKeyAttribute);
 	}
 	const indices = Table.indices;
