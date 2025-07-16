@@ -24,7 +24,11 @@ export function transaction<T>(
 	else if (context?.transaction?.open === TRANSACTION_STATE.OPEN && typeof callback === 'function')
 		return callback(context.transaction); // nothing to be done, already in open transaction
 	if (typeof callback !== 'function') throw new Error('Callback function must be provided to transaction');
+
+	// TODO: we need to branch here and either go the LMDB or RocksDB path
+
 	const transaction = (context.transaction = new DatabaseTransaction());
+
 	if (context.timestamp) transaction.timestamp = context.timestamp;
 	if (context.replicatedConfirmation) transaction.replicatedConfirmation = context.replicatedConfirmation;
 	transaction.setContext(context);

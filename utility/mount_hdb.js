@@ -36,7 +36,6 @@ async function createTables() {
 	let tables = Object.keys(systemSchema);
 
 	for (const tableName of tables) {
-		console.log('createTables() creating table', tableName);
 		let hash_attribute = systemSchema[tableName].hash_attribute;
 		try {
 			initPaths.initSystemSchemaPaths(terms.SYSTEM_SCHEMA_NAME, tableName);
@@ -53,8 +52,6 @@ async function createTables() {
 			throw e;
 		}
 	}
-
-	console.log('createTables() done creating tables');
 }
 
 function makeDirectory(targetDir) {

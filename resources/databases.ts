@@ -64,7 +64,7 @@ export interface Databases {
 export const tables: Tables = Object.create(null);
 export const databases: Databases = Object.create(null);
 
-const useRocksdb = false; //envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb';
+const useRocksdb = envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb';
 
 // note: technically `Database` is either a `LMDBStore` or a `CachingStore`
 interface LMDBDatabase extends Database {
@@ -596,7 +596,8 @@ export function database({ database: databaseName, table: tableName }) {
 		const path = join(databasePath, tablePath ? tableName : databaseName);
 		rootStore = rocksdbDatabaseEnvs.get(path);
 		if (!rootStore || rootStore.status === 'closed') {
-			rootStore = RocksDatabase.open(path);
+			const envInit = new OpenEnvironmentObject(path, false);
+			rootStore = RocksDatabase.open(path, envInit);
 			databaseEnvs.set(path, rootStore);
 			rocksdbDatabaseEnvs.set(path, rootStore);
 		}
@@ -817,8 +818,6 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 		Table.schemaVersion = 1;
 		hasChanges = true;
 
-		debugger;
-		console.log('table() putting primaryKeyAttribute', dbiName, primaryKeyAttribute);
 		attributesDbi.put(dbiName, primaryKeyAttribute);
 	}
 	const indices = Table.indices;
