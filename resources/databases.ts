@@ -357,16 +357,9 @@ export function readMetaDb(
 			}
 			definedTables?.add(tableName);
 			let tableDef = tablesToLoad.get(tableName);
-			if (!tableDef) {
-				tableDef = { attributes: [] };
-				tablesToLoad.set(tableName, tableDef);
-			}
-			if (attribute_name == null || value.is_hash_attribute) {
-				tableDef.primary = value;
-			}
-			if (attribute_name != null) {
-				tableDef.attributes.push(value);
-			}
+			if (!tableDef) tablesToLoad.set(tableName, (tableDef = { attributes: [] }));
+			if (attribute_name == null || value.is_hash_attribute) tableDef.primary = value;
+			if (attribute_name != null) tableDef.attributes.push(value);
 			Object.defineProperty(value, 'key', { value: key, configurable: true });
 		}
 
