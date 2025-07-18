@@ -46,9 +46,9 @@ export interface Context {
 	user?: User;
 	/**	 The database transaction object */
 	transaction?: DatabaseTransaction;
-	/**	 If the operation that will be performed with this context should check user authorization */
-	authorize?: number;
-	/**	 The last modification time of any data that has been accessed with this context */
+	/**	 If the operation that will be performed with this context should check user authorization	 */
+	authorize?: boolean;
+	/**	 The last modification time of any data that has been accessed with this context	 */
 	lastModified?: number;
 	/**	 The time	at which a saved record should expire */
 	expiresAt?: number;
@@ -72,6 +72,7 @@ export interface Context {
 	nodeName?: string;
 	resourceCache?: Map<Id, any>;
 	_freezeRecords?: boolean; // until v5, we conditionally freeze records for back-compat
+	timestamp?: number;
 }
 
 export interface SourceContext<TRequestContext = Context, Record extends object = any> {

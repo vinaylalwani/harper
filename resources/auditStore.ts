@@ -10,6 +10,7 @@ import { getRecordAtTime } from './crdt.ts';
 import { isMainThread } from 'worker_threads';
 import { decodeFromDatabase, deleteBlobsInObject } from './blob.ts';
 import { onStorageReclamation } from '../server/storageReclamation.ts';
+import { RocksDatabase } from '@harperdb/rocksdb-js';
 
 /**
  * This module is responsible for the binary representation of audit records in an efficient form.
@@ -69,15 +70,21 @@ const FLOAT_BUFFER = new Uint8Array(FLOAT_TARGET.buffer);
 let DEFAULT_AUDIT_CLEANUP_DELAY = 10000; // default delay of 10 seconds
 let timestampErrored = false;
 export function openAuditStore(rootStore) {
-	let auditStore = (rootStore.auditStore = rootStore.openDB(AUDIT_STORE_NAME, {
-		create: false,
-		...AUDIT_STORE_OPTIONS,
-	}));
-	if (!auditStore) {
-		// this means we are creating a new audit store. Initialize with the last removed timestamp (we don't want to put this in legacy audit logs since we don't know if they have had deletions or not).
-		auditStore = rootStore.auditStore = rootStore.openDB(AUDIT_STORE_NAME, AUDIT_STORE_OPTIONS);
-		updateLastRemoved(auditStore, 1);
+	let auditStore;
+	if (rootStore instanceof RocksDatabase) {
+		auditStore = RocksDatabase.open(rootStore.path, { ...AUDIT_STORE_OPTIONS, name: AUDIT_STORE_NAME });
+	} else {
+		auditStore = rootStore.openDB(AUDIT_STORE_NAME, {
+			create: false,
+			...AUDIT_STORE_OPTIONS,
+		});
+		if (!auditStore) {
+			// this means we are creating a new audit store. Initialize with the last removed timestamp (we don't want to put this in legacy audit logs since we don't know if they have had deletions or not).
+			auditStore = rootStore.openDB(AUDIT_STORE_NAME, AUDIT_STORE_OPTIONS);
+			updateLastRemoved(auditStore, 1);
+		}
 	}
+	rootStore.auditStore = auditStore;
 	auditStore.rootStore = rootStore;
 	auditStore.tableStores = [];
 	const deleteCallbacks = [];
@@ -95,7 +102,7 @@ export function openAuditStore(rootStore) {
 	let lastCleanupResolution: Promise<void>;
 	let cleanupPriority = 0;
 	let auditCleanupDelay = DEFAULT_AUDIT_CLEANUP_DELAY;
-	onStorageReclamation(auditStore.env.path, (priority) => {
+	onStorageReclamation(auditStore.path, (priority) => {
 		cleanupPriority = priority; // update the priority
 		if (priority) {
 			// and if we have a priority, schedule cleanup soon

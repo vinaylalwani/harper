@@ -59,6 +59,7 @@ import { onStorageReclamation } from '../server/storageReclamation.ts';
 import { RequestTarget } from './RequestTarget.ts';
 import harperLogger from '../utility/logging/harper_logger.js';
 import { throttle } from '../server/throttle.ts';
+import { RocksDatabase } from '@harperdb/rocksdb-js';
 
 const { sortBy } = lodash;
 const { validateAttribute } = lmdbProcessRows;
@@ -184,7 +185,7 @@ export function makeTable(options) {
 	const MAX_PREFETCH_SEQUENCE = 10;
 	const MAX_PREFETCH_BUNDLE = 6;
 	if (audit) addDeleteRemoval();
-	onStorageReclamation(primaryStore.path ?? primaryStore.env.path, (priority: number) => {
+	onStorageReclamation(primaryStore.path, (priority: number) => {
 		if (hasSourceGet) return scheduleCleanup(priority);
 	});
 
@@ -3450,7 +3451,14 @@ export function makeTable(options) {
 			// if the transaction was closed, which can happen if we are iterating
 			// through query results and the iterator ends (abruptly)
 			if (options.transaction?.isDone) return withEntry(null, id);
-			const entry = primaryStore.getEntry(id, options);
+			let entry;
+			if (primaryStore instanceof RocksDatabase) {
+				entry = {
+					value: primaryStore.getSync(id, options),
+				};
+			} else {
+				entry = primaryStore.getEntry(id, options);
+			}
 
 			// skip recording reads for most system tables except hdb_analytics
 			// we want to track analytics reads in licensing, etc.
@@ -3632,20 +3640,20 @@ export function makeTable(options) {
 	function txnForContext(context: Context) {
 		let transaction = context?.transaction;
 		if (transaction) {
-			if (!transaction.lmdbDb) {
+			if (!transaction.db) {
 				// this is an uninitialized DatabaseTransaction, we can claim it
-				transaction.lmdbDb = primaryStore;
+				transaction.db = primaryStore;
 				return transaction;
 			}
 			do {
 				// See if this is a transaction for our database and if so, use it
-				if (transaction.lmdbDb?.path === primaryStore.path) return transaction;
+				if (transaction.db?.path === primaryStore.path) return transaction;
 				// try the next one:
 				const nextTxn = transaction.next;
 				if (!nextTxn) {
 					// no next one, then add our database
 					transaction = transaction.next = new DatabaseTransaction();
-					transaction.lmdbDb = primaryStore;
+					transaction.db = primaryStore;
 					return transaction;
 				}
 				transaction = nextTxn;
