@@ -78,6 +78,7 @@ interface LMDBRootDatabase extends RootDatabase {
 	dbisDb?: LMDBDatabase;
 	isLegacy?: boolean;
 	needsDeletion?: boolean;
+	path?: string;
 	status?: 'open' | 'closed';
 }
 
@@ -505,7 +506,7 @@ function initStores(
 					tableName,
 					tableId,
 					primaryKey: primaryAttribute.name,
-					databasePath: databaseName,
+					databasePath: isLegacy ? `${databaseName}/${tableName}` : databaseName,
 					databaseName,
 					indices,
 					attributes,
@@ -770,7 +771,6 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 	let hasChanges;
 	let txnCommit;
 	if (Table) {
-		debugger;
 		primaryKey = Table.primaryKey;
 		if (Table.primaryStore.rootStore.status === 'closed') {
 			throw new Error(`Can not use a closed data store from ${tableName} class`);
@@ -824,8 +824,9 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 		if (rootStore instanceof RocksDatabase) {
 			primaryStore = RocksDatabase.open(rootStore.path, { ...internalDbiInit, name: dbiName });
 		} else {
-			primaryStore = handleLocalTimeForGets(rootStore.openDB(dbiName, dbiInit), rootStore);
+			primaryStore = rootStore.openDB(dbiName, dbiInit);
 		}
+		primaryStore = handleLocalTimeForGets(primaryStore, rootStore);
 		rootStore.databaseName = databaseName;
 		primaryStore.tableId = attributesDbi.get(NEXT_TABLE_ID);
 		logger.trace(`Assigning new table id ${primaryStore.tableId} for ${tableName}`);

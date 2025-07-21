@@ -20,6 +20,7 @@ import * as harperLogger from '../utility/logging/harper_logger.js';
 import './blob.ts';
 import { blobsWereEncoded, decodeFromDatabase, deleteBlobsInObject, encodeBlobsWithFilePath } from './blob.ts';
 import { recordAction } from './analytics/write.ts';
+import { RocksDatabase } from '@harperdb/rocksdb-js';
 export type Entry = {
 	key: any;
 	value: any;
@@ -233,34 +234,39 @@ function getTimestamp() {
 }
 
 export function handleLocalTimeForGets(store, rootStore) {
-	const storeGetEntry = store.getEntry;
+	const isRocksDb = store instanceof RocksDatabase;
 	store.readCount = 0;
 	store.cachePuts = false;
 	store.rootStore = rootStore;
 	store.encoder.rootStore = rootStore;
-	store.getEntry = function (id, options) {
-		store.readCount++;
-		lastMetadata = null;
-		const entry = storeGetEntry.call(this, id, options);
-		// if we have decoded with metadata, we want to pull it out and assign to this entry
-		if (entry) {
-			if (lastMetadata) {
-				entry.metadataFlags = lastMetadata[METADATA];
-				entry.localTime = lastMetadata.localTime;
-				entry.residencyId = lastMetadata.residencyId;
-				entry.size = lastMetadata.size;
-				if (lastMetadata.expiresAt >= 0) {
-					entry.expiresAt = lastMetadata.expiresAt;
+
+	if (!isRocksDb) {
+		const storeGetEntry = store.getEntry;
+		store.getEntry = function (id, options) {
+			store.readCount++;
+			lastMetadata = null;
+			const entry = storeGetEntry.call(this, id, options);
+			// if we have decoded with metadata, we want to pull it out and assign to this entry
+			if (entry) {
+				if (lastMetadata) {
+					entry.metadataFlags = lastMetadata[METADATA];
+					entry.localTime = lastMetadata.localTime;
+					entry.residencyId = lastMetadata.residencyId;
+					entry.size = lastMetadata.size;
+					if (lastMetadata.expiresAt >= 0) {
+						entry.expiresAt = lastMetadata.expiresAt;
+					}
+					lastMetadata = null;
 				}
-				lastMetadata = null;
+				if (entry.value) {
+					entryMap.set(entry.value, entry); // allow the record to access the entry
+				}
+				entry.key = id;
 			}
-			if (entry.value) {
-				entryMap.set(entry.value, entry); // allow the record to access the entry
-			}
-			entry.key = id;
-		}
-		return entry;
-	};
+			return entry;
+		};
+	}
+
 	const storeGet = store.get;
 	store.get = function (id, options) {
 		lastMetadata = null;
@@ -271,6 +277,7 @@ export function handleLocalTimeForGets(store, rootStore) {
 		}
 		return value;
 	};
+
 	//store.pendingTimestampUpdates = new Map();
 	const storeGetRange = store.getRange;
 	store.getRange = function (options) {
@@ -291,32 +298,35 @@ export function handleLocalTimeForGets(store, rootStore) {
 			return entry;
 		});
 	};
-	// add read transaction tracking
-	const txn = store.useReadTransaction();
-	txn.done();
-	if (!txn.done.isTracked) {
-		const Txn = txn.constructor;
-		const use = txn.use;
-		const done = txn.done;
-		Txn.prototype.use = function () {
-			if (!this.timerTracked) {
-				this.timerTracked = true;
-				trackedTxns.push(new WeakRef(this));
-			}
-			use.call(this);
-		};
-		Txn.prototype.done = function () {
-			done.call(this);
-			if (this.isDone) {
-				for (let i = 0; i < trackedTxns.length; i++) {
-					const txn = trackedTxns[i].deref();
-					if (!txn || txn.isDone || txn.isCommitted) {
-						trackedTxns.splice(i--, 1);
+
+	if (!isRocksDb) {
+		// add read transaction tracking
+		const txn = store.useReadTransaction();
+		txn.done();
+		if (!txn.done.isTracked) {
+			const Txn = txn.constructor;
+			const use = txn.use;
+			const done = txn.done;
+			Txn.prototype.use = function () {
+				if (!this.timerTracked) {
+					this.timerTracked = true;
+					trackedTxns.push(new WeakRef(this));
+				}
+				use.call(this);
+			};
+			Txn.prototype.done = function () {
+				done.call(this);
+				if (this.isDone) {
+					for (let i = 0; i < trackedTxns.length; i++) {
+						const txn = trackedTxns[i].deref();
+						if (!txn || txn.isDone || txn.isCommitted) {
+							trackedTxns.splice(i--, 1);
+						}
 					}
 				}
-			}
-		};
-		Txn.prototype.done.isTracked = true;
+			};
+			Txn.prototype.done.isTracked = true;
+		}
 	}
 
 	return store;
@@ -427,7 +437,7 @@ export function recordUpdater(store, tableId, auditStore) {
 						extendedType |= HAS_BLOBS;
 					}
 				}
-				if (((store.store || store)?.encoder)?.hasStructureUpdate) {
+				if (store.encoder?.hasStructureUpdate) {
 					extendedType |= HAS_STRUCTURE_UPDATE;
 					store.encoder.hasStructureUpdate = false;
 				}
