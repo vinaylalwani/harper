@@ -3738,7 +3738,6 @@ export function makeTable(options) {
 		existingEntry: Entry,
 		nodeId?: number
 	): number {
-		debugger;
 		if (nodeId === undefined) {
 			nodeId = server.replication?.getThisNodeId(auditStore);
 		}

@@ -649,9 +649,9 @@ export function database({ database: databaseName, table: tableName }) {
 			databaseEnvs.set(path, rootStore);
 			lmdbDatabaseEnvs.set(path, rootStore);
 		}
-		if (!rootStore.auditStore) {
-			rootStore.auditStore = openAuditStore(rootStore);
-		}
+	}
+	if (!rootStore.auditStore) {
+		rootStore.auditStore = openAuditStore(rootStore);
 	}
 	return rootStore;
 }
@@ -770,6 +770,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 	let hasChanges;
 	let txnCommit;
 	if (Table) {
+		debugger;
 		primaryKey = Table.primaryKey;
 		if (Table.primaryStore.rootStore.status === 'closed') {
 			throw new Error(`Can not use a closed data store from ${tableName} class`);
