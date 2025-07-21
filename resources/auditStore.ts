@@ -73,6 +73,7 @@ export function openAuditStore(rootStore) {
 	let auditStore;
 	if (rootStore instanceof RocksDatabase) {
 		auditStore = RocksDatabase.open(rootStore.path, { ...AUDIT_STORE_OPTIONS, name: AUDIT_STORE_NAME });
+		updateLastRemoved(auditStore, 1);
 	} else {
 		auditStore = rootStore.openDB(AUDIT_STORE_NAME, {
 			create: false,
