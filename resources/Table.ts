@@ -214,7 +214,7 @@ export function makeTable(options) {
 		#changes: any; // the changes to the record that have been made (should not be modified directly)
 		#version?: number; // version of the record
 		#entry?: Entry; // the entry from the database
-		#saveMode?: boolean; // indicates that the record is currently being saved
+		#saveMode?: number; // indicates that the record is currently being saved
 		#loadedFromSource?: boolean; // indicates that the record was loaded from the source
 		declare getProperty: (name: string) => any;
 		static name = tableName; // for display/debugging purposes
@@ -1268,7 +1268,7 @@ export function makeTable(options) {
 			const context = this.getContext();
 			if ((target as RequestTarget)?.checkPermission) {
 				// requesting authorization verification
-				allowed = this.allowDelete(context.user, target, context);
+				allowed = this.allowDelete(context.user, target as RequestTarget /*, context */);
 			}
 			return when(allowed, (allowed: boolean) => {
 				if (!allowed) {
@@ -1801,7 +1801,7 @@ export function makeTable(options) {
 			transaction.addWrite(write);
 		}
 
-		async delete(target: RequestTarget): Promise<boolean> | boolean {
+		async delete(target: RequestTarget): Promise<boolean> {
 			if (isSearchTarget(target)) {
 				target.select = ['$id']; // just get the primary key of each record so we can delete them
 				for await (const entry of this.search(target)) {
@@ -1814,7 +1814,7 @@ export function makeTable(options) {
 				const context = this.getContext();
 				if (target.checkPermission) {
 					// requesting authorization verification
-					allowed = this.allowDelete(context.user, target, context);
+					allowed = this.allowDelete(context.user, target /*, context */);
 				}
 				return when(allowed, (allowed: boolean) => {
 					if (!allowed) {
@@ -3505,7 +3505,7 @@ export function makeTable(options) {
 		// to evaluate if prefetching is a good idea.
 		// First, the caller can tell us. If the record is in our local cache, we use that as indication
 		// that we can get the value very quickly without a page fault.
-		if (sync) return whenPrefetched();
+		if (sync || primaryStore instanceof RocksDatabase) return whenPrefetched();
 		// Next, we allow for non-prefetch mode where we can execute some gets without prefetching,
 		// but we will limit the number before we do another prefetch
 		if (untilNextPrefetch > 0) {
@@ -3736,8 +3736,13 @@ export function makeTable(options) {
 	function precedesExistingVersion(
 		txnTime: number,
 		existingEntry: Entry,
-		nodeId: number = server.replication?.getThisNodeId(auditStore)
+		nodeId?: number
 	): number {
+		debugger;
+		if (nodeId === undefined) {
+			nodeId = server.replication?.getThisNodeId(auditStore);
+		}
+
 		if (txnTime <= existingEntry?.version) {
 			if (existingEntry?.version === txnTime && nodeId !== undefined) {
 				// if we have a timestamp tie, we break the tie by comparing the node name of the

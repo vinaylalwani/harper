@@ -380,7 +380,11 @@ export function recordUpdater(store, tableId, auditStore) {
 		expiresAtNextEncoding = expiresAt;
 		if (existingEntry?.version === newVersion && audit === false)
 			throw new Error('Must retain local time if version is not changed');
-		const putOptions = {
+		const putOptions: {
+			version: number;
+			instructedWrite?: boolean;
+			ifVersion?: number;
+		} = {
 			version: newVersion,
 			instructedWrite: timestampNextEncoding > 0,
 		};
@@ -423,7 +427,7 @@ export function recordUpdater(store, tableId, auditStore) {
 						extendedType |= HAS_BLOBS;
 					}
 				}
-				if (store.encoder.hasStructureUpdate) {
+				if (((store.store || store)?.encoder)?.hasStructureUpdate) {
 					extendedType |= HAS_STRUCTURE_UPDATE;
 					store.encoder.hasStructureUpdate = false;
 				}

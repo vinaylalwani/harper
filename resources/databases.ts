@@ -267,197 +267,259 @@ export function getDatabases(): Databases {
 	return databases;
 }
 
-function readRocksMetaDb(path: string, defaultTable: string, databaseName: string) {
+/**
+ * This is responsible for reading the internal dbi of a single database file to get a list of all the tables and
+ * their indexed or registered attributes
+ * @param path
+ * @param defaultTable
+ * @param databaseName
+ */
+export function readMetaDb(
+	path: string,
+	defaultTable?: string,
+	databaseName: string = DEFAULT_DATABASE_NAME,
+	auditPath?: string,
+	isLegacy?: boolean
+) {
+	const envInit = new OpenEnvironmentObject(path, false);
 	try {
-		logger.trace(`loading rocksdb database: ${path}`);
-		debugger;
-
-		const rootStore: RocksRootDatabase = RocksDatabase.open(path);
-		databaseEnvs.set(path, rootStore);
-		rocksdbDatabaseEnvs.set(path, rootStore);
-
-		const internalDbiInit = new OpenDBIObject(false);
-		let dbisStore = rootStore.dbisDb;
-		if (!dbisStore) {
-			dbisStore = RocksDatabase.open(rootStore.path, { ...internalDbiInit, name: INTERNAL_DBIS_NAME });
-			rootStore.dbisDb = dbisStore;
+		let rootStore = lmdbDatabaseEnvs.get(path);
+		if (rootStore) {
+			rootStore.needsDeletion = false;
+		} else {
+			rootStore = open(envInit);
+			databaseEnvs.set(path, rootStore);
+			lmdbDatabaseEnvs.set(path, rootStore);
 		}
 
-		let auditStore = rootStore.auditStore;
-		if (!auditStore) {
-			auditStore = openAuditStore(rootStore);
-		}
-
-		const tables = ensureDB(databaseName);
-		const definedTables = tables[DEFINED_TABLES];
-		const tablesToLoad = new Map<string, any>();
-
-		for (const result of dbisStore.getRange({ start: false })) {
-			const { key, value } = result as { key: string; value: any };
-			let [tableName, attribute_name] = key.toString().split('/');
-			if (attribute_name === '') {
-				// primary key
-				attribute_name = value.name;
-			} else if (!attribute_name) {
-				attribute_name = tableName;
-				tableName = defaultTable;
-				if (!value.name) {
-					// legacy attribute
-					value.name = attribute_name;
-					value.indexed = !value.is_hash_attribute;
-				}
-			}
-			definedTables?.add(tableName);
-			let tableDef = tablesToLoad.get(tableName);
-			if (!tableDef) tablesToLoad.set(tableName, (tableDef = { attributes: [] }));
-			if (attribute_name == null || value.is_hash_attribute) tableDef.primary = value;
-			if (attribute_name != null) tableDef.attributes.push(value);
-			Object.defineProperty(value, 'key', { value: key, configurable: true });
-		}
-
-		for (const [tableName, tableDef] of tablesToLoad) {
-			let { attributes, primary: primaryAttribute } = tableDef;
-			if (!primaryAttribute) {
-				// this isn't defined, find it in the attributes
-				for (const attribute of attributes) {
-					if (attribute.is_hash_attribute || attribute.isPrimaryKey) {
-						primaryAttribute = attribute;
-						break;
-					}
-				}
-				if (!primaryAttribute) {
-					logger.warn(
-						`Unable to find a primary key attribute on table ${tableName}, with attributes: ${JSON.stringify(
-							attributes
-						)}`
-					);
-					continue;
-				}
-			}
-			// if the table has already been defined, use that class, don't create a new one
-			let table = tables[tableName];
-			let indices = {},
-				existingAttributes = [];
-			let tableId;
-			let primaryStore;
-			const audit =
-				typeof primaryAttribute.audit === 'boolean' ? primaryAttribute.audit : envGet(CONFIG_PARAMS.LOGGING_AUDITLOG);
-			const trackDeletes = primaryAttribute.trackDeletes;
-			const expiration = primaryAttribute.expiration;
-			const eviction = primaryAttribute.eviction;
-			const sealed = primaryAttribute.sealed;
-			const splitSegments = primaryAttribute.splitSegments;
-			const replicate = primaryAttribute.replicate;
-			if (table) {
-				indices = table.indices;
-				existingAttributes = table.attributes;
-				table.schemaVersion++;
-			} else {
-				tableId = primaryAttribute.tableId;
-				if (tableId) {
-					if (tableId >= (dbisStore.get(NEXT_TABLE_ID) || 0)) {
-						dbisStore.putSync(NEXT_TABLE_ID, tableId + 1);
-						logger.info(`Updating next table id (it was out of sync) to ${tableId + 1} for ${tableName}`);
-					}
-				} else {
-					primaryAttribute.tableId = tableId = dbisStore.get(NEXT_TABLE_ID);
-					if (!tableId) tableId = 1;
-					logger.debug(`Table {tableName} missing an id, assigning {tableId}`);
-					dbisStore.putSync(NEXT_TABLE_ID, tableId + 1);
-					dbisStore.putSync(primaryAttribute.key, primaryAttribute);
-				}
-				const dbiInit = new OpenDBIObject(!primaryAttribute.is_hash_attribute, primaryAttribute.is_hash_attribute);
-				dbiInit.compression = primaryAttribute.compression;
-				if (dbiInit.compression) {
-					const compressionThreshold =
-						envGet(CONFIG_PARAMS.STORAGE_COMPRESSION_THRESHOLD) || DEFAULT_COMPRESSION_THRESHOLD; // this is the only thing that can change;
-					dbiInit.compression.threshold = compressionThreshold;
-				}
-				primaryStore = handleLocalTimeForGets(
-					RocksDatabase.open(rootStore.path, { ...dbiInit, name: primaryAttribute.key }),
-					rootStore
-				);
-				rootStore.databaseName = databaseName;
-				primaryStore.tableId = tableId;
-			}
-			let attributesUpdated: boolean;
-			for (const attribute of attributes) {
-				attribute.attribute = attribute.name;
-				try {
-					// now load the non-primary keys, opening the dbs as necessary for indices
-					if (!attribute.is_hash_attribute && (attribute.indexed || (attribute.attribute && !attribute.name))) {
-						if (!indices[attribute.name]) {
-							const dbi = openIndex(attribute.key, rootStore, attribute);
-							indices[attribute.name] = dbi;
-							indices[attribute.name].indexNulls = attribute.indexNulls;
-						}
-						const existingAttribute = existingAttributes.find(
-							(existingAttribute) => existingAttribute.name === attribute.name
-						);
-						if (existingAttribute)
-							existingAttributes.splice(existingAttributes.indexOf(existingAttribute), 1, attribute);
-						else existingAttributes.push(attribute);
-						attributesUpdated = true;
-					}
-				} catch (error) {
-					logger.error(`Error trying to update attribute`, attribute, existingAttributes, indices, error);
-				}
-			}
-			for (const existingAttribute of existingAttributes) {
-				const attribute = attributes.find((attribute) => attribute.name === existingAttribute.name);
-				if (!attribute) {
-					if (existingAttribute.is_hash_attribute) {
-						logger.error('Unable to remove existing primary key attribute', existingAttribute);
-						continue;
-					}
-					if (existingAttribute.indexed) {
-						// we only remove attributes if they were indexed, in order to support dropAttribute that removes dynamic indexed attributes
-						existingAttributes.splice(existingAttributes.indexOf(existingAttribute), 1);
-						attributesUpdated = true;
-					}
-				}
-			}
-			if (table) {
-				if (attributesUpdated) {
-					table.schemaVersion++;
-					table.updatedAttributes();
-				}
-			} else {
-				table = setTable(
-					tables,
-					tableName,
-					makeTable({
-						primaryStore,
-						auditStore,
-						audit,
-						sealed,
-						splitSegments,
-						replicate,
-						expirationMS: expiration && expiration * 1000,
-						evictionMS: eviction && eviction * 1000,
-						trackDeletes,
-						tableName,
-						tableId,
-						primaryKey: primaryAttribute.name,
-						databasePath: databaseName,
-						databaseName,
-						indices,
-						attributes,
-						schemaDefined: primaryAttribute.schemaDefined,
-						dbisDB: dbisStore,
-					})
-				);
-				table.schemaVersion = 1;
-				for (const listener of tableListeners) {
-					listener(table);
-				}
-			}
-		}
-		return rootStore;
+		return initStores(path, rootStore, databaseName, defaultTable, auditPath, isLegacy);
 	} catch (error) {
 		error.message += ` opening database ${path}`;
 		throw error;
 	}
+}
+
+function readRocksMetaDb(
+	path: string,
+	defaultTable?: string,
+	databaseName: string = DEFAULT_DATABASE_NAME
+) {
+	try {
+		logger.trace(`loading rocksdb database: ${path}`);
+		const rootStore: RocksRootDatabase = RocksDatabase.open(path);
+		databaseEnvs.set(path, rootStore);
+		rocksdbDatabaseEnvs.set(path, rootStore);
+
+		return initStores(path, rootStore, databaseName, defaultTable);
+	} catch (error) {
+		error.message += ` opening database ${path}`;
+		throw error;
+	}
+}
+
+function initStores(
+	path: string,
+	rootStore: LMDBRootDatabase | RocksRootDatabase,
+	databaseName: string,
+	defaultTable?: string,
+	auditPath?: string,
+	isLegacy?: boolean
+) {
+	const envInit = new OpenEnvironmentObject(path, false);
+	const internalDbiInit = new OpenDBIObject(false);
+	let dbisStore = rootStore.dbisDb;
+	if (!dbisStore) {
+		if (rootStore instanceof RocksDatabase) {
+			dbisStore = RocksDatabase.open(rootStore.path, { ...internalDbiInit, name: INTERNAL_DBIS_NAME });
+		} else {
+			dbisStore = rootStore.openDB(INTERNAL_DBIS_NAME, internalDbiInit);
+		}
+		rootStore.dbisDb = dbisStore;
+	}
+
+	let auditStore = rootStore.auditStore;
+	if (!auditStore) {
+		if (auditPath) {
+			if (existsSync(auditPath)) {
+				envInit.path = auditPath;
+				if (rootStore instanceof RocksDatabase) {
+					auditStore = RocksDatabase.open(envInit.path, envInit);
+				} else {
+					auditStore = open(envInit);
+				}
+				auditStore.isLegacy = true;
+			}
+		} else {
+			auditStore = openAuditStore(rootStore);
+		}
+	}
+
+	const tables = ensureDB(databaseName);
+	const definedTables = tables[DEFINED_TABLES];
+	const tablesToLoad = new Map<string, any>();
+
+	for (const result of dbisStore.getRange({ start: false })) {
+		const { key, value } = result as { key: string; value: any };
+		let [tableName, attribute_name] = key.toString().split('/');
+		if (attribute_name === '') {
+			// primary key
+			attribute_name = value.name;
+		} else if (!attribute_name) {
+			attribute_name = tableName;
+			tableName = defaultTable;
+			if (!value.name) {
+				// legacy attribute
+				value.name = attribute_name;
+				value.indexed = !value.is_hash_attribute;
+			}
+		}
+		definedTables?.add(tableName);
+		let tableDef = tablesToLoad.get(tableName);
+		if (!tableDef) tablesToLoad.set(tableName, (tableDef = { attributes: [] }));
+		if (attribute_name == null || value.is_hash_attribute) tableDef.primary = value;
+		if (attribute_name != null) tableDef.attributes.push(value);
+		Object.defineProperty(value, 'key', { value: key, configurable: true });
+	}
+
+	for (const [tableName, tableDef] of tablesToLoad) {
+		let { attributes, primary: primaryAttribute } = tableDef;
+		if (!primaryAttribute) {
+			// this isn't defined, find it in the attributes
+			for (const attribute of attributes) {
+				if (attribute.is_hash_attribute || attribute.isPrimaryKey) {
+					primaryAttribute = attribute;
+					break;
+				}
+			}
+			if (!primaryAttribute) {
+				logger.warn(
+					`Unable to find a primary key attribute on table ${tableName}, with attributes: ${JSON.stringify(
+						attributes
+					)}`
+				);
+				continue;
+			}
+		}
+		// if the table has already been defined, use that class, don't create a new one
+		let table = tables[tableName];
+		let indices = {},
+			existingAttributes = [];
+		let tableId;
+		let primaryStore;
+		const audit =
+			typeof primaryAttribute.audit === 'boolean' ? primaryAttribute.audit : envGet(CONFIG_PARAMS.LOGGING_AUDITLOG);
+		const trackDeletes = primaryAttribute.trackDeletes;
+		const expiration = primaryAttribute.expiration;
+		const eviction = primaryAttribute.eviction;
+		const sealed = primaryAttribute.sealed;
+		const splitSegments = primaryAttribute.splitSegments;
+		const replicate = primaryAttribute.replicate;
+		if (table) {
+			indices = table.indices;
+			existingAttributes = table.attributes;
+			table.schemaVersion++;
+		} else {
+			tableId = primaryAttribute.tableId;
+			if (tableId) {
+				if (tableId >= (dbisStore.get(NEXT_TABLE_ID) || 0)) {
+					dbisStore.putSync(NEXT_TABLE_ID, tableId + 1);
+					logger.info(`Updating next table id (it was out of sync) to ${tableId + 1} for ${tableName}`);
+				}
+			} else {
+				primaryAttribute.tableId = tableId = dbisStore.get(NEXT_TABLE_ID);
+				if (!tableId) tableId = 1;
+				logger.debug(`Table {tableName} missing an id, assigning {tableId}`);
+				dbisStore.putSync(NEXT_TABLE_ID, tableId + 1);
+				dbisStore.putSync(primaryAttribute.key, primaryAttribute);
+			}
+			const dbiInit = new OpenDBIObject(!primaryAttribute.is_hash_attribute, primaryAttribute.is_hash_attribute);
+			dbiInit.compression = primaryAttribute.compression;
+			if (dbiInit.compression) {
+				const compressionThreshold =
+					envGet(CONFIG_PARAMS.STORAGE_COMPRESSION_THRESHOLD) || DEFAULT_COMPRESSION_THRESHOLD; // this is the only thing that can change;
+				dbiInit.compression.threshold = compressionThreshold;
+			}
+			primaryStore = handleLocalTimeForGets(
+				RocksDatabase.open(rootStore.path, { ...dbiInit, name: primaryAttribute.key }),
+				rootStore
+			);
+			rootStore.databaseName = databaseName;
+			primaryStore.tableId = tableId;
+		}
+		let attributesUpdated: boolean;
+		for (const attribute of attributes) {
+			attribute.attribute = attribute.name;
+			try {
+				// now load the non-primary keys, opening the dbs as necessary for indices
+				if (!attribute.is_hash_attribute && (attribute.indexed || (attribute.attribute && !attribute.name))) {
+					if (!indices[attribute.name]) {
+						const dbi = openIndex(attribute.key, rootStore, attribute);
+						indices[attribute.name] = dbi;
+						indices[attribute.name].indexNulls = attribute.indexNulls;
+					}
+					const existingAttribute = existingAttributes.find(
+						(existingAttribute) => existingAttribute.name === attribute.name
+					);
+					if (existingAttribute)
+						existingAttributes.splice(existingAttributes.indexOf(existingAttribute), 1, attribute);
+					else existingAttributes.push(attribute);
+					attributesUpdated = true;
+				}
+			} catch (error) {
+				logger.error(`Error trying to update attribute`, attribute, existingAttributes, indices, error);
+			}
+		}
+		for (const existingAttribute of existingAttributes) {
+			const attribute = attributes.find((attribute) => attribute.name === existingAttribute.name);
+			if (!attribute) {
+				if (existingAttribute.is_hash_attribute) {
+					logger.error('Unable to remove existing primary key attribute', existingAttribute);
+					continue;
+				}
+				if (existingAttribute.indexed) {
+					// we only remove attributes if they were indexed, in order to support dropAttribute that removes dynamic indexed attributes
+					existingAttributes.splice(existingAttributes.indexOf(existingAttribute), 1);
+					attributesUpdated = true;
+				}
+			}
+		}
+		if (table) {
+			if (attributesUpdated) {
+				table.schemaVersion++;
+				table.updatedAttributes();
+			}
+		} else {
+			table = setTable(
+				tables,
+				tableName,
+				makeTable({
+					primaryStore,
+					auditStore,
+					audit,
+					sealed,
+					splitSegments,
+					replicate,
+					expirationMS: expiration && expiration * 1000,
+					evictionMS: eviction && eviction * 1000,
+					trackDeletes,
+					tableName,
+					tableId,
+					primaryKey: primaryAttribute.name,
+					databasePath: databaseName,
+					databaseName,
+					indices,
+					attributes,
+					schemaDefined: primaryAttribute.schemaDefined,
+					dbisDB: dbisStore,
+				})
+			);
+			table.schemaVersion = 1;
+			for (const listener of tableListeners) {
+				listener(table);
+			}
+		}
+	}
+	return rootStore;
 }
 
 export function resetDatabases() {
@@ -485,219 +547,6 @@ export function resetDatabases() {
 	return databases;
 }
 
-/**
- * This is responsible for reading the internal dbi of a single database file to get a list of all the tables and
- * their indexed or registered attributes
- * @param path
- * @param defaultTable
- * @param databaseName
- */
-export function readMetaDb(
-	path: string,
-	defaultTable?: string,
-	databaseName: string = DEFAULT_DATABASE_NAME,
-	auditPath?: string,
-	isLegacy?: boolean
-) {
-	const envInit = new OpenEnvironmentObject(path, false);
-	try {
-		let rootStore = lmdbDatabaseEnvs.get(path);
-		if (rootStore) {
-			rootStore.needsDeletion = false;
-		} else {
-			rootStore = open(envInit);
-			databaseEnvs.set(path, rootStore);
-			lmdbDatabaseEnvs.set(path, rootStore);
-		}
-
-		const internalDbiInit = new OpenDBIObject(false);
-		let dbisStore = rootStore.dbisDb;
-		if (!dbisStore) {
-			dbisStore = rootStore.openDB(INTERNAL_DBIS_NAME, internalDbiInit);
-			rootStore.dbisDb = dbisStore;
-		}
-
-		let auditStore = rootStore.auditStore;
-		if (!auditStore) {
-			if (auditPath) {
-				if (existsSync(auditPath)) {
-					envInit.path = auditPath;
-					auditStore = open(envInit);
-					auditStore.isLegacy = true;
-				}
-			} else {
-				auditStore = openAuditStore(rootStore);
-			}
-		}
-
-		const tables = ensureDB(databaseName);
-		const definedTables = tables[DEFINED_TABLES];
-		const tablesToLoad = new Map<string, any>();
-
-		for (const result of dbisStore.getRange({ start: false })) {
-			const { key, value } = result as { key: string; value: any };
-			let [tableName, attribute_name] = key.toString().split('/');
-			if (attribute_name === '') {
-				// primary key
-				attribute_name = value.name;
-			} else if (!attribute_name) {
-				attribute_name = tableName;
-				tableName = defaultTable;
-				if (!value.name) {
-					// legacy attribute
-					value.name = attribute_name;
-					value.indexed = !value.is_hash_attribute;
-				}
-			}
-			definedTables?.add(tableName);
-			let tableDef = tablesToLoad.get(tableName);
-			if (!tableDef) tablesToLoad.set(tableName, (tableDef = { attributes: [] }));
-			if (attribute_name == null || value.is_hash_attribute) tableDef.primary = value;
-			if (attribute_name != null) tableDef.attributes.push(value);
-			Object.defineProperty(value, 'key', { value: key, configurable: true });
-		}
-
-		for (const [tableName, tableDef] of tablesToLoad) {
-			let { attributes, primary: primaryAttribute } = tableDef;
-			if (!primaryAttribute) {
-				// this isn't defined, find it in the attributes
-				for (const attribute of attributes) {
-					if (attribute.is_hash_attribute || attribute.isPrimaryKey) {
-						primaryAttribute = attribute;
-						break;
-					}
-				}
-				if (!primaryAttribute) {
-					logger.warn(
-						`Unable to find a primary key attribute on table ${tableName}, with attributes: ${JSON.stringify(
-							attributes
-						)}`
-					);
-					continue;
-				}
-			}
-			// if the table has already been defined, use that class, don't create a new one
-			let table = tables[tableName];
-			let indices = {},
-				existingAttributes = [];
-			let tableId;
-			let primaryStore;
-			const audit =
-				typeof primaryAttribute.audit === 'boolean' ? primaryAttribute.audit : envGet(CONFIG_PARAMS.LOGGING_AUDITLOG);
-			const trackDeletes = primaryAttribute.trackDeletes;
-			const expiration = primaryAttribute.expiration;
-			const eviction = primaryAttribute.eviction;
-			const sealed = primaryAttribute.sealed;
-			const splitSegments = primaryAttribute.splitSegments;
-			const replicate = primaryAttribute.replicate;
-			if (table) {
-				indices = table.indices;
-				existingAttributes = table.attributes;
-				table.schemaVersion++;
-			} else {
-				tableId = primaryAttribute.tableId;
-				if (tableId) {
-					if (tableId >= (dbisStore.get(NEXT_TABLE_ID) || 0)) {
-						dbisStore.putSync(NEXT_TABLE_ID, tableId + 1);
-						logger.info(`Updating next table id (it was out of sync) to ${tableId + 1} for ${tableName}`);
-					}
-				} else {
-					primaryAttribute.tableId = tableId = dbisStore.get(NEXT_TABLE_ID);
-					if (!tableId) tableId = 1;
-					logger.debug(`Table {tableName} missing an id, assigning {tableId}`);
-					dbisStore.putSync(NEXT_TABLE_ID, tableId + 1);
-					dbisStore.putSync(primaryAttribute.key, primaryAttribute);
-				}
-				const dbiInit = new OpenDBIObject(!primaryAttribute.is_hash_attribute, primaryAttribute.is_hash_attribute);
-				dbiInit.compression = primaryAttribute.compression;
-				if (dbiInit.compression) {
-					const compressionThreshold =
-						envGet(CONFIG_PARAMS.STORAGE_COMPRESSION_THRESHOLD) || DEFAULT_COMPRESSION_THRESHOLD; // this is the only thing that can change;
-					dbiInit.compression.threshold = compressionThreshold;
-				}
-				primaryStore = handleLocalTimeForGets(rootStore.openDB(primaryAttribute.key, dbiInit), rootStore);
-				rootStore.databaseName = databaseName;
-				primaryStore.tableId = tableId;
-			}
-			let attributesUpdated: boolean;
-			for (const attribute of attributes) {
-				attribute.attribute = attribute.name;
-				try {
-					// now load the non-primary keys, opening the dbs as necessary for indices
-					if (!attribute.is_hash_attribute && (attribute.indexed || (attribute.attribute && !attribute.name))) {
-						if (!indices[attribute.name]) {
-							const dbi = openIndex(attribute.key, rootStore, attribute);
-							indices[attribute.name] = dbi;
-							indices[attribute.name].indexNulls = attribute.indexNulls;
-						}
-						const existingAttribute = existingAttributes.find(
-							(existingAttribute) => existingAttribute.name === attribute.name
-						);
-						if (existingAttribute)
-							existingAttributes.splice(existingAttributes.indexOf(existingAttribute), 1, attribute);
-						else existingAttributes.push(attribute);
-						attributesUpdated = true;
-					}
-				} catch (error) {
-					logger.error(`Error trying to update attribute`, attribute, existingAttributes, indices, error);
-				}
-			}
-			for (const existingAttribute of existingAttributes) {
-				const attribute = attributes.find((attribute) => attribute.name === existingAttribute.name);
-				if (!attribute) {
-					if (existingAttribute.is_hash_attribute) {
-						logger.error('Unable to remove existing primary key attribute', existingAttribute);
-						continue;
-					}
-					if (existingAttribute.indexed) {
-						// we only remove attributes if they were indexed, in order to support dropAttribute that removes dynamic indexed attributes
-						existingAttributes.splice(existingAttributes.indexOf(existingAttribute), 1);
-						attributesUpdated = true;
-					}
-				}
-			}
-			if (table) {
-				if (attributesUpdated) {
-					table.schemaVersion++;
-					table.updatedAttributes();
-				}
-			} else {
-				table = setTable(
-					tables,
-					tableName,
-					makeTable({
-						primaryStore,
-						auditStore,
-						audit,
-						sealed,
-						splitSegments,
-						replicate,
-						expirationMS: expiration && expiration * 1000,
-						evictionMS: eviction && eviction * 1000,
-						trackDeletes,
-						tableName,
-						tableId,
-						primaryKey: primaryAttribute.name,
-						databasePath: isLegacy ? databaseName + '/' + tableName : databaseName,
-						databaseName,
-						indices,
-						attributes,
-						schemaDefined: primaryAttribute.schemaDefined,
-						dbisDB: dbisStore,
-					})
-				);
-				table.schemaVersion = 1;
-				for (const listener of tableListeners) {
-					listener(table);
-				}
-			}
-		}
-		return rootStore;
-	} catch (error) {
-		error.message += ` opening database ${path}`;
-		throw error;
-	}
-}
 interface TableDefinition {
 	table: string;
 	database?: string;
@@ -929,7 +778,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 		if (splitSegments == undefined) splitSegments = Table.splitSegments;
 		Table.attributes.splice(0, Table.attributes.length, ...attributes);
 	} else {
-		const auditStore = 'auditStore' in rootStore ? rootStore.auditStore : undefined;
+		const auditStore = rootStore.auditStore;
 		primaryKeyAttribute = attributes.find((attribute) => attribute.isPrimaryKey) || {};
 		primaryKey = primaryKeyAttribute.name;
 		primaryKeyAttribute.is_hash_attribute = primaryKeyAttribute.isPrimaryKey = true;
