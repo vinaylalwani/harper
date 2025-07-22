@@ -459,7 +459,7 @@ export class ResourceBridge extends LMDBBridge {
 	}
 
 	resetReadTxn(schema, table) {
-		getTable({ schema, table })?.primaryStore.resetReadTxn();
+		getTable({ schema, table })?.primaryStore.resetReadTxn?.();
 	}
 
 	async deleteAuditLogsBefore(deleteObj) {

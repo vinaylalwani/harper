@@ -181,8 +181,10 @@ export function getDatabases(): Databases {
 						readRocksMetaDb(dbPath, null, dbName);
 						continue;
 					}
-				} catch {
-					// skip
+				} catch (err) {
+					if (!('code' in err && err.code === 'ENOENT')) {
+						throw err;
+					}
 				}
 			}
 		}
