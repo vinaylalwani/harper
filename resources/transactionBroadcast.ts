@@ -3,6 +3,8 @@ import { IterableEventQueue } from './IterableEventQueue.ts';
 import { keyArrayToString } from './Resources.ts';
 import { readAuditEntry } from './auditStore.ts';
 import type { Id } from './ResourceInterface.ts';
+import { RocksDatabase } from '@harperdb/rocksdb-js';
+
 const allSubscriptions = Object.create(null); // using it as a map that doesn't change much
 const allSameThreadSubscriptions = Object.create(null); // using it as a map that doesn't change much
 /**
@@ -209,8 +211,12 @@ export function listenToCommits(primaryStore, auditStore) {
 				}
 			};
 			// try to get lock or wait for it
-			if (!store.attemptLock('thread-local-writes', acquiredLock)) return;
-			acquiredLock();
+			const lockAcquired = store instanceof RocksDatabase
+				? store.tryLock('thread-local-writes', acquiredLock)
+				: store.attemptLock('thread-local-writes', acquiredLock);
+			if (lockAcquired) {
+				acquiredLock();
+			}
 		});
 	}
 }

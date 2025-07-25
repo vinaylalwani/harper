@@ -3782,18 +3782,21 @@ export function makeTable(options) {
 		// attemptLock() will return true if we got the lock, and the callback won't be called.
 		// If another thread has the lock it returns false and then the callback is called once
 		// the other thread releases the lock.
-		if (
-			!primaryStore.attemptLock(id, existingVersion, () => {
-				// This is called when another thread releases the lock on resolution. Hopefully
-				// it should be resolved now and we can use the value it saved.
-				clearTimeout(timer);
-				const entry = primaryStore.getEntry(id);
-				if (!entry || !entry.value || entry.metadataFlags & (INVALIDATED | EVICTED))
-					// try again
-					whenResolved(getFromSource(id, primaryStore.getEntry(id), context));
-				else whenResolved(entry);
-			})
-		) {
+		const callback = () => {
+			// This is called when another thread releases the lock on resolution. Hopefully
+			// it should be resolved now and we can use the value it saved.
+			clearTimeout(timer);
+			const entry = primaryStore.getEntry(id);
+			if (!entry || !entry.value || entry.metadataFlags & (INVALIDATED | EVICTED))
+				// try again
+				whenResolved(getFromSource(id, primaryStore.getEntry(id), context));
+			else whenResolved(entry);
+		};
+		const lockAcquired = primaryStore instanceof RocksDatabase
+			? primaryStore.tryLock(id, callback)
+			: primaryStore.attemptLock(id, existingVersion, callback);
+
+		if (!lockAcquired) {
 			return new Promise((resolve) => {
 				whenResolved = resolve;
 				timer = setTimeout(() => {

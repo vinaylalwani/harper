@@ -41,6 +41,7 @@ import { asyncSerialization, hasAsyncSerialization } from '../server/serverHelpe
 import { HAS_BLOBS, readAuditEntry } from './auditStore.ts';
 import { getHeapStatistics } from 'node:v8';
 import { setTimeout as delay, setImmediate as rest } from 'node:timers/promises';
+import { RocksDatabase } from '@harperdb/rocksdb-js';
 
 type StorageInfo = {
 	storageIndex: number;
@@ -192,12 +193,24 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 						throw new Error(`Incomplete blob for ${filePath}`);
 					}
 					return new Promise((resolve, reject) => {
+<<<<<<< HEAD
 						if (
 							store.attemptLock(lockKey, 0, () => {
 								writeFinished = true;
 								return resolve(readContents());
 							})
 						) {
+=======
+						const callback = () => {
+							writeFinished = true;
+							store.unlock(lockKey, 0);
+							return resolve(readContents());
+						};
+						const lockAcquired = store instanceof RocksDatabase
+							? store.tryLock(lockKey, callback)
+							: store.attemptLock(lockKey, 0, callback);
+						if (lockAcquired) {
+>>>>>>> 73b8ee4f2 (Update lock api)
 							writeFinished = true;
 							store.unlock(lockKey, 0);
 							return resolve(readContents());
