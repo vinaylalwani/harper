@@ -120,27 +120,20 @@ function symlinkHarperModule(componentDirectory: string) {
 			store.unlock(componentDirectory, 0);
 			reject(new Error('symlinking harperdb module timed out'));
 		}, 10_000);
-<<<<<<< HEAD
-		if (
-			// Get lock for this component
-			Status.primaryStore.attemptLock(componentDirectory, 0, () => {
-				clearTimeout(timeout);
-				resolve();
-			})
-		) {
-=======
 
 		const callback = () => {
 			clearTimeout(timeout);
 			resolve();
 		};
 		const store = Status.primaryStore;
-		const lockAcquired = store instanceof RocksDatabase
-			? store.tryLock(componentDirectory, callback)
-			: store.attemptLock(componentDirectory, 0, callback);
+		const lockAcquired =
+			store instanceof RocksDatabase
+				? store.tryLock(componentDirectory, callback)
+				: store.attemptLock(componentDirectory, 0, callback);
 
 		if (!lockAcquired) {
->>>>>>> 73b8ee4f2 (Update lock api)
+			clearTimeout(timeout);
+		} else {
 			try {
 				// validate node_modules directory exists
 				const nodeModulesDir = join(componentDirectory, 'node_modules');
@@ -165,12 +158,8 @@ function symlinkHarperModule(componentDirectory: string) {
 				symlinkSync(PACKAGE_ROOT, harperModule, 'dir');
 				resolve();
 			} finally {
-<<<<<<< HEAD
 				// finally release the lock
-				Status.primaryStore.unlock(componentDirectory, 0);
-=======
 				store.unlock(componentDirectory, 0);
->>>>>>> 73b8ee4f2 (Update lock api)
 			}
 		}
 	});
@@ -199,9 +188,8 @@ function sequentiallyHandleApplication(scope: Scope, plugin: PluginModule) {
 			whenResolved(sequentiallyHandleApplication(scope, plugin));
 		};
 		const store = Status.primaryStore;
-		const lockAcquired = store instanceof RocksDatabase
-			? store.tryLock(scope.name, callback)
-			: store.attemptLock(scope.name, 0, callback);
+		const lockAcquired =
+			store instanceof RocksDatabase ? store.tryLock(scope.name, callback) : store.attemptLock(scope.name, 0, callback);
 
 		if (!lockAcquired) {
 			return new Promise((resolve, reject) => {
