@@ -17,6 +17,7 @@ setTimeout(() => {
 	// let everything load before we actually load and start the profiler
 	import('./profile.ts');
 }, 1000);
+import { RocksDatabase } from '@harperdb/rocksdb-js';
 
 const log = forComponent('analytics').conditional;
 
@@ -374,12 +375,17 @@ async function aggregation(fromPeriod, toPeriod = 60000) {
 				log.warn?.('Unusually high event queue latency on the main thread of ' + Math.round(now - start) + 'ms');
 			start = performance.now(); // We use this start time to measure the time it actually takes to on the task queue, minus the time on the event queu
 		});
-		analyticsTable.primaryStore.prefetch([1], () => {
-			const now = performance.now();
-			if (now - start > 5000)
-				log.warn?.('Unusually high task queue latency on the main thread of ' + Math.round(now - start) + 'ms');
-			resolve(now - start);
-		});
+		if (analyticsTable.primaryStore instanceof RocksDatabase) {
+			// TOOD: Implement this for RocksDB
+			resolve(0);
+		} else {
+			analyticsTable.primaryStore.prefetch([1], () => {
+				const now = performance.now();
+				if (now - start > 5000)
+					log.warn?.('Unusually high task queue latency on the main thread of ' + Math.round(now - start) + 'ms');
+				resolve(now - start);
+			});
+		}
 	});
 	let lastForPeriod;
 	// find the last entry for this period
