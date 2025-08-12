@@ -2981,7 +2981,7 @@ export function makeTable(options) {
 			return stats && (stats.treeBranchPageCount + stats.treeLeafPageCount + stats.overflowPages) * stats.pageSize;
 		}
 		static getStorageStats() {
-			const storePath = primaryStore.env.path;
+			const storePath = primaryStore.path;
 			const stats: any = fs.statfsSync?.(storePath) ?? {};
 			return {
 				available: stats.bavail * stats.bsize,

@@ -182,7 +182,7 @@ export function getDatabases(): Databases {
 						continue;
 					}
 				} catch (err) {
-					if (!('code' in err && err.code === 'ENOENT')) {
+					if (!('code' in err && (err.code === 'ENOENT' || err.code === 'ENOTDIR'))) {
 						throw err;
 					}
 				}
