@@ -111,7 +111,7 @@ export class DatabaseTransaction implements Transaction {
 		if (DEBUG_LONG_TXNS) {
 			this.stackTraces.push(new StartedTransaction());
 		if (this.readTxn instanceof RocksTransaction) {
-			//
+			// TODO: Implement this for RocksDB
 		} else {
 			(this.readTxn as LMDBTransaction).use();
 			this.readTxnsUsed++;
@@ -122,7 +122,7 @@ export class DatabaseTransaction implements Transaction {
 	doneReadTxn() {
 		if (!this.readTxn) return;
 		if (this.readTxn instanceof RocksTransaction) {
-			//
+			// TODO: Implement this for RocksDB
 		} else {
 			(this.readTxn as LMDBTransaction).done();
 		}

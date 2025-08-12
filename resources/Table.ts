@@ -1268,7 +1268,7 @@ export function makeTable(options) {
 			const context = this.getContext();
 			if ((target as RequestTarget)?.checkPermission) {
 				// requesting authorization verification
-				allowed = this.allowDelete(context.user, target as RequestTarget /*, context */);
+				allowed = this.allowDelete(context.user, target as RequestTarget, context);
 			}
 			return when(allowed, (allowed: boolean) => {
 				if (!allowed) {
@@ -1814,7 +1814,7 @@ export function makeTable(options) {
 				const context = this.getContext();
 				if (target.checkPermission) {
 					// requesting authorization verification
-					allowed = this.allowDelete(context.user, target /*, context */);
+					allowed = this.allowDelete(context.user, target, context);
 				}
 				return when(allowed, (allowed: boolean) => {
 					if (!allowed) {

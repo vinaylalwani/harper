@@ -13,8 +13,7 @@ export function transaction<T>(callback: (transaction: Transaction) => T): T;
  */
 export function transaction<T>(
 	ctx: Context | ((transaction: Transaction) => T),
-	callback?: (transaction: Transaction) => T,
-	// options?: any
+	callback?: (transaction: Transaction) => T
 ): T {
 	let context: Context;
 	if (typeof ctx === 'function') {
