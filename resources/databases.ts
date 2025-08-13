@@ -24,7 +24,7 @@ import { handleLocalTimeForGets } from './RecordEncoder.ts';
 import { deleteRootBlobPathsForDB } from './blob.ts';
 import { CUSTOM_INDEXES } from './indexes/customIndexes.ts';
 import * as OpenDBIObjectModule from '../utility/lmdb/OpenDBIObject.js';
-import { RocksDatabase } from '@harperdb/rocksdb-js';
+import { RocksDatabase, type RocksDatabaseOptions } from '@harperdb/rocksdb-js';
 
 function OpenDBIObject(dupSort, isPrimary) {
 	// what is going on with esbuild, it suddenly is randomly flip-flopping the module record for OpenDBIObject, sometimes return the correct exports object and sometimes returning the exports as the `default`.
@@ -64,7 +64,7 @@ export interface Databases {
 export const tables: Tables = Object.create(null);
 export const databases: Databases = Object.create(null);
 
-const useRocksdb = envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb';
+const useRocksdb = false; // envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb';
 
 // note: technically `Database` is either a `LMDBStore` or a `CachingStore`
 interface LMDBDatabase extends Database {
@@ -88,6 +88,7 @@ interface RocksDatabaseEx extends RocksDatabase {
 	isLegacy?: boolean;
 	isIndexing?: boolean;
 	indexNulls?: boolean;
+	getEntry?: (id: string | number | (string | number)[] | Buffer, options?: any) => { value: any };
 }
 
 interface RocksRootDatabase extends RocksDatabaseEx {
@@ -98,6 +99,17 @@ interface RocksRootDatabase extends RocksDatabaseEx {
 }
 
 export type RootDatabaseKind = LMDBRootDatabase | RocksRootDatabase;
+
+function openRocksDatabase(path: string, options?: RocksDatabaseOptions) {
+	const db = RocksDatabase.open(path, options) as RocksRootDatabase;
+	db.env = {};
+	db.getEntry = (id, options) => {
+		return {
+			value: db.getSync(id, options),
+		};
+	};
+	return db;
+}
 
 const databaseEnvs = new Map<string, RootDatabaseKind>();
 const lmdbDatabaseEnvs = new Map<string, LMDBRootDatabase>();
@@ -313,8 +325,7 @@ export function readMetaDb(
 function readRocksMetaDb(path: string, defaultTable?: string, databaseName: string = DEFAULT_DATABASE_NAME) {
 	try {
 		logger.trace(`loading rocksdb database: ${path}`);
-		const rootStore = RocksDatabase.open(path) as RocksRootDatabase;
-		rootStore.env = {};
+		const rootStore = openRocksDatabase(path);
 		databaseEnvs.set(path, rootStore);
 		rocksdbDatabaseEnvs.set(path, rootStore);
 
@@ -338,11 +349,7 @@ function initStores(
 	let dbisStore = rootStore.dbisDb;
 	if (!dbisStore) {
 		if (rootStore instanceof RocksDatabase) {
-			dbisStore = RocksDatabase.open(rootStore.path, {
-				...internalDbiInit,
-				name: INTERNAL_DBIS_NAME,
-			}) as RocksDatabaseEx;
-			dbisStore.env = {};
+			dbisStore = openRocksDatabase(rootStore.path, { ...internalDbiInit, name: INTERNAL_DBIS_NAME });
 		} else {
 			dbisStore = rootStore.openDB(INTERNAL_DBIS_NAME, internalDbiInit);
 		}
@@ -355,8 +362,7 @@ function initStores(
 			if (existsSync(auditPath)) {
 				envInit.path = auditPath;
 				if (rootStore instanceof RocksDatabase) {
-					auditStore = RocksDatabase.open(envInit.path, envInit) as RocksDatabaseEx;
-					auditStore.env = {};
+					auditStore = openRocksDatabase(envInit.path, envInit);
 				} else {
 					auditStore = open(envInit);
 				}
@@ -452,10 +458,9 @@ function initStores(
 			}
 			if (rootStore instanceof RocksDatabase) {
 				primaryStore = handleLocalTimeForGets(
-					RocksDatabase.open(rootStore.path, { ...dbiInit, name: primaryAttribute.key }),
+					openRocksDatabase(rootStore.path, { ...dbiInit, name: primaryAttribute.key }),
 					rootStore
 				);
-				primaryStore.env = {};
 			} else {
 				primaryStore = handleLocalTimeForGets(rootStore.openDB(primaryAttribute.key, dbiInit), rootStore);
 			}
@@ -650,8 +655,7 @@ export function database({ database: databaseName, table: tableName }) {
 		rootStore = rocksdbDatabaseEnvs.get(path);
 		if (!rootStore || rootStore.status === 'closed') {
 			const envInit = new OpenEnvironmentObject(path, false);
-			rootStore = RocksDatabase.open(path, envInit) as RocksRootDatabase;
-			rootStore.env = {};
+			rootStore = openRocksDatabase(path, envInit);
 			databaseEnvs.set(path, rootStore);
 			rocksdbDatabaseEnvs.set(path, rootStore);
 		}
@@ -716,8 +720,7 @@ function openIndex(dbiKey: string, rootStore: LMDBRootDatabase | RocksRootDataba
 	const dbiInit = new OpenDBIObject(!objectStorage, objectStorage);
 	let dbi: LMDBDatabase | (RocksDatabase & { customIndex?: any; isIndexing?: boolean; indexNulls?: boolean });
 	if (rootStore instanceof RocksDatabase) {
-		dbi = RocksDatabase.open(rootStore.path, { ...dbiInit, name: dbiKey }) as RocksDatabaseEx;
-		dbi.env = {};
+		dbi = openRocksDatabase(rootStore.path, { ...dbiInit, name: dbiKey });
 	} else {
 		dbi = rootStore.openDB(dbiKey, dbiInit);
 	}
@@ -820,11 +823,10 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 		const dbiName = tableName + '/';
 
 		if (rootStore instanceof RocksDatabase) {
-			attributesDbi = rootStore.dbisDb = RocksDatabase.open(rootStore.path, {
+			attributesDbi = rootStore.dbisDb = openRocksDatabase(rootStore.path, {
 				...internalDbiInit,
 				name: INTERNAL_DBIS_NAME,
-			}) as RocksDatabaseEx;
-			attributesDbi.env = {};
+			});
 		} else {
 			attributesDbi = rootStore.dbisDb = rootStore.openDB(INTERNAL_DBIS_NAME, internalDbiInit);
 		}
@@ -839,8 +841,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 
 		let primaryStore;
 		if (rootStore instanceof RocksDatabase) {
-			primaryStore = RocksDatabase.open(rootStore.path, { ...internalDbiInit, name: dbiName }) as RocksDatabaseEx;
-			primaryStore.env = {};
+			primaryStore = openRocksDatabase(rootStore.path, { ...internalDbiInit, name: dbiName });
 		} else {
 			primaryStore = rootStore.openDB(dbiName, dbiInit);
 		}
@@ -884,11 +885,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 	const indices = Table.indices;
 	if (!attributesDbi) {
 		if (rootStore instanceof RocksDatabase) {
-			rootStore.dbisDb = RocksDatabase.open(rootStore.path, {
-				...internalDbiInit,
-				name: INTERNAL_DBIS_NAME,
-			}) as RocksDatabaseEx;
-			rootStore.dbisDb.env = {};
+			rootStore.dbisDb = openRocksDatabase(rootStore.path, { ...internalDbiInit, name: INTERNAL_DBIS_NAME });
 		} else {
 			rootStore.dbisDb = rootStore.openDB(INTERNAL_DBIS_NAME, internalDbiInit);
 		}

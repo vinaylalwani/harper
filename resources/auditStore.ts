@@ -74,6 +74,11 @@ export function openAuditStore(rootStore) {
 	if (rootStore instanceof RocksDatabase) {
 		auditStore = RocksDatabase.open(rootStore.path, { ...AUDIT_STORE_OPTIONS, name: AUDIT_STORE_NAME });
 		auditStore.env = {};
+		auditStore.getEntry = (id, options) => {
+			return {
+				value: auditStore.getSync(id, options)
+			};
+		};
 		updateLastRemoved(auditStore, 1);
 	} else {
 		auditStore = rootStore.openDB(AUDIT_STORE_NAME, {

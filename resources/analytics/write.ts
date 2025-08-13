@@ -644,7 +644,7 @@ setChildListenerByType(ANALYTICS_REPORT_TYPE, recordAnalytics);
 let scheduledTasksRunning;
 function startScheduledTasks() {
 	scheduledTasksRunning = true;
-	const AGGREGATE_PERIOD = envGet(CONFIG_PARAMS.ANALYTICS_AGGREGATEPERIOD) * 1000;
+	const AGGREGATE_PERIOD = 0; // envGet(CONFIG_PARAMS.ANALYTICS_AGGREGATEPERIOD) * 1000;
 	if (AGGREGATE_PERIOD) {
 		setInterval(
 			async () => {

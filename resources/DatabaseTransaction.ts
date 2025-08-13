@@ -248,9 +248,7 @@ export class DatabaseTransaction implements Transaction {
 				if (write.key) {
 					if (write.store instanceof RocksDatabase) {
 						if (retries > 0 || !write.entry) {
-							write.entry = {
-								value: write.store.getSync(write.key),
-							};
+							write.entry = write.store.getEntry(write.key);
 						}
 						nextCondition();
 					} else {
