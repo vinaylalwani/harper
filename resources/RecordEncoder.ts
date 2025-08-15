@@ -239,24 +239,20 @@ export function handleLocalTimeForGets(store, rootStore) {
 	store.cachePuts = false;
 	store.rootStore = rootStore;
 	store.encoder.rootStore = rootStore;
-
-	if (!isRocksDb) {
-		const storeGetEntry = store.getEntry;
-		store.getEntry = function (id, options) {
-			store.readCount++;
-			lastMetadata = null;
-			const entry = storeGetEntry.call(this, id, options);
-			// if we have decoded with metadata, we want to pull it out and assign to this entry
-			if (entry) {
-				if (lastMetadata) {
-					entry.metadataFlags = lastMetadata[METADATA];
-					entry.localTime = lastMetadata.localTime;
-					entry.residencyId = lastMetadata.residencyId;
-					entry.size = lastMetadata.size;
-					if (lastMetadata.expiresAt >= 0) {
-						entry.expiresAt = lastMetadata.expiresAt;
-					}
-					lastMetadata = null;
+	const storeGetEntry = store.getEntry;
+	store.getEntry = function (id, options) {
+		store.readCount++;
+		lastMetadata = null;
+		const entry = storeGetEntry.call(this, id, options);
+		// if we have decoded with metadata, we want to pull it out and assign to this entry
+		if (entry) {
+			if (lastMetadata) {
+				entry.metadataFlags = lastMetadata[METADATA];
+				entry.localTime = lastMetadata.localTime;
+				entry.residencyId = lastMetadata.residencyId;
+				entry.size = lastMetadata.size;
+				if (lastMetadata.expiresAt >= 0) {
+					entry.expiresAt = lastMetadata.expiresAt;
 				}
 				if (entry.value) {
 					entryMap.set(entry.value, entry); // allow the record to access the entry
@@ -264,8 +260,8 @@ export function handleLocalTimeForGets(store, rootStore) {
 				entry.key = id;
 			}
 			return entry;
-		};
-	}
+		}
+	};
 
 	const storeGet = store.get;
 	store.get = function (id, options) {

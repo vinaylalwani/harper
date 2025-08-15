@@ -1514,7 +1514,12 @@ export function makeTable(options) {
 					id = this.constructor.getNewId();
 					record[primaryKey] = id; // make this immediately available
 				} else {
-					if (primaryStore.get(id)) throw new ClientError('Record already exists', 409);
+					const existing = primaryStore instanceof RocksDatabase
+						? primaryStore.getSync(id)
+						: primaryStore.get(id);
+					if (existing) {
+						throw new ClientError('Record already exists', 409);
+					}
 				}
 				this._writeUpdate(id, record, true);
 				return record;
