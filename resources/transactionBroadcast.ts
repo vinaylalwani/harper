@@ -108,7 +108,9 @@ class Subscription extends IterableEventQueue {
 function notifyFromTransactionData(subscriptions) {
 	if (!subscriptions) return; // if no subscriptions to this env path, don't need to read anything
 	const auditStore = subscriptions.auditStore;
-	auditStore.resetReadTxn();
+	if (!(auditStore instanceof RocksDatabase)) {
+		auditStore.resetReadTxn();
+	}
 	nextTransaction(subscriptions.auditStore);
 	let subscribersWithTxns;
 	for (const { key: localTime, value: auditEntryEncoded } of auditStore.getRange({

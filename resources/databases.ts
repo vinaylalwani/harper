@@ -24,7 +24,7 @@ import { handleLocalTimeForGets } from './RecordEncoder.ts';
 import { deleteRootBlobPathsForDB } from './blob.ts';
 import { CUSTOM_INDEXES } from './indexes/customIndexes.ts';
 import * as OpenDBIObjectModule from '../utility/lmdb/OpenDBIObject.js';
-import { RocksDatabase, type RocksDatabaseOptions } from '@harperdb/rocksdb-js';
+import { RocksDatabase, Store as RocksStore, type RocksDatabaseOptions } from '@harperdb/rocksdb-js';
 
 function OpenDBIObject(dupSort, isPrimary) {
 	// what is going on with esbuild, it suddenly is randomly flip-flopping the module record for OpenDBIObject, sometimes return the correct exports object and sometimes returning the exports as the `default`.
@@ -61,11 +61,6 @@ export interface Databases {
 	[databaseName: string]: Tables;
 }
 
-export const tables: Tables = Object.create(null);
-export const databases: Databases = Object.create(null);
-
-const useRocksdb = envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb';
-
 // note: technically `Database` is either a `LMDBStore` or a `CachingStore`
 interface LMDBDatabase extends Database {
 	customIndex?: any;
@@ -100,8 +95,64 @@ interface RocksRootDatabase extends RocksDatabaseEx {
 
 export type RootDatabaseKind = LMDBRootDatabase | RocksRootDatabase;
 
+export const tables: Tables = Object.create(null);
+export const databases: Databases = Object.create(null);
+
+const useRocksdb = envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb';
+
+class HarperStore extends RocksStore {
+	SPECIAL_WRITE = 0x10101n;
+	REPLACE_WITH_TIMESTAMP_FLAG = 0x1000000n;
+	// REPLACE_WITH_TIMESTAMP = 0x1010101n;
+	DIRECT_WRITE = 0x2000000n;
+	// SET_VERSION = 0x200;
+
+	timestampBuffer = new DataView(new ArrayBuffer(8));
+
+	putSync(context, key, value, options) {
+		if (!this.db.opened) {
+			throw new Error('Database not open');
+		}
+
+		const valueBuffer = this.encodeValue(value);
+		const dataView = new DataView(
+			valueBuffer.buffer || valueBuffer,
+			valueBuffer.byteOffset || 0,
+			valueBuffer.byteLength || valueBuffer.length
+		);
+		const firstWord = dataView.getBigUint64(0, true);
+
+		if ((firstWord & 0xffffffn) === this.SPECIAL_WRITE) {
+			if (firstWord & this.REPLACE_WITH_TIMESTAMP_FLAG) {
+				if (firstWord & this.DIRECT_WRITE) {
+					// unsupported
+				} else {
+					// get current time with milliseconds precision as a double
+					const now = performance.timeOrigin + performance.now();
+
+					// convert the timestamp to a 64-bit int
+					const float64Array = new Float64Array([now]);
+					const bigUint64Array = new BigUint64Array(float64Array.buffer);
+
+					// convert the 64-bit int from big endian to little endian
+					this.timestampBuffer.setBigUint64(0, bigUint64Array[0], false);
+					const tsLE = this.timestampBuffer.getBigUint64(0, true);
+
+					// get the next 32 bits from the first word
+					const next32 = firstWord >> 32n;
+
+					// store the big integer timestamp in the value buffer
+					dataView.setBigUint64(0, tsLE ^ (next32 >> 8n), true);
+				}
+			}
+		}
+
+		context.putSync(this.encodeKey(key), valueBuffer, this.getTxnId(options));
+	}
+}
+
 function openRocksDatabase(path: string, options?: RocksDatabaseOptions) {
-	const db = RocksDatabase.open(path, options) as RocksRootDatabase;
+	const db = RocksDatabase.open(new HarperStore(path, options)) as RocksRootDatabase;
 	db.env = {};
 	db.getEntry = (id, options) => {
 		return {

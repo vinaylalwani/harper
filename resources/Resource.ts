@@ -511,25 +511,16 @@ function transactional(
 	applyContext.reliesOnPrototype = true;
 	const hasContent = options.hasContent;
 	return applyContext;
-
-	function applyContext(
-		idOrQuery: string | Id | RequestTarget,
-		dataOrContext?: any,
-		ctx?: Context
-	) {
-		let id;
-		let query;
-		let isCollection = false;
+	function applyContext(idOrQuery: string | Id | Query, dataOrContext?: any, context?: Context) {
+		let id, query, isCollection;
 		let data;
-		let context: Context;
-
 		// First we do our argument normalization. There are two main types of methods, with or without content
 		if (hasContent) {
 			// for put, post, patch, publish, query
-			if (ctx) {
+			if (context) {
 				// if there are three arguments, it is id, data, context
 				data = dataOrContext;
-				context = ctx.getContext?.() || context;
+				context = context.getContext?.() || context;
 			} else if (dataOrContext) {
 				// two arguments, more possibilities:
 				if (
@@ -572,16 +563,12 @@ function transactional(
 			// (request) a structured id/query, which we will use as the context
 			context = idOrQuery as Context;
 		}
-
 		if (id === undefined) {
 			if (typeof idOrQuery === 'object' && idOrQuery) {
 				// it is a query
 				query = idOrQuery;
-				id = idOrQuery instanceof URLSearchParams
-					? idOrQuery.toString()
-					: 'url' in idOrQuery ? idOrQuery.url : undefined; // get the request target (check .url for back-compat), and try to parse
-
-				if ('conditions' in idOrQuery && idOrQuery.conditions) {
+				id = idOrQuery instanceof URLSearchParams ? idOrQuery.toString() : idOrQuery.url; // get the request target (check .url for back-compat), and try to parse
+				if (idOrQuery.conditions) {
 					// it is already parsed, nothing more to do other than assign the id
 					id = idOrQuery.id;
 				} else if (typeof id === 'string') {
@@ -632,7 +619,7 @@ function transactional(
 					}
 				}
 				if (id === undefined) {
-					id = idOrQuery && typeof idOrQuery === 'object' && 'id' in idOrQuery && idOrQuery.id || null;
+					id = idOrQuery.id ?? null;
 					if (id == null) isCollection = true;
 				}
 			} else {
@@ -667,22 +654,20 @@ function transactional(
 			if (isCollection) resourceOptions.isCollection = true;
 		} else resourceOptions = options;
 		const loadAsInstance = this.loadAsInstance;
-
 		let runAction = authorizeActionOnResource;
 		if (loadAsInstance === false ? !this.explicitContext : this.explicitContext === false) {
 			// if we are using the newer resource API, we default to doing ALS context tracking, which is also
 			// necessary for accessing relationship properties on the direct frozen records
-			runAction = (resource) => contextStorage.run(context as Context, () => authorizeActionOnResource(resource));
+			runAction = (resource) => contextStorage.run(context, () => authorizeActionOnResource(resource));
 		}
-
-		if ('transaction' in context && context.transaction) {
+		if (context?.transaction) {
 			// we are already in a transaction, proceed
 			const resource = this.getResource(id, context, resourceOptions);
 			return resource.then ? resource.then(runAction) : runAction(resource);
 		} else {
 			// start a transaction
 			return transaction(
-				context as Context,
+				context,
 				() => {
 					// record what transaction we are starting from, so that if it times out, we can have an indication of the cause
 					context.transaction.startedFrom = {
@@ -691,11 +676,10 @@ function transactional(
 					};
 					const resource = this.getResource(id, context, resourceOptions);
 					return resource.then ? resource.then(runAction) : runAction(resource);
-				},
-				// resourceOptions
+				}
+				// resourceOptions // this is unused
 			);
 		}
-
 		function authorizeActionOnResource(resource: ResourceInterface) {
 			if (context.authorize) {
 				// authorization has been requested, but only do it for this entry call
