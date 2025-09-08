@@ -144,6 +144,7 @@ class HarperStore extends RocksStore {
 					const float64Array = new Float64Array([now]);
 					const bigUint64Array = new BigUint64Array(float64Array.buffer);
 					this.timestampBuffer.setBigUint64(0, bigUint64Array[0], false);
+					// setFloat64()
 					timestamp = this.timestampBuffer.getBigUint64(0, true);
 				}
 
