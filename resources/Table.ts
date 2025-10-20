@@ -1435,7 +1435,7 @@ export function makeTable(options) {
 					return updateRecord(id, partialRecord, entry, existingVersion, EVICTED, null, null, null, true);
 				}
 			}
-			primaryStore.ifVersion(id, existingVersion, () => {
+			primaryStore.ifVersion?.(id, existingVersion, () => {
 				updateIndices(id, existingRecord, null);
 			});
 			// evictions never go in the audit log, so we can not record a deletion entry for the eviction

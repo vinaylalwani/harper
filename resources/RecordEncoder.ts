@@ -168,14 +168,19 @@ export class RecordEncoder extends Encoder {
 		let nextByte = buffer[start];
 		let metadataFlags = 0;
 		try {
-			if (nextByte < 32 && end > 2) {
+			if ((this.isRocksDb && nextByte === 66) || (nextByte < 32 && end > 2)) {
 				// record with metadata
 				// this means that the record starts with a local timestamp (that was assigned by lmdb-js).
 				// we copy it so we can decode it as float-64; we need to do it first because if structural data
 				// is loaded during decoding the buffer can actually mutate
 				let position = start;
 				let localTime;
-				if (nextByte === 2) {
+				if (this.isRocksDb) {
+					buffer.copy(TIMESTAMP_HOLDER, 0, position);
+					position += 8;
+					localTime = TIMESTAMP_VIEW.getFloat64(0);
+					nextByte = buffer[position];
+				} else if (nextByte === 2) {
 					if (buffer.copy) {
 						buffer.copy(TIMESTAMP_HOLDER, 0, position);
 						position += 8;
@@ -261,12 +266,16 @@ export function handleLocalTimeForGets(store, rootStore) {
 				if (lastMetadata.expiresAt >= 0) {
 					entry.expiresAt = lastMetadata.expiresAt;
 				}
+				if (isRocksDb) entry.version = lastMetadata.localTime;
 				if (entry.value) {
 					entryMap.set(entry.value, entry); // allow the record to access the entry
 				}
 				entry.key = id;
 			}
-			return entry;
+			if (entry.value) {
+				entryMap.set(entry.value, entry); // allow the record to access the entry
+			}
+			entry.key = id;
 		}
 		return entry;
 	};

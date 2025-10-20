@@ -29,6 +29,8 @@ let txnExpiration = envMngr.get(CONFIG_PARAMS.STORAGE_MAXTRANSACTIONOPENTIME) ??
 
 class StartedTransaction extends Error {}
 
+type MaybePromise<T> = T | Promise<T>;
+
 export type CommitOptions = {
 	doneWriting?: boolean;
 	timestamp?: number;
@@ -154,11 +156,11 @@ export class DatabaseTransaction implements Transaction {
 	/**
 	 * Resolves with information on the timestamp and success of the commit
 	 */
-	commit(options: CommitOptions = {}): Promise<CommitResolution> | CommitResolution {
+	commit(options: CommitOptions = {}): MaybePromise<CommitResolution> {
 		let txnTime = this.timestamp;
 		if (!txnTime) txnTime = this.timestamp = options.timestamp || getNextMonotonicTime();
 		if (!options.timestamp) options.timestamp = txnTime;
-		let commitResolution: void | Promise<void>;
+		let commitResolution: MaybePromise<void>;
 		if (--this.readTxnsUsed > 0) {
 			// we still have outstanding iterators using the transaction, we can't just commit/abort it, we will still
 			// need to use it
@@ -252,12 +254,12 @@ export class DatabaseTransaction implements Transaction {
 		this.#context = context;
 	}
 }
-interface CommitResolution {
+export interface CommitResolution {
 	txnTime: number;
 	next?: CommitResolution;
 }
 export interface Transaction {
-	commit(options): Promise<CommitResolution>;
+	commit(options): MaybePromise<CommitResolution>;
 	abort?(): any;
 }
 

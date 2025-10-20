@@ -1,5 +1,10 @@
 import { Transaction as LMDBNativeTransaction } from 'lmdb';
-import { DatabaseTransaction, type CommitOptions, type TransactionWrite } from './DatabaseTransaction';
+import {
+	DatabaseTransaction,
+	type CommitOptions,
+	type TransactionWrite,
+	type CommitResolution,
+} from './DatabaseTransaction';
 import { getNextMonotonicTime } from '../utility/lmdb/commonUtility.js';
 import * as harperLogger from '../utility/logging/harper_logger.js';
 import type { Context, Id } from './ResourceInterface.ts';
