@@ -1,7 +1,6 @@
 import { Transaction as LMDBNativeTransaction } from 'lmdb';
-import { DatabaseTransaction } from './DatabaseTransaction';
+import { DatabaseTransaction, type CommitOptions, type TransactionWrite } from './DatabaseTransaction';
 import { getNextMonotonicTime } from '../utility/lmdb/commonUtility.js';
-import { ServerError } from '../utility/errors/hdbError.js';
 import * as harperLogger from '../utility/logging/harper_logger.js';
 import type { Context, Id } from './ResourceInterface.ts';
 import * as envMngr from '../utility/environment/environmentManager.js';
@@ -9,11 +8,9 @@ import { CONFIG_PARAMS } from '../utility/hdbTerms.ts';
 import { convertToMS } from '../utility/common_utils.js';
 import { RocksDatabase, Transaction as RocksTransaction } from '@harperdb/rocksdb-js';
 import type { RootDatabaseKind } from './databases.ts';
-import type { Entry } from './RecordEncoder.ts';
 
 const MAX_OPTIMISTIC_SIZE = 100;
 const trackedTxns = new Set<DatabaseTransaction>();
-const MAX_OUTSTANDING_TXN_DURATION = convertToMS(envMngr.get(CONFIG_PARAMS.STORAGE_MAXTRANSACTIONQUEUETIME)) || 45000; // Allow write transactions to be queued for up to 25 seconds before we start rejecting them
 export const TRANSACTION_STATE = {
 	CLOSED: 0, // the transaction has been committed or aborted and can no longer be used for writes (if read txn is active, it can be used for reads)
 	OPEN: 1, // the transaction is open and can be used for reads and writes
@@ -25,27 +22,9 @@ export function replicationConfirmation(callback) {
 	confirmReplication = callback;
 }
 
-type CommitOptions = {
-	doneWriting?: boolean;
-	timestamp?: number;
-	retries?: number;
-	flush?: boolean;
-};
-
-type ReadTransaction = (LMDBNativeTransaction | RocksTransaction) & {
+type ReadTransaction = LMDBNativeTransaction & {
 	openTimer?: number;
 	retryRisk?: number;
-};
-
-type TransactionWrite = {
-	key: Id;
-	store: RootDatabaseKind;
-	invalidated?: boolean;
-	entry?: Partial<Entry>;
-	before?: () => void;
-	beforeIntermediate?: () => void;
-	commit?: (txnTime: number, existingEntry: Entry, retries: number) => void;
-	validate?: (txnTime: number) => void;
 };
 
 export class LMDBTransaction extends DatabaseTransaction {
@@ -62,14 +41,6 @@ export class LMDBTransaction extends DatabaseTransaction {
 	overloadChecked: boolean;
 	open = TRANSACTION_STATE.OPEN;
 	replicatedConfirmation: number;
-
-	get timestamp() {
-		return this._timestamp;
-	}
-
-	set timestamp(value: number) {
-		this._timestamp = value;
-	}
 
 	getReadTxn(): ReadTransaction {
 		// used optimistically
@@ -122,17 +93,6 @@ export class LMDBTransaction extends DatabaseTransaction {
 		if (--this.readTxnRefCount === 0 && this.readTxnsUsed === 1) {
 			this.doneReadTxn();
 		}
-	}
-
-	checkOverloaded() {
-		if (
-			outstandingCommit &&
-			!this.overloadChecked &&
-			performance.now() - outstandingCommitStart > MAX_OUTSTANDING_TXN_DURATION
-		) {
-			throw new ServerError('Outstanding write transactions have too long of queue, please try again later', 503);
-		}
-		this.overloadChecked = true; // only check this once, don't interrupt ongoing transactions that have already made writes
 	}
 
 	addWrite(operation: TransactionWrite) {
@@ -350,20 +310,6 @@ export class LMDBTransaction extends DatabaseTransaction {
 		// reset the transaction
 		this.writes = [];
 	}
-	getContext() {
-		return this.#context;
-	}
-	setContext(context) {
-		this.#context = context;
-	}
-}
-interface CommitResolution {
-	txnTime: number;
-	next?: CommitResolution;
-}
-export interface Transaction {
-	commit(options): Promise<CommitResolution>;
-	abort?(): any;
 }
 
 export class ImmediateTransaction extends LMDBTransaction {

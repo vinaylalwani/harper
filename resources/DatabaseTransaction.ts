@@ -29,7 +29,7 @@ let txnExpiration = envMngr.get(CONFIG_PARAMS.STORAGE_MAXTRANSACTIONOPENTIME) ??
 
 class StartedTransaction extends Error {}
 
-type CommitOptions = {
+export type CommitOptions = {
 	doneWriting?: boolean;
 	timestamp?: number;
 	retries?: number;
@@ -41,7 +41,7 @@ type ReadTransaction = (LMDBTransaction | RocksTransaction) & {
 	retryRisk?: number;
 };
 
-type TransactionWrite = {
+export type TransactionWrite = {
 	key: Id;
 	store: RootDatabaseKind;
 	invalidated?: boolean;
@@ -151,11 +151,6 @@ export class DatabaseTransaction implements Transaction {
 		this.writes.push(operation);
 	}
 
-	removeWrite(operation: TransactionWrite) {
-		const index = this.writes.indexOf(operation);
-		if (index > -1) this.writes[index] = null;
-	}
-
 	/**
 	 * Resolves with information on the timestamp and success of the commit
 	 */
@@ -218,15 +213,14 @@ export class DatabaseTransaction implements Transaction {
 						};
 					});
 				},
-				(err) => {
-					// if the transaction failed, we need to retry. First record this as an increased risk of contention/retry
-					// for future transactions
-					if (db) {
-						db.retryRisk = (db.retryRisk || 0) + MAX_OPTIMISTIC_SIZE / 2;
-					}
-					if (options) options.retries = retries + 1;
-					else options = { retries: 1 };
-					return this.commit(options); // try again
+				(error) => {
+					if (error.code === 'ERR_BUSY') {
+						// if the transaction failed due to concurrent changes, we need to retry. First record this as an increased risk of contention/retry
+						// for future transactions
+						if (options) options.retries = (options.retries ?? 0) + 1;
+						else options = { retries: 1 };
+						return this.commit(options); // try again
+					} else throw error;
 				}
 			);
 		}
