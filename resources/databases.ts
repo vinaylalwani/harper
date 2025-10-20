@@ -163,7 +163,7 @@ class HarperStore extends RocksStore {
 }
 
 function openRocksDatabase(path: string, options?: RocksDatabaseOptions) {
-	const db = RocksDatabase.open(new HarperStore(path, options)) as RocksRootDatabase;
+	const db = RocksDatabase.open(path, options) as RocksRootDatabase;
 	db.env = {};
 	db.getEntry = (id, options) => {
 		return {

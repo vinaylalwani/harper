@@ -60,6 +60,7 @@ import { RequestTarget } from './RequestTarget.ts';
 import harperLogger from '../utility/logging/harper_logger.js';
 import { throttle } from '../server/throttle.ts';
 import { RocksDatabase } from '@harperdb/rocksdb-js';
+import { LMDBTransaction } from './LMDBTransaction';
 
 const { sortBy } = lodash;
 const { validateAttribute } = lmdbProcessRows;
@@ -1514,9 +1515,7 @@ export function makeTable(options) {
 					id = this.constructor.getNewId();
 					record[primaryKey] = id; // make this immediately available
 				} else {
-					const existing = primaryStore instanceof RocksDatabase
-						? primaryStore.getSync(id)
-						: primaryStore.get(id);
+					const existing = primaryStore instanceof RocksDatabase ? primaryStore.getSync(id) : primaryStore.get(id);
 					if (existing) {
 						throw new ClientError('Record already exists', 409);
 					}
@@ -3645,20 +3644,21 @@ export function makeTable(options) {
 	function txnForContext(context: Context) {
 		let transaction = context?.transaction;
 		if (transaction) {
-			if (!transaction.db) {
+			if (!transaction.store) {
 				// this is an uninitialized DatabaseTransaction, we can claim it
-				transaction.db = primaryStore;
+				transaction.store = primaryStore;
 				return transaction;
 			}
 			do {
 				// See if this is a transaction for our database and if so, use it
-				if (transaction.db?.path === primaryStore.path) return transaction;
+				if (transaction.store?.path === primaryStore.path) return transaction;
 				// try the next one:
 				const nextTxn = transaction.next;
 				if (!nextTxn) {
 					// no next one, then add our database
-					transaction = transaction.next = new DatabaseTransaction();
-					transaction.db = primaryStore;
+					transaction = transaction.next =
+						primaryStore instanceof RocksDatabase ? new DatabaseTransaction() : new LMDBTransaction();
+					transaction.store = primaryStore;
 					return transaction;
 				}
 				transaction = nextTxn;
@@ -3738,11 +3738,7 @@ export function makeTable(options) {
 		return ids;
 	}
 
-	function precedesExistingVersion(
-		txnTime: number,
-		existingEntry: Entry,
-		nodeId?: number
-	): number {
+	function precedesExistingVersion(txnTime: number, existingEntry: Entry, nodeId?: number): number {
 		if (nodeId === undefined) {
 			nodeId = server.replication?.getThisNodeId(auditStore);
 		}
@@ -3797,9 +3793,10 @@ export function makeTable(options) {
 				whenResolved(getFromSource(id, primaryStore.getEntry(id), context));
 			else whenResolved(entry);
 		};
-		const lockAcquired = primaryStore instanceof RocksDatabase
-			? primaryStore.tryLock(id, callback)
-			: primaryStore.attemptLock(id, existingVersion, callback);
+		const lockAcquired =
+			primaryStore instanceof RocksDatabase
+				? primaryStore.tryLock(id, callback)
+				: primaryStore.attemptLock(id, existingVersion, callback);
 
 		if (!lockAcquired) {
 			return new Promise((resolve) => {

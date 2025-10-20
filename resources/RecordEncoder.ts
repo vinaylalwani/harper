@@ -115,10 +115,16 @@ export class RecordEncoder extends Encoder {
 				lastValueEncoding = encoded.subarray((encoded.start || 0) + valueStart, encoded.end);
 				let position = encoded.start || 0;
 				if (timestamp) {
-					// we apply the special instruction bytes that tell lmdb-js how to assign the timestamp
-					TIMESTAMP_PLACEHOLDER[4] = timestamp;
-					TIMESTAMP_PLACEHOLDER[5] = timestamp >> 8;
-					encoded.set(TIMESTAMP_PLACEHOLDER, position);
+					if (this.isRocksDb) {
+						// rocksdb, just store the version directly as the timestamp
+						TIMESTAMP_VIEW.setFloat64(position, timestamp);
+						encoded.set(TIMESTAMP_HOLDER, position);
+					} else {
+						// we apply the special instruction bytes that tell lmdb-js how to assign the timestamp
+						TIMESTAMP_PLACEHOLDER[4] = timestamp;
+						TIMESTAMP_PLACEHOLDER[5] = timestamp >> 8;
+						encoded.set(TIMESTAMP_PLACEHOLDER, position);
+					}
 					position += 8;
 				}
 				if (blobsWereEncoded) metadata |= HAS_BLOBS;
@@ -239,6 +245,7 @@ export function handleLocalTimeForGets(store, rootStore) {
 	store.cachePuts = false;
 	store.rootStore = rootStore;
 	store.encoder.rootStore = rootStore;
+	store.encoder.isRocksDb = isRocksDb;
 	const storeGetEntry = store.getEntry;
 	store.getEntry = function (id, options) {
 		store.readCount++;
@@ -261,6 +268,7 @@ export function handleLocalTimeForGets(store, rootStore) {
 			}
 			return entry;
 		}
+		return entry;
 	};
 
 	const storeGet = store.get;
@@ -366,7 +374,10 @@ export function recordUpdater(store, tableId, auditStore) {
 		auditRecord?: any
 	) {
 		// determine if and how we apply the local timestamp
-		if (audit == null)
+		if (store instanceof RocksDatabase) {
+			// with rocksdb, we simplify to just storing the singular version/timestamp
+			timestampNextEncoding = newVersion;
+		} else if (audit == null)
 			// if not auditing, there is no local timestamp to reference
 			timestampNextEncoding = NO_TIMESTAMP;
 		else if (resolveRecord)

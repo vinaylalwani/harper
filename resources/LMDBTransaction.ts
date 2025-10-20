@@ -1,5 +1,5 @@
-import { Transaction as LMDBTransaction } from 'lmdb';
-import { LMDBTransaction as HarperLMDBTransaction } from './LMDBTransaction.ts';
+import { Transaction as LMDBNativeTransaction } from 'lmdb';
+import { DatabaseTransaction } from './DatabaseTransaction';
 import { getNextMonotonicTime } from '../utility/lmdb/commonUtility.js';
 import { ServerError } from '../utility/errors/hdbError.js';
 import * as harperLogger from '../utility/logging/harper_logger.js';
@@ -7,14 +7,13 @@ import type { Context, Id } from './ResourceInterface.ts';
 import * as envMngr from '../utility/environment/environmentManager.js';
 import { CONFIG_PARAMS } from '../utility/hdbTerms.ts';
 import { convertToMS } from '../utility/common_utils.js';
-import { RocksDatabase, Transaction as RocksTransaction, type Store as RocksStore } from '@harperdb/rocksdb-js';
+import { RocksDatabase, Transaction as RocksTransaction } from '@harperdb/rocksdb-js';
 import type { RootDatabaseKind } from './databases.ts';
 import type { Entry } from './RecordEncoder.ts';
 
 const MAX_OPTIMISTIC_SIZE = 100;
 const trackedTxns = new Set<DatabaseTransaction>();
 const MAX_OUTSTANDING_TXN_DURATION = convertToMS(envMngr.get(CONFIG_PARAMS.STORAGE_MAXTRANSACTIONQUEUETIME)) || 45000; // Allow write transactions to be queued for up to 25 seconds before we start rejecting them
-const DEBUG_LONG_TXNS = envMngr.get(CONFIG_PARAMS.STORAGE_DEBUGLONGTRANSACTIONS);
 export const TRANSACTION_STATE = {
 	CLOSED: 0, // the transaction has been committed or aborted and can no longer be used for writes (if read txn is active, it can be used for reads)
 	OPEN: 1, // the transaction is open and can be used for reads and writes
@@ -25,9 +24,6 @@ let confirmReplication;
 export function replicationConfirmation(callback) {
 	confirmReplication = callback;
 }
-let txnExpiration = envMngr.get(CONFIG_PARAMS.STORAGE_MAXTRANSACTIONOPENTIME) ?? 30000;
-
-class StartedTransaction extends Error {}
 
 type CommitOptions = {
 	doneWriting?: boolean;
@@ -36,7 +32,7 @@ type CommitOptions = {
 	flush?: boolean;
 };
 
-type ReadTransaction = (LMDBTransaction | RocksTransaction) & {
+type ReadTransaction = (LMDBNativeTransaction | RocksTransaction) & {
 	openTimer?: number;
 	retryRisk?: number;
 };
@@ -52,24 +48,17 @@ type TransactionWrite = {
 	validate?: (txnTime: number) => void;
 };
 
-export class DatabaseTransaction implements Transaction {
+export class LMDBTransaction extends DatabaseTransaction {
 	#context: Context;
 	writes: TransactionWrite[] = []; // the set of writes to commit if the conditions are met
-	store: RootDatabaseKind;
-	transaction: RocksTransaction;
+	db: RootDatabaseKind;
 	readTxn: ReadTransaction;
 	readTxnRefCount: number;
 	readTxnsUsed: number;
-	timeout: number;
 	validated = 0;
 	_timestamp = 0;
 	declare next: DatabaseTransaction;
 	declare stale: boolean;
-	declare startedFrom?: {
-		resourceName: string;
-		method: string;
-	};
-	declare stackTraces?: StartedTransaction[];
 	overloadChecked: boolean;
 	open = TRANSACTION_STATE.OPEN;
 	replicatedConfirmation: number;
@@ -83,39 +72,49 @@ export class DatabaseTransaction implements Transaction {
 	}
 
 	getReadTxn(): ReadTransaction {
+		// used optimistically
 		this.readTxnRefCount = (this.readTxnRefCount || 0) + 1;
-		this.timeout = txnExpiration; // reset the timeout
+		if (this.stale) this.stale = false;
 		if (this.readTxn) {
 			if (this.readTxn.openTimer) this.readTxn.openTimer = 0;
 			return this.readTxn;
 		}
 		if (this.open !== TRANSACTION_STATE.OPEN) return; // can not start a new read transaction as there is no future commit that will take place, just have to allow the read to latest database state
 
-		this.transaction = new RocksTransaction(this.store.store);
+		if (this.db instanceof RocksDatabase) {
+			this.readTxn = new RocksTransaction(this.db.store);
+		} else {
+			// Get a read transaction from lmdb-js; make sure we do this first, as it can fail, we don't want to leave the transaction in a bad state with readTxnsUsed > 0
+			this.readTxn = this.db.useReadTransaction();
+		}
 
 		this.readTxnsUsed = 1;
-		if (DEBUG_LONG_TXNS) {
-			this.stackTraces = [new StartedTransaction()];
-		}
 		if (this.readTxn.openTimer) this.readTxn.openTimer = 0;
 		trackedTxns.add(this);
-		return this.transaction;
+		return this.readTxn;
 	}
 
 	useReadTxn() {
-		const readTxn = this.getReadTxn();
-		if (DEBUG_LONG_TXNS) {
-			this.stackTraces.push(new StartedTransaction());
-		this.readTxnsUsed++;
-		return readTxn;
+		this.getReadTxn();
+		if (this.readTxn instanceof RocksTransaction) {
+			// TODO: Implement this for RocksDB
+		} else {
+			(this.readTxn as LMDBTransaction).use();
+			this.readTxnsUsed++;
+		}
+		return this.readTxn;
 	}
 
 	doneReadTxn() {
-		if (!this.transaction) return;
+		if (!this.readTxn) return;
+		if (this.readTxn instanceof RocksTransaction) {
+			// TODO: Implement this for RocksDB
+		} else {
+			(this.readTxn as LMDBTransaction).done();
+		}
 		if (--this.readTxnsUsed === 0) {
 			trackedTxns.delete(this);
-			this.transaction?.abort();
-			this.transaction = null;
+			this.readTxn = null;
 		}
 	}
 
@@ -140,15 +139,15 @@ export class DatabaseTransaction implements Transaction {
 		if (this.open === TRANSACTION_STATE.CLOSED) {
 			throw new Error('Can not use a transaction that is no longer open');
 		}
-		if (!this.transaction) {
-			this.transaction = new RocksTransaction(this.store as RocksStore);
+
+		if (this.open === TRANSACTION_STATE.LINGERING) {
+			// if the transaction is lingering, it is already committed, so we need to commit the write immediately
+			const immediateTxn = new DatabaseTransaction();
+			immediateTxn.addWrite(operation);
+			return immediateTxn.commit({});
 		}
-		let txnTime = this.timestamp;
-		if (!txnTime) txnTime = this.timestamp = getNextMonotonicTime();
-		// immediately execute in this transaction
-		operation.commit(txnTime, operation.entry, 0, this.transaction);
-		// record the write as well in case we need to redo the transaction if it fails
-		this.writes.push(operation);
+
+		this.writes.push(operation); // standard path, add to current transaction
 	}
 
 	removeWrite(operation: TransactionWrite) {
@@ -159,35 +158,137 @@ export class DatabaseTransaction implements Transaction {
 	/**
 	 * Resolves with information on the timestamp and success of the commit
 	 */
-	commit(options: CommitOptions = {}): Promise<CommitResolution> | CommitResolution {
+	commit(options: CommitOptions = {}): Promise<CommitResolution> {
 		let txnTime = this.timestamp;
 		if (!txnTime) txnTime = this.timestamp = options.timestamp || getNextMonotonicTime();
 		if (!options.timestamp) options.timestamp = txnTime;
-		let commitResolution: void | Promise<void>;
-		if (--this.readTxnsUsed > 0) {
-			// we still have outstanding iterators using the transaction, we can't just commit/abort it, we will still
-			// need to use it
-			commitResolution =
-				this.writes.length > 0
-					? this.transaction?.commit({ renewAfterCommit: true /* Try to use RocksDB's CommitAndTryCreateSnapshot */ })
-					: // don't abort, we still have outstanding reads to complete
-						null;
-		} else {
-			// no more reads need to be performed, just commit/abort based if there are any writes
-			commitResolution = this.writes.length > 0 ? this.transaction?.commit() : this.transaction?.abort();
+		const retries = options.retries || 0;
+		// now validate
+		if (this.validated < this.writes.length) {
+			try {
+				const start = this.validated;
+				// record the number of writes that have been validated so if we re-execute
+				// and the number is increased we can validate the new entries
+				this.validated = this.writes.length;
+				for (let i = start; i < this.validated; i++) {
+					const write = this.writes[i];
+					write?.validate?.(this.timestamp);
+				}
+				let hasBefore;
+				for (let i = start; i < this.validated; i++) {
+					const write = this.writes[i];
+					if (!write) continue;
+					if (write.before || write.beforeIntermediate) {
+						hasBefore = true;
+					}
+				}
+				// Now we need to let any "before" actions execute. These are calls to the sources,
+				// and we want to follow the order of the source sequence so that later, more canonical
+				// source writes will finish (with right to refuse/abort) before proceeeding to less
+				// canonical sources.
+				if (hasBefore) {
+					return (async () => {
+						try {
+							for (let phase = 0; phase < 2; phase++) {
+								let completion;
+								for (let i = start; i < this.validated; i++) {
+									const write = this.writes[i];
+									if (!write) continue;
+									const before = write[phase === 0 ? 'before' : 'beforeIntermediate'];
+									if (before) {
+										const nextCompletion = before();
+										if (completion) {
+											if (completion.push) completion.push(nextCompletion);
+											else completion = [completion, nextCompletion];
+										} else completion = nextCompletion;
+									}
+								}
+								if (completion) await (completion.push ? Promise.all(completion) : completion);
+							}
+						} catch (error) {
+							this.abort();
+							throw error;
+						}
+						return this.commit(options);
+					})();
+				}
+			} catch (error) {
+				this.abort();
+				throw error;
+			}
+		}
+		// release the read snapshot so we don't keep it open longer than necessary
+		if (!retries) this.doneReadTxn();
+		this.open = options?.doneWriting ? TRANSACTION_STATE.LINGERING : TRANSACTION_STATE.OPEN;
+		let resolution;
+		const completions = [];
+		let writeIndex = 0;
+		this.writes = this.writes.filter((write) => write); // filter out removed entries
+		const doWrite = (write) => {
+			write.commit(txnTime, write.entry, retries);
+		};
+		// this uses optimistic locking to submit a transaction, conditioning each write on the expected version
+		const nextCondition = () => {
+			const write = this.writes[writeIndex++];
+			if (write) {
+				if (write.key) {
+					if (write.store instanceof RocksDatabase) {
+						if (retries > 0 || !write.entry) {
+							write.entry = write.store.getEntry(write.key);
+						}
+						nextCondition();
+					} else {
+						if (retries > 0 || !write.entry) {
+							// if the first optimistic attempt failed, we need to try again with the very latest version
+							write.entry = write.store.getEntry(write.key);
+						}
+
+						const conditionResolution = write.store.ifVersion(write.key, write.entry?.version ?? null, nextCondition);
+						resolution = resolution || conditionResolution;
+					}
+				} else {
+					nextCondition();
+				}
+			} else {
+				for (const write of this.writes) {
+					doWrite(write);
+				}
+			}
+		};
+
+		const db = this.db;
+		// only commit if there are writes
+		if (this.writes.length > 0) {
+			// we also maintain a retry risk for the transaction, which is a measure of how likely it is that the transaction
+			// will fail and retry due to contention. This is used to determine when to give up on optimistic writes and
+			// use a real (async) transaction to get exclusive access to the data
+			if (db?.retryRisk) db.retryRisk *= 0.99; // gradually decay the retry risk
+			if (this.writes.length + (db?.retryRisk || 0) < MAX_OPTIMISTIC_SIZE >> retries) nextCondition();
+			else {
+				// if it is too big to expect optimistic writes to work, or we have done too many retries we use
+				// a real LMDB transaction to get exclusive access to reading and writing
+				resolution = this.writes[0].store.transaction(() => {
+					for (const write of this.writes) {
+						// we load latest data while in the transaction
+						write.entry = write.store.getEntry(write.key);
+						doWrite(write);
+					}
+					return true; // success. always success
+				});
+			}
 		}
 
-		if (commitResolution) {
+		if (resolution) {
 			if (!outstandingCommit) {
-				outstandingCommit = commitResolution;
+				outstandingCommit = resolution;
 				outstandingCommitStart = performance.now();
 				outstandingCommit.then(() => {
 					outstandingCommit = null;
 				});
 			}
-			let completions = [];
-			return commitResolution.then(
-				() => {
+
+			return resolution.then((resolution) => {
+				if (resolution) {
 					if (this.next) {
 						completions.push(this.next.commit(options));
 					}
@@ -211,14 +312,12 @@ export class DatabaseTransaction implements Transaction {
 					// now reset transactions tracking; this transaction be reused and committed again
 					this.writes = [];
 					this.next = null;
-					this.timestamp = 0; // reset the timestamp as well
 					return Promise.all(completions).then(() => {
 						return {
 							txnTime,
 						};
 					});
-				},
-				(err) => {
+				} else {
 					// if the transaction failed, we need to retry. First record this as an increased risk of contention/retry
 					// for future transactions
 					if (db) {
@@ -228,7 +327,7 @@ export class DatabaseTransaction implements Transaction {
 					else options = { retries: 1 };
 					return this.commit(options); // try again
 				}
-			);
+			});
 		}
 		const txnResolution: CommitResolution = {
 			txnTime,
@@ -267,7 +366,7 @@ export interface Transaction {
 	abort?(): any;
 }
 
-export class ImmediateTransaction extends DatabaseTransaction {
+export class ImmediateTransaction extends LMDBTransaction {
 	addWrite(operation) {
 		super.addWrite(operation);
 		// immediately commit the write
@@ -287,21 +386,15 @@ let timer;
 function startMonitoringTxns() {
 	timer = setInterval(function () {
 		for (const txn of trackedTxns) {
-			if (txn.timeout <= 0) {
+			if (txn.stale) {
 				const url = txn.getContext()?.url;
 				harperLogger.error(
-					`Transaction was open too long and has been committed, from table: ${
+					`Transaction was open too long and has been aborted, from table: ${
 						txn.store?.name + (url ? ' path: ' + url : '')
-					}`,
-					...(txn.startedFrom ? [`was started from ${txn.startedFrom.resourceName}.${txn.startedFrom.method}`] : []),
-					...(DEBUG_LONG_TXNS ? ['starting stack trace', txn.stackTraces] : [])
+					}`
 				);
-				// reset the transaction
-				txn.commit();
-				txn.timeout = txnExpiration;
-			} else {
-				txn.timeout -= txnExpiration;
-			}
+				txn.abort();
+			} else txn.stale = true;
 		}
 	}, txnExpiration).unref();
 }

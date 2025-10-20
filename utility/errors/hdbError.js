@@ -84,6 +84,11 @@ function handleHDBError(
 	if (isHDBError(e)) {
 		return e;
 	}
+	if (e) {
+		e.statusCode = httpCode;
+		e.message ||= httpMsg;
+		return e;
+	}
 
 	const error = new HdbError(e, httpMsg, httpCode, logLevel, logMsg);
 
