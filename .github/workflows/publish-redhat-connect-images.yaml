@@ -1,4 +1,4 @@
-name: 'Publish HarperDB Redhat Connect Container'
+name: 'Publish Harper Redhat Connect Images'
 
 on:
   workflow_dispatch:
