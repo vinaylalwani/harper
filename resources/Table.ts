@@ -1234,6 +1234,7 @@ export function makeTable(options) {
 		 * @param entry
 		 */
 		static _recordRelocate(existing_entry, entry) {
+			if (this.getResidencyById) return false; // we don't want to relocate entries that are located by id
 			const context = {
 				previousResidency: this.getResidencyRecord(existing_entry.residencyId),
 				isRelocation: true,
