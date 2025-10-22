@@ -85,6 +85,53 @@ describe('Scope', () => {
 		assert.equal(entryHandlerCloseSpy.callCount, 1, 'close event for entry handler should be emitted once');
 	});
 
+	it('should create a default entry handler with urlPath', async () => {
+		writeFileSync(this.configFilePath, stringify({ [this.name]: { files: 'test.js', urlPath: 'abc' } }));
+
+		const scope = new Scope(this.name, this.directory, this.configFilePath, this.resources, this.server);
+
+		const readySpy = spy();
+		scope.on('ready', readySpy);
+
+		await scope.ready;
+
+		assert.ok(readySpy.calledOnce, 'ready event should be emitted once');
+
+		assert.ok(scope instanceof EventEmitter, 'Scope should be an instance of EventEmitter');
+		assert.ok(scope.options instanceof OptionsWatcher, 'Scope should have an OptionsWatcher instance');
+		assert.ok(scope.resources instanceof Resources, 'Scope should have a resources property of type Map');
+		assert.ok(scope.server !== undefined, 'Scope should have a server property');
+
+		const handleEntrySpy = spy();
+		const entryHandler = scope.handleEntry(handleEntrySpy);
+		assert.ok(entryHandler instanceof EntryHandler, 'Entry handler should be created');
+
+		await writeFile(this.testFilePath, '"foo";');
+
+		await waitFor(() => handleEntrySpy.callCount > 0);
+		const callArgs = handleEntrySpy.getCall(0).args[0];
+		assert.equal(callArgs.eventType, 'add', 'handleEntry argument `eventType` should be `add`');
+		assert.equal(callArgs.entryType, 'file', 'handleEntry argument `entryType` should be `file`');
+		assert.equal(callArgs.absolutePath, this.testFilePath, 'handleEntry argument `absolutePath` should be the test file path');
+		assert.equal(callArgs.urlPath, '/abc/test.js', 'handleEntry argument `urlPath` should be `abc/test.js`');
+		assert.ok(callArgs.stats !== undefined, 'add event argument `stats` should be defined');
+		assert.ok(callArgs.stats.isFile(), 'add event argument `stats` should be a file');
+
+		const scopeCloseSpy = spy();
+		scope.on('close', scopeCloseSpy);
+
+		const scopeOptionsCloseSpy = spy();
+		scope.options.on('close', scopeOptionsCloseSpy);
+
+		const entryHandlerCloseSpy = spy();
+		entryHandler.on('close', entryHandlerCloseSpy);
+
+		scope.close();
+		assert.equal(scopeCloseSpy.callCount, 1, 'close event should be emitted once');
+		assert.equal(scopeOptionsCloseSpy.callCount, 1, 'close event for options should be emitted once');
+		assert.equal(entryHandlerCloseSpy.callCount, 1, 'close event for entry handler should be emitted once');
+	});
+
 	it('should call requestRestart if no entry handler is provided', async () => {
 		writeFileSync(this.configFilePath, stringify({ [this.name]: { files: '.' } }));
 
