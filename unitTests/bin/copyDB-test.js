@@ -105,9 +105,12 @@ describe('Test database copy and compact', () => {
 	it('Test compactOnStart compacts and overwrites DB', async () => {
 		await copyDB.compactOnStart();
 		const stat_after = await fs.stat(path.join(storage_path, 'copy-test.mdb'));
-		assert(update_config_stub.called);
-		assert(!console_error_spy.called);
-		assert((stat_after.size / stat_before_compact.size) * 100 < 10);
+		assert(update_config_stub.called, 'updateConfigValue should be called');
+		assert(!console_error_spy.called, 'console.error should not be called');
+		assert(
+			(stat_after.size / stat_before_compact.size) * 100 < 10,
+			'after size ' + stat_after.size + ' should be' + ' much less than before size ' + stat_before_compact.size
+		);
 	});
 
 	it('Test compactOnStart compacts and overwrites DB and keeps backups', async () => {
