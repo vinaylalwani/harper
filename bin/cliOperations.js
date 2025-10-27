@@ -82,6 +82,7 @@ const SUPPORTED_OPS = [
 	'get_status',
 	'set_status',
 	'clear_status',
+	'get_usage_licenses',
 ];
 
 const OP_ALIASES = { deploy: 'deploy_component', package: 'package_component' };
