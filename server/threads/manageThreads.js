@@ -6,6 +6,7 @@ const { join, isAbsolute, extname } = require('path');
 const { server } = require('../Server.ts');
 const { watch, readdir } = require('fs/promises');
 const { totalmem } = require('os');
+const { setHeapSnapshotNearHeapLimit } = require('v8');
 const hdbTerms = require('../../utility/hdbTerms.ts');
 const envMgr = require('../../utility/environment/environmentManager.js');
 const harperLogger = require('../../utility/logging/harper_logger.js');
@@ -58,6 +59,10 @@ connectedPorts.sendToThread = function (threadId, message) {
 module.exports.whenThreadsStarted = new Promise((resolve) => {
 	module.exports.threadsHaveStarted = resolve;
 });
+
+// make sure this is set on all threads, including the main thread (this is no-op
+// if it was already with the execArgv below)
+if (envMgr.get(hdbTerms.CONFIG_PARAMS.THREADS_HEAPSNAPSHOTNEARLIMIT)) setHeapSnapshotNearHeapLimit(1);
 
 let isMainWorker;
 function setTerminateTimeout(newTimeout) {
@@ -133,17 +138,19 @@ function startWorker(path, options = {}) {
 
 	if (!extname(path)) path += '.js';
 
+	const execArgv = [
+		'--enable-source-maps',
+		'--expose-internals', // expose Node.js internal utils so jsLoader can use `decorateErrorStack()`
+	];
+	if (envMgr.get(hdbTerms.CONFIG_PARAMS.THREADS_HEAPSNAPSHOTNEARLIMIT))
+		execArgv.push('--heapsnapshot-near-heap-limit=1');
+
 	const worker = new Worker(isAbsolute(path) ? path : join(PACKAGE_ROOT, path), {
 		resourceLimits: {
 			maxOldGenerationSizeMb: maxOldMemory,
 			maxYoungGenerationSizeMb: maxYoungMemory,
 		},
-		execArgv: [
-			'--enable-source-maps',
-
-			// expose Node.js internal utils so jsLoader can use `decorateErrorStack()`
-			'--expose-internals',
-		],
+		execArgv,
 		argv: process.argv.slice(2),
 		// pass these in synchronously to the worker so it has them on startup:
 		workerData: {
