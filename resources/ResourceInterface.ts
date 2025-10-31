@@ -1,28 +1,38 @@
-import { DatabaseTransaction } from './DatabaseTransaction.ts';
+import { User } from '../security/user.types.ts';
 import type { OperationFunctionName } from '../server/serverHelpers/serverUtilities.ts';
-import { RequestTarget } from './RequestTarget.ts';
+import { DatabaseTransaction } from './DatabaseTransaction.ts';
+import { IterableEventQueue } from './IterableEventQueue.js';
 import type { Entry } from './RecordEncoder.ts';
+import { RequestTarget } from './RequestTarget.ts';
 
-export interface ResourceInterface<Key = any, Record = any> {
+export interface ResourceInterface<Record extends object = any> {
+	allowRead(user: User, target: RequestTarget): boolean | Promise<boolean>;
 	get?(id: Id): Promise<Record>;
 	get?(query: RequestTargetOrId): Promise<AsyncIterable<Record>>;
-	put?(target: RequestTargetOrId, record: any): void;
-	post?(target: RequestTargetOrId, record: any): void;
-	create?(target: RequestTargetOrId, record: any): void;
-	patch?(target: RequestTargetOrId, record: any): void;
-	publish?(target: RequestTargetOrId, record: any): void;
-	update?(updates: any, fullUpdate?: boolean): Promise<UpdatableRecord<Record>>;
-	delete?(target: RequestTargetOrId): boolean;
-	search?(query: RequestTarget): AsyncIterable<any>;
-	subscribe?(request: SubscriptionRequest): Subscription;
-	allowRead(user: any, target: RequestTarget): boolean | Promise<boolean>;
-	allowUpdate(user: any, record: any, target: RequestTarget): boolean | Promise<boolean>;
-	allowCreate(user: any, record: any, target: RequestTarget): boolean | Promise<boolean>;
-	allowDelete(user: any, target: RequestTarget): boolean | Promise<boolean>;
-}
+	search?(query: RequestTarget): AsyncIterable<Record>;
 
-export interface User {
-	username: string;
+	allowCreate(user: User, record: Record, target: RequestTarget): boolean | Promise<boolean>;
+	create?(target: RequestTargetOrId, record: Partial<Record>): void;
+	post?(target: RequestTargetOrId, record: Partial<Record>): void;
+
+	allowUpdate(user: User, record: Record, target: RequestTarget): boolean | Promise<boolean>;
+	put?(target: RequestTargetOrId, record: Record): void;
+	patch?(target: RequestTargetOrId, record: Partial<Record>): void;
+	update?(updates: Record, fullUpdate: true): ResourceInterface<Record>;
+	update?(updates: Partial<Record>, fullUpdate?: boolean): ResourceInterface<Record> | Promise<ResourceInterface<Record> | UpdatableRecord<Record>>;
+	addTo(propety, value): void;
+	subtractFrom(propety, value): void;
+
+	allowDelete(user: User, target: RequestTarget): boolean | Promise<boolean>;
+	delete?(target: RequestTargetOrId): boolean;
+	invalidate(target: RequestTargetOrId): void | Promise<void>;
+
+	publish?(target: RequestTargetOrId, record: Record): void;
+	subscribe?(request: SubscriptionRequest): Promise<Subscription>;
+
+	doesExist(): boolean;
+	wasLoadedFromSource(): boolean | void;
+	getUpdatedTime(): number;
 }
 
 export interface Context {
@@ -58,11 +68,11 @@ export interface Context {
 	_freezeRecords?: boolean; // until v5, we conditionally freeze records for back-compat
 }
 
-export interface SourceContext<TRequestContext = Context> {
+export interface SourceContext<TRequestContext = Context, Record extends object = any> {
 	/** The original request context passed from the caching layer */
 	requestContext: TRequestContext;
 	/** The existing record, from the existing entry (if any) */
-	replacingRecord?: any;
+	replacingRecord?: Record;
 	/** The existing database entry (if any) */
 	replacingEntry?: Entry;
 	/** The version/timestamp of the existing record */
@@ -70,7 +80,7 @@ export interface SourceContext<TRequestContext = Context> {
 	/** Indicates that values from the source data should NOT be stored as a cached value */
 	noCacheStore?: boolean;
 	/** Reference to the source Resource instance */
-	source?: ResourceInterface;
+	source?: ResourceInterface<Record>;
 	/** Shared resource cache from parent context for visibility of modifications */
 	resourceCache?: Map<Id, any>;
 	/** Database transaction for the context */
@@ -83,42 +93,49 @@ export interface SourceContext<TRequestContext = Context> {
 
 export type Operator = 'and' | 'or';
 
-type Comparator =
-	| 'equals'
+export type Comparator =
+	| 'between'
 	| 'contains'
-	| 'starts_with'
 	| 'ends_with'
+	| 'eq'
+	| 'equals'
 	| 'greater_than'
 	| 'greater_than_equal'
 	| 'less_than'
 	| 'less_than_equal'
-	| 'between';
+	| 'ne'
+	| 'not_equal'
+	| 'starts_with';
 
-export interface DirectCondition {
-	attribute?: string;
-	search_attribute?: string;
+export type DirectCondition<Record extends object = any> = TypedDirectCondition<Record, keyof Record>;
+
+interface TypedDirectCondition<Record extends object, Property extends keyof Record> {
+	attribute?: keyof Record;
+	search_attribute?: keyof Record;
 	comparator?: Comparator;
 	search_type?: Comparator;
-	value?: any;
-	search_value?: any;
+	value?: Record[Property];
+	search_value?: Record[Property];
 }
-interface ConditionGroup {
-	conditions?: Conditions;
+
+interface ConditionGroup<Record extends object = any> {
+	conditions?: Conditions<Record>;
 	operator?: Operator;
 }
-export type Condition = DirectCondition & ConditionGroup;
-export type Conditions = Condition[];
+export type Condition<Record extends object = any> = DirectCondition<Record> & ConditionGroup<Record>;
+export type Conditions<Record extends object = any> = Condition<Record>[];
 
-export interface Sort {
-	attribute: string;
+export interface Sort<Record extends object = any> {
+	attribute: keyof Record;
 	descending?: boolean;
-	next?: Sort;
+	next?: Sort<Record>;
 }
 export interface SubSelect {
 	name: string;
 	select: (string | SubSelect)[];
 }
 export type Select = (string | SubSelect)[];
+
 export interface SubscriptionRequest {
 	/** The starting time of events to return (defaults to now) */
 	startTime?: number;
@@ -130,11 +147,33 @@ export interface SubscriptionRequest {
 	includeDescendants?: boolean;
 	supportsTransactions?: boolean;
 	rawEvents?: boolean;
-	listener: (data: any) => void;
+	listener: Listener;
 }
+
 export type Query = RequestTarget; // for back-compat
 export type RequestTargetOrId = RequestTarget | Id;
 
 export type Id = number | string | (number | string | null)[] | null;
-export type UpdatableRecord<T> = T;
-interface Subscription {}
+
+export type UpdatableRecord<Record extends object = any> = TypedUpdatableRecord<Record, keyof Record>;
+interface TypedUpdatableRecord<Record extends object, Property extends keyof Record> {
+	set(property: Property, value: Record[Property]): void;
+	getProperty(property: Property): Record[Property];
+	getUpdatedTime(): number;
+	getExpiresAt(): number;
+	addTo(property: Property, value: Record[Property]): void;
+	subtractFrom(property: Property, value: Record[Property]): void;
+}
+
+interface Subscription extends IterableEventQueue {
+	new(listener: Listener);
+
+	listener: Listener;
+	subscriptions: Listener[];
+	startTime?: number;
+
+	end(): void;
+	toJSON(): { name: 'subscription' };
+}
+
+type Listener = (recordId: Id, auditEntry: any, localTime: number, beginTxn: boolean) => void;
