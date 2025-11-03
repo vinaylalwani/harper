@@ -13,7 +13,7 @@ import guidePath from 'path';
 import { PACKAGE_ROOT } from '../utility/packageUtils.js';
 import globalSchema from '../utility/globalSchema.js';
 import commonUtils from '../utility/common_utils.js';
-import userSchema from '../security/user.ts';
+import * as userSchema from '../security/user.ts';
 import { server as serverRegistration, type ServerOptions } from '../server/Server.ts';
 import {
 	authHandler,
@@ -25,7 +25,6 @@ import {
 import { registerContentHandlers } from './serverHelpers/contentTypes.ts';
 import type { OperationFunctionName } from './serverHelpers/serverUtilities.ts';
 import type { ParsedSqlObject } from '../sqlTranslator/index.js';
-import type { User } from '../resources/ResourceInterface.ts';
 import { generateJsonApi } from '../resources/openApi.ts';
 import { Resources } from '../resources/Resources.ts';
 import { ServerError } from '../utility/errors/hdbError.js';
@@ -98,7 +97,7 @@ async function setUp() {
 interface BaseOperationRequestBody {
 	operation: OperationFunctionName;
 	bypassAuth: boolean;
-	hdb_user?: User;
+	hdb_user?: userSchema.User;
 	hdbAuthHeader?: unknown;
 	bypass_auth?: boolean;
 	password?: string;
