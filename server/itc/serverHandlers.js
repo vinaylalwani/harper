@@ -4,7 +4,7 @@
 const hdbLogger = require('../../utility/logging/harper_logger.js');
 const hdbTerms = require('../../utility/hdbTerms.ts');
 const cleanLmdbMap = require('../../utility/lmdb/cleanLMDBMap.js');
-const userSchema = require('../../security/user.js');
+const userSchema = require('../../security/user.ts');
 const { validateEvent } = require('../threads/itc.js');
 const harperBridge = require('../../dataLayer/harperBridge/harperBridge.js');
 const process = require('process');

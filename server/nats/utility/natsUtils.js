@@ -26,7 +26,7 @@ const { Encoder, decode } = require('msgpackr');
 const encoder = new Encoder(); // use default encoder options
 
 const { isEmpty } = hdbUtils;
-const user = require('../../../security/user.js');
+const user = require('../../../security/user.ts');
 
 const INGEST_MAX_MSG_AGE = 48 * 3600000000000; // nanoseconds
 const INGEST_MAX_BYTES = 5000000000;

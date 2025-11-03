@@ -2,26 +2,83 @@
 
 const USERNAME_REQUIRED = 'username is required';
 const ALTERUSER_NOTHING_TO_UPDATE = 'nothing to update, must supply active, role or password to update';
+// eslint-disable-next-line sonarjs/no-hardcoded-passwords
 const EMPTY_PASSWORD = 'password cannot be an empty string';
 const EMPTY_ROLE = 'If role is specified, it cannot be empty.';
 const ACTIVE_BOOLEAN = 'active must be true or false';
 
-module.exports.addUser = addUser;
-module.exports.alterUser = alterUser;
-module.exports.dropUser = dropUser;
-module.exports.getSuperUser = getSuperUser;
-module.exports.userInfo = userInfo;
-module.exports.listUsers = listUsers;
-module.exports.listUsersExternal = listUsersExternal;
-module.exports.setUsersWithRolesCache = setUsersWithRolesCache;
-module.exports.findAndValidateUser = findAndValidateUser;
-module.exports.getClusterUser = getClusterUser;
-module.exports.getUsersWithRolesCache = getUsersWithRolesCache;
-module.exports.USERNAME_REQUIRED = USERNAME_REQUIRED;
-module.exports.ALTERUSER_NOTHING_TO_UPDATE = ALTERUSER_NOTHING_TO_UPDATE;
-module.exports.EMPTY_PASSWORD = EMPTY_PASSWORD;
-module.exports.EMPTY_ROLE = EMPTY_ROLE;
-module.exports.ACTIVE_BOOLEAN = ACTIVE_BOOLEAN;
+export {
+	addUser,
+	alterUser,
+	dropUser,
+	getSuperUser,
+	userInfo,
+	listUsers,
+	listUsersExternal,
+	setUsersWithRolesCache,
+	findAndValidateUser,
+	getClusterUser,
+	getUsersWithRolesCache,
+	USERNAME_REQUIRED,
+	ALTERUSER_NOTHING_TO_UPDATE,
+	EMPTY_PASSWORD,
+	EMPTY_ROLE,
+	ACTIVE_BOOLEAN,
+};
+
+export interface User {
+	active?: boolean;
+	username: string;
+	role?: UserRole;
+	__updatedtime__?: number;
+	__createdtime__?: number;
+	[other: string]: unknown;
+}
+
+export interface UserRole {
+	permission: UserRoleNamedPermissions & UserRoleDatabasePermissions;
+	role: string;
+	id: string;
+	__updatedtime__: number;
+	__createdtime__: number;
+}
+
+export interface UserRoleNamedPermissions extends Partial<CRUDPermissions> {
+	super_user?: boolean;
+	cluster_user?: boolean;
+	structure_user?: boolean;
+}
+
+export interface UserRoleDatabasePermissions {
+	[databaseName: string]: UserRoleSchemaRecord;
+}
+
+export interface UserRoleSchemaRecord extends Partial<CRUDPermissions> {
+	tables: Record<string, UserRolePermissionTable | UserLegacyRolePermissionTable>;
+}
+
+export interface UserRolePermissionTable extends CRUDPermissions {
+	attribute_permissions: UserRoleAttributePermissionTable[];
+}
+
+export interface UserRoleAttributePermissionTable extends Omit<CRUDPermissions, 'delete'> {
+	attribute_name: string;
+}
+
+export interface UserLegacyRolePermissionTable extends CRUDPermissions {
+	attribute_restrictions: UserLegacyRoleAttributePermissionTable[];
+}
+
+export interface UserLegacyRoleAttributePermissionTable extends CRUDPermissions {
+	attribute_name: string;
+}
+
+export interface CRUDPermissions {
+	read: boolean;
+	insert: boolean;
+	update: boolean;
+	delete: boolean;
+}
 
 //requires must be declared after module.exports to avoid cyclical dependency
 const insert = require('../dataLayer/insert.js');
@@ -46,11 +103,12 @@ const { UserEventMsg } = require('../server/threads/itc.js');
 const _ = require('lodash');
 const { server } = require('../server/Server.ts');
 const harperLogger = require('../utility/logging/harper_logger.js');
-server.getUser = (username, password) => {
+
+server.getUser = (username: string, password?: string | null): Promise<User> => {
 	return findAndValidateUser(username, password, password != null);
 };
 
-server.authenticateUser = (username, password) => {
+server.authenticateUser = (username: string, password?: string | null): Promise<User> => {
 	return findAndValidateUser(username, password);
 };
 
@@ -66,7 +124,7 @@ const configuredHashFunction =
 	env.get(terms.CONFIG_PARAMS.AUTHENTICATION_HASHFUNCTION) ?? password.HASH_FUNCTION.SHA256;
 let usersWithRolesMap;
 
-async function addUser(user) {
+async function addUser(user: User | any): Promise<string> {
 	let cleanUser = validate.cleanAttributes(user, USER_ATTRIBUTE_ALLOWLIST);
 	let validationResp = validation.addUserValidation(cleanUser);
 	if (validationResp) throw new ClientError(validationResp.message);
@@ -181,7 +239,7 @@ async function alterUser(jsonMessage) {
 	return updateResponse;
 }
 
-function isClusterUser(username) {
+function isClusterUser(username: string): boolean {
 	let isClusterUser = false;
 	const userRole = usersWithRolesMap.get(username);
 
@@ -192,7 +250,7 @@ function isClusterUser(username) {
 	return isClusterUser;
 }
 
-async function dropUser(user) {
+async function dropUser(user: User | any): Promise<string> {
 	const validationResp = validation.dropUserValidation(user);
 	if (validationResp) throw new ClientError(validationResp.message);
 
@@ -211,13 +269,12 @@ async function dropUser(user) {
 	return `${user.username} successfully deleted`;
 }
 
-async function userInfo(body) {
-	let user = {};
+async function userInfo(body): Promise<string | User> {
 	if (!body || !body.hdb_user) {
 		return 'There was no user info in the body';
 	}
 
-	user = _.cloneDeep(body.hdb_user);
+	let user = _.cloneDeep(body.hdb_user);
 	let roleData = await search.searchByHash({
 		schema: 'system',
 		table: 'hdb_role',
@@ -238,7 +295,7 @@ async function userInfo(body) {
  * This function should be called by chooseOperation as it scrubs sensitive information before returning
  * the results of list users.
  */
-async function listUsersExternal() {
+async function listUsersExternal(): Promise<User[]> {
 	const userData = await listUsers();
 	userData.forEach((user) => {
 		delete user.password;
@@ -253,9 +310,8 @@ async function listUsersExternal() {
 /**
  * Queries system table for user records, adds role-based perms, scrubs list based on licensed role allowance and returns
  * data in a Map with the username as the key for the entry
- * @returns {Promise<Map<string, object>>}
  */
-async function listUsers() {
+async function listUsers(): Promise<Map<string, User>> {
 	const roles = await search.searchByValue({
 		schema: 'system',
 		table: 'hdb_role',
@@ -278,8 +334,9 @@ async function listUsers() {
 		get_attributes: ['*'],
 	});
 
-	const userMap = new Map();
+	const userMap: Map<string, User> = new Map();
 	for (let user of users) {
+		// eslint-disable-next-line sonarjs/updated-loop-counter
 		user = _.cloneDeep(user);
 		user.role = roleMapObj[user.role];
 		appendSystemTablesToRole(user.role);
@@ -290,19 +347,21 @@ async function listUsers() {
 }
 
 /**
- * adds system table permissions to a role.  This is used to protect system tables by leveraging operationAuthoriation.
+ * adds system table permissions to a role.  This is used to protect system tables by leveraging operationAuthorization.
  * @param userRole - Role of the user found during auth.
  */
-function appendSystemTablesToRole(userRole) {
+function appendSystemTablesToRole(userRole: UserRole) {
 	if (!userRole) {
 		logger.error(`invalid user role found.`);
 		return;
 	}
-	if (!userRole.permission['system']) {
-		userRole.permission['system'] = {};
+	if (!userRole.permission.system) {
+		userRole.permission.system = {
+			tables: {},
+		};
 	}
-	if (!userRole.permission.system['tables']) {
-		userRole.permission.system['tables'] = {};
+	if (!userRole.permission.system.tables) {
+		userRole.permission.system.tables = {};
 	}
 	for (let table of Object.keys(systemSchema)) {
 		let newProp = {
@@ -332,9 +391,8 @@ async function getUsersWithRolesCache() {
  * @param {string} username
  * @param {string} pw
  * @param {boolean} validatePassword
- * @returns {Promise<{}|null>}
  */
-async function findAndValidateUser(username, pw, validatePassword = true) {
+async function findAndValidateUser(username: string, pw?: string | null, validatePassword = true): Promise<User> {
 	if (!usersWithRolesMap) {
 		await setUsersWithRolesCache();
 	}
@@ -348,7 +406,7 @@ async function findAndValidateUser(username, pw, validatePassword = true) {
 	if (userTmp && !userTmp.active)
 		throw new ClientError(AUTHENTICATION_ERROR_MSGS.USER_INACTIVE, HTTP_STATUS_CODES.UNAUTHORIZED);
 
-	const user = {
+	const user: User = {
 		active: userTmp.active,
 		username: userTmp.username,
 	};
@@ -370,7 +428,7 @@ async function findAndValidateUser(username, pw, validatePassword = true) {
 	return user;
 }
 
-async function getSuperUser() {
+async function getSuperUser(): Promise<User | undefined> {
 	if (!usersWithRolesMap) {
 		await setUsersWithRolesCache();
 	}
@@ -385,14 +443,15 @@ async function getSuperUser() {
  * The Nats routes require the decrypt_hash to be uri encoded.
  * @returns {Promise<Object>}
  */
-async function getClusterUser() {
+async function getClusterUser(): Promise<User | undefined> {
 	const users = await listUsers();
 	const clusterUsername = configUtils.getConfigFromFile(terms.CONFIG_PARAMS.CLUSTERING_USER);
 	const clusterUser = users.get(clusterUsername);
 	if (clusterUser == null || clusterUser?.role?.role !== terms.ROLE_TYPES_ENUM.CLUSTER_USER) return;
 
-	clusterUser.decrypt_hash = cryptoHash.decrypt(clusterUser.hash);
-	clusterUser.uri_encoded_d_hash = encodeURIComponent(clusterUser.decrypt_hash);
+	const decrypted = cryptoHash.decrypt(clusterUser.hash);
+	clusterUser.decrypt_hash = decrypted;
+	clusterUser.uri_encoded_d_hash = encodeURIComponent(decrypted);
 	clusterUser.uri_encoded_name = encodeURIComponent(clusterUser.username);
 	clusterUser.sys_name = clusterUser.username + natsTerms.SERVER_SUFFIX.ADMIN;
 	clusterUser.sys_name_encoded = clusterUser.uri_encoded_name + natsTerms.SERVER_SUFFIX.ADMIN;
@@ -401,7 +460,7 @@ async function getClusterUser() {
 }
 
 let invalidateCallbacks = [];
-server.invalidateUser = function (user) {
+server.invalidateUser = function (user: User | any) {
 	for (let callback of invalidateCallbacks) {
 		try {
 			callback(user);

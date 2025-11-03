@@ -45,7 +45,7 @@ function setHashFunction(hashFunction) {
 	user = require('../../security/user');
 }
 
-describe('user.js Unit Tests', () => {
+describe('user.ts Unit Tests', () => {
 	before(async () => {
 		await user.setUsersWithRolesCache();
 	});
