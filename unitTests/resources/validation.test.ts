@@ -24,6 +24,8 @@ import { setMainIsWorker } from '@/server/threads/manageThreads';
  *       at process._fatalException (node:internal/process/execution:155:25)
  *
  * - WSM 2025-10-31
+ *
+ * this issue is tracked here: https://github.com/HarperFast/harper/issues/18
  */
 describe.skip('Types Validation', () => {
 	let ValidationTest: Table;

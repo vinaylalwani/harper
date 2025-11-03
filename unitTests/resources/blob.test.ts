@@ -208,6 +208,7 @@ describe('Blob test', () => {
 
 	// this is failing pretty often, and we know we have some issues with orphaned blobs
 	// let's try re-enabling this once we track down and fix that - WSM 2025-10-31
+	// tracked here: https://github.com/HarperFast/harper/issues/19
 	it.skip('Save a blob and delete it', async () => {
 		setAuditRetention(0.01); // 10 ms audit log retention
 		setDeletionDelay(0);
