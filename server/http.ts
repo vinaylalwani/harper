@@ -11,9 +11,9 @@ import * as terms from '../utility/hdbTerms.ts';
 import { resolvePath } from '../config/configUtils.js';
 import { getTicketKeys } from './threads/manageThreads.js';
 import { createTLSSelector } from '../security/keys.js';
-import { createSecureServer } from 'node:http2';
-import { createServer as createSecureServerHttp1 } from 'node:https';
-import { createServer, IncomingMessage } from 'node:http';
+import { createSecureServer, type ServerOptions as HTTP2ServerOptions } from 'node:http2';
+import { createServer as createSecureServerHttp1, type ServerOptions as HTTP1ServerOptions } from 'node:https';
+import { createServer, IncomingMessage, type ServerOptions as HTTPInsecureServerOptions } from 'node:http';
 import { Request } from './serverHelpers/Request.ts';
 import { appendHeader, Headers } from './serverHelpers/Headers.ts';
 import { Blob } from '../resources/blob.ts';
@@ -204,6 +204,8 @@ export function httpServer(listener, options) {
 	return servers;
 }
 
+type HTTPServerOptions = HTTP1ServerOptions & HTTP2ServerOptions & HTTPInsecureServerOptions;
+
 function getHTTPServer(port, secure, isOperationsServer, isMtls) {
 	setPortServerMap(port, { protocol_name: secure ? 'HTTPS' : 'HTTP', name: getComponentName() });
 	if (!httpServers[port]) {
@@ -213,7 +215,7 @@ function getHTTPServer(port, secure, isOperationsServer, isMtls) {
 		const requestTimeout = env.get(serverPrefix + '_timeout');
 		const headersTimeout = env.get(serverPrefix + '_headersTimeout');
 		const maxHeaderSize = env.get(terms.CONFIG_PARAMS.HTTP_MAXHEADERSIZE);
-		const options = {
+		const options: HTTPServerOptions = {
 			// we set this higher (2x times the default in v22, 8x times the default in v20) because it can help with
 			// performance
 			highWaterMark: 128 * 1024,
@@ -222,16 +224,16 @@ function getHTTPServer(port, secure, isOperationsServer, isMtls) {
 			keepAliveInitialDelay: 600, // lower the initial delay to 10 minutes, we want to be proactive about closing unused connections
 		};
 		if (keepAliveTimeout) {
-			options['keepAliveTimeout'] = Number(keepAliveTimeout);
+			options.keepAliveTimeout = Number(keepAliveTimeout);
 		}
 		if (headersTimeout) {
-			options['headersTimeout'] = Number(headersTimeout);
+			options.headersTimeout = Number(headersTimeout);
 		}
 		if (requestTimeout) {
-			options['requestTimeout'] = Number(requestTimeout);
+			options.requestTimeout = Number(requestTimeout);
 		}
 		if (maxHeaderSize) {
-			options['maxHeaderSize'] = Number(maxHeaderSize);
+			options.maxHeaderSize = Number(maxHeaderSize);
 		}
 		const mtls = env.get(serverPrefix + '_mtls');
 		const mtlsRequired = env.get(serverPrefix + '_mtls_required');
