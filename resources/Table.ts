@@ -1351,6 +1351,7 @@ export function makeTable(options) {
 		 * @param entry
 		 */
 		static _recordRelocate(existingEntry, entry): boolean {
+			if (this.getResidencyById) return false; // we don't want to relocate entries that are located by id
 			const context = {
 				previousResidency: this.getResidencyRecord(existingEntry.residencyId),
 				isRelocation: true,
@@ -3741,8 +3742,8 @@ export function makeTable(options) {
 						updatedRecord = await throttledCallToSource(id, sourceContext, existingEntry);
 						invalidated = metadataFlags & INVALIDATED;
 						let version = sourceContext.lastModified || (invalidated && existingVersion);
-						hasChanges = invalidated || version > existingVersion || !existingRecord;
 						if (!version) version = getNextMonotonicTime();
+						hasChanges = invalidated || version > existingVersion || !existingRecord;
 						const resolveDuration = performance.now() - start;
 						recordAction(resolveDuration, 'cache-resolution', tableName, null, 'success');
 						if (responseHeaders)

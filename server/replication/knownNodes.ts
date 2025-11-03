@@ -108,9 +108,17 @@ export function subscribeToNodeUpdates(listener: (node: any, id: string) => void
 }
 
 export function shouldReplicateToNode(node, databaseName) {
+	const databaseReplications = env.get(CONFIG_PARAMS.REPLICATION_DATABASES);
 	return (
 		((node.replicates === true || node.replicates?.sends) &&
 			databases[databaseName] &&
+			(databaseReplications === '*' ||
+				databaseReplications?.find?.((dbReplication) => {
+					return (
+						dbReplication.name === databaseName &&
+						(!dbReplication.sharded || node.shard === env.get(CONFIG_PARAMS.REPLICATION_SHARD))
+					);
+				})) &&
 			getHDBNodeTable().primaryStore.get(getThisNodeName())?.replicates) ||
 		node.subscriptions?.some((sub) => (sub.database || sub.schema) === databaseName && sub.subscribe)
 	);
