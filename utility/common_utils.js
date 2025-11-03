@@ -432,10 +432,6 @@ function stringifyProps(propReaderObject, comments) {
 }
 
 function getHomeDir() {
-	// for hermetic tests
-	if (process.env.OVERRIDE_HOME_DIR) {
-		return process.env.OVERRIDE_HOME_DIR;
-	}
 	let homeDir;
 	try {
 		homeDir = os.homedir();

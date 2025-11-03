@@ -37,7 +37,7 @@ export function getMockLMDBPath() {
 
 export function createTestSandbox() {
 	const lmdbPath = getMockLMDBPath();
-	process.env.OVERRIDE_HOME_DIR = lmdbPath;
+	process.env.ROOTPATH = lmdbPath;
 	const storagePath = path.join(lmdbPath, 'database');
 	process.env.STORAGE_PATH = storagePath;
 	const bootPropsPath = path.join(lmdbPath, terms.HDB_HOME_DIR_NAME);
@@ -66,9 +66,8 @@ export function createTestSandbox() {
 	return lmdbPath;
 }
 
-export async function cleanupTestSandbox() {
-	delete process.env.OVERRIDE_HOME_DIR;
-	await tearDownMockDB();
+export function cleanupTestSandbox() {
+	return tearDownMockDB();
 }
 
 export async function waitUntilDefined(value) {
