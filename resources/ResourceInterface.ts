@@ -2,37 +2,36 @@ import { User } from '../security/user.ts';
 import type { OperationFunctionName } from '../server/serverHelpers/serverUtilities.ts';
 import { DatabaseTransaction } from './DatabaseTransaction.ts';
 import { IterableEventQueue } from './IterableEventQueue.js';
-import type { Entry } from './RecordEncoder.ts';
+import type { Entry, RecordObject } from './RecordEncoder.ts';
 import { RequestTarget } from './RequestTarget.ts';
 
-export interface ResourceInterface<Record extends object = any> {
+export interface ResourceInterface<Record extends object = any> extends RecordObject, Pick<UpdatableRecord<Record>, 'addTo' | 'subtractFrom'> {
+	new(identifier: Id, source: any);
+
 	allowRead(user: User, target: RequestTarget): boolean | Promise<boolean>;
-	get?(id: Id): Promise<Record>;
-	get?(query: RequestTargetOrId): Promise<AsyncIterable<Record>>;
-	search?(query: RequestTarget): AsyncIterable<Record>;
+	get?(id: Id): Promise<Record & RecordObject>;
+	get?(query: RequestTargetOrId): Promise<AsyncIterable<Record & RecordObject>>;
+	search?(query: RequestTarget): AsyncIterable<Record & RecordObject>;
 
-	allowCreate(user: User, record: Record, target: RequestTarget): boolean | Promise<boolean>;
-	create?(target: RequestTargetOrId, record: Partial<Record>): void;
-	post?(target: RequestTargetOrId, record: Partial<Record>): void;
+	allowCreate(user: User, record: Record & RecordObject, target: RequestTarget): boolean | Promise<boolean>;
+	create?(target: RequestTargetOrId, record: Partial<Record & RecordObject>): void;
+	post?(target: RequestTargetOrId, record: Partial<Record & RecordObject>): void;
 
-	allowUpdate(user: User, record: Record, target: RequestTarget): boolean | Promise<boolean>;
-	put?(target: RequestTargetOrId, record: Record): void;
-	patch?(target: RequestTargetOrId, record: Partial<Record>): void;
-	update?(updates: Record, fullUpdate: true): ResourceInterface<Record>;
-	update?(updates: Partial<Record>, fullUpdate?: boolean): ResourceInterface<Record> | Promise<ResourceInterface<Record> | UpdatableRecord<Record>>;
-	addTo(propety, value): void;
-	subtractFrom(propety, value): void;
+	allowUpdate(user: User, record: Record & RecordObject, target: RequestTarget): boolean | Promise<boolean>;
+	put?(target: RequestTargetOrId, record: Record & RecordObject): void;
+	patch?(target: RequestTargetOrId, record: Partial<Record & RecordObject>): void;
+	update?(updates: Record & RecordObject, fullUpdate: true): ResourceInterface<Record & RecordObject>;
+	update?(updates: Partial<Record & RecordObject>, fullUpdate?: boolean): ResourceInterface<Record & RecordObject> | Promise<ResourceInterface<Record & RecordObject> | UpdatableRecord<Record & RecordObject>>;
 
 	allowDelete(user: User, target: RequestTarget): boolean | Promise<boolean>;
 	delete?(target: RequestTargetOrId): boolean;
 	invalidate(target: RequestTargetOrId): void | Promise<void>;
 
-	publish?(target: RequestTargetOrId, record: Record): void;
+	publish?(target: RequestTargetOrId, record: Record & RecordObject): void;
 	subscribe?(request: SubscriptionRequest): Promise<Subscription>;
 
 	doesExist(): boolean;
 	wasLoadedFromSource(): boolean | void;
-	getUpdatedTime(): number;
 }
 
 export interface Context {
@@ -110,8 +109,8 @@ export type Comparator =
 export type DirectCondition<Record extends object = any> = TypedDirectCondition<Record, keyof Record>;
 
 interface TypedDirectCondition<Record extends object, Property extends keyof Record> {
-	attribute?: keyof Record;
-	search_attribute?: keyof Record;
+	attribute?: keyof Record | Array<keyof Record> | string | string[];
+	search_attribute?: keyof Record | Array<keyof Record> | string | string[];
 	comparator?: Comparator;
 	search_type?: Comparator;
 	value?: Record[Property];
@@ -156,11 +155,9 @@ export type RequestTargetOrId = RequestTarget | Id;
 export type Id = number | string | (number | string | null)[] | null;
 
 export type UpdatableRecord<Record extends object = any> = TypedUpdatableRecord<Record, keyof Record>;
-interface TypedUpdatableRecord<Record extends object, Property extends keyof Record> {
+interface TypedUpdatableRecord<Record extends object, Property extends keyof Record> extends RecordObject {
 	set(property: Property, value: Record[Property]): void;
 	getProperty(property: Property): Record[Property];
-	getUpdatedTime(): number;
-	getExpiresAt(): number;
 	addTo(property: Property, value: Record[Property]): void;
 	subtractFrom(property: Property, value: Record[Property]): void;
 }
