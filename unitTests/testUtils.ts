@@ -25,12 +25,14 @@ async function tearDownMockDB(envs = undefined, partial_teardown = false) {
 }
 
 export function getMockLMDBPath() {
-	let lmdbPath = path.join(UNIT_TEST_DIR, ENV_DIR_NAME, process.pid.toString());
+	const lmdbPath = path.join(UNIT_TEST_DIR, ENV_DIR_NAME, process.pid.toString());
 	env.setProperty(terms.HDB_SETTINGS_NAMES.HDB_ROOT_KEY, lmdbPath);
 	env.setProperty(terms.CONFIG_PARAMS.DATABASES, { data: { path: lmdbPath }, dev: { path: lmdbPath } });
 	resetDatabases();
 	if (isMainThread) {
-		process.on('exit', () => tearDownMockDB());
+		process.on('exit', () => {
+			void tearDownMockDB();
+		});
 	}
 	return lmdbPath;
 }
