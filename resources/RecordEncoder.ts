@@ -315,8 +315,11 @@ export function recordUpdater(store, table_id, audit_store) {
 		audit_record?: any
 	) {
 		// determine if and how we apply the local timestamp
-		if (resolve_record || audit == null)
-			// preserve existing timestamp
+		if (audit == null)
+			// if not auditing, there is no local timestamp to reference
+			timestamp_next_encoding = NO_TIMESTAMP;
+		else if (resolve_record)
+			// preserve existing timestamp, if possible
 			timestamp_next_encoding = existing_entry?.localTime
 				? TIMESTAMP_RECORD_PREVIOUS | TIMESTAMP_ASSIGN_PREVIOUS
 				: NO_TIMESTAMP;
@@ -355,7 +358,7 @@ export function recordUpdater(store, table_id, audit_store) {
 			// we use resolve_record outside of transaction, so must explicitly make it conditional
 			if (resolve_record) put_options.ifVersion = if_version = existing_entry?.version ?? null;
 			if (existing_entry && existing_entry.value && type !== 'message' && existing_entry.metadataFlags & HAS_BLOBS) {
-				if (!audit_store.getBinaryFast(existing_entry.localTime)) {
+				if (!existing_entry.localTime || !audit_store.getBinaryFast(existing_entry.localTime)) {
 					// if it used to have blobs, and it doesn't exist in the audit store, we need to delete the old blobs
 					deleteBlobsInObject(existing_entry.value);
 				}

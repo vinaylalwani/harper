@@ -3431,8 +3431,8 @@ export function makeTable(options) {
 						}
 						invalidated = metadata_flags & INVALIDATED;
 						let version = source_context.lastModified || (invalidated && existing_version);
-						has_changes = invalidated || version > existing_version || !existing_record;
 						if (!version) version = getNextMonotonicTime();
+						has_changes = invalidated || version > existing_version || !existing_record;
 						const resolve_duration = performance.now() - start;
 						recordAction(resolve_duration, 'cache-resolution', table_name, null, 'success');
 						if (response_headers)
