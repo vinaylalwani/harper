@@ -1,4 +1,4 @@
-import { User } from '../security/user.types.ts';
+import { User } from '../security/user.ts';
 import type { OperationFunctionName } from '../server/serverHelpers/serverUtilities.ts';
 import { DatabaseTransaction } from './DatabaseTransaction.ts';
 import { IterableEventQueue } from './IterableEventQueue.js';
