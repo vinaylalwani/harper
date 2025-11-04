@@ -661,7 +661,7 @@ export function replicateOverWS(ws, options, authorization) {
 												' for record ' +
 												(stream.recordId ?? 'unknown') +
 												' from ' +
-												remote_node_name
+												remoteNodeName
 										)
 									);
 								} else stream.end(blobBody);
