@@ -1409,6 +1409,10 @@ export function makeTable(options) {
 					//  during the write transaction.
 					let precedes_existing_version = precedesExistingVersion(txn_time, existing_entry, options?.nodeId);
 					let audit_record_to_store: any; // what to store in the audit record. For a full update, this can be left undefined in which case it is the same as full record update and optimized to use a binary copy
+					const type = full_update ? 'put' : 'patch';
+					let residency_id: number;
+					if (options?.residencyId != undefined) residency_id = options.residencyId;
+					const expires_at = context?.expiresAt ?? (expiration_ms ? expiration_ms + Date.now() : -1);
 					if (precedes_existing_version <= 0) {
 						// This block is to handle the case of saving an update where the transaction timestamp is older than the
 						// existing timestamp, which means that we received updates out of order, and must resequence the application
@@ -1433,7 +1437,7 @@ export function makeTable(options) {
 											options?.nodeId
 										);
 										if (precedes_existing_version === 0) {
-											return; // treat a tie as a duplicate and drop it
+											return writeCommit(false); // treat a tie as a duplicate and drop it
 										}
 										if (precedes_existing_version > 0) continue; // if the existing version is older, we can skip this update
 									}
@@ -1444,7 +1448,7 @@ export function makeTable(options) {
 									} else if (audit_record.type === 'put' || audit_record.type === 'delete') {
 										// There is newer full record update, so this incremental update is completely superseded
 										// TODO: We should still store the audit record for historical purposes
-										return;
+										return writeCommit(false);
 									}
 								}
 								local_time = audit_record.previousLocalTime;
@@ -1454,13 +1458,12 @@ export function makeTable(options) {
 								const newer_update = audit_record.getValue(primary_store);
 								update_to_apply = rebuildUpdateBefore(update_to_apply, newer_update, full_update);
 								logger.debug?.('Rebuilding update with future patch:', update_to_apply);
-								if (!update_to_apply) return; // if all changes are overwritten, nothing left to do
+								if (!update_to_apply) return writeCommit(false); // if all changes are overwritten, nothing left to do
 							}
 						} else if (full_update) {
 							// if no audit, we can't accurately do incremental updates, so we just assume the last update
 							// was the same type. Assuming a full update this record update loses and there are no changes
-							// TODO: We should still store the audit record for historical purposes
-							return;
+							return writeCommit(false);
 						} else {
 							// no audit, assume updates are overwritten except CRDT operations or properties that didn't exist
 							update_to_apply = rebuildUpdateBefore(update_to_apply, existing_record, full_update);
@@ -1476,9 +1479,7 @@ export function makeTable(options) {
 					this.#record = record_to_store;
 					if (record_to_store && record_to_store.getRecord)
 						throw new Error('Can not assign a record to a record, check for circular references');
-					let residency_id: number;
-					if (options?.residencyId != undefined) residency_id = options.residencyId;
-					else {
+					if (residency_id == undefined) {
 						if (entry?.residencyId) context.previousResidency = TableResource.getResidencyRecord(entry.residencyId);
 						const residency = residencyFromFunction(TableResource.getResidency(record_to_store, context));
 						if (residency) {
@@ -1508,7 +1509,6 @@ export function makeTable(options) {
 						// we use our own data as the basis for the audit record, which will include information about the incremental updates, even if it was overwritten by CRDT resolution
 						audit_record_to_store = record_update;
 					}
-					const expires_at = context?.expiresAt ?? (expiration_ms ? expiration_ms + Date.now() : -1);
 					logger.trace?.(
 						`Saving record with id: ${id}, timestamp: ${new Date(txn_time).toISOString()}${
 							expires_at ? ', expires at: ' + new Date(expires_at).toISOString() : ''
@@ -1526,28 +1526,31 @@ export function makeTable(options) {
 						})()
 					);
 					updateIndices(id, existing_record, record_to_store);
-					const type = full_update ? 'put' : 'patch';
 
-					updateRecord(
-						id,
-						record_to_store,
-						existing_entry,
-						txn_time,
-						omitLocalRecord ? INVALIDATED : 0,
-						audit,
-						{
-							omitLocalRecord,
-							user: context?.user,
-							residencyId: residency_id,
-							expiresAt: expires_at,
-							nodeId: options?.nodeId,
-							originatingOperation: context?.originatingOperation,
-						},
-						type,
-						false,
-						audit_record_to_store
-					);
+					writeCommit(true);
 					if (context.expiresAt) scheduleCleanup();
+					function writeCommit(storeRecord: boolean) {
+						// we need to write the commit. if storeRecord then we need to store the record, otherwise we just need to store the audit record
+						updateRecord(
+							id,
+							storeRecord ? record_to_store : undefined,
+							storeRecord ? existing_entry : { ...existing_entry, value: undefined },
+							txn_time,
+							omitLocalRecord ? INVALIDATED : 0,
+							audit,
+							{
+								omitLocalRecord,
+								user: context?.user,
+								residencyId: residency_id,
+								expiresAt: expires_at,
+								nodeId: options?.nodeId,
+								originatingOperation: context?.originatingOperation,
+							},
+							type,
+							false,
+							storeRecord ? audit_record_to_store : (audit_record_to_store ?? record_update)
+						);
+					}
 				},
 			};
 			transaction.addWrite(write);
