@@ -223,6 +223,7 @@ describe('Transactions', () => {
 			assert.equal(entity.count, 5);
 			assert.equal(entity.get('propertyA'), 'valueA');
 			assert.equal(entity.get('propertyB'), 'valueB');
+			let startingAuditSize = TxnTest.auditStore.getStats().entryCount;
 
 			await new Promise((resolve) => {
 				// send an update with a duplicate timestamp, this should be ignored
@@ -235,6 +236,7 @@ describe('Transactions', () => {
 					onCommit: resolve,
 				});
 			});
+			assert.equal(TxnTest.auditStore.getStats().entryCount, startingAuditSize + 1);
 			entity = await TxnTest.get(45);
 			// nothing should have changed
 			assert.equal(entity.count, 5);
