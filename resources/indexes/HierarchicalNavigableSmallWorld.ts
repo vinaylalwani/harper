@@ -107,7 +107,7 @@ export class HierarchicalNavigableSmallWorld {
 		} else oldNode = {} as Node;
 		if (vector) {
 			let entryPoint = entryPointId && this.indexStore.get(entryPointId);
-			if (entryPoint === undefined) {
+			if (entryPoint == null) {
 				const level = Math.floor(-Math.log(Math.random()) * this.mL);
 				const node = {
 					vector,
