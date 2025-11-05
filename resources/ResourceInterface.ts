@@ -27,8 +27,8 @@ export interface ResourceInterface<Record extends object = any> extends RecordOb
 	delete?(target: RequestTargetOrId): boolean;
 	invalidate(target: RequestTargetOrId): void | Promise<void>;
 
-	publish?(target: RequestTargetOrId, record: Record & RecordObject): void;
-	subscribe?(request: SubscriptionRequest): Promise<Subscription>;
+	publish?(target: RequestTargetOrId, record: Record): void;
+	subscribe?(request: SubscriptionRequest): Promise<Subscription<Record & RecordObject>>;
 
 	doesExist(): boolean;
 	wasLoadedFromSource(): boolean | void;
@@ -162,15 +162,15 @@ interface TypedUpdatableRecord<Record extends object, Property extends keyof Rec
 	subtractFrom(property: Property, value: Record[Property]): void;
 }
 
-interface Subscription extends IterableEventQueue {
-	new(listener: Listener);
+interface Subscription<Record extends object = any> extends IterableEventQueue<Record> {
+	new(listener: Listener<Record>);
 
-	listener: Listener;
-	subscriptions: Listener[];
+	listener: Listener<Record>;
+	subscriptions: Listener<Record>[];
 	startTime?: number;
 
 	end(): void;
 	toJSON(): { name: 'subscription' };
 }
 
-type Listener = (recordId: Id, auditEntry: any, localTime: number, beginTxn: boolean) => void;
+type Listener<Record extends object = any> = (payload: { message: Record; done?: true }) => void;
