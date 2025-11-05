@@ -251,7 +251,7 @@ export class HierarchicalNavigableSmallWorld {
 				// if this is the entry point, find a new entry point
 				const lastLevel = oldNode.level ?? 0;
 				for (let l = lastLevel; l >= 0; l--) {
-					entryPointId = oldNode[l][0]?.id;
+					entryPointId = oldNode[l]?.[0]?.id;
 					if (entryPointId !== undefined) break;
 				}
 				if (entryPointId === undefined) {
