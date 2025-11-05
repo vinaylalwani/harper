@@ -173,4 +173,13 @@ interface Subscription<Record extends object = any> extends IterableEventQueue<R
 	toJSON(): { name: 'subscription' };
 }
 
-type Listener<Record extends object = any> = (payload: { message: Record; done?: true }) => void;
+type Listener<Record extends object = any> = (payload: ListenerPayload<Record>) => void;
+
+interface ListenerPayload<Record extends object = any> {
+	id: Id;
+	localTime: number;
+	value: Record;
+	version: number;
+	type: string;
+	beginTxn: boolean;
+}
