@@ -136,3 +136,11 @@ jobs:
           containerImage: ${{ matrix.container }}
           containerTag: ${{ github.sha }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish_to_redhat:
+    needs:
+      - build
+      - publish_public_containers
+    uses: ./.github/workflows/publish-redhat-connect-images.yaml
+    with:
+      container_tag: ${{ needs.build.outputs.harperdbVersion }}
