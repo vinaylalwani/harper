@@ -1410,7 +1410,7 @@ export function makeTable(options) {
 					let precedes_existing_version = precedesExistingVersion(txn_time, existing_entry, options?.nodeId);
 					let audit_record_to_store: any; // what to store in the audit record. For a full update, this can be left undefined in which case it is the same as full record update and optimized to use a binary copy
 					const type = full_update ? 'put' : 'patch';
-					let residency_id: number;
+					let residency_id: number | undefined;
 					if (options?.residencyId != undefined) residency_id = options.residencyId;
 					const expires_at = context?.expiresAt ?? (expiration_ms ? expiration_ms + Date.now() : -1);
 					if (precedes_existing_version <= 0) {
