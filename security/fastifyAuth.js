@@ -10,6 +10,7 @@ const cbFindValidateUsers = util.callbackify(userFunctions.findAndValidateUser);
 const hdbErrors = require('../utility/errors/commonErrors.js');
 const hdbTerms = require('../utility/hdbTerms.ts');
 const tokenAuthentication = require('./tokenAuthentication.ts');
+const { AccessViolation } = require('../utility/errors/hdbError');
 
 passport.use(
 	new LocalStrategy(function (username, password, done) {
@@ -46,7 +47,7 @@ function authorize(req, res, next) {
 			return next(err);
 		}
 		if (!user) {
-			return next('Must login');
+			return next(new AccessViolation());
 		}
 		return next(null, user);
 	}
@@ -146,8 +147,7 @@ function checkPermissions(checkPermissionObj, callback) {
 		permission[checkPermissionObj.schema].tables[checkPermissionObj.table].attribute_permissions &&
 		checkPermissionObj.attributes
 	) {
-		let restrictedAttrs =
-			permission[checkPermissionObj.schema].tables[checkPermissionObj.table].attribute_permissions;
+		let restrictedAttrs = permission[checkPermissionObj.schema].tables[checkPermissionObj.table].attribute_permissions;
 		for (let rAttr in restrictedAttrs) {
 			if (
 				checkPermissionObj.attributes.indexOf(restrictedAttrs[rAttr].attribute_name) > -1 &&
