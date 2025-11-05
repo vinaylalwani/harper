@@ -18,22 +18,6 @@ describe('HierarchicalNavigableSmallWorld indexing', () => {
 			],
 		});
 	});
-	it('can remove and add and search with vector index', async () => {
-		await HNSWTest.put(0, {
-			name: 'test',
-			vector: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-		});
-		await HNSWTest.delete(0);
-		await HNSWTest.put(0, {
-			name: 'test',
-			vector: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-		});
-		await HNSWTest.put(0, {
-			name: 'test',
-			vector: null,
-		});
-		await HNSWTest.delete(0);
-	});
 	it('can index and search with vector index', async () => {
 		for (let i = 0; i < 200; i++) {
 			let vector = [i % 2, i % 3, i % 4, i % 5, i % 6, i % 7, i % 8, i % 9, i % 10, i % 11];
@@ -124,6 +108,22 @@ describe('HierarchicalNavigableSmallWorld indexing', () => {
 			},
 			{ message: /must be an array/ }
 		);
+	});
+	it('can remove and add and search with vector index', async () => {
+		await HNSWTest.put(0, {
+			name: 'test',
+			vector: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+		});
+		await HNSWTest.delete(0);
+		await HNSWTest.put(0, {
+			name: 'test',
+			vector: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+		});
+		await HNSWTest.put(0, {
+			name: 'test',
+			vector: null,
+		});
+		await HNSWTest.delete(0);
 	});
 	after(() => {
 		HNSWTest.dropTable();
