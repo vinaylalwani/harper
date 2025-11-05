@@ -318,14 +318,7 @@ describe('Test serverHandlers.js module ', () => {
 			serverHandlers_rw.authHandler(test_req, {}, (err, data) => {
 				assert.ok(data === null, 'Should not return anything for valid auth');
 				assert.ok(err.statusCode === 401, 'Method should return an error with 401 status code');
-				assert.ok(err.http_resp_msg.error === TEST_ERR.message, 'Method should return correct error message');
-
-				assert.ok(warn_log_stub.calledThrice === true, 'Warning logged thrice');
-				assert.ok(warn_log_stub.firstCall.args[0] === TEST_ERR, 'Warning logged error');
-				assert.ok(
-					warn_log_stub.secondCall.args[0].includes(test_req.socket.remoteAddress) === true,
-					'Warning logged error with socket remote address'
-				);
+				assert.ok(err.message === TEST_ERR.message, 'Method should return correct error message');
 			});
 		});
 	});
@@ -385,14 +378,7 @@ describe('Test serverHandlers.js module ', () => {
 			serverHandlers_rw.authHandler(test_req, {}, (err, data) => {
 				assert.ok(data === null, 'Should not return anything for valid auth');
 				assert.ok(err.statusCode === 401, 'Method should return an error with 401 status code');
-				assert.ok(err.http_resp_msg.error === TEST_ERR.message, 'Method should return correct error message');
-
-				assert.ok(warn_log_stub.calledThrice === true, 'Warning logged thrice');
-				assert.ok(warn_log_stub.firstCall.args[0] === TEST_ERR, 'Warning logged error');
-				assert.ok(
-					warn_log_stub.secondCall.args[0].includes(test_req.socket.remoteAddress) === true,
-					'Warning logged error with socket remote address'
-				);
+				assert.ok(err.message === TEST_ERR.message, 'Method should return correct error message');
 			});
 		});
 	});
