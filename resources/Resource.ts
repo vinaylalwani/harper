@@ -648,30 +648,33 @@ function transactional(action, options) {
 			);
 		}
 		function authorizeActionOnResource(resource: ResourceInterface) {
-			if (loadAsInstance !== false && context.authorize) {
-				// do permission checks (and don't require subsequent uses of this request/context to need to do it)
+			if (context.authorize) {
+				// authorization has been requested, but only do it for this entry call
 				context.authorize = false;
-				const allowed =
-					options.type === 'read'
-						? resource.allowRead(context.user, query, context)
-						: options.type === 'update'
-							? resource.doesExist?.() === false
-								? resource.allowCreate(context.user, data, context)
-								: resource.allowUpdate(context.user, data, context)
-							: options.type === 'create'
-								? resource.allowCreate(context.user, data, context)
-								: resource.allowDelete(context.user, query, context);
-				if (allowed?.then) {
-					return allowed.then((allowed) => {
-						if (!allowed) {
-							throw new AccessViolation(context.user);
-						}
-						if (typeof data?.then === 'function') return data.then((data) => action(resource, query, context, data));
-						return action(resource, query, context, data);
-					});
-				}
-				if (!allowed) {
-					throw new AccessViolation(context.user);
+				if (loadAsInstance !== false) {
+					// do permission checks, with legacy allow methods
+					const allowed =
+						options.type === 'read'
+							? resource.allowRead(context.user, query, context)
+							: options.type === 'update'
+								? resource.doesExist?.() === false
+									? resource.allowCreate(context.user, data, context)
+									: resource.allowUpdate(context.user, data, context)
+								: options.type === 'create'
+									? resource.allowCreate(context.user, data, context)
+									: resource.allowDelete(context.user, query, context);
+					if (allowed?.then) {
+						return allowed.then((allowed) => {
+							if (!allowed) {
+								throw new AccessViolation(context.user);
+							}
+							if (typeof data?.then === 'function') return data.then((data) => action(resource, query, context, data));
+							return action(resource, query, context, data);
+						});
+					}
+					if (!allowed) {
+						throw new AccessViolation(context.user);
+					}
 				}
 			}
 			if (typeof data?.then === 'function') return data.then((data) => action(resource, query, context, data));
