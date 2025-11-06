@@ -45,6 +45,9 @@
 		"node": ">=20",
 		"minimum-node": "20.0.0"
 	},
+	"imports": {
+		"#harper/*": "./dist/*.js"
+	},
 	"devEngines": {
 		"runtime": {
 			"name": "node",
