@@ -162,23 +162,23 @@ interface TypedUpdatableRecord<Record extends object, Property extends keyof Rec
 	subtractFrom(property: Property, value: Record[Property]): void;
 }
 
-interface Subscription<Record extends object = any> extends IterableEventQueue<Record> {
-	new(listener: Listener<Record>);
+interface Subscription<Event extends object = any> extends IterableEventQueue<Event> {
+	new(listener: Listener<Event>);
 
-	listener: Listener<Record>;
-	subscriptions: Listener<Record>[];
+	listener: Listener<Event>;
+	subscriptions: Listener<Event>[];
 	startTime?: number;
 
 	end(): void;
 	toJSON(): { name: 'subscription' };
 }
 
-type Listener<Record extends object = any> = (payload: ListenerPayload<Record>) => void;
+type Listener<Payload extends object = any> = (payload: ListenerPayload<Payload>) => void;
 
-interface ListenerPayload<Record extends object = any> {
+interface ListenerPayload<Payload extends object = any> {
 	id: Id;
 	localTime: number;
-	value: Record;
+	value: Payload;
 	version: number;
 	type: string;
 	beginTxn: boolean;

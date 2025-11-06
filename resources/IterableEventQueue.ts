@@ -1,21 +1,21 @@
 import { EventEmitter } from 'events';
 
-export class IterableEventQueue<Record extends object = any> extends EventEmitter {
-	resolveNext: null | ((args: { value: Record }) => void) = null;
+export class IterableEventQueue<Event extends object = any> extends EventEmitter {
+	resolveNext: null | ((args: { value: Event }) => void) = null;
 	queue: any[];
 	hasDataListeners: boolean;
 	drainCloseListener: boolean;
 	currentDrainResolver: null | ((draining: boolean) => void) = null;
-	[Symbol.asyncIterator](): AsyncIterator<Record> {
-		const iterator = new EventQueueIterator<Record>();
+	[Symbol.asyncIterator](): AsyncIterator<Event> {
+		const iterator = new EventQueueIterator<Event>();
 		iterator.queue = this;
 		// @ts-expect-error The EventQueueIterator is acceptable as an AsyncIterator
 		return iterator;
 	}
-	push(message: Record) {
+	push(message: Event) {
 		this.send(message);
 	}
-	send(message: Record) {
+	send(message: Event) {
 		if (this.resolveNext) {
 			this.resolveNext({ value: message });
 			this.resolveNext = null;
@@ -50,7 +50,7 @@ export class IterableEventQueue<Record extends object = any> extends EventEmitte
 			}
 		});
 	}
-	on(eventName: 'data' | string, listener: ((data: Record) => void) | any) {
+	on(eventName: 'data' | string, listener: ((data: Event) => void) | any) {
 		if (eventName === 'data' && !this.hasDataListeners) {
 			this.hasDataListeners = true;
 			while (this.queue?.length > 0) listener(this.queue.shift());
@@ -59,13 +59,13 @@ export class IterableEventQueue<Record extends object = any> extends EventEmitte
 	}
 }
 
-class EventQueueIterator<Record extends object = any> implements AsyncIterator<Record> {
-	queue: IterableEventQueue<Record>;
-	push(message: Record) {
+class EventQueueIterator<Event extends object = any> implements AsyncIterator<Event> {
+	queue: IterableEventQueue<Event>;
+	push(message: Event) {
 		this.queue.send(message);
 	}
 	// @ts-expect-error TypeScript is wrong, the JS engine accepts MaybePromise<...>
-	next(): { value: Record } | Promise<{ value: Record }> {
+	next(): { value: Event } | Promise<{ value: Event }> {
 		const message = this.queue.getNextMessage();
 		if (message) {
 			return {
@@ -76,7 +76,7 @@ class EventQueueIterator<Record extends object = any> implements AsyncIterator<R
 		}
 	}
 	// @ts-expect-error TypeScript is wrong, the JS engine accepts MaybePromise<...>
-	return(value: Record): { value: Record, done: true } {
+	return(value: Event): { value: Event, done: true } {
 		this.queue.emit('close');
 		return {
 			value,
