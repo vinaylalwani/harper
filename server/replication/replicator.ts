@@ -391,7 +391,7 @@ export function setReplicator(dbName: string, table: any, options: any) {
 								// if we are still connected, must be a non-network error
 								if (bestConnection.isConnected) throw error;
 								// if we got a network error, record it and try the next node (continuing through the loop)
-								logger.warn('Error in load from node', node_name, error);
+								logger.warn('Error in load from node', nodeName, error);
 								if (!firstError) firstError = error;
 							}
 							// eslint-disable-next-line no-constant-condition
@@ -443,16 +443,16 @@ const nodeNameToRetrievalConnections = new Map<string, Map<string, NodeReplicati
  * Get connection by node name, using caching
  * */
 function getRetrievalConnectionByName(nodeName, subscription, dbName): NodeReplicationConnection {
-	let dbConnections = nodeNameToRetrievalConnections.get(node_name);
+	let dbConnections = nodeNameToRetrievalConnections.get(nodeName);
 	if (!dbConnections) {
 		dbConnections = new Map();
-		nodeNameToRetrievalConnections.set(node_name, dbConnections);
+		nodeNameToRetrievalConnections.set(nodeName, dbConnections);
 	}
 	let connection = dbConnections.get(dbName);
 	if (connection) return connection;
 	const node = getHDBNodeTable().primaryStore.get(nodeName);
 	if (node?.url) {
-		connection = new NodeReplicationConnection(node.url, subscription, dbName, node_name, node.authorization);
+		connection = new NodeReplicationConnection(node.url, subscription, dbName, nodeName, node.authorization);
 		// cache the connection
 		dbConnections.set(dbName, connection);
 		connection.connect();
@@ -561,15 +561,15 @@ function getCommonNameFromCert() {
 		return (commonNameFromCert = subject?.match(/CN=(.*)/)?.[1] ?? null);
 	}
 }
-let node_name;
+let nodeName;
 
 /** Attempt to figure out the host/node name, using direct or indirect settings
  * @returns {string}
  */
 export function getThisNodeName() {
 	return (
-		node_name ||
-		(node_name =
+		nodeName ||
+		(nodeName =
 			env.get('replication_hostname') ??
 			urlToNodeName(env.get('replication_url')) ??
 			getCommonNameFromCert() ??
@@ -580,7 +580,7 @@ export function getThisNodeName() {
 }
 
 export function clearThisNodeName() {
-	node_name = undefined;
+	nodeName = undefined;
 }
 
 Object.defineProperty(server, 'hostname', {
