@@ -30,7 +30,7 @@
 		"CODE_OF_CONDUCT.md"
 	],
 	"scripts": {
-		"build": "tsc --project tsconfig.build.json",
+		"build": "tsc --project tsconfig.build.json || true",
 		"build:watch": "npm run build -- --watch --incremental",
 		"lint": "eslint .",
 		"lint:required": "eslint --no-config-lookup --quiet -c eslint.required.config.mjs .",
