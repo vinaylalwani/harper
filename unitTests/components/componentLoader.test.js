@@ -5,13 +5,13 @@ const path = require('path');
 const { tmpdir } = require('os');
 const { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } = require('fs');
 
-describe('ComponentLoader Status Integration', function () {
+describe('ComponentLoader Status Integration', () => {
 	let componentStatusRegistry;
 	let tempDir;
 	let componentLoader;
 	let lifecycle;
 
-	before(function () {
+	before(() => {
 		// Create a temporary directory for test components
 		tempDir = mkdtempSync(path.join(tmpdir(), 'harper-test-components-'));
 
@@ -58,7 +58,7 @@ describe('ComponentLoader Status Integration', function () {
 		componentLoader = require('#harper/components/componentLoader');
 	});
 
-	after(function () {
+	after(() => {
 		// Restore all spies
 		sinon.restore();
 
@@ -71,7 +71,7 @@ describe('ComponentLoader Status Integration', function () {
 		componentStatusRegistry.reset();
 	});
 
-	beforeEach(function () {
+	beforeEach(() => {
 		// Reset spy history before each test
 		lifecycle.loading.resetHistory();
 		lifecycle.loaded.resetHistory();
@@ -86,8 +86,8 @@ describe('ComponentLoader Status Integration', function () {
 		componentStatusRegistry.reset();
 	});
 
-	describe('Basic component status tracking', function () {
-		it('should initialize loading status for non-root components', async function () {
+	describe('Basic component status tracking', () => {
+		it('should initialize loading status for non-root components', async () => {
 			// Create a test component directory
 			const componentDirName = 'test-component';
 			const componentDir = path.join(tempDir, componentDirName);
@@ -121,7 +121,7 @@ describe('ComponentLoader Status Integration', function () {
 			);
 		});
 
-		it('should track loading for components with trusted loaders', async function () {
+		it('should track loading for components with trusted loaders', async () => {
 			// Create a component using a trusted loader
 			const componentDirName = 'trusted-component';
 			const componentDir = path.join(tempDir, componentDirName);
@@ -154,7 +154,7 @@ describe('ComponentLoader Status Integration', function () {
 			assert.match(loadedCalls[0].args[1], /loaded successfully/);
 		});
 
-		it('should mark component as failed when it loads no functionality', async function () {
+		it('should mark component as failed when it loads no functionality', async () => {
 			// Create a component directory without config
 			// This will use DEFAULT_CONFIG but won't actually load anything
 			const componentDirName = 'empty-component';
@@ -188,8 +188,8 @@ describe('ComponentLoader Status Integration', function () {
 		});
 	});
 
-	describe('Component status verification', function () {
-		it('should properly set status in registry after successful load', async function () {
+	describe('Component status verification', () => {
+		it('should properly set status in registry after successful load', async () => {
 			// Create a component
 			const componentDirName = 'verify-status';
 			const componentDir = path.join(tempDir, componentDirName);
@@ -213,7 +213,7 @@ describe('ComponentLoader Status Integration', function () {
 			assert.ok(status.message, 'Should have a status message');
 		});
 
-		it('should handle component loading errors gracefully', async function () {
+		it('should handle component loading errors gracefully', async () => {
 			// Stub the dataLoader module's handleApplication method to throw an error
 			const dataLoaderModule = require('#harper/resources/dataLoader');
 			const originalhandleApplication = dataLoaderModule.handleApplication;
