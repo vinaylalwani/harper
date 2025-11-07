@@ -64,23 +64,14 @@ interface UpdatableUsageLicense extends UsageLicense {
 
 export function isActiveLicense(license: UsageLicense): boolean {
 	return (
-		((license.usedReads ?? 0) < license.reads &&
-			(license.usedReadBytes ?? 0) < license.readBytes &&
-			(license.usedWrites ?? 0) < license.writes &&
-			(license.usedWriteBytes ?? 0) < license.writeBytes &&
-			(license.usedRealTimeMessages ?? 0) < license.realTimeMessages &&
-			(license.usedRealTimeBytes ?? 0) < license.realTimeBytes &&
-			(license.usedCpuTime ?? 0) < license.cpuTime &&
-			(license.usedStorage ?? 0) < license.storage) ||
-		// check for unlimited license
-		(license.reads === -1 &&
-			license.readBytes === -1 &&
-			license.writes === -1 &&
-			license.writeBytes === -1 &&
-			license.realTimeMessages === -1 &&
-			license.realTimeBytes === -1 &&
-			license.cpuTime === -1 &&
-			license.storage === -1)
+		(license.reads === -1 || (license.usedReads ?? 0) < license.reads) &&
+		(license.readBytes === -1 || (license.usedReadBytes ?? 0) < license.readBytes) &&
+		(license.writes === -1 || (license.usedWrites ?? 0) < license.writes) &&
+		(license.writeBytes === -1 || (license.usedWriteBytes ?? 0) < license.writeBytes) &&
+		(license.realTimeMessages === -1 || (license.usedRealTimeMessages ?? 0) < license.realTimeMessages) &&
+		(license.realTimeBytes === -1 || (license.usedRealTimeBytes ?? 0) < license.realTimeBytes) &&
+		(license.cpuTime === -1 || (license.usedCpuTime ?? 0) < license.cpuTime) &&
+		(license.storage === -1 || (license.usedStorage ?? 0) < license.storage)
 	);
 }
 

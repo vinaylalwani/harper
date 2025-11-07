@@ -217,4 +217,18 @@ describe('isActiveLicense', async () => {
 		};
 		expect(isActiveLicense(license)).to.be.true;
 	});
+
+	it('should accept a partially-unlimited license', () => {
+		const license = {
+			...generateValidLicensePayload(),
+			reads: -1,
+			readBytes: -1,
+			writes: 10000,
+			writeBytes: 100000000,
+			realTimeMessages: -1,
+			realTimeBytes: -1,
+			cpuTime: -1,
+		};
+		expect(isActiveLicense(license)).to.be.true;
+	});
 });
