@@ -73,6 +73,7 @@ export class Resource implements ResourceInterface {
 			letItLinger: true,
 			ensureLoaded: true, // load from source by default
 			async: true, // use async by default
+			method: 'get',
 		}
 	);
 	get?(query?): Promise<any>;
@@ -100,7 +101,7 @@ export class Resource implements ResourceInterface {
 					: resource.put(data, query)
 				: missingMethod(resource, 'put');
 		},
-		{ hasContent: true, type: 'update' }
+		{ hasContent: true, type: 'update', method: 'put' }
 	);
 
 	static patch = transactional(
@@ -112,7 +113,7 @@ export class Resource implements ResourceInterface {
 					: resource.patch(data, query)
 				: missingMethod(resource, 'patch');
 		},
-		{ hasContent: true, type: 'update' }
+		{ hasContent: true, type: 'update', method: 'patch' }
 	);
 
 	static delete(identifier: Id, context?: Context): Promise<boolean>;
@@ -121,7 +122,7 @@ export class Resource implements ResourceInterface {
 		function (resource: Resource, query?: RequestTarget, request: Context, data?: any) {
 			return resource.delete ? resource.delete(query) : missingMethod(resource, 'delete');
 		},
-		{ hasContent: false, type: 'delete' }
+		{ hasContent: false, type: 'delete', method: 'delete' }
 	);
 
 	/**
@@ -164,6 +165,10 @@ export class Resource implements ResourceInterface {
 			}
 		}
 		return transaction(context, async () => {
+			context.transaction.startedFrom ??= {
+				resourceName: this.name,
+				method: 'create',
+			};
 			const resource = new this(id, context);
 			const results = (await resource.create) ? resource.create(id, record) : missingMethod(resource, 'create');
 			context.newLocation = id ?? results?.[this.primaryKey];
@@ -175,7 +180,7 @@ export class Resource implements ResourceInterface {
 		function (resource: Resource, query?: RequestTarget, request: Context, data?: any) {
 			return resource.invalidate ? resource.invalidate(query) : missingMethod(resource, 'delete');
 		},
-		{ hasContent: false, type: 'update' }
+		{ hasContent: false, type: 'update', method: 'invalidate' }
 	);
 
 	static post = transactional(
@@ -183,14 +188,14 @@ export class Resource implements ResourceInterface {
 			if (resource.#id != null) resource.update?.(); // save any changes made during post
 			return resource.constructor.loadAsInstance === false ? resource.post(query, data) : resource.post(data, query);
 		},
-		{ hasContent: true, type: 'create' }
+		{ hasContent: true, type: 'create', method: 'post' }
 	);
 
 	static update = transactional(
 		function (resource: Resource, query?: RequestTarget, request: Context, data?: any) {
 			return resource.update(query, data);
 		},
-		{ hasContent: false, type: 'update' }
+		{ hasContent: false, type: 'update', method: 'update' }
 	);
 
 	static connect = transactional(
@@ -201,7 +206,7 @@ export class Resource implements ResourceInterface {
 					: resource.connect(data, query)
 				: missingMethod(resource, 'connect');
 		},
-		{ hasContent: true, type: 'read' }
+		{ hasContent: true, type: 'read', method: 'connect' }
 	);
 
 	static subscribe(request: SubscriptionRequest): Promise<AsyncIterable<{ id: any; operation: string; value: object }>>;
@@ -209,7 +214,7 @@ export class Resource implements ResourceInterface {
 		function (resource: Resource, query?: RequestTarget, request: Context, data?: any) {
 			return resource.subscribe ? resource.subscribe(query) : missingMethod(resource, 'subscribe');
 		},
-		{ type: 'read' }
+		{ type: 'read', method: 'subscribe' }
 	);
 
 	static publish = transactional(
@@ -221,7 +226,7 @@ export class Resource implements ResourceInterface {
 					: resource.publish(data, query)
 				: missingMethod(resource, 'publish');
 		},
-		{ hasContent: true, type: 'create' }
+		{ hasContent: true, type: 'create', method: 'publish' }
 	);
 
 	static search = transactional(
@@ -234,7 +239,7 @@ export class Resource implements ResourceInterface {
 			}
 			return result;
 		},
-		{ type: 'read' }
+		{ type: 'read', method: 'search' }
 	);
 
 	static query = transactional(
@@ -245,7 +250,7 @@ export class Resource implements ResourceInterface {
 					: resource.search(data, query)
 				: missingMethod(resource, 'search');
 		},
-		{ hasContent: true, type: 'read' }
+		{ hasContent: true, type: 'read', method: 'query' }
 	);
 
 	static copy = transactional(
@@ -256,7 +261,7 @@ export class Resource implements ResourceInterface {
 					: resource.copy(data, query)
 				: missingMethod(resource, 'copy');
 		},
-		{ hasContent: true, type: 'create' }
+		{ hasContent: true, type: 'create', method: 'copy' }
 	);
 
 	static move = transactional(
@@ -267,7 +272,7 @@ export class Resource implements ResourceInterface {
 					: resource.move(data, query)
 				: missingMethod(resource, 'move');
 		},
-		{ hasContent: true, type: 'delete' }
+		{ hasContent: true, type: 'delete', method: 'move' }
 	);
 
 	async post(target: RequestTarget, newRecord: any) {
@@ -641,6 +646,11 @@ function transactional(action, options) {
 			return transaction(
 				context,
 				() => {
+					// record what transaction we are starting from, so that if it times out, we can have an indication of the cause
+					context.transaction.startedFrom = {
+						resourceName: this.name,
+						method: options.method,
+					};
 					const resource = this.getResource(id, context, resourceOptions);
 					return resource.then ? resource.then(runAction) : runAction(resource);
 				},
