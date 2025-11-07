@@ -69,6 +69,10 @@ export class Scope extends EventEmitter {
 		return this.#directory;
 	}
 
+	get configFilePath(): string {
+		return this.#configFilePath;
+	}
+
 	#handleOptionsWatcherReady(): void {
 		// This previously created the default entry handler immediately, but now we wait for the user to call `handleEntry`
 		// The issue was that since the component loader was awaiting `scope.ready()` and then calling `pluginModule.handleApplication(scope)`,
@@ -175,53 +179,89 @@ export class Scope extends EventEmitter {
 		return undefined;
 	}
 
-	handleEntry(files: FilesOption | FileAndURLPathConfig, handler: onEntryEventHandler): EntryHandler;
-	handleEntry(handler: onEntryEventHandler): EntryHandler;
-	handleEntry(): EntryHandler;
-	handleEntry(
+	handleEntry(files: FilesOption | FileAndURLPathConfig, handler: onEntryEventHandler): Promise<EntryHandler>;
+	handleEntry(handler: onEntryEventHandler): Promise<EntryHandler>;
+	handleEntry(): Promise<EntryHandler>;
+	async handleEntry(
 		filesOrHandler?: FilesOption | FileAndURLPathConfig | onEntryEventHandler,
 		handler?: onEntryEventHandler
-	): EntryHandler {
+	): Promise<EntryHandler> {
+		// Track async operations from handlers
+		const pendingOperations = new Set<Promise<void>>();
+
+		// Wrapper to track async handler results
+		const wrapHandler = (originalHandler: onEntryEventHandler): onEntryEventHandler => {
+			return (entry) => {
+				const result = originalHandler(entry);
+				// Check if the handler returned a Promise
+				if (result && typeof result === 'object' && 'then' in result && typeof result.then === 'function') {
+					const tracked = (result as Promise<any>)
+						.catch((error) => {
+							// Log error with full details but don't let it break the tracking
+							this.#logger.error?.('Error in async entry handler:', error);
+						})
+						.finally(() => pendingOperations.delete(tracked));
+					pendingOperations.add(tracked);
+				}
+			};
+		};
+
+		let entryHandler: EntryHandler;
+
 		// No arguments
 		if (filesOrHandler === undefined) {
 			// If entry handler already exists, return it
 			if (this.#entryHandler) {
-				return this.#entryHandler;
-			}
-
-			// Otherwise, try to create a default entry handler using the files option
-			const filesOption = this.#getFilesOption();
-			if (filesOption) {
-				this.#entryHandler = this.#createEntryHandler(filesOption);
-				return this.#entryHandler;
+				entryHandler = this.#entryHandler;
 			} else {
-				this.emit('error', new MissingDefaultFilesOptionError());
-				return;
+				// Otherwise, try to create a default entry handler using the files option
+				const filesOption = this.#getFilesOption();
+				if (filesOption) {
+					this.#entryHandler = this.#createEntryHandler(filesOption);
+					entryHandler = this.#entryHandler;
+				} else {
+					this.emit('error', new MissingDefaultFilesOptionError());
+					return;
+				}
 			}
 		}
-
 		// Provided a handler function
-		if (typeof filesOrHandler === 'function') {
+		else if (typeof filesOrHandler === 'function') {
+			const wrapped = wrapHandler(filesOrHandler);
+
 			// If an entry handler already exists, return it with the handler attached
 			if (this.#entryHandler) {
-				return this.#entryHandler.on('all', filesOrHandler);
-			}
-
-			// Otherwise, try to create a default entry handler using the files option
-			const filesOption = this.#getFilesOption();
-			if (filesOption) {
-				this.#entryHandler = this.#createEntryHandler(filesOption);
-				// And attach the handler to it
-				return this.#entryHandler.on('all', filesOrHandler);
+				entryHandler = this.#entryHandler.on('all', wrapped);
 			} else {
-				this.emit('error', new MissingDefaultFilesOptionError());
-				return;
+				// Otherwise, try to create a default entry handler using the files option
+				const filesOption = this.#getFilesOption();
+				if (filesOption) {
+					this.#entryHandler = this.#createEntryHandler(filesOption);
+					// And attach the handler to it
+					entryHandler = this.#entryHandler.on('all', wrapped);
+				} else {
+					this.emit('error', new MissingDefaultFilesOptionError());
+					return;
+				}
+			}
+		}
+		// otherwise this is a custom config entry handler
+		else {
+			entryHandler = this.#createEntryHandler(filesOrHandler);
+			if (handler) {
+				entryHandler.on('all', wrapHandler(handler));
 			}
 		}
 
-		// otherwise this is a custom config entry handler
-		const entryHandler = this.#createEntryHandler(filesOrHandler);
-		return handler ? entryHandler.on('all', handler) : entryHandler;
+		// Wait for the entry handler to complete its initial scan
+		await entryHandler.ready;
+
+		// Wait for all async operations triggered during the initial scan to complete
+		if (pendingOperations.size > 0) {
+			await Promise.all(pendingOperations);
+		}
+
+		return entryHandler;
 	}
 
 	requestRestart() {

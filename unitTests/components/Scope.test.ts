@@ -56,7 +56,7 @@ describe('Scope', () => {
 		await writeFile(this.testFilePath, '"bar";');
 		assert.equal(restartNeeded(), false, 'requestRestart should not be called');
 
-		const entryHandlerNoArgs = scope.handleEntry();
+		const entryHandlerNoArgs = await scope.handleEntry();
 		assert.ok(entryHandlerNoArgs instanceof EntryHandler, 'Entry handler should be created');
 
 		// Now, since there is not entry handler function, modifying the file should request a restart
@@ -65,7 +65,7 @@ describe('Scope', () => {
 		assert.equal(restartNeeded(), true, 'requestRestart should be called');
 
 		// even though it doesn't do anything this counts as an all handler
-		const entryHandlerFunctionArg = scope.handleEntry(() => {});
+		const entryHandlerFunctionArg = await scope.handleEntry(() => {});
 		assert.ok(entryHandlerFunctionArg instanceof EntryHandler, 'Entry handler should be created');
 
 		assert.deepEqual(entryHandlerNoArgs, entryHandlerFunctionArg, 'Entry handlers should be the same');
@@ -103,7 +103,7 @@ describe('Scope', () => {
 		assert.ok(scope.server !== undefined, 'Scope should have a server property');
 
 		const handleEntrySpy = spy();
-		const entryHandler = scope.handleEntry(handleEntrySpy);
+		const entryHandler = await scope.handleEntry(handleEntrySpy);
 		assert.ok(entryHandler instanceof EntryHandler, 'Entry handler should be created');
 
 		await writeFile(this.testFilePath, '"foo";');
@@ -143,7 +143,7 @@ describe('Scope', () => {
 
 		await scope.ready;
 
-		await scope.handleEntry().ready;
+		await scope.handleEntry();
 
 		assert.equal(restartNeeded(), true, 'requestRestart was called');
 
@@ -157,7 +157,7 @@ describe('Scope', () => {
 
 		await scope.ready;
 
-		await scope.handleEntry(() => {}).ready;
+		await scope.handleEntry(() => {});
 
 		assert.equal(restartNeeded(), false, 'requestRestart was not called');
 
@@ -180,7 +180,7 @@ describe('Scope', () => {
 		const errorSpy = spy();
 		scope.on('error', errorSpy);
 
-		const entryHandler = scope.handleEntry();
+		const entryHandler = await scope.handleEntry();
 		assert.equal(entryHandler, undefined, 'Entry handler should be undefined');
 
 		assert.equal(errorSpy.callCount, 1, 'error event should be emitted once');
@@ -190,7 +190,7 @@ describe('Scope', () => {
 			'error event should be a missing default files option error'
 		);
 
-		scope.handleEntry(() => {});
+		await scope.handleEntry(() => {});
 
 		assert.equal(errorSpy.callCount, 2, 'error event should be emitted once');
 		assert.deepEqual(
@@ -211,10 +211,13 @@ describe('Scope', () => {
 
 		await scope.ready;
 
-		const customEntryHandlerPathOnlyArg = scope.handleEntry('.');
+		const customEntryHandlerPathOnlyArg = await scope.handleEntry('.');
 		assert.ok(customEntryHandlerPathOnlyArg instanceof EntryHandler, 'Custom entry handler should be created');
 
-		const customEntryHandlerPathAndFunctionArgs = scope.handleEntry('.', () => {});
+		// Reset restart flag - the first handler without a function triggers restart when it encounters files
+		resetRestartNeeded();
+
+		const customEntryHandlerPathAndFunctionArgs = await scope.handleEntry('.', () => {});
 		assert.ok(customEntryHandlerPathAndFunctionArgs instanceof EntryHandler, 'Custom entry handler should be created');
 
 		assert.equal(restartNeeded(), false, 'requestRestart should not be called');
@@ -229,5 +232,31 @@ describe('Scope', () => {
 
 		assert.equal(entryHandleCloseSpy1.callCount, 1, 'close event for custom entry handler should be emitted once');
 		assert.equal(entryHandleCloseSpy2.callCount, 1, 'close event for custom entry handler should be emitted once');
+	});
+
+	it('should support non-awaited handleEntry', async () => {
+		writeFileSync(this.configFilePath, stringify({ [this.name]: { files: 'test.js' } }));
+
+		const scope = new Scope(this.name, this.directory, this.configFilePath, this.resources, this.server);
+
+		await scope.ready;
+
+		const handleEntrySpy = spy();
+
+		// Call handleEntry WITHOUT await (old plugin behavior)
+		const entryHandlerPromise = scope.handleEntry(handleEntrySpy);
+
+		// Should return a Promise
+		assert.ok(entryHandlerPromise instanceof Promise, 'handleEntry should return a Promise');
+
+		// Await it to get the EntryHandler
+		const entryHandler = await entryHandlerPromise;
+		assert.ok(entryHandler instanceof EntryHandler, 'Promise should resolve to EntryHandler');
+
+		// Handler should eventually be called
+		await waitFor(() => handleEntrySpy.callCount > 0);
+		assert.ok(handleEntrySpy.callCount > 0, 'Entry handler should be called');
+
+		scope.close();
 	});
 });
