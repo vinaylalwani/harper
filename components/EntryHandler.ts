@@ -60,6 +60,7 @@ export type EntryHandlerEventMap = {
 	close: [];
 	error: [error: unknown];
 	ready: [];
+	initialLoadComplete: [];
 	add: [entry: AddFileEvent];
 	change: [entry: ChangeFileEvent];
 	unlink: [entry: UnlinkFileEvent];

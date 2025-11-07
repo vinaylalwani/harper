@@ -29,6 +29,7 @@ export class Scope extends EventEmitter {
 	#entryHandler?: EntryHandler;
 	#entryHandlers: EntryHandler[];
 	#logger: any;
+	#pendingInitialLoads: Set<Promise<void>>;
 
 	options: OptionsWatcher;
 	resources: Resources;
@@ -47,6 +48,7 @@ export class Scope extends EventEmitter {
 		this.server = server;
 
 		this.#entryHandlers = [];
+		this.#pendingInitialLoads = new Set();
 
 		this.ready = once(this, 'ready');
 
@@ -179,34 +181,50 @@ export class Scope extends EventEmitter {
 		return undefined;
 	}
 
-	handleEntry(files: FilesOption | FileAndURLPathConfig, handler: onEntryEventHandler): Promise<EntryHandler>;
-	handleEntry(handler: onEntryEventHandler): Promise<EntryHandler>;
-	handleEntry(): Promise<EntryHandler>;
-	async handleEntry(
+	handleEntry(files: FilesOption | FileAndURLPathConfig, handler: onEntryEventHandler): EntryHandler;
+	handleEntry(handler: onEntryEventHandler): EntryHandler;
+	handleEntry(): EntryHandler;
+	handleEntry(
 		filesOrHandler?: FilesOption | FileAndURLPathConfig | onEntryEventHandler,
 		handler?: onEntryEventHandler
-	): Promise<EntryHandler> {
-		// Track async operations from handlers
-		const pendingOperations = new Set<Promise<void>>();
+	): EntryHandler {
+		let entryHandler: EntryHandler;
 
-		// Wrapper to track async handler results
-		const wrapHandler = (originalHandler: onEntryEventHandler): onEntryEventHandler => {
-			return (entry) => {
-				const result = originalHandler(entry);
-				// Check if the handler returned a Promise
-				if (result && typeof result === 'object' && 'then' in result && typeof result.then === 'function') {
-					const tracked = (result as Promise<any>)
+		// Helper to wrap async handlers for tracking
+		const wrapHandler = (
+			targetEntryHandler: EntryHandler,
+			entryEventHandler: onEntryEventHandler
+		): onEntryEventHandler => {
+			const pendingOperations = new Set<Promise<void>>();
+
+			const wrapped: onEntryEventHandler = (entry) => {
+				const result = entryEventHandler(entry);
+				if (result instanceof Promise) {
+					const tracked = result
 						.catch((error) => {
-							// Log error with full details but don't let it break the tracking
 							this.#logger.error?.('Error in async entry handler:', error);
+							this.#handleError(error);
+							throw error;
 						})
 						.finally(() => pendingOperations.delete(tracked));
 					pendingOperations.add(tracked);
 				}
 			};
-		};
 
-		let entryHandler: EntryHandler;
+			// When the entry handler's initial scan completes, wait for all pending async operations
+			const initialLoadPromise = once(targetEntryHandler, 'ready').then(async () => {
+				if (pendingOperations.size > 0) {
+					await Promise.all(pendingOperations);
+				}
+				targetEntryHandler.emit('initialLoadComplete');
+			});
+
+			// Track this promise so the component loader can await it
+			this.#pendingInitialLoads.add(initialLoadPromise);
+			initialLoadPromise.finally(() => this.#pendingInitialLoads.delete(initialLoadPromise));
+
+			return wrapped;
+		};
 
 		// No arguments
 		if (filesOrHandler === undefined) {
@@ -227,38 +245,31 @@ export class Scope extends EventEmitter {
 		}
 		// Provided a handler function
 		else if (typeof filesOrHandler === 'function') {
-			const wrapped = wrapHandler(filesOrHandler);
-
 			// If an entry handler already exists, return it with the handler attached
 			if (this.#entryHandler) {
-				entryHandler = this.#entryHandler.on('all', wrapped);
+				entryHandler = this.#entryHandler;
 			} else {
 				// Otherwise, try to create a default entry handler using the files option
 				const filesOption = this.#getFilesOption();
 				if (filesOption) {
 					this.#entryHandler = this.#createEntryHandler(filesOption);
-					// And attach the handler to it
-					entryHandler = this.#entryHandler.on('all', wrapped);
+					entryHandler = this.#entryHandler;
 				} else {
 					this.emit('error', new MissingDefaultFilesOptionError());
 					return;
 				}
 			}
+
+			const wrappedHandler = wrapHandler(entryHandler, filesOrHandler);
+			entryHandler.on('all', wrappedHandler);
 		}
 		// otherwise this is a custom config entry handler
 		else {
 			entryHandler = this.#createEntryHandler(filesOrHandler);
 			if (handler) {
-				entryHandler.on('all', wrapHandler(handler));
+				const wrappedHandler = wrapHandler(entryHandler, handler);
+				entryHandler.on('all', wrappedHandler);
 			}
-		}
-
-		// Wait for the entry handler to complete its initial scan
-		await entryHandler.ready;
-
-		// Wait for all async operations triggered during the initial scan to complete
-		if (pendingOperations.size > 0) {
-			await Promise.all(pendingOperations);
 		}
 
 		return entryHandler;
@@ -267,5 +278,16 @@ export class Scope extends EventEmitter {
 	requestRestart() {
 		this.#logger.debug(`Restart requested from ${this.name} scope for ${this.directory}`);
 		requestRestart();
+	}
+
+	/**
+	 * Wait for all entry handlers' initial loads to complete.
+	 * This includes waiting for any async operations in entry handler callbacks.
+	 * Called by the component loader after handleApplication completes.
+	 */
+	async waitForInitialLoads(): Promise<void> {
+		if (this.#pendingInitialLoads.size > 0) {
+			await Promise.all(this.#pendingInitialLoads);
+		}
 	}
 }
