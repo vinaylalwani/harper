@@ -7,6 +7,21 @@ function isResource(value: unknown) {
 }
 
 /**
+ * Error thrown when a JavaScript resource module fails to load
+ */
+export class ResourceLoadError extends Error {
+	public readonly filePath: string;
+	public readonly cause?: Error;
+
+	constructor(filePath: string, cause?: Error) {
+		super(`Failed to load resource module ${filePath}${cause ? `: ${cause.message}` : ''}`);
+		this.name = 'ResourceLoadError';
+		this.filePath = filePath;
+		this.cause = cause;
+	}
+}
+
+/**
  * This plugin loads JavaScript files and registers their exports as resources.
  *
  * The export can be the default export and will be assigned to the root URL path.
@@ -21,7 +36,7 @@ function isResource(value: unknown) {
  *
  */
 export async function handleApplication(scope: Scope) {
-	await scope.handleEntry(async (entryEvent) => {
+	await scope.handleEntry(async function handleResourceEntry(entryEvent) {
 		if (entryEvent.entryType !== 'file') {
 			scope.logger.warn(
 				`jsResource plugin cannot handle entry type ${entryEvent.entryType}. Modify the 'files' option in ${scope.configFilePath} to only include files.`
@@ -45,7 +60,7 @@ export async function handleApplication(scope: Scope) {
 			recurseForResources(scope, resourceModule, root);
 		} catch (error) {
 			// Rethrow with more context
-			throw new Error(`Failed to load resource module ${entryEvent.absolutePath}: ${error}`);
+			throw new ResourceLoadError(entryEvent.absolutePath, error);
 		}
 	});
 }

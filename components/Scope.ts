@@ -197,8 +197,8 @@ export class Scope extends EventEmitter {
 				if (result && typeof result === 'object' && 'then' in result && typeof result.then === 'function') {
 					const tracked = (result as Promise<any>)
 						.catch((error) => {
-							// Log error but don't let it break the tracking
-							this.#logger.error?.(`Error in async entry handler: ${error}`);
+							// Log error with full details but don't let it break the tracking
+							this.#logger.error?.('Error in async entry handler:', error);
 						})
 						.finally(() => pendingOperations.delete(tracked));
 					pendingOperations.add(tracked);

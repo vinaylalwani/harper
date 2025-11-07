@@ -112,9 +112,12 @@ describe('jsResource', () => {
 				async () => await handleApplication(mockScope),
 				(error) => {
 					// Should rethrow with context
+					assert.equal(error.name, 'ResourceLoadError', 'Error should be ResourceLoadError');
 					assert.ok(error.message.includes('Failed to load resource module'), 'Error should include context message');
 					assert.ok(error.message.includes(testFile), 'Error should include file path');
 					assert.ok(error.message.includes('Import failed'), 'Error should include original error');
+					assert.equal(error.filePath, testFile, 'Error should have filePath property');
+					assert.equal(error.cause, testError, 'Error should preserve original error as cause');
 					return true;
 				}
 			);
