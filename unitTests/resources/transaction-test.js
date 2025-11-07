@@ -448,5 +448,10 @@ describe('Transactions', () => {
 			instance = await WithCountOnGet.get(67);
 			assert.equal(instance.count, 2);
 		});
+		it('authorize gets turned off', async function () {
+			const context = { authorize: true };
+			await TxnTest.get(45, context);
+			assert.equal(context.authorize, false);
+		});
 	});
 });
