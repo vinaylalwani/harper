@@ -98,6 +98,7 @@ describe('Transactions', () => {
 			TxnTest2.put(13, { name: 'thirteen' }, context);
 			await context.transaction.commit();
 			assert.equal((await TxnTest.get(7, context)).name, 'seven');
+			await TxnTest.put(7, { name: 'SEVEN' }, context);
 			let entries = [];
 			for await (let entry of TxnTest2.search([{ attribute: 'name', value: 'thirteen' }], context)) {
 				entries.push(entry);
@@ -105,6 +106,11 @@ describe('Transactions', () => {
 			assert.equal(entries[0].name, 'thirteen');
 			TxnTest3.put(14, { name: 'fourteen' }, context);
 		});
+		const sevens = [];
+		for await (let seven of TxnTest.search([{ attribute: 'name', value: 'SEVEN' }])) {
+			sevens.push(seven);
+		}
+		assert.equal(sevens.length, 1);
 	});
 	describe('Testing updates', () => {
 		it('Can update with addTo and set', async function () {

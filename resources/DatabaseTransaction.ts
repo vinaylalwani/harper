@@ -259,6 +259,7 @@ export class DatabaseTransaction implements Transaction {
 					// now reset transactions tracking; this transaction be reused and committed again
 					this.writes = [];
 					this.next = null;
+					this.timestamp = 0; // reset the timestamp as well
 					return Promise.all(completions).then(() => {
 						return {
 							txnTime,
