@@ -306,7 +306,7 @@ export class HierarchicalNavigableSmallWorld {
 		}
 		function updateNode(id: number, node?: Node) {
 			// keep a record of all our changes, maintaining any changes that are queued to be written
-			let updatedNode: Node = updatedNodes.get(id)!;
+			let updatedNode: Node = updatedNodes.get(id);
 			if (!updatedNode && node) {
 				// copy the node so we can modify it
 				updatedNode = { ...node };
@@ -364,7 +364,7 @@ export class HierarchicalNavigableSmallWorld {
 		while (candidates.length > 0) {
 			// Get closest unvisited element
 			candidates.sort((a, b) => a.distance - b.distance);
-			const current = candidates.shift()!;
+			const current = candidates.shift();
 
 			// Get least result distance
 			const furthestDistance = results[results.length - 1].distance;
