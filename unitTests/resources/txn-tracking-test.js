@@ -4,8 +4,10 @@ const { getMockLMDBPath } = require('../test_utils');
 const { setTxnExpiration } = require('../../resources/DatabaseTransaction');
 const { setMainIsWorker } = require('../../server/threads/manageThreads');
 const { table } = require('../../resources/databases');
+const { setTimeout: delay } = require('node:timers/promises');
 describe('Txn Expiration', () => {
-	let SlowResource;
+	let SlowResource,
+		performedDBInteractions = false;
 	before(async function () {
 		getMockLMDBPath();
 		setMainIsWorker(true); // TODO: Should be default until changed
@@ -16,17 +18,28 @@ describe('Txn Expiration', () => {
 		});
 		SlowResource = class extends BasicTable {
 			async get(query) {
-				await new Promise((resolve) => setTimeout(resolve, 5000));
+				await delay(40);
+				// at this point the read transaction should be expired, but we should still be able to do read/writes (in a
+				// new transaction)
+				await super.get(3);
+				await super.put(3, { name: 'three' });
+				performedDBInteractions = true;
+				await delay(500);
 				return super.get(query);
 			}
 		};
 	});
 	it('Slow txn will expire', async function () {
-		let tracked_txns = setTxnExpiration(20);
+		let trackedTxns = setTxnExpiration(20);
 		let result = SlowResource.get(3);
-		assert.equal(tracked_txns.size, 1);
-		await new Promise((resolve) => setTimeout(resolve, 50));
-		assert.equal(tracked_txns.size, 0);
+		assert.equal(trackedTxns.size, 1);
+		const txns = Array.from(trackedTxns);
+		assert.equal(txns[0].startedFrom.resourceName, 'SlowResource');
+		assert.equal(txns[0].startedFrom.method, 'get');
+		assert.equal(txns[0].timeout, 20);
+		await Promise.race([delay(50), result]);
+		assert(performedDBInteractions);
+		assert.equal(trackedTxns.size, 0);
 	});
 	after(function () {
 		setTxnExpiration(30000);
