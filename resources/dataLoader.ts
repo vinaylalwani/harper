@@ -119,15 +119,14 @@ export function handleApplication(scope) {
 	}
 
 	// Handle all files that match the pattern in the config
-	scope.handleEntry((entry) => {
+	scope.handleEntry(async function handleDataLoaderEntry(entry) {
 		// Return early if not adding or updating a file
 		if (entry.entryType !== 'file' || entry.eventType === 'unlink') {
 			return;
 		}
 
-		loadDataFile(entry, tables, databases).then((result) => {
-			dataLoaderLogger.debug?.('Data loader processed file: %s: %s', basename(entry.absolutePath), result.message);
-		});
+		const result = await loadDataFile(entry, tables, databases);
+		dataLoaderLogger.debug?.('Data loader processed file: %s: %s', basename(entry.absolutePath), result.message);
 	});
 }
 
@@ -138,11 +137,7 @@ export function handleApplication(scope) {
  * @param databasesRef - Reference to databases object (local const for testing)
  */
 
-export async function loadDataFile(
-	{ contents, absolutePath, stats }: FileEntry,
-	tablesRef: Tables,
-	databasesRef: Databases
-) {
+export async function loadDataFile({ contents, absolutePath }: FileEntry, tablesRef: Tables, databasesRef: Databases) {
 	const fileExt = extname(absolutePath) || 'unknown';
 	let data: DataFileFormat;
 
