@@ -36,7 +36,7 @@ export class ResourceLoadError extends Error {
  *
  */
 export async function handleApplication(scope: Scope) {
-	await scope.handleEntry(async function handleResourceEntry(entryEvent) {
+	scope.handleEntry(async function handleResourceEntry(entryEvent) {
 		if (entryEvent.entryType !== 'file') {
 			scope.logger.warn(
 				`jsResource plugin cannot handle entry type ${entryEvent.entryType}. Modify the 'files' option in ${scope.configFilePath} to only include files.`
