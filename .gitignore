@@ -18,6 +18,7 @@ integrationTests/apiTests/.env
 *test_export.json.json
 /unitTests/envDir/*
 /unitTests/apiTests/envDir/*
+/unitTests/server/replication/envDir/*
 /unitTests/testApp/node_modules/*
 /unitTests/server/nats/tempTestDir/*
 /bin/unit-test/keys/*
