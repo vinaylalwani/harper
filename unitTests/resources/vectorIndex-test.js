@@ -110,20 +110,37 @@ describe('HierarchicalNavigableSmallWorld indexing', () => {
 		);
 	});
 	it('can remove and add and search with vector index', async () => {
-		await HNSWTest.put(0, {
-			name: 'test',
-			vector: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-		});
-		await HNSWTest.delete(0);
-		await HNSWTest.put(0, {
-			name: 'test',
-			vector: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-		});
-		await HNSWTest.put(0, {
-			name: 'test',
-			vector: null,
-		});
-		await HNSWTest.delete(0);
+		for (let record of HNSWTest.search([])) {
+			await HNSWTest.delete(record.id);
+		}
+		const records = [
+			{ id: 0, name: 'test', vector: [1, 2, 3] },
+			{ id: 1, name: 'test1', vector: [4, 5, 6] },
+			{ id: 2, name: 'test1', vector: [7, 6, 5] },
+			{ id: 3, name: 'test1', vector: [8, 7, 6] },
+			{ id: 4, name: 'test1', vector: [9, 8, 7] },
+		];
+		for (let i = 0; i < 500; i++) {
+			let promise;
+			if (i % 17 > 10) {
+				promise = HNSWTest.delete(records[i % 5].id);
+			} else {
+				promise = HNSWTest.put(records[i % 5]);
+			}
+			if (i % 13 === 0) {
+				await promise;
+			}
+		}
+		for (let i = 0; i < 5; i++) {
+			await HNSWTest.put(records[i]);
+		}
+		let results = await fromAsync(
+			HNSWTest.search({
+				sort: { attribute: 'vector', target: [7, 6, 5], distance: 'cosine' },
+				select: ['id', 'vector', 'name', '$distance'],
+			})
+		);
+		assert.equal(results[0].id, 2);
 	});
 	after(() => {
 		HNSWTest.dropTable();
