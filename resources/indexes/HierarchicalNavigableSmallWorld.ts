@@ -504,7 +504,7 @@ export class HierarchicalNavigableSmallWorld {
 		if (this.optimizeRouting) maxConnections <<= 2; // bump up the max connections beyond traditional HNSW because we are naturally limiting
 		// have we exceeded the max connections (with 25% grace period)
 		if (node[level].length >= maxConnections + (maxConnections >> 2)) {
-			logger.warn?.('maxConnections reached, removing some connections', maxConnections);
+			logger.debug?.('maxConnections reached, removing some connections', maxConnections);
 			// Get all connections with their similarities
 
 			// Sort by distance but prioritize nodes that have reverse connections
