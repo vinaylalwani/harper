@@ -98,6 +98,7 @@ describe('Transactions', () => {
 			TxnTest2.put(13, { name: 'thirteen' }, context);
 			await context.transaction.commit();
 			assert.equal((await TxnTest.get(7, context)).name, 'seven');
+			assert.equal((await TxnTest2.get(13, context)).name, 'thirteen');
 			await TxnTest.put(7, { name: 'SEVEN' }, context);
 			let entries = [];
 			for await (let entry of TxnTest2.search([{ attribute: 'name', value: 'thirteen' }], context)) {
@@ -105,6 +106,10 @@ describe('Transactions', () => {
 			}
 			assert.equal(entries[0].name, 'thirteen');
 			TxnTest3.put(14, { name: 'fourteen' }, context);
+			await context.transaction.commit();
+			assert.equal((await TxnTest.get(7, context)).name, 'SEVEN');
+			assert.equal((await TxnTest2.get(13, context)).name, 'thirteen');
+			assert.equal((await TxnTest3.get(14, context)).name, 'fourteen');
 		});
 		const sevens = [];
 		for await (let seven of TxnTest.search([{ attribute: 'name', value: 'SEVEN' }])) {
@@ -293,6 +298,40 @@ describe('Transactions', () => {
 			assert.equal(instance.count, 1);
 			instance = await WithCountOnGet.get(67);
 			assert.equal(instance.count, 2);
+		});
+	});
+	describe('Testing updates with extended class with loadAsInstance=false', () => {
+		it('Can run txn with commit in the middle', async function () {
+			class NewTxnTest extends TxnTest {
+				static loadAsInstance = false;
+				get(target) {
+					return this.getContext().callback();
+				}
+			}
+			class NewTxnTest2 extends TxnTest2 {
+				static loadAsInstance = false;
+			}
+			const context = {
+				callback: async () => {
+					TxnTest.put(7, { name: 'seven' }, context);
+					TxnTest2.put(13, { name: 'thirteen' }, context);
+					await context.transaction.commit();
+					assert.equal((await TxnTest.get(7, context)).name, 'seven');
+					assert.equal((await TxnTest2.get(13, context)).name, 'thirteen');
+					await TxnTest.put(7, { name: 'SEVEN' }, context);
+					let entries = [];
+					for await (let entry of TxnTest2.search([{ attribute: 'name', value: 'thirteen' }], context)) {
+						entries.push(entry);
+					}
+					assert.equal(entries[0].name, 'thirteen');
+					TxnTest3.put(14, { name: 'fourteen' }, context);
+					await context.transaction.commit();
+					assert.equal((await TxnTest.get(7)).name, 'SEVEN');
+					assert.equal((await TxnTest2.get(13)).name, 'thirteen');
+					assert.equal((await TxnTest3.get(14)).name, 'fourteen');
+				},
+			};
+			await NewTxnTest.get(1, context);
 		});
 	});
 	describe('Testing updates with loadAsInstance=false', () => {
