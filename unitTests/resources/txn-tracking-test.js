@@ -31,15 +31,16 @@ describe('Txn Expiration', () => {
 	});
 	it('Slow txn will expire', async function () {
 		let trackedTxns = setTxnExpiration(20);
+		let existingTxns = trackedTxns.size;
 		let result = SlowResource.get(3);
-		assert.equal(trackedTxns.size, 1);
+		assert.equal(trackedTxns.size, existingTxns + 1);
 		const txns = Array.from(trackedTxns);
 		assert.equal(txns[0].startedFrom.resourceName, 'SlowResource');
 		assert.equal(txns[0].startedFrom.method, 'get');
 		assert.equal(txns[0].timeout, 20);
 		await Promise.race([delay(50), result]);
 		assert(performedDBInteractions);
-		assert.equal(trackedTxns.size, 0);
+		assert.equal(trackedTxns.size, existingTxns);
 	});
 	after(function () {
 		setTxnExpiration(30000);
