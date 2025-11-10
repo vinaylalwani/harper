@@ -1,5 +1,5 @@
 const { describe, it } = require('mocha');
-const { resolveBaseURLPath, InvalidBaseURLPathError } = require('#harper/components/resolveBaseURLPath');
+const { resolveBaseURLPath, InvalidBaseURLPathError } = require('#dist/components/resolveBaseURLPath');
 const assert = require('node:assert/strict');
 
 describe('resolveBaseURLPath', () => {

@@ -1,5 +1,5 @@
 const { describe, it } = require('mocha');
-const { deriveCommonPatternBase } = require('#harper/components/deriveCommonPatternBase');
+const { deriveCommonPatternBase } = require('#dist/components/deriveCommonPatternBase');
 const assert = require('node:assert/strict');
 
 describe('deriveCommonPatternBase', () => {

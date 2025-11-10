@@ -1,10 +1,10 @@
 const { describe, it, beforeEach, afterEach } = require('mocha');
 const assert = require('node:assert/strict');
 const sinon = require('sinon');
-const { CrossThreadStatusCollector, StatusAggregator } = require('#harper/components/status/crossThread');
-const { ComponentStatusRegistry } = require('#harper/components/status/ComponentStatusRegistry');
-const itcModule = require('#harper/server/threads/itc');
-const manageThreadsModule = require('#harper/server/threads/manageThreads');
+const { CrossThreadStatusCollector, StatusAggregator } = require('#dist/components/status/crossThread');
+const { ComponentStatusRegistry } = require('#dist/components/status/ComponentStatusRegistry');
+const itcModule = require('#dist/server/threads/itc');
+const manageThreadsModule = require('#dist/server/threads/manageThreads');
 
 describe('CrossThread Module', () => {
 	let sendItcEventStub;
@@ -169,7 +169,7 @@ describe('CrossThread Module', () => {
 			getWorkerIndexStub.returns(0);
 
 			// Mock getWorkerCount to return 2 (expecting 2 worker responses)
-			const manageThreadsModule = require('#harper/server/threads/manageThreads');
+			const manageThreadsModule = require('#dist/server/threads/manageThreads');
 			const getWorkerCountStub = sinon.stub(manageThreadsModule, 'getWorkerCount').returns(2);
 
 			// Track when collection completes

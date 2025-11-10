@@ -1,12 +1,12 @@
 const { describe, it, beforeEach, afterEach, after } = require('mocha');
 const assert = require('node:assert/strict');
 const sinon = require('sinon');
-const { ComponentStatusRegistry } = require('#harper/components/status/ComponentStatusRegistry');
-const { ComponentStatus } = require('#harper/components/status/ComponentStatus');
-const { COMPONENT_STATUS_LEVELS } = require('#harper/components/status/types');
-const { StatusAggregator } = require('#harper/components/status/crossThread');
-const itcModule = require('#harper/server/threads/itc');
-const manageThreadsModule = require('#harper/server/threads/manageThreads');
+const { ComponentStatusRegistry } = require('#dist/components/status/ComponentStatusRegistry');
+const { ComponentStatus } = require('#dist/components/status/ComponentStatus');
+const { COMPONENT_STATUS_LEVELS } = require('#dist/components/status/types');
+const { StatusAggregator } = require('#dist/components/status/crossThread');
+const itcModule = require('#dist/server/threads/itc');
+const manageThreadsModule = require('#dist/server/threads/manageThreads');
 
 describe('ComponentStatusRegistry', () => {
 	let registry;
@@ -505,7 +505,7 @@ describe('ComponentStatusRegistry', () => {
 	describe('static getAggregatedFromAllThreads method', () => {
 		it('should collect and aggregate statuses', async () => {
 			// Mock the crossThreadCollector to avoid actual ITC communication
-			const { crossThreadCollector } = require('#harper/components/status/crossThread');
+			const { crossThreadCollector } = require('#dist/components/status/crossThread');
 			const originalCollect = crossThreadCollector.collect;
 
 			// Create a fresh registry for this test

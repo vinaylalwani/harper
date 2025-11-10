@@ -7,8 +7,8 @@ const {
 	AggregationError,
 	ComponentStatusOperationError,
 	CrossThreadCollectionError,
-} = require('#harper/components/status/errors');
-const { HTTP_STATUS_CODES } = require('#harper/utility/errors/commonErrors');
+} = require('#dist/components/status/errors');
+const { HTTP_STATUS_CODES } = require('#dist/utility/errors/commonErrors');
 
 describe('Component Status Errors', () => {
 	describe('ComponentStatusError', () => {

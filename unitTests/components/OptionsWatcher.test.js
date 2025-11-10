@@ -1,5 +1,5 @@
 const { describe, it, beforeEach, afterEach } = require('mocha');
-const { OptionsWatcher } = require('#harper/components/OptionsWatcher');
+const { OptionsWatcher } = require('#dist/components/OptionsWatcher');
 const { EventEmitter, once } = require('node:events');
 const assert = require('node:assert/strict');
 const { join } = require('node:path');
@@ -8,7 +8,7 @@ const { mkdtempSync, writeFileSync, rmSync } = require('node:fs');
 const { writeFile, rm } = require('node:fs/promises');
 const { stringify } = require('yaml');
 const { spy } = require('sinon');
-const { DEFAULT_CONFIG } = require('#harper/components/DEFAULT_CONFIG');
+const { DEFAULT_CONFIG } = require('#dist/components/DEFAULT_CONFIG');
 
 /**
  * This function asserts that an event is emitted.

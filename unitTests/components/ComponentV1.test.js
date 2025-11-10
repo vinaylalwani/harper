@@ -11,8 +11,8 @@ const {
 	InvalidRootOptionError,
 	InvalidPathOptionError,
 	InvalidURLPathOptionError,
-} = require('#harper/components/ComponentV1');
-const { Resources } = require('#harper/resources/Resources');
+} = require('#dist/components/ComponentV1');
+const { Resources } = require('#dist/resources/Resources');
 const assert = require('node:assert/strict');
 const { join } = require('node:path');
 const { mkdtempSync, writeFileSync, mkdirSync, rmSync } = require('node:fs');
@@ -43,7 +43,7 @@ function createTempFixture(fixture) {
 describe('ComponentV1', () => {
 	const componentName = 'test-component';
 
-	const harperLogger = require('#harper/utility/logging/harper_logger');
+	const harperLogger = require('#dist/utility/logging/harper_logger');
 
 	beforeEach(() => {
 		replace(harperLogger, 'warn', fake());

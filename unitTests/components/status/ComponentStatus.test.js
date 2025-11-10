@@ -1,8 +1,8 @@
 const { describe, it, beforeEach, afterEach } = require('mocha');
 const assert = require('node:assert/strict');
 const sinon = require('sinon');
-const { ComponentStatus } = require('#harper/components/status/ComponentStatus');
-const { COMPONENT_STATUS_LEVELS } = require('#harper/components/status/types');
+const { ComponentStatus } = require('#dist/components/status/ComponentStatus');
+const { COMPONENT_STATUS_LEVELS } = require('#dist/components/status/types');
 
 describe('ComponentStatus', () => {
 	let clock;

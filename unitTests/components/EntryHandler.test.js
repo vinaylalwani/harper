@@ -1,5 +1,5 @@
 const { describe, it, beforeEach, afterEach } = require('mocha');
-const { EntryHandler } = require('#harper/components/EntryHandler');
+const { EntryHandler } = require('#dist/components/EntryHandler');
 const { EventEmitter, once } = require('node:events');
 const assert = require('node:assert/strict');
 const { join, basename } = require('node:path');

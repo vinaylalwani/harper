@@ -1,5 +1,5 @@
 const { describe, it, beforeEach, afterEach } = require('mocha');
-const { Scope, MissingDefaultFilesOptionError } = require('#harper/components/Scope');
+const { Scope, MissingDefaultFilesOptionError } = require('#dist/components/Scope');
 const { EventEmitter } = require('node:events');
 const assert = require('node:assert/strict');
 const { join, basename } = require('node:path');
@@ -7,10 +7,10 @@ const { tmpdir } = require('node:os');
 const { mkdtempSync, writeFileSync, rmSync } = require('node:fs');
 const { stringify } = require('yaml');
 const { spy } = require('sinon');
-const { OptionsWatcher } = require('#harper/components/OptionsWatcher');
-const { Resources } = require('#harper/resources/Resources');
-const { EntryHandler } = require('#harper/components/EntryHandler');
-const { restartNeeded, resetRestartNeeded } = require('#harper/components/requestRestart');
+const { OptionsWatcher } = require('#dist/components/OptionsWatcher');
+const { Resources } = require('#dist/resources/Resources');
+const { EntryHandler } = require('#dist/components/EntryHandler');
+const { restartNeeded, resetRestartNeeded } = require('#dist/components/requestRestart');
 const { writeFile } = require('node:fs/promises');
 const { waitFor } = require('./waitFor.js');
 

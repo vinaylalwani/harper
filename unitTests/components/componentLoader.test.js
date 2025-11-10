@@ -16,7 +16,7 @@ describe('ComponentLoader Status Integration', () => {
 		tempDir = mkdtempSync(path.join(tmpdir(), 'harper-test-components-'));
 
 		// Mock environment to use our temp directory
-		const env = require('#harper/utility/environment/environmentManager');
+		const env = require('#dist/utility/environment/environmentManager');
 		sinon.stub(env, 'get').callsFake((key) => {
 			if (key === 'COMPONENTSROOT') {
 				return tempDir;
@@ -30,7 +30,7 @@ describe('ComponentLoader Status Integration', () => {
 		});
 
 		// Get both the lifecycle and internal objects
-		const statusModule = require('#harper/components/status/index');
+		const statusModule = require('#dist/components/status/index');
 		const { internal } = statusModule;
 		lifecycle = statusModule.lifecycle;
 		componentStatusRegistry = internal.componentStatusRegistry;
@@ -48,14 +48,14 @@ describe('ComponentLoader Status Integration', () => {
 		sinon.spy(componentStatusRegistry, 'getStatus');
 
 		// Mock getConfigObj to avoid loading real config for root components
-		const configUtils = require('#harper/config/configUtils');
+		const configUtils = require('#dist/config/configUtils');
 		sinon.stub(configUtils, 'getConfigObj').returns({});
 
 		// Clear the componentLoader from require cache to ensure it gets our spied lifecycle
-		delete require.cache[require.resolve('#harper/components/componentLoader')];
+		delete require.cache[require.resolve('#dist/components/componentLoader')];
 
 		// Load componentLoader after setting up spies
-		componentLoader = require('#harper/components/componentLoader');
+		componentLoader = require('#dist/components/componentLoader');
 	});
 
 	after(() => {
@@ -215,7 +215,7 @@ describe('ComponentLoader Status Integration', () => {
 
 		it('should handle component loading errors gracefully', async () => {
 			// Stub the dataLoader module's handleApplication method to throw an error
-			const dataLoaderModule = require('#harper/resources/dataLoader');
+			const dataLoaderModule = require('#dist/resources/dataLoader');
 			const originalhandleApplication = dataLoaderModule.handleApplication;
 			sinon.stub(dataLoaderModule, 'handleApplication').throws(new Error('DataLoader failed to initialize'));
 

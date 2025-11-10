@@ -1,5 +1,5 @@
 const { describe, it } = require('mocha');
-const { Component, ComponentInvalidPatternError } = require('#harper/components/Component');
+const { Component, ComponentInvalidPatternError } = require('#dist/components/Component');
 const assert = require('node:assert/strict');
 
 describe('Component', () => {

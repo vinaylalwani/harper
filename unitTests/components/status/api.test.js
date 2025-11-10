@@ -1,6 +1,6 @@
 const { describe, it, afterEach } = require('mocha');
 const assert = require('node:assert/strict');
-const { statusForComponent, lifecycle, reset, STATUS, internal } = require('#harper/components/status/index');
+const { statusForComponent, lifecycle, reset, STATUS, internal } = require('#dist/components/status/index');
 
 describe('Component Status Public API', () => {
 	afterEach(reset);

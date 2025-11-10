@@ -1,6 +1,6 @@
 const { describe, it } = require('mocha');
 const assert = require('node:assert/strict');
-const { deriveGlobOptions } = require('#harper/components/deriveGlobOptions');
+const { deriveGlobOptions } = require('#dist/components/deriveGlobOptions');
 
 // components/deriveGlobOptions.test.ts
 
