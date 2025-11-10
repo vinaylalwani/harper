@@ -47,7 +47,11 @@
 	},
 	"imports": {
 		"#dist/*": "./dist/*.js",
-		"#src/*": ["./*", "./*.ts", "./*.js"]
+		"#src/*": [
+			"./*",
+			"./*.ts",
+			"./*.js"
+		]
 	},
 	"devEngines": {
 		"runtime": {
