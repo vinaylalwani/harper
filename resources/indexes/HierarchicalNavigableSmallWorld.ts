@@ -175,7 +175,7 @@ export class HierarchicalNavigableSmallWorld {
 						let skipping = false;
 						const neighborNeighbors = node[l];
 						const distanceThreshold = 1 + this.optimizeRouting * (1 + (0.5 * i) / this.M);
-						for (let i2 = 0; i2 < neighborNeighbors.length; i2++) {
+						for (let i2 = 0; i2 < neighborNeighbors?.length; i2++) {
 							const { id: neighborId, distance: neighborDistance } = neighborNeighbors[i2];
 							const neighborDistanceThreshold = 1 + this.optimizeRouting * (1 + (0.5 * i2) / this.M);
 							for (let i3 = 0; i3 < connectionsAtLevel.length; i3++) {
@@ -290,12 +290,13 @@ export class HierarchicalNavigableSmallWorld {
 				for (const { id: neighborId } of oldConnections) {
 					// get and copy the neighbor node so we can modify it
 					const neighborNode = updateNode(neighborId, this.indexStore.get(neighborId));
+					if (!neighborNode) continue;
 					for (let l2 = 0; l2 <= l; l2++) {
 						// remove the connection to this node from the neighbor node
 						neighborNode[l2] = neighborNode[l2]?.filter(({ id: nid }) => {
 							return nid !== nodeId;
 						});
-						if (neighborNode[l2].length === 0) {
+						if (neighborNode[l2]?.length === 0) {
 							logger.info?.('node was left orphaned, will reindex', neighborId);
 							needsReindexing.set(neighborNode.primaryKey, neighborNode.vector);
 						}
