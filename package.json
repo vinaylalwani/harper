@@ -46,7 +46,8 @@
 		"minimum-node": "20.0.0"
 	},
 	"imports": {
-		"#dist/*": "./dist/*.js"
+		"#dist/*": "./dist/*.js",
+		"#src/*": ["./*", "./*.ts", "./*.js"]
 	},
 	"devEngines": {
 		"runtime": {
