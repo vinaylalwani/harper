@@ -35,9 +35,10 @@ describe('Txn Expiration', () => {
 		let result = SlowResource.get(3);
 		assert.equal(trackedTxns.size, existingTxns + 1);
 		const txns = Array.from(trackedTxns);
-		assert.equal(txns[0].startedFrom.resourceName, 'SlowResource');
-		assert.equal(txns[0].startedFrom.method, 'get');
-		assert.equal(txns[0].timeout, 20);
+		const lastTxn = txns[txns.length - 1];
+		assert.equal(lastTxn.startedFrom.resourceName, 'SlowResource');
+		assert.equal(lastTxn.startedFrom.method, 'get');
+		assert.equal(lastTxn.timeout, 20);
 		await Promise.race([delay(50), result]);
 		assert(performedDBInteractions);
 		assert.equal(trackedTxns.size, existingTxns);
