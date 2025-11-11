@@ -474,7 +474,7 @@ describe('EntryHandler', () => {
 		entryHandler.on('add', (entry) => {
 			eventsReceived.push({
 				path: entry.absolutePath,
-				hasContents: entry.contents !== undefined && entry.contents.length > 0
+				hasContents: entry.contents !== undefined && entry.contents.length > 0,
 			});
 		});
 

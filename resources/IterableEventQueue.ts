@@ -76,7 +76,7 @@ class EventQueueIterator<Event extends object = any> implements AsyncIterator<Ev
 		}
 	}
 	// @ts-expect-error TypeScript is wrong, the JS engine accepts MaybePromise<...>
-	return(value: Event): { value: Event, done: true } {
+	return(value: Event): { value: Event; done: true } {
 		this.queue.emit('close');
 		return {
 			value,

@@ -5,8 +5,10 @@ import { IterableEventQueue } from './IterableEventQueue.js';
 import type { Entry, RecordObject } from './RecordEncoder.ts';
 import { RequestTarget } from './RequestTarget.ts';
 
-export interface ResourceInterface<Record extends object = any> extends RecordObject, Pick<UpdatableRecord<Record>, 'addTo' | 'subtractFrom'> {
-	new(identifier: Id, source: any);
+export interface ResourceInterface<Record extends object = any>
+	extends RecordObject,
+		Pick<UpdatableRecord<Record>, 'addTo' | 'subtractFrom'> {
+	new (identifier: Id, source: any);
 
 	allowRead(user: User, target: RequestTarget): boolean | Promise<boolean>;
 	get?(id: Id): Promise<Record & RecordObject>;
@@ -21,7 +23,12 @@ export interface ResourceInterface<Record extends object = any> extends RecordOb
 	put?(target: RequestTargetOrId, record: Record & RecordObject): void;
 	patch?(target: RequestTargetOrId, record: Partial<Record & RecordObject>): void;
 	update?(updates: Record & RecordObject, fullUpdate: true): ResourceInterface<Record & RecordObject>;
-	update?(updates: Partial<Record & RecordObject>, fullUpdate?: boolean): ResourceInterface<Record & RecordObject> | Promise<ResourceInterface<Record & RecordObject> | UpdatableRecord<Record & RecordObject>>;
+	update?(
+		updates: Partial<Record & RecordObject>,
+		fullUpdate?: boolean
+	):
+		| ResourceInterface<Record & RecordObject>
+		| Promise<ResourceInterface<Record & RecordObject> | UpdatableRecord<Record & RecordObject>>;
 
 	allowDelete(user: User, target: RequestTarget): boolean | Promise<boolean>;
 	delete?(target: RequestTargetOrId): boolean;
@@ -163,7 +170,7 @@ interface TypedUpdatableRecord<Record extends object, Property extends keyof Rec
 }
 
 interface Subscription<Event extends object = any> extends IterableEventQueue<Event> {
-	new(listener: Listener<Event>);
+	new (listener: Listener<Event>);
 
 	listener: Listener<Event>;
 	subscriptions: Listener<Event>[];
