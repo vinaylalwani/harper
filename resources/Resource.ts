@@ -611,7 +611,10 @@ function transactional(action, options) {
 				id = idOrQuery;
 				query = new RequestTarget();
 				query.id = id;
-				if (id == null) isCollection = true;
+				if (id == null) {
+					throw new Error('Invalid id, is this used anywhere?');
+					isCollection = true;
+				}
 			}
 		}
 		if (!query) {
