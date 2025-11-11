@@ -58,18 +58,16 @@ export async function compactOnStart() {
 
 			console.log('Backing up', database_name, 'to', backup_dest);
 			await move(db_path, backup_dest, { overwrite: true });
+			// Move compacted DB to back to original DB path
+			console.log('Moving copy compacted', database_name, 'to', db_path);
+			await move(copy_dest, db_path, { overwrite: true });
+			await remove(join(root_path, DATABASES_DIR_NAME, `${database_name}-copy.mdb-lock`));
 		}
 		try {
 			resetDatabases();
 		} catch (err) {
 			hdb_logger.error('Error resetting databases after backup', err);
 			console.error('Error resetting databases after backup', err);
-		}
-		// Move compacted DB to back to original DB path
-		for (const [db, { db_path, copy_dest }] of compacted_db) {
-			console.log('Moving copy compacted', db, 'to', db_path);
-			await move(copy_dest, db_path, { overwrite: true });
-			await remove(join(root_path, DATABASES_DIR_NAME, `${db}-copy.mdb-lock`));
 		}
 
 		try {
