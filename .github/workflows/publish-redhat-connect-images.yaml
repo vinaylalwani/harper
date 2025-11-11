@@ -17,6 +17,11 @@ on:
         description: 'tag of image to release (probably not "latest")'
         required: true
         type: string
+    secrets:
+      REDHAT_CONNECT_DOCKERCONFIG_JSON:
+        required: true
+      REDHAT_PYXIS_KEY:
+        required: true
   workflow_dispatch:
     inputs:
       container_image:
