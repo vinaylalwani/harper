@@ -299,8 +299,21 @@ describe('Transactions', () => {
 			instance = await WithCountOnGet.get(67);
 			assert.equal(instance.count, 2);
 		});
+		it('Can run txn with commit after get(undefined)', async function () {
+			await TxnTest.delete(8);
+			const context = {};
+			await transaction(context, async () => {
+				let result = await TxnTest.create({ id: 8, name: 'eight' }, context);
+				await TxnTest.get(undefined, context);
+				await context.transaction.commit();
+				assert.equal((await TxnTest.get(8, context)).name, 'eight');
+			});
+		});
 	});
 	describe('Testing updates with extended class with loadAsInstance=false', () => {
+		before(() => {
+			TxnTest.primaryStore.clearSync();
+		});
 		it('Can run txn with commit in the middle', async function () {
 			class NewTxnTest extends TxnTest {
 				static loadAsInstance = false;
@@ -313,10 +326,11 @@ describe('Transactions', () => {
 			}
 			const context = {
 				callback: async () => {
-					TxnTest.put(7, { name: 'seven' }, context);
+					const result = await TxnTest.create({ id: 8, name: 'eight' }, context);
+					await TxnTest.get();
 					TxnTest2.put(13, { name: 'thirteen' }, context);
 					await context.transaction.commit();
-					assert.equal((await TxnTest.get(7, context)).name, 'seven');
+					assert.equal((await TxnTest.get(8, context)).name, 'eight');
 					assert.equal((await TxnTest2.get(13, context)).name, 'thirteen');
 					await TxnTest.put(7, { name: 'SEVEN' }, context);
 					let entries = [];
@@ -325,10 +339,11 @@ describe('Transactions', () => {
 					}
 					assert.equal(entries[0].name, 'thirteen');
 					TxnTest3.put(14, { name: 'fourteen' }, context);
+					let undefinedResult = await TxnTest.get(undefined);
 					await context.transaction.commit();
-					assert.equal((await TxnTest.get(7)).name, 'SEVEN');
+					assert.equal((await TxnTest.get(8)).name, 'eight', context);
 					assert.equal((await TxnTest2.get(13)).name, 'thirteen');
-					assert.equal((await TxnTest3.get(14)).name, 'fourteen');
+					assert.equal((await TxnTest3.get(14)).name, 'fourteen', context);
 				},
 			};
 			await NewTxnTest.get(1, context);
