@@ -82,7 +82,6 @@ export interface CRUDPermissions {
 //requires must be declared after module.exports to avoid cyclical dependency
 const insert = require('../dataLayer/insert.js');
 const delete_ = require('../dataLayer/delete.js');
-const password = require('../utility/password.ts');
 const validation = require('../validation/user_validation.js');
 const search = require('../dataLayer/search.js');
 const signalling = require('../utility/signalling.js');
@@ -90,15 +89,19 @@ const hdbUtility = require('../utility/common_utils.js');
 const validate = require('validate.js');
 const logger = require('../utility/logging/harper_logger.js');
 const { promisify } = require('util');
-const terms = require('../utility/hdbTerms.ts');
 const env = require('../utility/environment/environmentManager.js');
 const systemSchema = require('../json/systemSchema.json');
 const { hdbErrors, ClientError } = require('../utility/errors/hdbError.js');
 const { HTTP_STATUS_CODES, AUTHENTICATION_ERROR_MSGS, HDB_ERROR_MSGS } = hdbErrors;
 const { UserEventMsg } = require('../server/threads/itc.js');
 const _ = require('lodash');
-const { server } = require('../server/Server.ts');
 const harperLogger = require('../utility/logging/harper_logger.js');
+
+// Need to use `.js` even for other TS files since TS compiler won't replace requires.
+// Whenever we can fix the cyclical dependency issue in this file (and switch to imports) we can use the correct file extensions.
+const password = require('../utility/password.js');
+const { server } = require('../server/Server.js');
+const terms = require('../utility/hdbTerms.js');
 
 server.getUser = (username: string, password?: string | null): Promise<User> => {
 	return findAndValidateUser(username, password, password != null);
