@@ -78,7 +78,7 @@ export async function get(
 		});
 	}
 
-	const request = { conditions, allowConditionsOnDynamicAttributes: true };
+	const request = { conditions, allowConditionsOnDynamicAttributes: true, snapshot: false };
 	if (select.length > 0) {
 		request['select'] = select;
 	}
