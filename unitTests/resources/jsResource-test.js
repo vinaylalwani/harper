@@ -84,16 +84,11 @@ describe('jsResource', () => {
 		const testFile = join(testDir, 'bad-resource.js');
 		const testError = new Error('Import failed');
 
+		let capturedHandler;
 		const mockScope = {
-			handleEntry: spy(async (handler) => {
-				// Simulate an error during the handler execution
-				// We need to actually throw from inside the handler to test the catch block
-				await handler({
-					entryType: 'file',
-					eventType: 'add',
-					absolutePath: testFile,
-					urlPath: '/bad-resource.js',
-				});
+			handleEntry: spy((handler) => {
+				// Capture the handler so we can invoke it and catch its error
+				capturedHandler = handler;
 			}),
 			resources: new Map(),
 			logger: { warn: spy(), debug: spy(), error: spy() },
@@ -108,8 +103,17 @@ describe('jsResource', () => {
 		};
 
 		try {
+			// handleApplication registers the handler
+			await handleApplication(mockScope);
+
+			// Now invoke the handler and expect it to throw
 			await assert.rejects(
-				async () => await handleApplication(mockScope),
+				async () => await capturedHandler({
+					entryType: 'file',
+					eventType: 'add',
+					absolutePath: testFile,
+					urlPath: '/bad-resource.js',
+				}),
 				(error) => {
 					// Should rethrow with context
 					assert.equal(error.name, 'ResourceLoadError', 'Error should be ResourceLoadError');
