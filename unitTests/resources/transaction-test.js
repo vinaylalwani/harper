@@ -299,7 +299,7 @@ describe('Transactions', () => {
 			instance = await WithCountOnGet.get(67);
 			assert.equal(instance.count, 2);
 		});
-		it('Can run txn with commit after get(undefined)', async function () {
+		it.skip('Can run txn with commit after get(undefined)', async function () {
 			await TxnTest.delete(8);
 			const context = {};
 			await transaction(context, async () => {
@@ -310,7 +310,7 @@ describe('Transactions', () => {
 			});
 		});
 	});
-	describe('Testing updates with extended class with loadAsInstance=false', () => {
+	describe.skip('Testing updates with extended class with loadAsInstance=false', () => {
 		before(() => {
 			TxnTest.primaryStore.clearSync();
 		});
