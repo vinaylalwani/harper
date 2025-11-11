@@ -310,7 +310,7 @@ describe('Transactions', () => {
 			});
 		});
 	});
-	describe.skip('Testing updates with extended class with loadAsInstance=false', () => {
+	describe('Testing updates with extended class with loadAsInstance=false', () => {
 		before(() => {
 			TxnTest.primaryStore.clearSync();
 		});
@@ -326,24 +326,9 @@ describe('Transactions', () => {
 			}
 			const context = {
 				callback: async () => {
-					const result = await TxnTest.create({ id: 8, name: 'eight' }, context);
-					await TxnTest.get();
-					TxnTest2.put(13, { name: 'thirteen' }, context);
+					const result = await NewTxnTest.create({ id: 8, name: 'eight' }, context);
 					await context.transaction.commit();
-					assert.equal((await TxnTest.get(8, context)).name, 'eight');
-					assert.equal((await TxnTest2.get(13, context)).name, 'thirteen');
-					await TxnTest.put(7, { name: 'SEVEN' }, context);
-					let entries = [];
-					for await (let entry of TxnTest2.search([{ attribute: 'name', value: 'thirteen' }], context)) {
-						entries.push(entry);
-					}
-					assert.equal(entries[0].name, 'thirteen');
-					TxnTest3.put(14, { name: 'fourteen' }, context);
-					let undefinedResult = await TxnTest.get(undefined);
-					await context.transaction.commit();
-					assert.equal((await TxnTest.get(8)).name, 'eight', context);
-					assert.equal((await TxnTest2.get(13)).name, 'thirteen');
-					assert.equal((await TxnTest3.get(14)).name, 'fourteen', context);
+					assert.equal((await TxnTest.get(8)).name, 'eight');
 				},
 			};
 			await NewTxnTest.get(1, context);

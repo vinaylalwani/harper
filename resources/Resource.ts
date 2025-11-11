@@ -8,6 +8,8 @@ import { transaction } from './transaction.ts';
 import { parseQuery } from './search.ts';
 import { AsyncLocalStorage } from 'async_hooks';
 import { RequestTarget } from './RequestTarget.ts';
+import logger from '../utility/logging/logger.js';
+
 export const contextStorage = new AsyncLocalStorage<Context>();
 
 const EXTENSION_TYPES = {
@@ -142,16 +144,15 @@ export class Resource implements ResourceInterface {
 	static create(idPrefix: Id, record: any, context: Context): Promise<Id>;
 	static create(record: any, context: Context): Promise<Id>;
 	static create(idPrefix: any, record: any, context?: Context): Promise<Id> {
-		if (context) {
-			if (context.getContext) context = context.getContext();
-		} else {
-			// try to get the context from the async context if possible
-			context = contextStorage.getStore() ?? {};
-		}
-
 		let id: Id;
 		if (this.loadAsInstance === false) {
-			id = idPrefix;
+			if (typeof idPrefix === 'object' && idPrefix && !context) {
+				// two argument form (record, context), shift the arguments
+				context = record;
+				record = idPrefix;
+				id = new RequestTarget();
+				id.isCollection = true;
+			} else id = idPrefix;
 		} else {
 			if (idPrefix == null) id = record?.[this.primaryKey] ?? this.getNewId();
 			else if (Array.isArray(idPrefix) && typeof idPrefix[0] !== 'object')
@@ -163,6 +164,12 @@ export class Resource implements ResourceInterface {
 				context = record || {};
 				record = idPrefix;
 			}
+		}
+		if (context) {
+			if (context.getContext) context = context.getContext();
+		} else {
+			// try to get the context from the async context if possible
+			context = contextStorage.getStore() ?? {};
 		}
 		return transaction(context, async () => {
 			context.transaction.startedFrom ??= {
@@ -612,7 +619,12 @@ function transactional(action, options) {
 				query = new RequestTarget();
 				query.id = id;
 				if (id == null) {
-					if (!hasContent) throw new Error('Invalid id, is this used anywhere?');
+					if (!hasContent) {
+						logger.warn?.(
+							`Using an argument with a value of ${id} for ${options.method}, is deprecated`,
+							new Error('Invalid id')
+						);
+					}
 					isCollection = true;
 				}
 			}
