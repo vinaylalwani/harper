@@ -541,6 +541,14 @@ jobs:
           dockerUsername: ${{ secrets.DOCKER_USERNAME }}
           dockerPassword: ${{ secrets.DOCKER_PASSWORD }}
 
+  publishToRedHatConnect:
+    needs:
+      - build
+      - publicReleaseDocker
+    uses: ./.github/workflows/publish-redhat-connect-images.yaml
+    with:
+      container_tag: ${{ needs.build.outputs.harperdbVersion }}
+
   #############################################################
   #  Release offline installer to
   #  https://products-harperdb-io.s3.us-east-2.amazonaws.com/
