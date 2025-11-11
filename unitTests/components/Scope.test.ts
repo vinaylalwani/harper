@@ -143,7 +143,10 @@ describe('Scope', () => {
 
 		await scope.ready;
 
-		await scope.handleEntry().ready;
+		const entryHandler = scope.handleEntry();
+
+		// Wait for initial load to complete - the default behavior will trigger restart
+		await entryHandler.ready;
 
 		assert.equal(restartNeeded(), true, 'requestRestart was called');
 
@@ -157,7 +160,7 @@ describe('Scope', () => {
 
 		await scope.ready;
 
-		await scope.handleEntry(() => {}).ready;
+		scope.handleEntry(() => {});
 
 		assert.equal(restartNeeded(), false, 'requestRestart was not called');
 
@@ -214,6 +217,9 @@ describe('Scope', () => {
 		const customEntryHandlerPathOnlyArg = scope.handleEntry('.');
 		assert.ok(customEntryHandlerPathOnlyArg instanceof EntryHandler, 'Custom entry handler should be created');
 
+		// Reset restart flag - the first handler without a function triggers restart when it encounters files
+		resetRestartNeeded();
+
 		const customEntryHandlerPathAndFunctionArgs = scope.handleEntry('.', () => {});
 		assert.ok(customEntryHandlerPathAndFunctionArgs instanceof EntryHandler, 'Custom entry handler should be created');
 
@@ -229,5 +235,35 @@ describe('Scope', () => {
 
 		assert.equal(entryHandleCloseSpy1.callCount, 1, 'close event for custom entry handler should be emitted once');
 		assert.equal(entryHandleCloseSpy2.callCount, 1, 'close event for custom entry handler should be emitted once');
+	});
+
+	it('should support synchronous handleEntry with event-based initial load tracking', async () => {
+		writeFileSync(this.configFilePath, stringify({ [this.name]: { files: 'test.js' } }));
+
+		const scope = new Scope(this.name, this.directory, this.configFilePath, this.resources, this.server);
+
+		await scope.ready;
+
+		const handleEntrySpy = spy();
+
+		// Call handleEntry - returns EntryHandler immediately
+		const entryHandler = scope.handleEntry(handleEntrySpy);
+
+		// Should return an EntryHandler immediately (not a Promise)
+		assert.ok(entryHandler instanceof EntryHandler, 'handleEntry should return EntryHandler synchronously');
+
+		// Can listen for the ready event if needed
+		const readySpy = spy();
+		entryHandler.on('ready', readySpy);
+
+		// Wait for initial load to complete
+		await entryHandler.ready;
+		assert.ok(readySpy.calledOnce, 'ready event should be emitted once');
+
+		// Handler should be called for initial files
+		await waitFor(() => handleEntrySpy.callCount > 0);
+		assert.ok(handleEntrySpy.callCount > 0, 'Entry handler should be called');
+
+		scope.close();
 	});
 });
