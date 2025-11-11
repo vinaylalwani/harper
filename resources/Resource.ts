@@ -612,7 +612,7 @@ function transactional(action, options) {
 				query = new RequestTarget();
 				query.id = id;
 				if (id == null) {
-					throw new Error('Invalid id, is this used anywhere?');
+					if (!hasContent) throw new Error('Invalid id, is this used anywhere?');
 					isCollection = true;
 				}
 			}
