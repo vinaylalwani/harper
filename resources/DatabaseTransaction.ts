@@ -332,7 +332,7 @@ function startMonitoringTxns() {
 			if (txn.timeout <= 0) {
 				const url = txn.getContext()?.url;
 				harperLogger.error(
-					`Transaction was open too long and has been aborted, from table: ${
+					`Transaction was open too long and has been committed, from table: ${
 						txn.lmdbDb?.name + (url ? ' path: ' + url : '')
 					}`,
 					...(txn.startedFrom ? [`was started from ${txn.startedFrom.resourceName}.${txn.startedFrom.method}`] : []),
