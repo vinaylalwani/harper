@@ -15,7 +15,7 @@ const basePath = getHdbBasePath();
 export const userCodeFolders = basePath ? [basePath] : [];
 if (process.env.RUN_HDB_APP) userCodeFolders.push(realpathSync(process.env.RUN_HDB_APP));
 
-const SAMPLING_INTERVAL_IN_MICROSECONDS = 1000;
+const SAMPLING_INTERVAL_IN_MICROSECONDS = 50000;
 const session = new Session();
 // We create an inspector session with ourself
 // TODO: Running this on the thread itself can be problematic because the profiler snapshots are expensive
