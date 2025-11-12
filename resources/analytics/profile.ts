@@ -10,6 +10,8 @@ import { realpathSync } from 'node:fs';
 import { time as timeProfiler } from '@datadog/pprof';
 import * as log from '../../utility/logging/harper_logger.js';
 
+type Profile = ReturnType<typeof timeProfiler.stop>;
+type Sample = Profile['sample'][0];
 const basePath = getHdbBasePath();
 export const userCodeFolders = basePath ? [basePath] : [];
 if (process.env.RUN_HDB_APP) userCodeFolders.push(realpathSync(process.env.RUN_HDB_APP));
@@ -72,7 +74,7 @@ export async function captureProfile(delayToNextCapture?: number): Promise<void>
 	}
 	// this traverses the nodes and returns the number of sampling hits for the sample and attributes it
 	// to harper or user code (as opposed to execution of things like node internal modules or native code)
-	function getUserHitCount(sample: any) {
+	function getUserHitCount(sample: Sample) {
 		// if we can assign to user code or harper code, do so
 		let recordedTopSample = false;
 		for (let locationId of sample.locationId) {
