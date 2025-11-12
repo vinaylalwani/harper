@@ -32,6 +32,8 @@ package-lock.json
 pnpm-lock.yaml
 ts-build
 *-v8.log
+core
+dist
 
 /npm_pack/*
 *.jsc
