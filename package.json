@@ -20,7 +20,7 @@
 		"url": "https://github.com/harperfast/harper.git"
 	},
 	"bin": {
-		"harper": "./dist/bin/harperdb.js"
+		"harper": "./dist/bin/harper.js"
 	},
 	"files": [
 		"dist",

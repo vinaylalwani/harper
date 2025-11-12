@@ -31,5 +31,6 @@ dist/
 # something is generating this file :shrug:
 integration-test.json
 
+package-lock.json
 # Repo synchronization temp file
 commits-to-pick.txt
