@@ -2,13 +2,12 @@
  * This module is responsible for profiling threads so we can determine how much CPU usage can be attributed
  * to user code, harper code, and individual "hot" functions
  */
-import { Session } from 'node:inspector/promises';
 import { recordAction } from './write.ts';
 import { get as envGet, getHdbBasePath } from '../../utility/environment/environmentManager.js';
 import { CONFIG_PARAMS } from '../../utility/hdbTerms.js';
 import { PACKAGE_ROOT } from '../../utility/packageUtils.js';
 import { realpathSync } from 'node:fs';
-import { time as timeProfiler, type Sample } from '@datadog/pprof';
+import { time as timeProfiler } from '@datadog/pprof';
 import * as log from '../../utility/logging/harper_logger.js';
 
 const basePath = getHdbBasePath();
@@ -16,13 +15,10 @@ export const userCodeFolders = basePath ? [basePath] : [];
 if (process.env.RUN_HDB_APP) userCodeFolders.push(realpathSync(process.env.RUN_HDB_APP));
 
 const SAMPLING_INTERVAL_IN_MICROSECONDS = 50000;
-const session = new Session();
-// We create an inspector session with ourself
-// TODO: Running this on the thread itself can be problematic because the profiler snapshots are expensive
-//  (calling Profiler.stop and getting the large block of JSON and parsing it). This can take a 20ms or more
-//  which can have a noticeable impact on latency for users. I would like to move this all to the main thread
-//  and we would probably need to connect to all the child threads with WebSockets.
-session.connect();
+// TODO: Running this on the thread itself can be a problematic because the profiler snapshots are somewhat expensive
+//  (calling timeProfiler.stop and getting the large block of JSON and parsing it). This can take a 5ms or more
+//  which can have some impact on latency for users. However, the datadog profiler is much better than the node
+//  profiler, so we'll keep this for now.
 (async () => {
 	if (userCodeFolders.length === 0) return;
 	// start the profiler
@@ -76,7 +72,7 @@ export async function captureProfile(delayToNextCapture?: number): Promise<void>
 	}
 	// this traverses the nodes and returns the number of sampling hits for the sample and attributes it
 	// to harper or user code (as opposed to execution of things like node internal modules or native code)
-	function getUserHitCount(sample: Sample) {
+	function getUserHitCount(sample: any) {
 		// if we can assign to user code or harper code, do so
 		let recordedTopSample = false;
 		for (let locationId of sample.locationId) {
