@@ -7,10 +7,10 @@ import { convertToMS } from '../utility/common_utils.js';
 import { PREVIOUS_TIMESTAMP_PLACEHOLDER, LAST_TIMESTAMP_PLACEHOLDER } from './RecordEncoder.ts';
 import * as harperLogger from '../utility/logging/harper_logger.js';
 import { getRecordAtTime } from './crdt.ts';
-import { isMainThread } from 'worker_threads';
 import { decodeFromDatabase, deleteBlobsInObject } from './blob.ts';
 import { onStorageReclamation } from '../server/storageReclamation.ts';
 import { RocksDatabase } from '@harperdb/rocksdb-js';
+import { RocksAuditStore } from './RocksAuditStore.ts';
 
 /**
  * This module is responsible for the binary representation of audit records in an efficient form.
@@ -72,14 +72,8 @@ let timestampErrored = false;
 export function openAuditStore(rootStore) {
 	let auditStore;
 	if (rootStore instanceof RocksDatabase) {
-		auditStore = RocksDatabase.open(rootStore.path, { ...AUDIT_STORE_OPTIONS, name: AUDIT_STORE_NAME });
+		auditStore = new RocksAuditStore(rootStore);
 		auditStore.env = {};
-		auditStore.getEntry = (id, options) => {
-			return {
-				value: auditStore.getSync(id, options)
-			};
-		};
-		updateLastRemoved(auditStore, 1);
 	} else {
 		auditStore = rootStore.openDB(AUDIT_STORE_NAME, {
 			create: false,

@@ -108,9 +108,7 @@ class Subscription extends IterableEventQueue {
 function notifyFromTransactionData(subscriptions) {
 	if (!subscriptions) return; // if no subscriptions to this env path, don't need to read anything
 	const auditStore = subscriptions.auditStore;
-	if (!(auditStore instanceof RocksDatabase)) {
-		auditStore.resetReadTxn();
-	}
+	auditStore.resetReadTxn?.();
 	nextTransaction(subscriptions.auditStore);
 	let subscribersWithTxns;
 	for (const { key: localTime, value: auditEntryEncoded } of auditStore.getRange({
@@ -213,9 +211,10 @@ export function listenToCommits(primaryStore, auditStore) {
 				}
 			};
 			// try to get lock or wait for it
-			const lockAcquired = store instanceof RocksDatabase
-				? store.tryLock('thread-local-writes', acquiredLock)
-				: store.attemptLock('thread-local-writes', acquiredLock);
+			const lockAcquired =
+				store instanceof RocksDatabase
+					? store.tryLock('thread-local-writes', acquiredLock)
+					: store.attemptLock('thread-local-writes', acquiredLock);
 			if (lockAcquired) {
 				acquiredLock();
 			}

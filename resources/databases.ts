@@ -163,6 +163,8 @@ class HarperStore extends RocksStore {
 }
 
 function openRocksDatabase(path: string, options?: RocksDatabaseOptions) {
+	if (!options) options = {};
+	options.disableWAL ??= true;
 	const db = RocksDatabase.open(path, options) as RocksRootDatabase;
 	db.env = {};
 	db.getEntry = (id, options) => {
@@ -411,7 +413,11 @@ function initStores(
 	let dbisStore = rootStore.dbisDb;
 	if (!dbisStore) {
 		if (rootStore instanceof RocksDatabase) {
-			dbisStore = openRocksDatabase(rootStore.path, { ...internalDbiInit, name: INTERNAL_DBIS_NAME });
+			dbisStore = openRocksDatabase(rootStore.path, {
+				...internalDbiInit,
+				disableWAL: false,
+				name: INTERNAL_DBIS_NAME,
+			});
 		} else {
 			dbisStore = rootStore.openDB(INTERNAL_DBIS_NAME, internalDbiInit);
 		}
@@ -424,7 +430,7 @@ function initStores(
 			if (existsSync(auditPath)) {
 				envInit.path = auditPath;
 				if (rootStore instanceof RocksDatabase) {
-					auditStore = openRocksDatabase(envInit.path, envInit);
+					auditStore = openAuditStore(rootStore);
 				} else {
 					auditStore = open(envInit);
 				}
@@ -887,6 +893,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 		if (rootStore instanceof RocksDatabase) {
 			attributesDbi = rootStore.dbisDb = openRocksDatabase(rootStore.path, {
 				...internalDbiInit,
+				disableWAL: false,
 				name: INTERNAL_DBIS_NAME,
 			});
 		} else {
@@ -947,7 +954,11 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 	const indices = Table.indices;
 	if (!attributesDbi) {
 		if (rootStore instanceof RocksDatabase) {
-			rootStore.dbisDb = openRocksDatabase(rootStore.path, { ...internalDbiInit, name: INTERNAL_DBIS_NAME });
+			rootStore.dbisDb = openRocksDatabase(rootStore.path, {
+				...internalDbiInit,
+				disableWAL: false,
+				name: INTERNAL_DBIS_NAME,
+			});
 		} else {
 			rootStore.dbisDb = rootStore.openDB(INTERNAL_DBIS_NAME, internalDbiInit);
 		}

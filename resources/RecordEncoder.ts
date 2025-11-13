@@ -413,6 +413,7 @@ export function recordUpdater(store, tableId, auditStore) {
 		} = {
 			version: newVersion,
 			instructedWrite: timestampNextEncoding > 0,
+			transaction: options.transaction,
 		};
 		let ifVersion;
 		let extendedType = 0;
@@ -478,7 +479,7 @@ export function recordUpdater(store, tableId, auditStore) {
 								previousResidencyId,
 								expiresAt
 							),
-							{ ifVersion: ifVersion }
+							{ ifVersion: ifVersion, transaction: options.transaction }
 						);
 						return result;
 					}
@@ -505,6 +506,7 @@ export function recordUpdater(store, tableId, auditStore) {
 						// append: type !== 'invalidate', // for invalidation, we expect the record to be rewritten, so we don't want to necessarily expect pure sequential writes that create full pages
 						instructedWrite: true,
 						ifVersion,
+						transaction: options.transaction,
 					}
 				);
 			}

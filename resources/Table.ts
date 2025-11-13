@@ -1597,7 +1597,7 @@ export function makeTable(options) {
 				},
 				before: writeToSources(applyToSources),
 				beforeIntermediate: preCommitBlobsForRecordBefore(recordUpdate, writeToSources(applyToSourcesIntermediate)),
-				commit: (txnTime, existingEntry, retry) => {
+				commit: (txnTime: number, existingEntry: Entry, retry: boolean, transaction: any) => {
 					if (retry) {
 						if (context && existingEntry?.version > (context.lastModified || 0))
 							context.lastModified = existingEntry.version;
@@ -1791,6 +1791,7 @@ export function makeTable(options) {
 								user: context?.user,
 								residencyId,
 								expiresAt,
+								transaction,
 								nodeId: options?.nodeId,
 								originatingOperation: context?.originatingOperation,
 								tableToTrack: databaseName === 'system' ? null : tableName, // don't track analytics on system tables
