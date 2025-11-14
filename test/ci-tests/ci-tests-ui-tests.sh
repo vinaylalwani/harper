@@ -14,5 +14,5 @@ npm install
 echo "Install Playwright Browsers"
 npx playwright install --with-deps chromium
 
-echo "Run Playwright tests"
-npx playwright test
+echo "Run Playwright tests for Self Hosted Cluster - Localhost harperdb"
+npx playwright test tests/0007_self-hosted-cluster.spec.js
