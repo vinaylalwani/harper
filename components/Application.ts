@@ -428,7 +428,7 @@ export async function installApplications() {
 
 	const harperApplicationLockPath = join(getConfigValue(CONFIG_PARAMS.ROOTPATH), 'harper-application-lock.json');
 
-	let harperApplicationLock: any = { application: {} };
+	let harperApplicationLock: { applications: Record<string, ApplicationConfig> } = { applications: {} };
 	try {
 		harperApplicationLock = JSON.parse(await readFile(harperApplicationLockPath, 'utf8'));
 	} catch (error) {
@@ -447,29 +447,33 @@ export async function installApplications() {
 			continue;
 		}
 
-		// Then do proper error-based validation with TypeScript `asserts` to provide type safety
-		// This will throw if the config is invalid
-		assertApplicationConfig(name, applicationConfig);
-
-		const application = new Application({
-			name,
-			packageIdentifier: applicationConfig.package,
-			install: applicationConfig.install,
-		});
-
-		// Lock check: only install if not already installed with matching configuration
-		if (
-			existsSync(application.dirPath) &&
-			harperApplicationLock.applications[name] &&
-			JSON.stringify(harperApplicationLock.applications[name]) === JSON.stringify(applicationConfig)
-		) {
-			logger.info(`Application ${name} is already installed with matching configuration; skipping installation`);
-			continue;
+		try {
+			// Then do proper error-based validation with TypeScript `asserts` to provide type safety
+			// This will throw if the config is invalid
+			assertApplicationConfig(name, applicationConfig);
+	
+			const application = new Application({
+				name,
+				packageIdentifier: applicationConfig.package,
+				install: applicationConfig.install,
+			});
+	
+			// Lock check: only install if not already installed with matching configuration
+			if (
+				existsSync(application.dirPath) &&
+				harperApplicationLock.applications[name] &&
+				JSON.stringify(harperApplicationLock.applications[name]) === JSON.stringify(applicationConfig)
+			) {
+				logger.info(`Application ${name} is already installed with matching configuration; skipping installation`);
+				continue;
+			}
+	
+			applicationInstallationPromises.push(prepareApplication(application));
+	
+			harperApplicationLock.applications[name] = applicationConfig;
+		} catch (error) {
+			logger.error(`Skipping installation of application ${name} due to invalid configuration: ${error.message}`);
 		}
-
-		applicationInstallationPromises.push(prepareApplication(application));
-
-		harperApplicationLock.applications[name] = applicationConfig;
 	}
 
 	const applicationInstallationStatuses = await Promise.allSettled(applicationInstallationPromises);
