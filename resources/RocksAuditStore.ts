@@ -1,10 +1,11 @@
-import type { TransactionLog, RocksDatabase } from '@harperdb/rocksdb-js';
+import type { TransactionLog, RocksDatabase, TransactionLogReader } from '@harperdb/rocksdb-js';
 export class RocksAuditStore {
 	log: TransactionLog;
 	readLogs?: any[]; // whatever the type of the read logger
 	rootStore: RocksDatabase;
 	constructor(rootDatabase: RocksDatabase) {
 		this.log = rootDatabase.useLog(0);
+		this.logReader = new TransactionLogReader(this.log);
 		this.rootStore = rootDatabase;
 	}
 
@@ -21,7 +22,7 @@ export class RocksAuditStore {
 		if (typeof suggestedKey === 'symbol') {
 			this.rootStore.putSync(suggestedKey, value, options);
 		} else {
-			this.log.addEntry(value, options.transaction.id);
+			this.log.addEntryCopy(value, options.transaction.id);
 		}
 	}
 	get(key: any) {
