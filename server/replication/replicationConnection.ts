@@ -594,6 +594,10 @@ export function replicateOverWS(ws, options, authorization) {
 							localTime: last_sequence_id_received,
 							remoteNodeIds: receiving_data_from_node_ids,
 						});
+						getSharedStatus();
+						replication_shared_status[RECEIVED_VERSION_POSITION] = last_sequence_id_received;
+						replication_shared_status[RECEIVED_TIME_POSITION] = Date.now();
+						replication_shared_status[RECEIVING_STATUS_POSITION] = RECEIVING_STATUS_WAITING;
 						break;
 					case BLOB_CHUNK: {
 						// this is a blob chunk, we need to write it to the blob store
