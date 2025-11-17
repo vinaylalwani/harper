@@ -115,7 +115,7 @@ export function shouldReplicateToNode(node, database_name) {
 			(databaseReplications === '*' ||
 				databaseReplications?.find?.((dbReplication) => {
 					return (
-						dbReplication.name === database_name &&
+						(typeof dbReplication === 'string' ? dbReplication : dbReplication.name) === database_name &&
 						(!dbReplication.sharded || node.shard === env.get(CONFIG_PARAMS.REPLICATION_SHARD))
 					);
 				})) &&
