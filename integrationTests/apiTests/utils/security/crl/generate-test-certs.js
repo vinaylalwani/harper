@@ -9,36 +9,28 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { execSync } = require('node:child_process');
-const { getHarperCA } = require('../harperCA.js');
-
-// Function to find Harper keys directory in common locations
-function findHarperKeysDir() {
-	const { homedir } = require('os');
-	const possiblePaths = [
-		// Local development path
-		path.join(homedir(), 'hdb', 'keys'),
-		// CI or different installation paths
-		path.join(homedir(), '.harperdb', 'keys'),
-		path.join(process.cwd(), '..', '..', '..', '..', 'keys'),
-		path.join('/tmp', 'harperdb', 'keys'),
-		path.join('/var', 'harperdb', 'keys'),
-		// Check HARPERDB_ROOT env var if set
-		...(process.env.HARPERDB_ROOT ? [path.join(process.env.HARPERDB_ROOT, 'keys')] : []),
-	];
-
-	for (const keyPath of possiblePaths) {
-		if (fs.existsSync(keyPath)) {
-			console.log(`Found Harper keys directory at: ${keyPath}`);
-			return keyPath;
-		}
-	}
-
-	return null;
-}
 
 const OUTPUT_DIR = path.join(__dirname, 'generated');
 const CRL_PORT = process.env.CRL_PORT || 8889;
 const CRL_HOST = process.env.CRL_HOST || 'localhost';
+
+function generateTestCA() {
+	console.log('Generating test CA for CRL testing...');
+
+	const caKeyPath = path.join(OUTPUT_DIR, 'harper-ca.key');
+	const caCertPath = path.join(OUTPUT_DIR, 'harper-ca.crt');
+
+	// Generate CA key
+	execSync(`openssl genpkey -algorithm ED25519 -out ${caKeyPath}`);
+
+	// Generate CA certificate
+	execSync(
+		`openssl req -new -x509 -key ${caKeyPath} -out ${caCertPath} -days 365 -subj "/CN=Harper Test CA/O=Harper CRL Test"`
+	);
+
+	console.log('Test CA generated successfully');
+	return { caKeyPath, caCertPath };
+}
 
 function generateClientCerts(caKeyPath, caCertPath) {
 	console.log('\nGenerating client certificates...');
@@ -108,7 +100,7 @@ crlDistributionPoints = URI:http://${CRL_HOST}:${CRL_PORT}/test.crl`;
 	};
 }
 
-function generateCRL(caKeyPath, caCertPath, revokedCertPath) {
+function generateCRL(caKeyPath, caCertPath, validCertPath, revokedCertPath) {
 	console.log('\nGenerating CRL...');
 
 	// Create index.txt file for CRL generation
@@ -117,10 +109,14 @@ function generateCRL(caKeyPath, caCertPath, revokedCertPath) {
 	const crlPath = path.join(OUTPUT_DIR, 'test.crl');
 
 	// Initialize files
-	fs.writeFileSync(indexPath, '');
 	fs.writeFileSync(serialPath, '01\n');
 
-	// Get serial number of revoked certificate
+	// Get serial numbers of both certificates
+	const validSerial = execSync(`openssl x509 -in ${validCertPath} -noout -serial`)
+		.toString()
+		.trim()
+		.replace('serial=', '');
+
 	const revokedSerial = execSync(`openssl x509 -in ${revokedCertPath} -noout -serial`)
 		.toString()
 		.trim()
@@ -130,11 +126,13 @@ function generateCRL(caKeyPath, caCertPath, revokedCertPath) {
 	const now = new Date();
 	const revocationDate = now.toISOString().replace(/[-:T]/g, '').slice(2, 14) + 'Z';
 	const expiryDate =
-		new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().replace(/[-:T]/g, '').slice(0, 14) + 'Z';
+		new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().replace(/[-:T]/g, '').slice(2, 14) + 'Z';
 
-	// Add revoked certificate to index.txt (OpenSSL format: Status<TAB>ExpiryDate<TAB>RevocationDate<TAB>SerialNumber<TAB>FileName<TAB>DistinguishedName)
+	// Add BOTH certificates to index.txt - one valid, one revoked
+	// OpenSSL format: Status<TAB>ExpiryDate<TAB>RevocationDate<TAB>SerialNumber<TAB>FileName<TAB>DistinguishedName
+	const validEntry = `V\t${expiryDate}\t\t${validSerial}\tunknown\t/CN=Valid CRL Client/O=Harper CRL Test\n`;
 	const revokedEntry = `R\t${expiryDate}\t${revocationDate}\t${revokedSerial}\tunknown\t/CN=Revoked CRL Client/O=Harper CRL Test\n`;
-	fs.writeFileSync(indexPath, revokedEntry);
+	fs.writeFileSync(indexPath, validEntry + revokedEntry);
 
 	// Create minimal openssl config for CRL generation
 	const configContent = `
@@ -162,7 +160,7 @@ crl = ${OUTPUT_DIR}/test.crl
 	return crlPath;
 }
 
-async function generateCRLCerts() {
+function generateCRLCerts() {
 	// Create output directory
 	if (!fs.existsSync(OUTPUT_DIR)) {
 		fs.mkdirSync(OUTPUT_DIR, { recursive: true });
@@ -171,48 +169,19 @@ async function generateCRLCerts() {
 	try {
 		console.log('Generating CRL test certificates...');
 
-		// Step 1: Get Harper's CA
-		const ca = await getHarperCA();
-
-		// Save CA certificate for convenience
-		const caCertPath = path.join(OUTPUT_DIR, 'harper-ca.crt');
-		fs.writeFileSync(caCertPath, ca.certificate);
-		console.log(`CA certificate saved to: ${caCertPath}`);
-
-		// Step 2: Find CA private key
-		const harperKeysDir = findHarperKeysDir();
-		if (!harperKeysDir) {
-			console.error('\nERROR: Harper keys directory not found');
-			console.error('Tried the following locations:');
-			console.error('- ~/hdb/keys');
-			console.error('- ~/.harperdb/keys');
-			console.error('- /tmp/harperdb/keys');
-			console.error('- /var/harperdb/keys');
-			if (process.env.HARPERDB_ROOT) {
-				console.error(`- ${process.env.HARPERDB_ROOT}/keys`);
-			}
-			throw new Error('Harper keys directory not found');
-		}
-
-		const caKeyPath = path.join(harperKeysDir, ca.private_key_name);
-		if (!fs.existsSync(caKeyPath)) {
-			console.error(`\nERROR: CA private key not found at: ${caKeyPath}`);
-			console.error("Please check the path to Harper's keys directory");
-			console.error(`Expected Harper keys directory: ${harperKeysDir}`);
-			return;
-		}
-
-		console.log(`Using CA private key from: ${caKeyPath}`);
+		// Generate test CA
+		const { caKeyPath, caCertPath } = generateTestCA();
 
 		// Generate client certificates
 		const clientCerts = generateClientCerts(caKeyPath, caCertPath);
 
-		// Generate CRL with revoked certificate
-		generateCRL(caKeyPath, caCertPath, clientCerts.revoked.certPath);
+		// Generate CRL with both valid and revoked certificates
+		generateCRL(caKeyPath, caCertPath, clientCerts.valid.certPath, clientCerts.revoked.certPath);
 
 		console.log('\n✅ All CRL test certificates generated successfully!');
 		console.log('Generated files:');
-		console.log("  - harper-ca.crt (Harper's CA certificate)");
+		console.log('  - harper-ca.crt (Test CA certificate)');
+		console.log('  - harper-ca.key (Test CA private key)');
 		console.log('  - client-valid-chain.crt (Valid client certificate chain)');
 		console.log('  - client-revoked-chain.crt (Revoked client certificate chain)');
 		console.log('  - test.crl (Certificate Revocation List)');
