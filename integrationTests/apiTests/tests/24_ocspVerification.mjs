@@ -44,13 +44,16 @@ describe('24. OCSP Certificate Verification Tests', () => {
 	const certsPath = join(ocspUtilsPath, 'generated');
 	let certificatesGenerated = false;
 
+	// Get random path to avoid conflicts with any test components
+	const testPath = `/ocsp-test-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
 	before(async function () {
 		// Check if HTTPS is available on both endpoints
 		try {
 			// Check operations endpoint (used for certificate management)
 			await secureReq().send({ operation: 'describe_all' }).timeout(2000);
 			// Check REST endpoint (used for certificate verification tests)
-			await secureReqRest('/').timeout(2000);
+			await secureReqRest(testPath).timeout(2000);
 		} catch (error) {
 			if (error.code === 'ECONNREFUSED' || error.message.includes('ECONNREFUSED')) {
 				httpsAvailable = false;
@@ -256,7 +259,7 @@ operationsApi:
 		const key = readFileSync(join(certsPath, 'client-revoked.key'));
 		const ca = readFileSync(join(certsPath, 'harper-ca.crt'));
 		try {
-			await secureReqRest('/', {
+			await secureReqRest(testPath, {
 				cert: cert,
 				key: key,
 				ca: ca,
@@ -286,7 +289,7 @@ operationsApi:
 		const ca = readFileSync(join(certsPath, 'harper-ca.crt'));
 
 		try {
-			const response = await secureReqRest('/', {
+			const response = await secureReqRest(testPath, {
 				cert: cert,
 				key: key,
 				ca: ca,
@@ -340,14 +343,14 @@ operationsApi:
 		const ca = readFileSync(join(certsPath, 'harper-ca.crt'));
 
 		// Make two requests in quick succession - second should use cache
-		const response1 = await secureReqRest('/', {
+		const response1 = await secureReqRest(testPath, {
 			cert: cert,
 			key: key,
 			ca: ca,
 			rejectUnauthorized: false,
 		});
 
-		const response2 = await secureReqRest('/', {
+		const response2 = await secureReqRest(testPath, {
 			cert: cert,
 			key: key,
 			ca: ca,

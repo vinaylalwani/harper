@@ -376,15 +376,23 @@ export function extractIssuerKeyId(certPem: string): string {
 		const akiExt = cert.extensions?.find((ext) => ext.extnID === '2.5.29.35');
 
 		if (akiExt) {
-			const aki = new pkijs.AuthorityKeyIdentifier({
-				schema: akiExt.parsedValue,
-			});
+			try {
+				// Parse the extension value manually since parsedValue may be undefined for Ed25519 certs
+				const asn1 = asn1js.fromBER(akiExt.extnValue.valueBlock.valueHexView);
+				if (asn1.offset !== -1) {
+					const aki = new pkijs.AuthorityKeyIdentifier({
+						schema: asn1.result,
+					});
 
-			if (aki.keyIdentifier) {
-				const keyId = aki.keyIdentifier.valueBlock.valueHexView;
-				return Array.from(keyId)
-					.map((b) => b.toString(16).padStart(2, '0'))
-					.join('');
+					if (aki.keyIdentifier) {
+						const keyId = aki.keyIdentifier.valueBlock.valueHexView;
+						return Array.from(keyId)
+							.map((b) => b.toString(16).padStart(2, '0'))
+							.join('');
+					}
+				}
+			} catch (parseError) {
+				logger.debug?.(`Failed to parse Authority Key Identifier: ${parseError}, falling back to hash`);
 			}
 		}
 
