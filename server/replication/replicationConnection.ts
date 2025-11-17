@@ -918,20 +918,6 @@ export function replicateOverWS(ws, options, authorization) {
 									subscribed_node_ids
 								);
 							const txn_time = audit_record.version;
-							if (current_transaction.txnTime !== txn_time) {
-								// send the queued transaction
-								if (current_transaction.txnTime) {
-									if (DEBUG_MODE)
-										logger.trace?.(connection_id, 'new txn time, sending queued txn', current_transaction.txnTime);
-									if (encoding_buffer[encoding_start] !== 66) {
-										logger.error?.('Invalid encoding of message');
-									}
-									sendQueuedData();
-								}
-								current_transaction.txnTime = txn_time;
-								encoding_start = position;
-								writeFloat64(txn_time);
-							}
 
 							const residency_id = audit_record.residencyId;
 							const residency = getResidence(residency_id, table);
@@ -1037,6 +1023,21 @@ export function replicateOverWS(ws, options, authorization) {
 								ws.send(encode([RESIDENCY_LIST, residency, residency_id]));
 								sent_residency_lists[residency_id] = true;
 							}
+							if (current_transaction.txnTime !== txn_time) {
+								// send the queued transaction
+								if (current_transaction.txnTime) {
+									if (DEBUG_MODE)
+										logger.trace?.(connection_id, 'new txn time, sending queued txn', current_transaction.txnTime);
+									if (encoding_buffer[encoding_start] !== 66) {
+										logger.error?.('Invalid encoding of message');
+									}
+									sendQueuedData();
+								}
+								current_transaction.txnTime = txn_time;
+								encoding_start = position;
+								writeFloat64(txn_time);
+							}
+
 							/*
 							TODO: At some point we may want some fancier logic to elide the version (which is the same as txn_time)
 							and username from subsequent audit entries in multiple entry transactions*/
@@ -1181,7 +1182,6 @@ export function replicateOverWS(ws, options, authorization) {
 															entry.localTime
 														);
 														last_sequence_id = Math.max(entry.localTime, last_sequence_id);
-														queued_entries = true;
 														getSharedStatus()[SENDING_TIME_POSITION] = 1;
 														const encoded = createAuditEntry(
 															entry.version,
@@ -1220,13 +1220,15 @@ export function replicateOverWS(ws, options, authorization) {
 													}
 												}
 											}
-											if (queued_entries)
+											if (position - encoding_start > 8) {
+												// if we have any queued transactions to send, send them now
 												sendAuditRecord(
 													{
 														type: 'end_txn',
 													},
 													current_sequence_id
 												);
+											}
 											getSharedStatus()[SENDING_TIME_POSITION] = 0;
 											current_sequence_id = last_sequence_id;
 										}
@@ -1243,15 +1245,16 @@ export function replicateOverWS(ws, options, authorization) {
 										current_sequence_id = key;
 										await sendAuditRecord(audit_record, key);
 										audit_subscription.startTime = key; // update so don't double send
-										queued_entries = true;
 									}
-									if (queued_entries)
+									if (position - encoding_start > 8) {
+										// if we have any queued transactions to send, send them now
 										sendAuditRecord(
 											{
 												type: 'end_txn',
 											},
 											current_sequence_id
 										);
+									}
 									getSharedStatus()[SENDING_TIME_POSITION] = 0;
 									await whenNextTransaction(audit_store);
 								} while (!closed);
