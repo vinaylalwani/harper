@@ -48,8 +48,16 @@ export class Headers extends Map<string, string | string[]> {
 		}
 		return super.set(lowerName, [name, value]);
 	}
-	[Symbol.iterator]() {
-		return super.values()[Symbol.iterator]();
+	*[Symbol.iterator]() {
+		for (const [name, value] of super.values()) {
+			// Set-Cookie must be sent as separate headers per RFC 6265, not comma-separated,
+			// because Set-Cookie values may contain commas which would create ambiguity.
+			if (Array.isArray(value) && name.toLowerCase() === 'set-cookie') {
+				for (const v of value) yield [name, v];
+				continue;
+			}
+			yield [name, value];
+		}
 	}
 }
 

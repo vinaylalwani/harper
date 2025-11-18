@@ -50,5 +50,56 @@ describe('Test Headers', () => {
 			assert.equal(headers.get('name2'), 'value2');
 			assert.equal(headers.get('name3'), 'value4');
 		});
+		it('should handle multiple Set-Cookie headers correctly', async function () {
+			const headers = new Headers();
+			headers.append('Set-Cookie', 'session=abc123');
+			headers.append('Set-Cookie', 'user=john');
+
+			// Verify internal storage
+			assert.deepEqual(headers.get('Set-Cookie'), ['session=abc123', 'user=john']);
+
+			// Verify serialization - should return TWO separate entries, not one entry with an array
+			const serialized = Array.from(headers);
+			assert.equal(serialized.length, 2, 'Should have 2 separate header entries');
+			assert.deepEqual(serialized[0], ['Set-Cookie', 'session=abc123']);
+			assert.deepEqual(serialized[1], ['Set-Cookie', 'user=john']);
+		});
+		it('should handle mixed headers with multiple Set-Cookie', async function () {
+			const headers = new Headers();
+			headers.set('Content-Type', 'text/html');
+			headers.append('Set-Cookie', 'cookie1=value1');
+			headers.append('Set-Cookie', 'cookie2=value2');
+			headers.set('X-Custom', 'test');
+
+			const serialized = Array.from(headers);
+			assert.equal(serialized.length, 4, 'Should have 4 header entries total');
+
+			// Find all Set-Cookie headers in serialized output
+			const setCookies = serialized.filter(([name]) => name === 'Set-Cookie');
+			assert.equal(setCookies.length, 2, 'Should have 2 separate Set-Cookie entries');
+			assert.deepEqual(setCookies[0], ['Set-Cookie', 'cookie1=value1']);
+			assert.deepEqual(setCookies[1], ['Set-Cookie', 'cookie2=value2']);
+		});
+		it('should keep non-Set-Cookie headers with arrays merged (not split)', async function () {
+			const headers = new Headers();
+			// Other headers with multiple values should stay as arrays (to be comma-separated)
+			headers.append('Accept', 'text/html');
+			headers.append('Accept', 'application/json');
+			headers.append('Set-Cookie', 'session=abc');
+			headers.append('Set-Cookie', 'user=john');
+
+			const serialized = Array.from(headers);
+
+			// Accept should be a single entry with an array value
+			const acceptHeaders = serialized.filter(([name]) => name === 'Accept');
+			assert.equal(acceptHeaders.length, 1, 'Accept should be a single entry');
+			assert.deepEqual(acceptHeaders[0], ['Accept', ['text/html', 'application/json']]);
+
+			// Set-Cookie should be split into multiple entries
+			const setCookies = serialized.filter(([name]) => name === 'Set-Cookie');
+			assert.equal(setCookies.length, 2, 'Set-Cookie should be split into 2 entries');
+			assert.deepEqual(setCookies[0], ['Set-Cookie', 'session=abc']);
+			assert.deepEqual(setCookies[1], ['Set-Cookie', 'user=john']);
+		});
 	});
 });
