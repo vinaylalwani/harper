@@ -655,6 +655,10 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 							localTime: lastSequenceIdReceived,
 							remoteNodeIds: receivingDataFromNodeIds,
 						});
+						getSharedStatus();
+						replication_shared_status[RECEIVED_VERSION_POSITION] = last_sequence_id_received;
+						replication_shared_status[RECEIVED_TIME_POSITION] = Date.now();
+						replication_shared_status[RECEIVING_STATUS_POSITION] = RECEIVING_STATUS_WAITING;
 						break;
 					case BLOB_CHUNK: {
 						// this is a blob chunk, we need to write it to the blob store
@@ -972,20 +976,6 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 									subscribedNodeIds
 								);
 							const txnTime = auditRecord.version;
-							if (currentTransaction.txnTime !== txnTime) {
-								// send the queued transaction
-								if (currentTransaction.txnTime) {
-									if (DEBUG_MODE)
-										logger.trace?.(connectionId, 'new txn time, sending queued txn', currentTransaction.txnTime);
-									if (encodingBuffer[encodingStart] !== 66) {
-										logger.error?.('Invalid encoding of message');
-									}
-									sendQueuedData();
-								}
-								currentTransaction.txnTime = txnTime;
-								encodingStart = position;
-								writeFloat64(txnTime);
-							}
 
 							const residencyId = auditRecord.residencyId;
 							const residency = getResidence(residencyId, table);
@@ -1086,6 +1076,21 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 								ws.send(encode([RESIDENCY_LIST, residency, residencyId]));
 								sentResidencyLists[residencyId] = true;
 							}
+							if (currentTransaction.txnTime !== txnTime) {
+								// send the queued transaction
+								if (currentTransaction.txnTime) {
+									if (DEBUG_MODE)
+										logger.trace?.(connectionId, 'new txn time, sending queued txn', currentTransaction.txnTime);
+									if (encodingBuffer[encodingStart] !== 66) {
+										logger.error?.('Invalid encoding of message');
+									}
+									sendQueuedData();
+								}
+								currentTransaction.txnTime = txnTime;
+								encodingStart = position;
+								writeFloat64(txnTime);
+							}
+
 							/*
 							TODO: At some point we may want some fancier logic to elide the version (which is the same as txnTime)
 							and username from subsequent audit entries in multiple entry transactions*/
@@ -1211,7 +1216,6 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 										logger.warn?.('Invalid sequence id ' + currentSequenceId);
 										close(1008, 'Invalid sequence id' + currentSequenceId);
 									}
-									let queuedEntries;
 									if (isFirst && !closed) {
 										isFirst = false;
 										if (currentSequenceId === 0) {
@@ -1236,7 +1240,6 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 														entry.localTime
 													);
 													lastSequenceId = Math.max(entry.localTime ?? 1, lastSequenceId);
-													queuedEntries = true;
 													getSharedStatus()[SENDING_TIME_POSITION] = 1;
 													const encoded = createAuditEntry(
 														entry.version,
@@ -1279,12 +1282,15 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 												currentTransaction.txnTime = lastSequenceId;
 												writeFloat64(lastSequenceId);
 											}
-											sendAuditRecord(
-												{
-													type: 'end_txn',
-												},
-												lastSequenceId
-											);
+											if (position - encodingStart > 8) {
+												// if we have any queued transactions to send, send them now
+												sendAuditRecord(
+													{
+														type: 'end_txn',
+													},
+													currentSequenceId
+												);
+											}
 											getSharedStatus()[SENDING_TIME_POSITION] = 0;
 											currentSequenceId = lastSequenceId;
 										}
@@ -1301,15 +1307,16 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 										currentSequenceId = key;
 										await sendAuditRecord(auditRecord, key);
 										auditSubscription.startTime = key; // update so don't double send
-										queuedEntries = true;
 									}
-									if (queuedEntries)
+									if (position - encodingStart > 8) {
+										// if we have any queued transactions to send, send them now
 										sendAuditRecord(
 											{
 												type: 'end_txn',
 											},
 											currentSequenceId
 										);
+									}
 									getSharedStatus()[SENDING_TIME_POSITION] = 0;
 									await whenNextTransaction(auditStore);
 								} while (!closed);
