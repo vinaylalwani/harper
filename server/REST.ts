@@ -228,7 +228,7 @@ async function http(request: Context & Request, nextHandler) {
 			headers,
 			body: undefined,
 		};
-		responseObject.body = serialize(error.contentType ? error : errorToString(error), request, responseObject);
+		responseObject.body = serialize(error instanceof Error ? errorToString(error) : error, request, responseObject);
 		return responseObject;
 	}
 }

@@ -546,7 +546,26 @@ describe('test REST calls', () => {
 		assert.equal(response.status, 500);
 		assert(response.data.includes('Conflicting paths'));
 	});
-
+	it('Returns thrown plain object', async () => {
+		const response = await axios.get('http://localhost:9926/Echo/error-plain-object', {
+			customResponse: true,
+			validateStatus: function (status) {
+				return true;
+			},
+		});
+		assert.equal(response.status, 500);
+		assert(response.data.message, 'Test error');
+	});
+	it('Returns correct error for bad body', async () => {
+		const response = await axios.get('http://localhost:9926/Echo/error-bad-body', {
+			customResponse: true,
+			validateStatus: function (status) {
+				return true;
+			},
+		});
+		assert.isAtLeast(response.status, 400);
+		assert(response.data.includes('must be of type'));
+	});
 	it('handles async iterator content type handler', async () => {
 		// arbitrary rest request that will return multiple things to the content type handlers
 		const response = await axios.get('http://localhost:9926/FourProp/', {

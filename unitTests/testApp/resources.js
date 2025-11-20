@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import { createECDH } from 'node:crypto';
 
 export class Echo extends Resource {
+	static loadAsInstance = false;
 	async connect(incoming_messages, query) {
 		if (incoming_messages) {
 			// echo service for WebSockets
@@ -33,7 +34,15 @@ export class Echo extends Resource {
 		return super.subscribe(query);
 	}
 
-	get() {
+	get(target) {
+		if (target.id === 'error-plain-object') throw { message: 'Test error' };
+		if (target.id === 'error-bad-body') {
+			return {
+				status: 400,
+				headers: {},
+				body: { property: 'not valid' },
+			};
+		}
 		return {
 			change: 'this',
 			id: this.id,
