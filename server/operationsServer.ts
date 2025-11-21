@@ -1,5 +1,5 @@
 import cluster from 'cluster';
-
+import zlib from 'node:zlib';
 import env from '../utility/environment/environmentManager.js';
 env.initSync();
 import * as terms from '../utility/hdbTerms.ts';
@@ -154,7 +154,14 @@ function buildServer(isHttps: boolean, resources: Resources): FastifyInstance {
 	app.register(requestTimePlugin);
 
 	// This handles all get requests for the studio
-	app.register(fastifyCompress);
+	app.register(fastifyCompress, {
+		brotliOptions: {
+			params: {
+				[zlib.constants.BROTLI_PARAM_MODE]: zlib.constants.BROTLI_MODE_TEXT, // useful for APIs that primarily return text
+				[zlib.constants.BROTLI_PARAM_QUALITY]: 2, // default is 4, max is 11, min is 0
+			},
+		},
+	});
 	registerContentHandlers(app);
 
 	// Add a simple health check
