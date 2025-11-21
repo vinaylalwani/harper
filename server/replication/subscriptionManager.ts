@@ -192,7 +192,7 @@ export async function startOnMainThread(options) {
 			const nodes = [{ replicateByDefault: tablesReplicateByDefault, ...node }];
 			// Self catchup is done in case we have replicated any records that weren't actually written to our storage
 			// before a crash.
-			if (selfCatchupOfDatabase.has(database_name) && env.get(CONFIG_PARAMS.REPLICATION_FAILOVER)) {
+			if (selfCatchupOfDatabase.has(databaseName) && env.get(CONFIG_PARAMS.REPLICATION_FAILOVER)) {
 				// if we have a self catchup (only do if we have failover enabled), we need to add this node to the list of nodes that need to catch up
 				// and then we will remove it when it is done
 				nodes.push({
