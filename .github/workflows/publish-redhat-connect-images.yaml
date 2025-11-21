@@ -1,0 +1,89 @@
+name: 'Publish Harper Red Hat Connect Images'
+
+on:
+  workflow_call:
+    inputs:
+      container_image:
+        description: 'name of container image'
+        default: 'harpersystems/harper-openshift'
+        required: false
+        type: string
+      old_container_image:
+        description: 'old name of container image'
+        default: 'harperdb/harperdb-openshift'
+        required: false
+        type: string
+      container_tag:
+        description: 'tag of image to release (probably not "latest")'
+        required: true
+        type: string
+    secrets:
+      REDHAT_CONNECT_DOCKERCONFIG_JSON:
+        required: true
+      REDHAT_PYXIS_KEY:
+        required: true
+  workflow_dispatch:
+    inputs:
+      container_image:
+        description: 'name of container image'
+        default: 'harpersystems/harper-openshift'
+        required: false
+        type: string
+      old_container_image:
+        description: 'old name of container image'
+        default: 'harperdb/harperdb-openshift'
+        required: false
+        type: string
+      container_tag:
+        description: 'tag of image to release (probably not "latest")'
+        required: true
+        type: string
+
+jobs:
+  redhat_connect_publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Install Openshift CLI tools
+        uses: redhat-actions/openshift-tools-installer@v1
+        with:
+          source: 'github'
+          preflight: 'latest'
+
+      - name: Publish ${{ inputs.container_image }}:${{ inputs.container_tag }}
+        id: publish
+        env:
+          NEW_CERTIFICATION_COMPONENT_ID: '68f7d224ad264be9f3641617'
+          OLD_CERTIFICATION_COMPONENT_ID: '64652bdb6c16c68a7fdbe93b'
+          REDHAT_DOCKERCONFIG: ${{ secrets.REDHAT_CONNECT_DOCKERCONFIG_JSON }}
+          PYXIS_API_TOKEN: ${{ secrets.REDHAT_PYXIS_KEY }}
+          container_registry: 'registry.hub.docker.com'
+          container_image: ${{ inputs.container_image }}
+          old_container_image: ${{ inputs.old_container_image }}
+          container_tag: ${{ inputs.container_tag }}
+        run: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          echo "writing docker-config.json for submission"
+          echo "${REDHAT_DOCKERCONFIG}" | jq '.' > docker-config.json
+
+          echo "full environment before first preflight"
+          printenv
+
+          echo "preflighting ${container_image}:${container_tag} image with component ID ${NEW_CERTIFICATION_COMPONENT_ID}"
+          preflight check container "${container_registry}/${container_image}:${container_tag}" \
+            --pyxis-api-token="${PYXIS_API_TOKEN}" \
+            --certification-component-id="${NEW_CERTIFICATION_COMPONENT_ID}" \
+            --docker-config ./docker-config.json \
+            --submit >> "${GITHUB_STEP_SUMMARY}"
+
+          echo "full environment before second preflight"
+          printenv
+
+          echo "preflighting old ${old_container_image}:${container_tag} image with component ID ${OLD_CERTIFICATION_COMPONENT_ID}"
+          preflight check container "${container_registry}/${old_container_image}:${container_tag}" \
+            --pyxis-api-token="${PYXIS_API_TOKEN}" \
+            --certification-component-id="${OLD_CERTIFICATION_COMPONENT_ID}" \
+            --docker-config ./docker-config.json \
+            --submit >> "${GITHUB_STEP_SUMMARY}"
