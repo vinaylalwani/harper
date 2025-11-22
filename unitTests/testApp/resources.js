@@ -3,28 +3,28 @@ import { createECDH } from 'node:crypto';
 
 export class Echo extends Resource {
 	static loadAsInstance = false;
-	async connect(incoming_messages, query) {
-		if (incoming_messages) {
+	async connect(target, incomingMessages) {
+		if (incomingMessages) {
 			// echo service for WebSockets
 			return (async function* () {
-				for await (let message of incoming_messages) {
+				for await (let message of incomingMessages) {
 					yield message;
 				}
 			})();
 		} else {
 			// for server sent events, just send greetings, and try using super.connect
-			let outgoing_messages = super.connect(incoming_messages, query);
-			outgoing_messages.send('greetings');
+			let outgoingMessages = super.connect(target, incomingMessages);
+			outgoingMessages.send('greetings');
 			let timer = setTimeout(() => {
-				outgoing_messages.send({
+				outgoingMessages.send({
 					event: 'another-message',
 					data: 'hello again',
 				});
 			}, 10);
-			outgoing_messages.on('close', () => {
+			outgoingMessages.on('close', () => {
 				clearTimeout(timer);
 			});
-			return outgoing_messages;
+			return outgoingMessages;
 		}
 	}
 	subscribe(query) {
@@ -35,8 +35,8 @@ export class Echo extends Resource {
 	}
 
 	get(target) {
-		if (target.id === 'error-plain-object') throw { message: 'Test error' };
-		if (target.id === 'error-bad-body') {
+		if (this.getId() === 'error-plain-object') throw { message: 'Test error' };
+		if (this.getId() === 'error-bad-body') {
 			return {
 				status: 400,
 				headers: {},
