@@ -69,11 +69,12 @@ describe('listMetrics', () => {
 		expect(searchStub.calledOnce).to.be.true;
 		const searchParams = searchStub.firstCall.args[0];
 		expect(searchParams.select).to.deep.equal(['metric']);
-		expect(searchParams.conditions.length).to.equal(Object.keys(METRIC).length);
+		// will have time window cutoff condition too, so one more than builtin metrics length
+		expect(searchParams.conditions.length).to.equal(Object.keys(METRIC).length + 1);
 
-		// Each condition should be a 'not_equal' to a built-in metric
+		// Each condition after the first should be a 'not_equal' to a built-in metric
 		const builtins = Object.values(METRIC);
-		searchParams.conditions.forEach(condition => {
+		searchParams.conditions.slice(1).forEach(condition => {
 			expect(condition.attribute).to.equal('metric');
 			expect(condition.comparator).to.equal('not_equal');
 			expect(builtins).to.include(condition.value);
@@ -130,6 +131,24 @@ describe('listMetrics', () => {
 		expect(searchStub.calledOnce).to.be.true;
 	});
 
+	it('should set a default custom metric time window of one week', async () => {
+		const weekAgo = Date.now() - (1000 * 60 * 60 * 24 * 7);
+		await listMetrics(['custom']);
+		const firstCondition = searchStub.firstCall.args[0].conditions[0];
+		expect(firstCondition.attribute).to.be.equal('id');
+		expect(firstCondition.comparator).to.be.equal('greater_than');
+		expect(firstCondition.value).to.be.approximately(weekAgo, 1000);
+	});
+
+	it('should use the given metric time window when provided', async () => {
+		const twoDays = 1000 * 60 * 60 * 24 * 2;
+		await listMetrics(['custom'], twoDays);
+		const firstCondition = searchStub.firstCall.args[0].conditions[0];
+		expect(firstCondition.attribute).to.be.equal('id');
+		expect(firstCondition.comparator).to.be.equal('greater_than');
+		expect(firstCondition.value).to.be.approximately(Date.now() - twoDays, 1000);
+	});
+
 	it('should return empty array when no metric types are requested', async () => {
 		const result = await listMetrics([]);
 
@@ -167,11 +186,16 @@ describe('listMetrics', () => {
 		const builtins = Object.values(METRIC);
 
 		// Should have one condition per built-in metric
-		expect(searchParams.conditions.length).to.equal(builtins.length);
+		expect(searchParams.conditions.length).to.equal(builtins.length + 1);
+
+		// Should set a time window cutoff as the first condition
+		expect(searchParams.conditions[0].attribute).to.equal('id');
+		expect(searchParams.conditions[0].comparator).to.equal('greater_than');
+		expect(searchParams.conditions[0].value).to.be.lessThan(Date.now());
 
 		// Each condition should be checking "not equal" to a built-in metric
 		for (let i = 0; i < builtins.length; i++) {
-			expect(searchParams.conditions[i]).to.deep.equal({
+			expect(searchParams.conditions[i+1]).to.deep.equal({
 				attribute: 'metric',
 				comparator: 'not_equal',
 				value: builtins[i]
