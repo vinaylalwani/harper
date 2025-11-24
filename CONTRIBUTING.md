@@ -21,6 +21,13 @@ Run unit tests using `npm run test:unit <unit-test-file>` or `npm run test:unit:
 
 > Unit tests currently use [Mocha](https://mochajs.org/) as the test runner, but since they are implemented in TypeScript and are sometimes executing TypeScript source code, it also uses [TSX](https://tsx.is/) for compilation and execution. The npm script `test:unit` sets the appropriate env vars and mocha configuration file. Make sure that the `TSX_TSCONFIG_PATH` environment variable points to the correct `tsconfig.json` file for the unit tests (i.e. `./unitTests/tsconfig.json`) and not the root-level `tsconfig.json`.
 
+## Dependency Version Updates
+
+We use [Renovate](https://www.mend.io/renovate/) to automatically update dependencies on a regular schedule (with a cooldown period to help guard against supply chain attacks).
+This is configured in the `renovate.json` file in the project root. Renovate will open pull requests when it detects available updates and
+Harper staff will review these and merge them on a case-by-case basis. But contributors should feel free to comment on any pull requests
+they have feedback on. But in general, manually opening PRs to update dependencies is not necessary thanks to this automation.
+
 ## Repository Structure
 
 Most of the content within this repo is source files. The exceptions are `static` and `test` directories, and various configuration files (such as `eslint.config.mjs`, `prettier.config.mjs`, and `tsconfig.json`).
