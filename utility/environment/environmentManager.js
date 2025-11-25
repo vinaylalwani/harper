@@ -6,7 +6,7 @@ const os = require('os');
 const PropertiesReader = require('properties-reader');
 const log = require('../logging/harper_logger.js');
 const commonUtils = require('../common_utils.js');
-const hdbTerms = require('../hdbTerms.ts');
+const hdbTerms = require('#src/utility/hdbTerms');
 const configUtils = require('../../config/configUtils.js');
 const { PACKAGE_ROOT } = require('../packageUtils.js');
 

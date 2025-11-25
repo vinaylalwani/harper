@@ -6,7 +6,7 @@ const { workerData, threadId, isMainThread } = require('worker_threads');
 const pathModule = require('path');
 const YAML = require('yaml');
 const PropertiesReader = require('properties-reader');
-const hdbTerms = require('../hdbTerms.ts');
+const hdbTerms = require('#src/utility/hdbTerms');
 const assignCMDENVVariables = require('../assignCmdEnvVariables.js');
 const os = require('os');
 const { PACKAGE_ROOT } = require('../../utility/packageUtils.js');
@@ -595,7 +595,7 @@ function getFileLogger(path, rotation, isExternalInstance) {
 		setTimeout(() => {
 			logger.rotator?.end();
 			if (!rotation) return;
-			const logRotator = require('./logRotator.js');
+			const logRotator = require('#js/utility/logging/logRotator');
 			try {
 				logger.rotator = logRotator({
 					logger,
@@ -865,4 +865,4 @@ function AuthAuditLog(username, status, type, originatingIp, requestMethod, path
 	this.path = path;
 }
 // we have to load this at the end to avoid circular dependencies problems
-const { RootConfigWatcher } = require('../../config/RootConfigWatcher.ts');
+const { RootConfigWatcher } = require('#src/config/RootConfigWatcher');

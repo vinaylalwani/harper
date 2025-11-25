@@ -1,7 +1,7 @@
 'use strict';
 
-const hdb_terms = require('../hdbTerms.ts');
-const lmdb_terms = require('../lmdb/terms.js');
+const hdbTerms = require('#src/utility/hdbTerms');
+const lmdbTerms = require('#js/utility/lmdb/terms');
 
 // A subset of HTTP error codes that we may use in code.
 const HTTP_STATUS_CODES = {
@@ -88,8 +88,8 @@ const LMDB_ERRORS_ENUM = {
 	WRITE_ATTRIBUTES_MUST_BE_ARRAY: 'write_attributes must be an array',
 	RECORDS_REQUIRED: 'records is required',
 	RECORDS_MUST_BE_ARRAY: 'records must be an array',
-	CANNOT_CREATE_INTERNAL_DBIS_NAME: `cannot create a dbi named ${lmdb_terms.INTERNAL_DBIS_NAME}`,
-	CANNOT_DROP_INTERNAL_DBIS_NAME: `cannot drop a dbi named ${lmdb_terms.INTERNAL_DBIS_NAME}`,
+	CANNOT_CREATE_INTERNAL_DBIS_NAME: `cannot create a dbi named ${lmdbTerms.INTERNAL_DBIS_NAME}`,
+	CANNOT_DROP_INTERNAL_DBIS_NAME: `cannot drop a dbi named ${lmdbTerms.INTERNAL_DBIS_NAME}`,
 	START_VALUE_REQUIRED: 'start_value is required',
 	END_VALUE_REQUIRED: 'end_value is required',
 	CANNOT_COMPARE_STRING_TO_NUMERIC_KEYS: 'cannot compare a string to numeric keys',
@@ -101,10 +101,10 @@ const LMDB_ERRORS_ENUM = {
 //This ENUM includes error messages for INSERT, UPDATE, and UPSERT related ops
 const WRITE_OPS_ERROR_MSGS = {
 	ATTR_NAME_LENGTH_ERR: (attr_name) =>
-		`transaction aborted due to attribute name ${attr_name} being too long. Attribute names cannot be longer than ${hdb_terms.INSERT_MAX_CHARACTER_SIZE} bytes.`,
+		`transaction aborted due to attribute name ${attr_name} being too long. Attribute names cannot be longer than ${hdbTerms.INSERT_MAX_CHARACTER_SIZE} bytes.`,
 	ATTR_NAME_NULLISH_ERR:
 		'transaction aborted due to record(s) with an attribute name that is null, undefined or empty string',
-	HASH_VAL_LENGTH_ERR: `transaction aborted due to record(s) with a hash value that exceeds ${hdb_terms.INSERT_MAX_CHARACTER_SIZE} bytes, check log for more info`,
+	HASH_VAL_LENGTH_ERR: `transaction aborted due to record(s) with a hash value that exceeds ${hdbTerms.INSERT_MAX_CHARACTER_SIZE} bytes, check log for more info`,
 	INVALID_FORWARD_SLASH_IN_HASH_ERR:
 		'transaction aborted due to record(s) with a hash value that contains a forward slash, check log for more info',
 	RECORD_MISSING_HASH_ERR: 'transaction aborted due to record(s) with no hash value, check log for more info',

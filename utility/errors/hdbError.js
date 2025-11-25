@@ -1,6 +1,6 @@
 'use strict';
 const hdbErrors = require('./commonErrors.js');
-const hdbTerms = require('../hdbTerms.ts');
+const hdbTerms = require('#src/utility/hdbTerms');
 
 /**
  * Custom error class used for better error and log handling.  Caught errors that evaluate to an instanceof HdbError can

@@ -1,15 +1,15 @@
 'use strict';
 
-const { Worker, MessageChannel, parentPort, isMainThread, threadId, workerData } = require('worker_threads');
-const { join, isAbsolute, extname } = require('path');
-const { server } = require('../Server.ts');
-const { watch, readdir } = require('fs/promises');
-const { totalmem } = require('os');
-const { setHeapSnapshotNearHeapLimit } = require('v8');
-const hdbTerms = require('../../utility/hdbTerms.ts');
+const { Worker, MessageChannel, parentPort, isMainThread, threadId, workerData } = require('node:worker_threads');
+const { join, isAbsolute, extname } = require('node:path');
+const { server } = require('#src/server/Server');
+const { watch, readdir } = require('node:fs/promises');
+const { totalmem } = require('node:os');
+const { setHeapSnapshotNearHeapLimit } = require('node:v8');
+const hdbTerms = require('#src/utility/hdbTerms');
 const envMgr = require('../../utility/environment/environmentManager.js');
 const harperLogger = require('../../utility/logging/harper_logger.js');
-const { randomBytes } = require('crypto');
+const { randomBytes } = require('node:crypto');
 const { _assignPackageExport } = require('../../globals.js');
 const { PACKAGE_ROOT } = require('../../utility/packageUtils.js');
 const MB = 1024 * 1024;

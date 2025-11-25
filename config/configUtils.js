@@ -1,6 +1,6 @@
 'use strict';
 
-const hdbTerms = require('../utility/hdbTerms.ts');
+const hdbTerms = require('#src/utility/hdbTerms');
 const hdbUtils = require('../utility/common_utils.js');
 const logger = require('../utility/logging/harper_logger.js');
 const { configValidator } = require('../validation/configValidator.js');
@@ -12,8 +12,8 @@ const PropertiesReader = require('properties-reader');
 const _ = require('lodash');
 const { handleHDBError } = require('../utility/errors/hdbError.js');
 const { HTTP_STATUS_CODES, HDB_ERROR_MSGS } = require('../utility/errors/commonErrors.js');
-const { server } = require('../server/Server.ts');
-const { getBackupDirPath } = require('./configHelpers.ts');
+const { server } = require('#src/server/Server');
+const { getBackupDirPath } = require('#src/config/configHelpers');
 
 const { DATABASES_PARAM_CONFIG, CONFIG_PARAMS, CONFIG_PARAM_MAP } = hdbTerms;
 const UNINIT_GET_CONFIG_ERR = 'Unable to get config value because config is uninitialized';
