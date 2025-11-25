@@ -730,23 +730,7 @@ async function getSSHKey(req) {
 	const config_file = path.join(sshDir, 'config');
 	if (await fs.pathExists(config_file)) {
 		const configContents = await fs.readFile(config_file, 'utf8');
-		// Find the config block for this key (starts with #name)
-		const configBlockRegex = new RegExp(`#${name}[\\S\\s]*?IdentitiesOnly yes`, 'g');
-		const match = configContents.match(configBlockRegex);
-
-		if (match && match[0]) {
-			const configBlock = match[0];
-			// Extract Host
-			const hostMatch = configBlock.match(/^Host\s+(.+)$/m);
-			if (hostMatch) {
-				result.host = hostMatch[1].trim();
-			}
-			// Extract HostName
-			const hostnameMatch = configBlock.match(/^\s*HostName\s+(.+)$/m);
-			if (hostnameMatch) {
-				result.hostname = hostnameMatch[1].trim();
-			}
-		}
+		extractMatchingHostAndHostname(configContents, name, result);
 	}
 
 	return result;
@@ -801,14 +785,45 @@ async function deleteSSHKey(req) {
 async function listSSHKeys(req) {
 	let results = [];
 	if (await fs.pathExists(sshDir)) {
+		// Read the config file to get Host and HostName
+		const config_file = path.join(sshDir, 'config');
+		const configContents = await fs.pathExists(config_file) && await fs.readFile(config_file, 'utf8');
+
 		(await fs.readdir(sshDir)).forEach((file) => {
-			if (file != 'known_hosts' && file != 'config') {
-				results.push({ name: file.split('.')[0] });
+			if (file !== 'known_hosts' && file !== 'config') {
+				const name = file.split('.')[0];
+				const result = { name };
+
+				if (configContents) {
+					extractMatchingHostAndHostname(configContents, name, result);
+				}
+
+				results.push(result);
 			}
 		});
 	}
 
 	return results;
+}
+
+function extractMatchingHostAndHostname(configContents, name, result) {
+	// Find the config block for this key (starts with #name)
+	const configBlockRegex = new RegExp(`#${name}[\\S\\s]*?IdentitiesOnly yes`, 'g');
+	const match = configContents.match(configBlockRegex);
+
+	if (match && match[0]) {
+		const configBlock = match[0];
+		// Extract Host
+		const hostMatch = configBlock.match(/^Host\s+(.+)$/m);
+		if (hostMatch) {
+			result.host = hostMatch[1].trim();
+		}
+		// Extract HostName
+		const hostnameMatch = configBlock.match(/^\s*HostName\s+(.+)$/m);
+		if (hostnameMatch) {
+			result.hostname = hostnameMatch[1].trim();
+		}
+	}
 }
 
 async function setSSHKnownHosts(req) {
