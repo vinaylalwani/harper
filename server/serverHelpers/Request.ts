@@ -1,9 +1,10 @@
-import { platform } from 'os';
 import type { IncomingMessage as NodeIncomingMessage, ServerResponse as NodeServerResponse } from 'node:http';
 import type { Socket } from 'node:net';
 import { TLSSocket } from 'node:tls';
 
-// Some request compatible type-ing. We can handle both HTTP and HTTPS requests and the server is augmented.
+export { createReuseportFd } from '#js/server/serverHelpers/reusePort';
+
+export // Some request compatible type-ing. We can handle both HTTP and HTTPS requests and the server is augmented.
 interface IncomingMessage extends NodeIncomingMessage {
 	authority?: string;
 	socket: (Socket | TLSSocket) & {
@@ -149,5 +150,3 @@ class Headers {
 		}
 	}
 }
-export let createReuseportFd: any;
-if (platform() != 'win32') createReuseportFd = require('node-unix-socket').createReuseportFd;
