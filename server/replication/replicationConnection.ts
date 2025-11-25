@@ -656,9 +656,9 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 							remoteNodeIds: receivingDataFromNodeIds,
 						});
 						getSharedStatus();
-						replication_shared_status[RECEIVED_VERSION_POSITION] = last_sequence_id_received;
-						replication_shared_status[RECEIVED_TIME_POSITION] = Date.now();
-						replication_shared_status[RECEIVING_STATUS_POSITION] = RECEIVING_STATUS_WAITING;
+						replicationSharedStatus[RECEIVED_VERSION_POSITION] = last_sequence_id_received;
+						replicationSharedStatus[RECEIVED_TIME_POSITION] = Date.now();
+						replicationSharedStatus[RECEIVING_STATUS_POSITION] = RECEIVING_STATUS_WAITING;
 						break;
 					case BLOB_CHUNK: {
 						// this is a blob chunk, we need to write it to the blob store
