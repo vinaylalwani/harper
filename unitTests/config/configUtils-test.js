@@ -1482,4 +1482,125 @@ describe('Test configUtils module', () => {
 			expect(add_in_stub.getCall(2).lastArg).to.eql('audit/path');
 		});
 	});
+
+	describe('Test port conflict resolution with environment variables', () => {
+		const CONFIG_FILE_PATH = path.join(HDB_ROOT, hdbTerms.HDB_CONFIG_FILE);
+
+		beforeEach(() => {
+			// Clean up any existing env vars
+			delete process.env.HARPER_SET_CONFIG;
+			delete process.env.HARPER_DEFAULT_CONFIG;
+
+			// Reset parseYamlDoc in case previous tests stubbed it
+			// Re-require the module to get a fresh copy
+			delete require.cache[require.resolve('../../config/configUtils.js')];
+			require('../../config/configUtils.js');
+			const freshRewire = rewire('../../config/configUtils.js');
+			// Copy the fresh parseYamlDoc to our rewired module
+			const parseYamlDoc = freshRewire.__get__('parseYamlDoc');
+			config_utils_rw.__set__('parseYamlDoc', parseYamlDoc);
+
+			// Clean up test directory
+			if (fs.existsSync(HDB_ROOT)) {
+				fs.removeSync(HDB_ROOT);
+			}
+			fs.ensureDirSync(HDB_ROOT);
+			// Create the database directory that validation expects
+			fs.ensureDirSync(path.join(HDB_ROOT, 'database'));
+		});
+
+		afterEach(() => {
+			delete process.env.HARPER_SET_CONFIG;
+			delete process.env.HARPER_DEFAULT_CONFIG;
+
+			if (fs.existsSync(HDB_ROOT)) {
+				fs.removeSync(HDB_ROOT);
+			}
+		});
+
+		it('should allow explicitly setting port to null when HARPER_SET_CONFIG sets securePort to same value', () => {
+			const defaultPort = 9925;
+			const testArgs = {
+				ROOTPATH: HDB_ROOT,
+				OPERATIONSAPI_NETWORK_PORT: defaultPort,
+			};
+
+			// Set env var to move the default port to securePort and explicitly null out port
+			process.env.HARPER_SET_CONFIG = JSON.stringify({
+				operationsApi: {
+					network: {
+						port: null,
+						securePort: defaultPort,
+					},
+				},
+			});
+
+			// This should not throw a validation error
+			config_utils_rw.createConfigFile(testArgs);
+
+			// Verify the config was created correctly
+			const configDoc = YAML.parseDocument(fs.readFileSync(CONFIG_FILE_PATH, 'utf8'));
+			const configJson = configDoc.toJSON();
+
+			// Port should be null and securePort should be set
+			expect(configJson.operationsApi.network.port).to.be.null;
+			expect(configJson.operationsApi.network.securePort).to.equal(defaultPort);
+		});
+
+		it('should allow explicitly setting port to null when HARPER_SET_CONFIG sets securePort for http', () => {
+			const defaultPort = 9926;
+			const testArgs = {
+				ROOTPATH: HDB_ROOT,
+				HTTP_PORT: defaultPort,
+			};
+
+			// Set env var to move the default port to securePort and explicitly null out port
+			process.env.HARPER_SET_CONFIG = JSON.stringify({
+				http: {
+					port: null,
+					securePort: defaultPort,
+				},
+			});
+
+			// This should not throw a validation error
+			config_utils_rw.createConfigFile(testArgs);
+
+			// Verify the config was created correctly
+			const configDoc = YAML.parseDocument(fs.readFileSync(CONFIG_FILE_PATH, 'utf8'));
+			const configJson = configDoc.toJSON();
+
+			// Port should be null and securePort should be set
+			expect(configJson.http.port).to.be.null;
+			expect(configJson.http.securePort).to.equal(defaultPort);
+		});
+
+		it('should allow explicitly setting port to null with HARPER_DEFAULT_CONFIG', () => {
+			const defaultPort = 9925;
+			const testArgs = {
+				ROOTPATH: HDB_ROOT,
+				OPERATIONSAPI_NETWORK_PORT: defaultPort,
+			};
+
+			// Set env var to move the default port to securePort and explicitly null out port
+			process.env.HARPER_DEFAULT_CONFIG = JSON.stringify({
+				operationsApi: {
+					network: {
+						port: null,
+						securePort: defaultPort,
+					},
+				},
+			});
+
+			// This should not throw a validation error
+			config_utils_rw.createConfigFile(testArgs);
+
+			// Verify the config was created correctly
+			const configDoc = YAML.parseDocument(fs.readFileSync(CONFIG_FILE_PATH, 'utf8'));
+			const configJson = configDoc.toJSON();
+
+			// Port should be null and securePort should be set
+			expect(configJson.operationsApi.network.port).to.be.null;
+			expect(configJson.operationsApi.network.securePort).to.equal(defaultPort);
+		});
+	});
 });
