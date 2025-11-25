@@ -1,21 +1,12 @@
-'use strict';
+import hdbUtils from '../../utility/common_utils.js';
+import * as hdbTerms from '../../utility/hdbTerms.ts';
+import { ITC_ERRORS } from '../../utility/errors/commonErrors.js';
+import { threadId, isMainThread } from 'worker_threads';
+import { onMessageFromWorkers, broadcastWithAcknowledgement } from './manageThreads.js';
 
-const hdbLogger = require('../../utility/logging/harper_logger.js');
-const hdbUtils = require('../../utility/common_utils.js');
-const hdbTerms = require('../../utility/hdbTerms.ts');
-const { ITC_ERRORS } = require('../../utility/errors/commonErrors.js');
-const { parentPort, threadId, isMainThread, workerData } = require('worker_threads');
-const { onMessageFromWorkers, broadcast, broadcastWithAcknowledgement } = require('./manageThreads.js');
-
-module.exports = {
-	sendItcEvent,
-	validateEvent,
-	SchemaEventMsg,
-	UserEventMsg,
-};
 let serverItcHandlers;
 onMessageFromWorkers(async (event, sender) => {
-	serverItcHandlers = serverItcHandlers || require('../itc/serverHandlers.js');
+	serverItcHandlers = serverItcHandlers || (await import('../itc/serverHandlers.js'));
 	validateEvent(event);
 	if (serverItcHandlers[event.type]) {
 		await serverItcHandlers[event.type](event);
@@ -31,7 +22,7 @@ onMessageFromWorkers(async (event, sender) => {
  * Emits an ITC event to the ITC server.
  * @param event
  */
-function sendItcEvent(event) {
+export function sendItcEvent(event) {
 	if (!isMainThread && event.message) event.message.originator = threadId;
 	return broadcastWithAcknowledgement(event);
 }
@@ -41,7 +32,7 @@ function sendItcEvent(event) {
  * @param event
  * @returns {string}
  */
-function validateEvent(event) {
+export function validateEvent(event) {
 	if (typeof event !== 'object') {
 		return ITC_ERRORS.INVALID_ITC_DATA_TYPE;
 	}
@@ -72,7 +63,7 @@ function validateEvent(event) {
  * @param attribute
  * @constructor
  */
-function SchemaEventMsg(originator, operation, schema, table = undefined, attribute = undefined) {
+export function SchemaEventMsg(originator, operation, schema, table = undefined, attribute = undefined) {
 	this.originator = originator;
 	this.operation = operation;
 	this.schema = schema;
@@ -85,6 +76,6 @@ function SchemaEventMsg(originator, operation, schema, table = undefined, attrib
  * @param originator
  * @constructor
  */
-function UserEventMsg(originator) {
+export function UserEventMsg(originator) {
 	this.originator = originator;
 }

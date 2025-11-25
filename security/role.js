@@ -16,7 +16,7 @@ const SearchObject = require('../dataLayer/SearchObject.js');
 const SearchByHashObject = require('../dataLayer/SearchByHashObject.js');
 const { hdbErrors, handleHDBError } = require('../utility/errors/hdbError.js');
 const { HDB_ERROR_MSGS, HTTP_STATUS_CODES } = hdbErrors;
-const { UserEventMsg } = require('../server/threads/itc.js');
+const { UserEventMsg } = require('../server/threads/itc.ts');
 
 module.exports = {
 	addRole,

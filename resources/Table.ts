@@ -25,7 +25,7 @@ import * as envMngr from '../utility/environment/environmentManager.js';
 import { addSubscription } from './transactionBroadcast.ts';
 import { handleHDBError, ClientError, ServerError, AccessViolation } from '../utility/errors/hdbError.js';
 import * as signalling from '../utility/signalling.js';
-import { SchemaEventMsg, UserEventMsg } from '../server/threads/itc.js';
+import { SchemaEventMsg, UserEventMsg } from '../server/threads/itc.ts';
 import { databases, table } from './databases.ts';
 import {
 	searchByIndex,

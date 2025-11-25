@@ -5,7 +5,7 @@
  * and aggregating it into a unified view.
  */
 
-import { sendItcEvent } from '../../server/threads/itc.js';
+import { sendItcEvent } from '../../server/threads/itc.ts';
 import { getWorkerIndex, onMessageByType, getWorkerCount } from '../../server/threads/manageThreads.js';
 import { ITC_EVENT_TYPES } from '../../utility/hdbTerms.ts';
 import { loggerWithTag } from '../../utility/logging/logger.js';

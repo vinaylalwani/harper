@@ -5,7 +5,7 @@ const hdbLogger = require('../../utility/logging/harper_logger.js');
 const hdbTerms = require('../../utility/hdbTerms.ts');
 const cleanLmdbMap = require('../../utility/lmdb/cleanLMDBMap.js');
 const userSchema = require('../../security/user.ts');
-const { validateEvent } = require('../threads/itc.js');
+const { validateEvent } = require('../threads/itc.ts');
 const harperBridge = require('../../dataLayer/harperBridge/harperBridge.js');
 const process = require('process');
 const { resetDatabases } = require('../../resources/databases.ts');
@@ -119,7 +119,7 @@ async function componentStatusRequestHandler(event) {
 		// Get current thread's component status
 		const { internal } = require('../../components/status/index.ts');
 		const { getWorkerIndex } = require('../threads/manageThreads.js');
-		const { sendItcEvent } = require('../threads/itc.js');
+		const { sendItcEvent } = require('../threads/itc.ts');
 		const componentStatuses = internal.componentStatusRegistry.getAllStatuses();
 
 		// Convert Map to array for serialization

@@ -1,16 +1,16 @@
-import { getDatabases, getDefaultCompression, resetDatabases } from '../resources/databases.ts';
+import { getDatabases, getDefaultCompression, resetDatabases } from '#src/resources/databases';
 import { open } from 'lmdb';
-import { join } from 'path';
+import { join } from 'node:path';
 import { move, remove } from 'fs-extra';
-import { get } from '../utility/environment/environmentManager.js';
-import OpenEnvironmentObject from '../utility/lmdb/OpenEnvironmentObject.js';
-import { OpenDBIObject } from '../utility/lmdb/OpenDBIObject.js';
-import { INTERNAL_DBIS_NAME, AUDIT_STORE_NAME } from '../utility/lmdb/terms.js';
-import { CONFIG_PARAMS, DATABASES_DIR_NAME } from '../utility/hdbTerms.ts';
-import { AUDIT_STORE_OPTIONS } from '../resources/auditStore.ts';
-import { describeSchema } from '../dataLayer/schemaDescribe.js';
-import { updateConfigValue } from '../config/configUtils.js';
-import * as hdbLogger from '../utility/logging/harper_logger.js';
+import { get } from '#js/utility/environment/environmentManager';
+import OpenEnvironmentObject from '#js/utility/lmdb/OpenEnvironmentObject';
+import { OpenDBIObject } from '#src/utility/lmdb/OpenDBIObject';
+import { INTERNAL_DBIS_NAME, AUDIT_STORE_NAME } from '#js/utility/lmdb/terms';
+import { CONFIG_PARAMS, DATABASES_DIR_NAME } from '#src/utility/hdbTerms';
+import { AUDIT_STORE_OPTIONS } from '#src/resources/auditStore';
+import { describeSchema } from '#js/dataLayer/schemaDescribe';
+import { updateConfigValue } from '#js/config/configUtils';
+import * as hdbLogger from '#js/utility/logging/harper_logger';
 
 export async function compactOnStart() {
 	hdbLogger.notify('Running compact on start');

@@ -14,8 +14,8 @@ import * as fs from 'fs-extra';
 import { _assignPackageExport } from '../globals.js';
 import { getIndexedValues } from '../utility/lmdb/commonUtility.js';
 import * as signalling from '../utility/signalling.js';
-import { SchemaEventMsg } from '../server/threads/itc.js';
 import { workerData } from 'worker_threads';
+import { SchemaEventMsg } from '../server/threads/itc.ts';
 import harperLogger from '../utility/logging/harper_logger.js';
 const { forComponent } = harperLogger;
 import * as manageThreads from '../server/threads/manageThreads.js';
@@ -23,12 +23,8 @@ import { openAuditStore } from './auditStore.ts';
 import { handleLocalTimeForGets } from './RecordEncoder.ts';
 import { deleteRootBlobPathsForDB } from './blob.ts';
 import { CUSTOM_INDEXES } from './indexes/customIndexes.ts';
-import * as OpenDBIObjectModule from '../utility/lmdb/OpenDBIObject.js';
-function OpenDBIObject(dupSort, isPrimary) {
-	// what is going on with esbuild, it suddenly is randomly flip-flopping the module record for OpenDBIObject, sometimes return the correct exports object and sometimes returning the exports as the `default`.
-	let OpenDBIObject = OpenDBIObjectModule.OpenDBIObject ?? OpenDBIObjectModule.default.OpenDBIObject;
-	return new OpenDBIObject(dupSort, isPrimary);
-}
+import { OpenDBIObject } from '../utility/lmdb/OpenDBIObject.ts';
+
 const logger = forComponent('storage');
 
 const DEFAULT_DATABASE_NAME = 'data';

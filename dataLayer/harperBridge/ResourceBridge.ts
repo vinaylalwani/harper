@@ -11,8 +11,8 @@ import {
 	READ_AUDIT_LOG_SEARCH_TYPES_ENUM,
 } from '../../utility/hdbTerms.ts';
 import * as signalling from '../../utility/signalling.js';
-import { SchemaEventMsg } from '../../server/threads/itc.js';
 import { asyncSetTimeout } from '../../utility/common_utils.js';
+import { SchemaEventMsg } from '../../server/threads/itc.ts';
 import { transaction } from '../../resources/transaction.ts';
 import type { Condition, Query, Context, Select, Id, DirectCondition } from '../../resources/ResourceInterface.ts';
 import { collapseData } from '../../resources/tracked.ts';

@@ -5,7 +5,7 @@ const hdbUtils = require('./common_utils.js');
 const hdbLogger = require('../utility/logging/harper_logger.js');
 const ITCEventObject = require('../server/itc/utility/ITCEventObject.js');
 let serverItcHandlers;
-const { sendItcEvent } = require('../server/threads/itc.js');
+const { sendItcEvent } = require('../server/threads/itc.ts');
 
 function signalSchemaChange(message) {
 	try {

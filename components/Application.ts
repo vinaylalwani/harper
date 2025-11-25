@@ -1,5 +1,5 @@
 import { getConfigObj, getConfigValue } from '../config/configUtils.js';
-import { CONFIG_PARAMS } from '../utility/hdbTerms.js';
+import { CONFIG_PARAMS } from '#src/utility/hdbTerms';
 import logger from '../utility/logging/harper_logger.js';
 
 import { dirname, extname, join } from 'node:path';
