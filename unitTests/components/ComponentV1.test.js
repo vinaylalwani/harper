@@ -1,4 +1,4 @@
-const { describe, it, beforeEach, afterEach } = require('mocha');
+const { describe, it, beforeEach, afterEach, after } = require('mocha');
 const { tmpdir } = require('node:os');
 const {
 	processResourceExtensionComponent,
@@ -11,8 +11,8 @@ const {
 	InvalidRootOptionError,
 	InvalidPathOptionError,
 	InvalidURLPathOptionError,
-} = require('#dist/components/ComponentV1');
-const { Resources } = require('#dist/resources/Resources');
+} = require('#src/components/ComponentV1');
+const { Resources } = require('#src/resources/Resources');
 const assert = require('node:assert/strict');
 const { join } = require('node:path');
 const { mkdtempSync, writeFileSync, mkdirSync, rmSync } = require('node:fs');
@@ -43,7 +43,7 @@ function createTempFixture(fixture) {
 describe('ComponentV1', () => {
 	const componentName = 'test-component';
 
-	const harperLogger = require('#dist/utility/logging/harper_logger');
+	const harperLogger = require('#js/utility/logging/harper_logger');
 
 	beforeEach(() => {
 		replace(harperLogger, 'warn', fake());

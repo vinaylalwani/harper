@@ -1,6 +1,6 @@
 const { describe, it, beforeEach, after } = require('mocha');
 const assert = require('node:assert/strict');
-const { statusForComponent, reset, STATUS, internal } = require('#dist/components/status/index');
+const { statusForComponent, reset, STATUS, internal } = require('#src/components/status/index');
 const { ComponentStatus } = internal;
 
 describe('Component Status API', () => {

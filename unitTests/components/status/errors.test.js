@@ -7,8 +7,8 @@ const {
 	AggregationError,
 	ComponentStatusOperationError,
 	CrossThreadCollectionError,
-} = require('#dist/components/status/errors');
-const { HTTP_STATUS_CODES } = require('#dist/utility/errors/commonErrors');
+} = require('#src/components/status/errors');
+const { HTTP_STATUS_CODES } = require('#js/utility/errors/commonErrors');
 
 describe('Component Status Errors', () => {
 	describe('ComponentStatusError', () => {

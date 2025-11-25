@@ -1,13 +1,13 @@
 import type { Stats } from 'node:fs';
 import { EventEmitter, once } from 'node:events';
-import { Component, FileAndURLPathConfig } from './Component.js';
+import { Component, type FileAndURLPathConfig } from './Component.ts';
 import harperLogger from '../utility/logging/harper_logger.js';
-import chokidar, { FSWatcher, FSWatcherEventMap } from 'chokidar';
+import chokidar, { type FSWatcher, type FSWatcherEventMap } from 'chokidar';
 import { join } from 'node:path';
 import { readFile } from 'node:fs/promises';
-import { FilesOption } from './deriveGlobOptions.js';
-import { deriveURLPath } from './deriveURLPath.js';
-import { isMatch } from 'micromatch';
+import type { FilesOption } from './deriveGlobOptions.ts';
+import { deriveURLPath } from './deriveURLPath.ts';
+import micromatch from 'micromatch';
 
 export interface BaseEntry {
 	stats?: Stats;
@@ -98,7 +98,8 @@ export class EntryHandler extends EventEmitter<EntryHandlerEventMap> {
 	#handleAll(...[event, path, stats]: FSWatcherEventMap['all']): void {
 		if (path === '') path = '/';
 
-		if (!isMatch(path, this.#component.globOptions.source, { ignore: this.#component.globOptions.ignore })) return;
+		if (!micromatch.isMatch(path, this.#component.globOptions.source, { ignore: this.#component.globOptions.ignore }))
+			return;
 
 		const absolutePath = join(this.directory, path);
 

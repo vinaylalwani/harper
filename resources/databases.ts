@@ -1,8 +1,8 @@
 import { initSync, getHdbBasePath, get as envGet } from '../utility/environment/environmentManager.js';
 import { INTERNAL_DBIS_NAME } from '../utility/lmdb/terms.js';
 import { open, compareKeys, type Database } from 'lmdb';
-import { join, extname, basename } from 'path';
-import { existsSync, readdirSync } from 'fs';
+import { join, extname, basename } from 'node:path';
+import { existsSync, readdirSync } from 'node:fs';
 import {
 	getBaseSchemaPath,
 	getTransactionAuditStoreBasePath,
@@ -14,8 +14,8 @@ import * as fs from 'fs-extra';
 import { _assignPackageExport } from '../globals.js';
 import { getIndexedValues } from '../utility/lmdb/commonUtility.js';
 import * as signalling from '../utility/signalling.js';
-import { workerData } from 'worker_threads';
 import { SchemaEventMsg } from '../server/threads/itc.ts';
+import { workerData } from 'node:worker_threads';
 import harperLogger from '../utility/logging/harper_logger.js';
 const { forComponent } = harperLogger;
 import * as manageThreads from '../server/threads/manageThreads.js';

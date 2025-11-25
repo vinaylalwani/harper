@@ -4,7 +4,7 @@ import chokidar, { type FSWatcher } from 'chokidar';
 import { readFile } from 'node:fs/promises';
 import { isDeepStrictEqual } from 'util';
 import harperLogger from '../utility/logging/harper_logger.js';
-import { DEFAULT_CONFIG } from './DEFAULT_CONFIG.js';
+import { DEFAULT_CONFIG } from './DEFAULT_CONFIG.ts';
 
 export interface Config {
 	[key: string]: ConfigValue;

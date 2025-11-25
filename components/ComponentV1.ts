@@ -3,11 +3,11 @@ import fg from 'fast-glob';
 import { Resources } from '../resources/Resources.ts';
 import harperLogger from '../utility/logging/harper_logger.js';
 import { resolveBaseURLPath } from './resolveBaseURLPath.ts';
-import { deriveGlobOptions, FastGlobOptions, FilesOption } from './deriveGlobOptions.ts';
+import { deriveGlobOptions, type FastGlobOptions, type FilesOption } from './deriveGlobOptions.ts';
 import { basename, join } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { deriveURLPath } from './deriveURLPath.ts';
-import { scan } from 'micromatch';
+import micromatch from 'micromatch';
 
 interface ComponentV1Config {
 	files: string | string[] | FilesOption;
@@ -127,7 +127,7 @@ export class ComponentV1 {
 
 			return pattern;
 		});
-		this.patternBases = this.globOptions.source.map((pattern) => scan(pattern).base);
+		this.patternBases = this.globOptions.source.map((pattern) => micromatch.scan(pattern).base);
 		this.baseURLPath = resolveBaseURLPath(this.name, this.config.urlPath);
 	}
 }

@@ -1,12 +1,11 @@
 const { describe, it, beforeEach, afterEach, after } = require('mocha');
 const assert = require('node:assert/strict');
 const sinon = require('sinon');
-const { ComponentStatusRegistry } = require('#dist/components/status/ComponentStatusRegistry');
-const { ComponentStatus } = require('#dist/components/status/ComponentStatus');
-const { COMPONENT_STATUS_LEVELS } = require('#dist/components/status/types');
-const { StatusAggregator } = require('#dist/components/status/crossThread');
-const itcModule = require('#dist/server/threads/itc');
-const manageThreadsModule = require('#dist/server/threads/manageThreads');
+const { ComponentStatusRegistry } = require('#src/components/status/ComponentStatusRegistry');
+const { ComponentStatus } = require('#src/components/status/ComponentStatus');
+const { COMPONENT_STATUS_LEVELS } = require('#src/components/status/types');
+const { StatusAggregator } = require('#src/components/status/crossThread');
+const manageThreadsModule = require('#js/server/threads/manageThreads');
 
 describe('ComponentStatusRegistry', () => {
 	let registry;
@@ -16,8 +15,6 @@ describe('ComponentStatusRegistry', () => {
 		registry = new ComponentStatusRegistry();
 		clock = sinon.useFakeTimers();
 
-		// Stub ITC functions
-		sinon.stub(itcModule, 'sendItcEvent').resolves();
 		sinon.stub(manageThreadsModule, 'onMessageByType');
 		sinon.stub(manageThreadsModule, 'getWorkerIndex').returns(0);
 	});
@@ -25,7 +22,6 @@ describe('ComponentStatusRegistry', () => {
 	afterEach(() => {
 		clock.restore();
 		sinon.restore();
-		// Reset the registry to ensure clean state
 		registry.reset();
 	});
 
@@ -505,7 +501,7 @@ describe('ComponentStatusRegistry', () => {
 	describe('static getAggregatedFromAllThreads method', () => {
 		it('should collect and aggregate statuses', async () => {
 			// Mock the crossThreadCollector to avoid actual ITC communication
-			const { crossThreadCollector } = require('#dist/components/status/crossThread');
+			const { crossThreadCollector } = require('#src/components/status/crossThread');
 			const originalCollect = crossThreadCollector.collect;
 
 			// Create a fresh registry for this test

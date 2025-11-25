@@ -1,4 +1,4 @@
-import { Status } from '../server/status/index.ts';
+import { Status } from '#src/server/status/index';
 
 let restartArrayBuffer: ArrayBuffer;
 let restartNeededArray: Uint8Array;

@@ -1,6 +1,6 @@
 import { Resource } from '../resources/Resource.ts';
 import { tables, databases } from '../resources/databases.ts';
-import { Compartment as CompartmentClass } from 'ses';
+import 'ses';
 import { readFile } from 'fs/promises';
 import { extname } from 'path';
 import { pathToFileURL } from 'url';
@@ -44,7 +44,7 @@ export async function secureImport(filePath) {
 	}
 }
 
-declare class Compartment extends CompartmentClass {}
+declare class HarperCompartment extends Compartment {}
 async function getCompartment(getGlobalVars) {
 	const { StaticModuleRecord } = await import('@endo/static-module-record');
 	await import('ses');
@@ -56,7 +56,7 @@ async function getCompartment(getGlobalVars) {
 		stackFiltering: 'verbose',
 	});
 
-	compartment = new (Compartment as typeof CompartmentClass)(
+	compartment = new (HarperCompartment as typeof Compartment)(
 		{
 			console,
 			Math,

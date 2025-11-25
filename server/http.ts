@@ -2,12 +2,12 @@
  * This module represents the HTTP component for Harper, and receives the HTTP options and uses them to configure
  * HTTP servers
  */
-import { Scope } from '../components/Scope.ts';
+import { Scope } from '#src/components/Scope';
 import { Socket } from 'node:net';
 import harperLogger from '../utility/logging/harper_logger.js';
 import { parentPort } from 'node:worker_threads';
 import env from '../utility/environment/environmentManager.js';
-import * as terms from '../utility/hdbTerms.ts';
+import * as terms from '#src/utility/hdbTerms';
 import { resolvePath } from '../config/configUtils.js';
 import { getTicketKeys } from './threads/manageThreads.js';
 import { createTLSSelector } from '../security/keys.js';
@@ -16,16 +16,16 @@ import { createServer as createSecureServerHttp1 } from 'node:https';
 import { createServer, IncomingMessage } from 'node:http';
 import { Request } from './serverHelpers/Request.ts';
 import { appendHeader, Headers } from './serverHelpers/Headers.ts';
-import { Blob } from '../resources/blob.ts';
-import { recordAction, recordActionBinary } from '../resources/analytics/write.ts';
+import { Blob } from '#src/resources/blob';
+import { recordAction, recordActionBinary } from '#src/resources/analytics/write';
 import { Readable } from 'node:stream';
 import { server } from './Server.ts';
 import { setPortServerMap, SERVERS } from './serverRegistry.ts';
-import { getComponentName } from '../components/componentLoader.ts';
+import { getComponentName } from '#src/components/componentLoader';
 import { throttle } from './throttle.ts';
 import { WebSocketServer } from 'ws';
+import { errorToString } from '../utility/common_utils.js';
 
-const { errorToString } = harperLogger;
 server.http = httpServer;
 server.request = onRequest;
 server.ws = onWebSocket;

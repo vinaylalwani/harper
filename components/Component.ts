@@ -1,7 +1,7 @@
-import { resolveBaseURLPath } from './resolveBaseURLPath';
-import { deriveCommonPatternBase } from './deriveCommonPatternBase';
-import { deriveGlobOptions, FastGlobOptions, FilesOption } from './deriveGlobOptions';
-import { scan } from 'micromatch';
+import { resolveBaseURLPath } from './resolveBaseURLPath.ts';
+import { deriveCommonPatternBase } from './deriveCommonPatternBase.ts';
+import { deriveGlobOptions, type FastGlobOptions, type FilesOption } from './deriveGlobOptions.ts';
+import micromatch from 'micromatch';
 
 interface ComponentConfig {
 	files: FilesOption;
@@ -47,7 +47,7 @@ export class Component {
 			return pattern;
 		});
 
-		this.patternBases = this.globOptions.source.map((pattern) => scan(pattern).base);
+		this.patternBases = this.globOptions.source.map((pattern) => micromatch.scan(pattern).base);
 		this.commonPatternBase = deriveCommonPatternBase(this.patternBases);
 	}
 }

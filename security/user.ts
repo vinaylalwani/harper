@@ -1,4 +1,4 @@
-'use strict';
+import { readFileSync } from 'node:fs';
 
 const USERNAME_REQUIRED = 'username is required';
 const ALTERUSER_NOTHING_TO_UPDATE = 'nothing to update, must supply active, role or password to update';
@@ -79,28 +79,25 @@ export interface CRUDPermissions {
 }
 
 //requires must be declared after module.exports to avoid cyclical dependency
-const insert = require('../dataLayer/insert.js');
-const delete_ = require('../dataLayer/delete.js');
-const validation = require('../validation/user_validation.js');
-const search = require('../dataLayer/search.js');
-const signalling = require('../utility/signalling.js');
-const hdbUtility = require('../utility/common_utils.js');
-const validate = require('validate.js');
-const logger = require('../utility/logging/harper_logger.js');
-const { promisify } = require('util');
-const env = require('../utility/environment/environmentManager.js');
-const systemSchema = require('../json/systemSchema.json');
-const { hdbErrors, ClientError } = require('../utility/errors/hdbError.js');
-const { HTTP_STATUS_CODES, AUTHENTICATION_ERROR_MSGS, HDB_ERROR_MSGS } = hdbErrors;
-const { UserEventMsg } = require('../server/threads/itc.js');
-const _ = require('lodash');
-const harperLogger = require('../utility/logging/harper_logger.js');
+import insert from '#js/dataLayer/insert';
+import delete_ from '#js/dataLayer/delete';
+import validation from '#js/validation/user_validation';
+import search from '#js/dataLayer/search';
+import signalling from '#js/utility/signalling';
+import hdbUtility from '#js/utility/common_utils';
+import validate from 'validate.js';
+import logger from '#js/utility/logging/harper_logger';
+import { promisify } from 'node:util';
+import env from '#js/utility/environment/environmentManager';
+import { ClientError } from '#js/utility/errors/hdbError';
+import { UserEventMsg } from '#src/server/threads/itc';
+import _ from 'lodash';
 
 // Need to use `.js` even for other TS files since TS compiler won't replace requires.
 // Whenever we can fix the cyclical dependency issue in this file (and switch to imports) we can use the correct file extensions.
-const password = require('../utility/password.js');
-const { server } = require('../server/Server.js');
-const terms = require('../utility/hdbTerms.js');
+import * as password from '#src/utility/password';
+import { server } from '#src/server/Server';
+import * as terms from '#src/utility/hdbTerms';
 
 server.getUser = (username: string, password?: string | null): Promise<User> => {
 	return findAndValidateUser(username, password, password != null);
@@ -324,6 +321,8 @@ async function listUsers(): Promise<Map<string, User>> {
 	return userMap;
 }
 
+const systemSchema = readFileSync('./json/systemSchema.json');
+
 /**
  * adds system table permissions to a role.  This is used to protect system tables by leveraging operationAuthorization.
  * @param userRole - Role of the user found during auth.
@@ -421,7 +420,7 @@ server.invalidateUser = function (user: User | any) {
 		try {
 			callback(user);
 		} catch (error) {
-			harperLogger.error('Error invalidating user', error);
+			logger.error('Error invalidating user', error);
 		}
 	}
 };

@@ -1,7 +1,8 @@
 import { getDatabases } from './databases.ts';
 import { alterRole, addRole } from '../security/role.js';
 import { parseDocument } from 'yaml';
-import { isEqual } from 'lodash';
+import _ from 'lodash';
+
 const USERS_NOT_DBS = ['super_user', 'structure_user'];
 /**
  * This is the component for handling role declarations in the HarperDB system. This will read roles.yaml for role
@@ -81,7 +82,7 @@ async function ensureRole(role) {
 	for await (let existingRole of roleTable.search([{ attribute: 'role', value: role.role }])) {
 		// use the existing role id so we can update in place. Legacy roles may have a UUID for the id instead of the role name
 		const { __createdtime__, __updatedtime__, ...existingRoleData } = existingRole;
-		if (isEqual(existingRoleData, role)) {
+		if (_.isEqual(existingRoleData, role)) {
 			return;
 		}
 		role.id = existingRole.id;

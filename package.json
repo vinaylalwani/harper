@@ -30,7 +30,7 @@
 		"CODE_OF_CONDUCT.md"
 	],
 	"scripts": {
-		"build": "tsc --project tsconfig.build.json || true",
+		"build": "tsc --project tsconfig.build.json",
 		"build:watch": "npm run build -- --watch --incremental",
 		"lint": "eslint .",
 		"lint:required": "eslint --no-config-lookup --quiet -c eslint.required.config.mjs .",
@@ -39,19 +39,29 @@
 		"test:integration:api-tests": "node --test integrationTests/apiTests/tests/testSuite.mjs",
 		"test:integration": "node integrationTests/utils/scripts/run.ts",
 		"test:unit": "npx mocha --config unitTests/.mocharc.json",
-		"test:unit:all": "npm run test:unit unitTests"
+		"test:unit:all": "npm run test:unit unitTests",
+		"test:unit:typestrip": "env NODE_OPTIONS='--conditions=typestrip' npx mocha --config unitTests/.mocharc.json --grep '#skip-typestrip' --invert",
+		"test:unit:typestrip:all": "npm run test:unit:typestrip unitTests"
 	},
 	"engines": {
 		"node": ">=20",
 		"minimum-node": "20.0.0"
 	},
 	"imports": {
-		"#dist/*": "./dist/*.js",
-		"#src/*": [
-			"./*",
-			"./*.ts",
-			"./*.js"
-		]
+		"#src/*": {
+			"import": "./*.ts",
+			"require": {
+				"typestrip": "./*.ts",
+				"default": "./dist/*.js"
+			}
+		},
+		"#js/*": {
+			"import": "./*.js",
+			"require": {
+				"typestrip": "./*.js",
+				"default": "./dist/*.js"
+			}
+		}
 	},
 	"devEngines": {
 		"runtime": {
@@ -68,11 +78,14 @@
 		"@eslint/js": "^9.39.1",
 		"@harperdb/code-guidelines": "^0.0.6",
 		"@types/gunzip-maybe": "^1.4.3",
+		"@types/lodash": "^4.17.20",
 		"@types/micromatch": "^4.0.9",
 		"@types/mocha": "^10.0.10",
+		"@types/send": "^1.2.1",
 		"@types/sinon": "^17.0.4",
 		"@types/tar-fs": "^2.0.4",
 		"@typescript-eslint/parser": "^8.48.1",
+		"@types/ws": "^8.18.1",
 		"axios": "^1.12.2",
 		"chai": "^6.2.0",
 		"eslint": "^9.36.0",

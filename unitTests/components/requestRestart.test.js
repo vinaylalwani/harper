@@ -1,5 +1,5 @@
 const { describe, it } = require('mocha');
-const { requestRestart, restartNeeded } = require('#dist/components/requestRestart');
+const { requestRestart, restartNeeded } = require('#src/components/requestRestart');
 const assert = require('node:assert/strict');
 
 describe('requestRestart', () => {

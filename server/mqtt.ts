@@ -1,18 +1,20 @@
 // for now we are using mqtt-packet, but we may implement some of this ourselves, particularly packet generation so that
 // we can implement more efficient progressive buffer allocation.
 import { parser as makeParser, generate } from 'mqtt-packet';
-import { getSession, DurableSubscriptionsSession } from './DurableSubscriptionsSession.ts';
-import { getSuperUser } from '../security/user.ts';
-import { serializeMessage, getDeserializer } from './serverHelpers/contentTypes.ts';
-import { recordAction, addAnalyticsListener, recordActionBinary } from '../resources/analytics/write.ts';
-import { server } from '../server/Server.ts';
-import { get } from '../utility/environment/environmentManager.js';
-import { CONFIG_PARAMS, AUTH_AUDIT_STATUS, AUTH_AUDIT_TYPES } from '../utility/hdbTerms.ts';
-import { loggerWithTag } from '../utility/logging/logger.js';
-import { forComponent as loggerForComponent } from '../utility/logging/harper_logger.js';
-import { EventEmitter } from 'events';
-import { verifyCertificate } from '../security/certificateVerification/index.ts';
+import { getSession, DurableSubscriptionsSession } from '#src/server/DurableSubscriptionsSession';
+import { getSuperUser } from '#src/security/user';
+import { serializeMessage, getDeserializer } from '#src/server/serverHelpers/contentTypes';
+import { recordAction, addAnalyticsListener, recordActionBinary } from '#src/resources/analytics/write';
+import { server } from '#src/server/Server';
+import { get } from '#js/utility/environment/environmentManager';
+import { CONFIG_PARAMS, AUTH_AUDIT_STATUS, AUTH_AUDIT_TYPES } from '#src/utility/hdbTerms';
+import { loggerWithTag } from '#js/utility/logging/logger';
+import harperLogger from '#js/utility/logging/harper_logger';
+import { EventEmitter } from 'node:events';
+import { verifyCertificate } from '#src/security/certificateVerification/index';
+
 const authEventLog = loggerWithTag('auth-event');
+const { forComponent: loggerForComponent } = harperLogger;
 const mqttLog = loggerForComponent('mqtt');
 
 let AUTHORIZE_LOCAL = get(CONFIG_PARAMS.AUTHENTICATION_AUTHORIZELOCAL) ?? process.env.DEV_MODE;

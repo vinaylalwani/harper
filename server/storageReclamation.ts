@@ -1,5 +1,5 @@
 import { statfs } from 'node:fs/promises';
-import { getWorkerIndex, getWorkerCount } from '../server/threads/manageThreads.js';
+import { getWorkerIndex, getWorkerCount } from './threads/manageThreads.js';
 import logger from '../utility/logging/logger.js';
 import { CONFIG_PARAMS } from '../utility/hdbTerms.ts';
 import envMgr from '../utility/environment/environmentManager.js';

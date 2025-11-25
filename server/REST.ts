@@ -1,7 +1,7 @@
 import { serialize, serializeMessage, getDeserializer } from '../server/serverHelpers/contentTypes.ts';
 import { addAnalyticsListener, recordAction, recordActionBinary } from '../resources/analytics/write.ts';
 import * as harperLogger from '../utility/logging/harper_logger.js';
-import { ServerOptions } from 'http';
+import type { ServerOptions } from 'node:http';
 import { ServerError, ClientError } from '../utility/errors/hdbError.js';
 import { Resources } from '../resources/Resources.ts';
 import { parseQuery } from '../resources/search.ts';
@@ -11,14 +11,15 @@ import { Headers, mergeHeaders } from '../server/serverHelpers/Headers.ts';
 import { generateJsonApi } from '../resources/openApi.ts';
 import type { Context } from '../resources/ResourceInterface.ts';
 import { Request } from '../server/serverHelpers/Request.ts';
-import { RequestTarget } from '../resources/RequestTarget';
+import { RequestTarget } from '../resources/RequestTarget.ts';
+import { errorToString } from '../utility/common_utils.js';
+
 interface Response {
 	status?: number;
 	headers?: any;
 	data?: any;
 	body?: any;
 }
-const { errorToString } = harperLogger;
 const etagBytes = new Uint8Array(8);
 const etagFloat = new Float64Array(etagBytes.buffer, 0, 1);
 let httpOptions = {};

@@ -3,10 +3,10 @@ import { keyArrayToString, resources } from '../resources/Resources.ts';
 import { getNextMonotonicTime } from '../utility/lmdb/commonUtility.js';
 import { warn, trace } from '../utility/logging/harper_logger.js';
 import { transaction } from '../resources/transaction.ts';
-import { getWorkerIndex } from '../server/threads/manageThreads.js';
+import { getWorkerIndex } from './threads/manageThreads.js';
 import { whenComponentsLoaded } from '../server/threads/threadServer.js';
 import { server } from '../server/Server.ts';
-import { RequestTarget } from '../resources/RequestTarget';
+import { RequestTarget } from '#src/resources/RequestTarget';
 
 const AWAITING_ACKS_HIGH_WATER_MARK = 100;
 const DurableSession = table({

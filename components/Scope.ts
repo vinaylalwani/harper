@@ -1,11 +1,11 @@
 import { EventEmitter, once } from 'node:events';
 import { type Server } from '../server/Server.ts';
 import { EntryHandler, type EntryHandlerEventMap, type onEntryEventHandler } from './EntryHandler.ts';
-import { OptionsWatcher, OptionsWatcherEventMap } from './OptionsWatcher.ts';
+import { OptionsWatcher, type OptionsWatcherEventMap } from './OptionsWatcher.ts';
 import { loggerWithTag } from '../utility/logging/harper_logger.js';
 import type { Resources } from '../resources/Resources.ts';
 import type { FileAndURLPathConfig } from './Component.ts';
-import { FilesOption } from './deriveGlobOptions.ts';
+import type { FilesOption } from './deriveGlobOptions.ts';
 import { requestRestart } from './requestRestart.ts';
 
 export class MissingDefaultFilesOptionError extends Error {

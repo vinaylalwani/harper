@@ -1,7 +1,7 @@
 const { describe, it, after } = require('mocha');
 const assert = require('node:assert/strict');
-const { ComponentStatusRegistry } = require('#dist/components/status/ComponentStatusRegistry');
-const { componentStatusRegistry } = require('#dist/components/status/registry');
+const { ComponentStatusRegistry } = require('#src/components/status/ComponentStatusRegistry');
+const { componentStatusRegistry } = require('#src/components/status/registry');
 
 describe('componentStatusRegistry singleton', () => {
 	after(() => {
@@ -14,7 +14,7 @@ describe('componentStatusRegistry singleton', () => {
 	});
 
 	it('should be a singleton instance', () => {
-		const { componentStatusRegistry: registry2 } = require('#dist/components/status/registry');
+		const { componentStatusRegistry: registry2 } = require('#src/components/status/registry');
 		assert.strictEqual(componentStatusRegistry, registry2);
 	});
 

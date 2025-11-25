@@ -4,7 +4,12 @@ import env from '../utility/environment/environmentManager.js';
 env.initSync();
 import * as terms from '../utility/hdbTerms.ts';
 import harperLogger from '../utility/logging/harper_logger.js';
-import fastify, { FastifyInstance, FastifyReply, FastifyRequest, FastifyServerOptions } from 'fastify';
+import fastify, {
+	type FastifyInstance,
+	type FastifyReply,
+	type FastifyRequest,
+	type FastifyServerOptions,
+} from 'fastify';
 import fastifyCors, { type FastifyCorsOptions } from '@fastify/cors';
 import fastifyCompress from '@fastify/compress';
 import fastifyStatic from '@fastify/static';

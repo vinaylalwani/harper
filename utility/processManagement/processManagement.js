@@ -1,13 +1,12 @@
 'use strict';
 
-const hdbTerms = require('../hdbTerms.ts');
-const servicesConfig = require('./servicesConfig.js');
-const envMangr = require('../environment/environmentManager.js');
-const hdbLogger = require('../../utility/logging/harper_logger.js');
-const { onMessageFromWorkers } = require('../../server/threads/manageThreads.js');
-const fs = require('fs');
+const hdbTerms = require('#src/utility/hdbTerms');
+const servicesConfig = require('#js/utility/processManagement/servicesConfig');
+const envMangr = require('#js/utility/environment/environmentManager');
+const hdbLogger = require('#js/utility/logging/harper_logger');
+const { onMessageFromWorkers } = require('#js/server/threads/manageThreads');
+const fs = require('node:fs');
 const path = require('node:path');
-const terms = require('../hdbTerms');
 const { setTimeout: delay } = require('node:timers/promises');
 const { execFile, fork } = require('node:child_process');
 
@@ -121,7 +120,7 @@ function restartHdb() {
 function getHdbPid() {
 	const harperPath = envMangr.getHdbBasePath();
 	if (!harperPath) return;
-	const pidFile = path.join(harperPath, terms.HDB_PID_FILE);
+	const pidFile = path.join(harperPath, hdbTerms.HDB_PID_FILE);
 	const hdbPid = readPidFile(pidFile);
 	// If the pid file doesn't exist or the pid is the same as the current process, return.
 	// In a Docker container, the pid is usually 1, and so if a previous process crashed, there will still

@@ -1,4 +1,4 @@
-import { Scope } from './Scope';
+import { Scope } from '#src/components/Scope';
 
 export interface PluginModule {
 	handleApplication: (scope: Scope) => void | Promise<void>;

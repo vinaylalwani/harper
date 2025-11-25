@@ -1,5 +1,5 @@
-const { describe, it, beforeEach, afterEach } = require('mocha');
-const { Scope, MissingDefaultFilesOptionError } = require('#dist/components/Scope');
+const { describe, it, before, beforeEach, after, afterEach } = require('mocha');
+const { Scope, MissingDefaultFilesOptionError } = require('#src/components/Scope');
 const { EventEmitter } = require('node:events');
 const assert = require('node:assert/strict');
 const { join, basename } = require('node:path');
@@ -7,14 +7,18 @@ const { tmpdir } = require('node:os');
 const { mkdtempSync, writeFileSync, rmSync } = require('node:fs');
 const { stringify } = require('yaml');
 const { spy } = require('sinon');
-const { OptionsWatcher } = require('#dist/components/OptionsWatcher');
-const { Resources } = require('#dist/resources/Resources');
-const { EntryHandler } = require('#dist/components/EntryHandler');
-const { restartNeeded, resetRestartNeeded } = require('#dist/components/requestRestart');
+const { OptionsWatcher } = require('#src/components/OptionsWatcher');
+const { Resources } = require('#src/resources/Resources');
+const { EntryHandler } = require('#src/components/EntryHandler');
+const { restartNeeded, resetRestartNeeded } = require('#src/components/requestRestart');
 const { writeFile } = require('node:fs/promises');
 const { waitFor } = require('./waitFor.js');
+const { createTestSandbox, cleanupTestSandbox } = require('../testUtils.js');
 
 describe('Scope', () => {
+	before(createTestSandbox);
+	after(cleanupTestSandbox);
+
 	beforeEach(() => {
 		this.resources = new Resources();
 		this.server = {};

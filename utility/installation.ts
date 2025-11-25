@@ -1,6 +1,6 @@
-import * as terms from './hdbTerms.js';
+import * as terms from '#src/utility/hdbTerms';
 import fs from 'node:fs';
-import { noBootFile, getPropsFilePath } from './common_utils.js';
+import { noBootFile, getPropsFilePath } from '#js/utility/common_utils';
 
 interface Env {
 	get(key: string): string;
