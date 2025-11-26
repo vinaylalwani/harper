@@ -111,6 +111,7 @@ export function openAuditStore(rootStore) {
 		}
 	});
 	function scheduleAuditCleanup(newCleanupDelay?: number): Promise<void> {
+		if (auditStore instanceof RocksAuditStore) return; // transaction logs are simply deleted with rocksdb
 		if (newCleanupDelay) auditCleanupDelay = newCleanupDelay;
 		clearTimeout(pendingCleanup);
 		const resolution = new Promise<void>((resolve) => {
@@ -235,6 +236,7 @@ const MESSAGE = 3;
 const INVALIDATE = 4;
 const PATCH = 5;
 const RELOCATE = 6;
+const STRUCTURES = 7;
 export const ACTION_32_BIT = 14;
 export const ACTION_64_BIT = 15;
 /** Used to indicate we have received a remote local time update */
@@ -259,6 +261,10 @@ const EVENT_TYPES = {
 	[PATCH]: 'patch',
 	relocate: RELOCATE,
 	[RELOCATE]: 'relocate',
+	structures: STRUCTURES,
+	[STRUCTURES]: 'structures',
+	remoteSequenceUpdate: REMOTE_SEQUENCE_UPDATE,
+	[REMOTE_SEQUENCE_UPDATE]: 'remoteSequenceUpdate',
 };
 const ORIGINATING_OPERATIONS = {
 	insert: 1,
@@ -477,7 +483,7 @@ export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined) {
 				} // TODO: If we store a partial and full record, may need to read both sequentially
 			},
 			getBinaryValue() {
-				return action & (HAS_RECORD | HAS_PARTIAL_RECORD) ? buffer.subarray(decoder.position, end) : undefined;
+				return buffer.subarray(decoder.position, end);
 			},
 			extendedType: action,
 			residencyId,
