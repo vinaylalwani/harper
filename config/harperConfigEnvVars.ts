@@ -104,6 +104,71 @@ function isPlainObject(value: any): value is Record<string, any> {
 }
 
 /**
+ * Filters out arguments that are already set in HARPER_SET_CONFIG.
+ * This prevents individual environment variables from overriding runtime configuration.
+ *
+ * Note: Only filters against HARPER_SET_CONFIG, not HARPER_DEFAULT_CONFIG, since
+ * HARPER_DEFAULT_CONFIG sets defaults that can be overridden by individual env vars.
+ *
+ * @param args - Object containing individual env var arguments (e.g., from assignCMDENVVariables)
+ * @returns Filtered args object with HARPER_SET_CONFIG keys removed
+ *
+ * @example
+ * // If HARPER_SET_CONFIG sets operationsApi.network.port
+ * const args = { operationsapi_network_port: '9925', rootpath: '/var/hdb' };
+ * const filtered = filterArgsAgainstRuntimeConfig(args);
+ * // Returns: { rootpath: '/var/hdb' }
+ */
+export function filterArgsAgainstRuntimeConfig(args: Record<string, any>): Record<string, any> {
+	// Only filter against HARPER_SET_CONFIG (not HARPER_DEFAULT_CONFIG)
+	if (!process.env.HARPER_SET_CONFIG) {
+		return args;
+	}
+
+	// Parse HARPER_SET_CONFIG
+	let setConfig: ConfigObject;
+	try {
+		setConfig = JSON.parse(process.env.HARPER_SET_CONFIG);
+	} catch (err) {
+		// If parsing fails, log warning and return args unchanged
+		const logger = getLogger();
+		logger.warn('Failed to parse HARPER_SET_CONFIG for arg filtering', err);
+		return args;
+	}
+
+	// If no valid config, return args unchanged
+	if (Object.keys(setConfig).length === 0) {
+		return args;
+	}
+
+	// Flatten HARPER_SET_CONFIG to get all keys
+	const flattenSetConfig = (obj: ConfigObject, prefix = ''): Set<string> => {
+		const keys = new Set<string>();
+		for (const key in obj) {
+			const newKey = prefix ? `${prefix}_${key}` : key;
+			if (obj[key] !== null && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
+				flattenSetConfig(obj[key], newKey).forEach((k) => keys.add(k));
+			} else {
+				keys.add(newKey.toLowerCase());
+			}
+		}
+		return keys;
+	};
+
+	const setConfigKeys = flattenSetConfig(setConfig);
+
+	// Filter out args that are in HARPER_SET_CONFIG
+	const filteredArgs: Record<string, any> = {};
+	for (const key in args) {
+		if (!setConfigKeys.has(key.toLowerCase())) {
+			filteredArgs[key] = args[key];
+		}
+	}
+
+	return filteredArgs;
+}
+
+/**
  * Flatten nested object to dot-notation paths
  */
 function flattenObject(obj: ConfigObject, prefix = ''): Record<string, any> {
