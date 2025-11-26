@@ -261,11 +261,11 @@ class SelectValidator {
 				let foundGroupColumn = this[findColumn](groupColumn);
 
 				if (!foundGroupColumn || foundGroupColumn.length === 0) {
-					throw `unknown column '${group_column.toString()}' in group by`;
+					throw `unknown column '${groupColumn.toString()}' in group by`;
 				}
 
 				if (foundGroupColumn.length > 1) {
-					throw `ambiguously defined column '${group_column.toString()}' in group by`;
+					throw `ambiguously defined column '${groupColumn.toString()}' in group by`;
 				}
 
 				//TODO can use for of to break out of the loop rather than this janky way
@@ -282,7 +282,7 @@ class SelectValidator {
 			}
 
 			if (!foundColumn) {
-				throw `group by column '${group_column.toString()}' must be in select`;
+				throw `group by column '${groupColumn.toString()}' must be in select`;
 			}
 		});
 

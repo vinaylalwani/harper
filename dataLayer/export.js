@@ -101,9 +101,9 @@ async function confirmPath(directoryPath) {
 	} catch (err) {
 		let errorMessage;
 		if (err.code === 'ENOENT') {
-			errorMessage = `path '${directory_path}' does not exist`;
+			errorMessage = `path '${directoryPath}' does not exist`;
 		} else if (err.code === 'EACCES') {
-			errorMessage = `access to path '${directory_path}' is denied`;
+			errorMessage = `access to path '${directoryPath}' is denied`;
 		} else {
 			errorMessage = err.message;
 		}
@@ -111,7 +111,7 @@ async function confirmPath(directoryPath) {
 		throw handleHDBError(new Error(), errorMessage, HTTP_STATUS_CODES.BAD_REQUEST, undefined, undefined, true);
 	}
 	if (!stats.isDirectory()) {
-		let err = `path '${directory_path}' is not a directory, please supply a valid folder path`;
+		let err = `path '${directoryPath}' is not a directory, please supply a valid folder path`;
 		hdbLogger.error(err);
 		throw handleHDBError(new Error(), err, HTTP_STATUS_CODES.BAD_REQUEST, undefined, undefined, true);
 	}

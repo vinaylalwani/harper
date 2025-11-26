@@ -656,7 +656,7 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 							remoteNodeIds: receivingDataFromNodeIds,
 						});
 						getSharedStatus();
-						replicationSharedStatus[RECEIVED_VERSION_POSITION] = last_sequence_id_received;
+						replicationSharedStatus[RECEIVED_VERSION_POSITION] = lastSequenceIdReceived;
 						replicationSharedStatus[RECEIVED_TIME_POSITION] = Date.now();
 						replicationSharedStatus[RECEIVING_STATUS_POSITION] = RECEIVING_STATUS_WAITING;
 						break;
