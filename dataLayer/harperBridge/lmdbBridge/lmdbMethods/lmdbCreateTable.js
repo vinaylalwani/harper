@@ -13,7 +13,7 @@ const createTxnEnvironments = require('../lmdbUtility/lmdbCreateTransactionsAudi
 module.exports = lmdbCreateTable;
 
 /**
- * Writes new table data to the system tables creates the enivronment file and creates two datastores to track created and updated
+ * Writes new table data to the system tables creates the environment file and creates two datastores to track created and updated
  * timestamps for new table data.
  * @param tableSystemData
  * @param tableCreateObj

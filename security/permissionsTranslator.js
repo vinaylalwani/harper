@@ -105,7 +105,7 @@ function getRolePermissions(role) {
 			!role[terms.TIME_STAMP_NAMES_ENUM.UPDATED_TIME] ||
 			role[terms.TIME_STAMP_NAMES_ENUM.UPDATED_TIME] < terms.PERMS_UPDATE_RELEASE_TIMESTAMP
 		) {
-			const logMsg = `Role permissions for role '${role_name}' must be updated to align with new structure from the 2.2.0 release.`;
+			const logMsg = `Role permissions for role '${roleName}' must be updated to align with new structure from the 2.2.0 release.`;
 			logger.error(logMsg);
 			logger.debug(e);
 			throw handleHDBError(new Error(), HDB_ERROR_MSGS.OUTDATED_PERMS_TRANSLATION_ERROR, HTTP_STATUS_CODES.BAD_REQUEST);
