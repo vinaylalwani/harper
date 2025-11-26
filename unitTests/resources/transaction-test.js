@@ -299,14 +299,16 @@ describe('Transactions', () => {
 			instance = await WithCountOnGet.get(67);
 			assert.equal(instance.count, 2);
 		});
-		it.skip('Can run txn with commit after get(undefined)', async function () {
+		it('Can run txn with commit after get(undefined)', async function () {
 			await TxnTest.delete(8);
 			const context = {};
 			await transaction(context, async () => {
-				let result = await TxnTest.create({ id: 8, name: 'eight' }, context);
-				await TxnTest.get(undefined, context);
-				await context.transaction.commit();
+				await TxnTest.put({ id: 8, name: 'eight' }, context);
 				assert.equal((await TxnTest.get(8, context)).name, 'eight');
+				await context.transaction.commit();
+				await TxnTest.put({ id: 8, name: 'eight changed' }); // no context
+				await context.transaction.commit();
+				assert.equal((await TxnTest.get(8, context)).name, 'eight changed');
 			});
 		});
 	});
