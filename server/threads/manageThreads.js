@@ -236,6 +236,9 @@ async function restartWorkers(
 		} catch (e) {
 			harperLogger.error('Unable to reestablish current working directory', e);
 		}
+		// problematic cyclic dependency, bind late
+		const { resetRestartNeeded } = require('../../components/requestRestart.ts');
+		resetRestartNeeded();
 		// This is here to prevent circular dependencies
 		if (startReplacementThreads) {
 			const { loadRootComponents } = require('../loadRootComponents.js');
