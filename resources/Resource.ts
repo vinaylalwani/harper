@@ -356,41 +356,7 @@ export class Resource implements ResourceInterface {
 		// if it is a collection and we have a collection class defined, use it
 		const constructor = (isCollection && this.Collection) || this;
 		if (!context) context = context === undefined ? request : {};
-		if (context.transaction) {
-			// if this is part of a transaction, we use a map of existing loaded instances
-			// so that if a resource is already requested by id in this transaction, we can
-			// reuse that instance and preserve and changes/updates in that instance.
-			let resourceCache;
-			if (context.resourceCache) {
-				resourceCache = context.resourceCache;
-			} else resourceCache = context.resourceCache = [];
-			// we have two different cache formats, generally we want to use a simple array for small transactions, but can transition to a Map for larger operations
-			if (resourceCache.asMap) {
-				// we use the Map structure for larger transactions that require a larger cache (constant time lookups)
-				let cacheForId = resourceCache.asMap.get(id);
-				resource = cacheForId?.find((resource) => resource.constructor === constructor);
-				if (resource) return resource;
-				if (!cacheForId) resourceCache.asMap.set(id, (cacheForId = []));
-				cacheForId.push((resource = new constructor(id, context)));
-			} else {
-				// for small caches, this is probably fastest
-				resource = resourceCache.find((resource) => resource.#id === id && resource.constructor === constructor);
-				if (resource) return resource;
-				resourceCache.push((resource = new constructor(id, context)));
-				if (resourceCache.length > 10) {
-					// if it gets too big, upgrade to a Map
-					const cacheMap = new Map();
-					for (const resource of resourceCache) {
-						const id = resource.#id;
-						const cacheForId = cacheMap.get(id);
-						if (cacheForId) cacheForId.push(resource);
-						else cacheMap.set(id, [resource]);
-					}
-					context.resourceCache.length = 0; // clear out all the entries since we are using the map now
-					context.resourceCache.asMap = cacheMap;
-				}
-			}
-		} else resource = new constructor(id, context); // outside of a transaction, just create an instance
+		resource = new constructor(id, context); // outside of a transaction, just create an instance
 		if (isCollection) resource.#isCollection = true;
 		return resource;
 	}
