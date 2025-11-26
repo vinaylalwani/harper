@@ -87,9 +87,9 @@ export class DatabaseTransaction implements Transaction {
 	getReadTxn(): ReadTransaction {
 		this.readTxnRefCount = (this.readTxnRefCount || 0) + 1;
 		this.timeout = txnExpiration; // reset the timeout
-		if (this.readTxn) {
-			if (this.readTxn.openTimer) this.readTxn.openTimer = 0;
-			return this.readTxn;
+		if (this.transaction) {
+			if (this.transaction.openTimer) this.transaction.openTimer = 0;
+			return this.transaction;
 		}
 		if (this.open !== TRANSACTION_STATE.OPEN) return; // can not start a new read transaction as there is no future commit that will take place, just have to allow the read to latest database state
 
@@ -99,15 +99,14 @@ export class DatabaseTransaction implements Transaction {
 		if (DEBUG_LONG_TXNS) {
 			this.stackTraces = [new StartedTransaction()];
 		}
-		if (this.readTxn.openTimer) this.readTxn.openTimer = 0;
+		if (this.transaction.openTimer) this.transaction.openTimer = 0;
 		trackedTxns.add(this);
 		return this.transaction;
 	}
 
 	useReadTxn() {
 		const readTxn = this.getReadTxn();
-		if (DEBUG_LONG_TXNS) {
-			this.stackTraces.push(new StartedTransaction());
+		if (DEBUG_LONG_TXNS) this.stackTraces.push(new StartedTransaction());
 		this.readTxnsUsed++;
 		return readTxn;
 	}
@@ -182,7 +181,7 @@ export class DatabaseTransaction implements Transaction {
 					outstandingCommit = null;
 				});
 			}
-			let completions = [];
+			const completions = [];
 			return commitResolution.then(
 				() => {
 					if (this.next) {
@@ -277,7 +276,6 @@ export class ImmediateTransaction extends DatabaseTransaction {
 	}
 }
 
-let txnExpiration = 30000;
 let timer;
 
 function startMonitoringTxns() {

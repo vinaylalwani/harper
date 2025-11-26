@@ -1,7 +1,7 @@
-import type { TransactionLog, RocksDatabase, TransactionLogReader } from '@harperdb/rocksdb-js';
+import { type TransactionLog, RocksDatabase, TransactionLogReader } from '@harperdb/rocksdb-js';
 export class RocksAuditStore {
 	log: TransactionLog;
-	readLogs?: any[]; // whatever the type of the read logger
+	readLogs?: TransactionLogReader[]; // whatever the type of the read logger
 	rootStore: RocksDatabase;
 	constructor(rootDatabase: RocksDatabase) {
 		this.log = rootDatabase.useLog(0);
@@ -22,7 +22,7 @@ export class RocksAuditStore {
 		if (typeof suggestedKey === 'symbol') {
 			this.rootStore.putSync(suggestedKey, value, options);
 		} else {
-			this.log.addEntryCopy(value, options.transaction.id);
+			this.log.addEntry(value, options.transaction.id);
 		}
 	}
 	get(key: any) {
@@ -31,7 +31,7 @@ export class RocksAuditStore {
 	getSync(key: any) {
 		if (typeof key === 'number') {
 			// this a request for a transaction log entry by a timestamp
-			for (let entry of this.getRange({ start: key, end: key })) {
+			for (const entry of this.getRange({ start: key, end: key })) {
 				return entry.value;
 			}
 		} else {
@@ -49,21 +49,23 @@ export class RocksAuditStore {
 	 */
 	getRange(options: { start?: number; end?: number; log?: string; onlyKeys: boolean } = {}): Iterable<any> {
 		if (!this.readLogs) {
-			this.readLogs = this.rootStore.listLogs().map((logName) => this.rootStore.useLog(logName));
+			this.readLogs = this.rootStore
+				.listLogs()
+				.map((logName) => new TransactionLogReader(this.rootStore.useLog(logName)));
 		}
 		if (options.log) {
-			return this.readLogs.find((readLog) => readLog.name === options.log)?.query(options.start, options.end);
+			return this.readLogs.find((readLog) => readLog.name === options.log)?.query(options);
 		}
 		const onlyKeys = options.onlyKeys;
-		let iterators = this.readLogs.map((log) => log.query(options.start, options.end)[Symbol.iterator]());
+		const iterators = this.readLogs.map((log) => log.query(options)[Symbol.iterator]());
 		// get the earliest entry from each iterator
-		let nextEntries = iterators.map((iterator) => iterator.next());
-		let aggregateIterator = {
+		const nextEntries = iterators.map((iterator) => iterator.next());
+		const aggregateIterator = {
 			next() {
 				let earliest: any;
 				let earliestIndex = -1;
 				for (let i = 0; i < nextEntries.length; i++) {
-					let result = nextEntries[i];
+					const result = nextEntries[i];
 					// skip any that are done
 					if (result.done) {
 						// remove the entry from the list, so we don't keep hitting it
@@ -72,7 +74,7 @@ export class RocksAuditStore {
 					}
 					// find the earliest one that is not done
 					const next = result.value;
-					if (!earliest || earliest.key < next.key) {
+					if (!earliest || earliest.timestamp < next.timestamp) {
 						earliest = next;
 						earliestIndex = i;
 					}
@@ -80,7 +82,10 @@ export class RocksAuditStore {
 				if (earliestIndex >= 0) {
 					// replace the entry with the next one from the iterator we pulled from
 					nextEntries[earliestIndex] = iterators[earliestIndex].next();
-					return { value: onlyKeys ? earliest.key : earliest, done: false };
+					return {
+						value: onlyKeys ? earliest.timestamp : { key: earliest.timestamp, value: earliest.data },
+						done: false,
+					};
 				} // else we are done
 				return { value: undefined, done: true };
 			},

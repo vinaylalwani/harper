@@ -105,6 +105,7 @@ class Subscription extends IterableEventQueue {
 		return { name: 'subscription' };
 	}
 }
+const ACTIONS_OF_INTEREST = ['put', 'patch', 'delete', 'message'];
 function notifyFromTransactionData(subscriptions) {
 	if (!subscriptions) return; // if no subscriptions to this env path, don't need to read anything
 	const auditStore = subscriptions.auditStore;
@@ -117,6 +118,7 @@ function notifyFromTransactionData(subscriptions) {
 	})) {
 		subscriptions.lastTxnTime = localTime;
 		const auditEntry = readAuditEntry(auditEntryEncoded);
+		if (!ACTIONS_OF_INTEREST.includes(auditEntry.type)) continue;
 		const tableSubscriptions = subscriptions[auditEntry.tableId];
 		if (!tableSubscriptions) continue;
 		const recordId = auditEntry.recordId;

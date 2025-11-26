@@ -66,6 +66,7 @@ let lastEncoding,
 // tracking metadata with a singleton works better than trying to alter response of getEntry/get and coordinating that across caching layers
 export let lastMetadata: Entry | null = null;
 export class RecordEncoder extends Encoder {
+	structureUpdate?: any;
 	constructor(options) {
 		options.useBigIntExtension = true;
 		/**
@@ -114,11 +115,12 @@ export class RecordEncoder extends Encoder {
 				const encoded = (lastEncoding = superEncode.call(this, record, options | 2048 | valueStart)); // encode with 8 bytes reserved space for txnId
 				lastValueEncoding = encoded.subarray((encoded.start || 0) + valueStart, encoded.end);
 				let position = encoded.start || 0;
+				const dataView =
+					encoded.dataView || (encoded.dataView = new DataView(encoded.buffer, encoded.byteOffset, encoded.byteLength));
 				if (timestamp) {
 					if (this.isRocksDb) {
 						// rocksdb, just store the version directly as the timestamp
-						TIMESTAMP_VIEW.setFloat64(position, timestamp);
-						encoded.set(TIMESTAMP_HOLDER, position);
+						dataView.setFloat64(position, timestamp);
 					} else {
 						// we apply the special instruction bytes that tell lmdb-js how to assign the timestamp
 						TIMESTAMP_PLACEHOLDER[4] = timestamp;
@@ -129,22 +131,13 @@ export class RecordEncoder extends Encoder {
 				}
 				if (blobsWereEncoded) metadata |= HAS_BLOBS;
 				if (metadata >= 0) {
-					const dataView =
-						encoded.dataView ||
-						(encoded.dataView = new DataView(encoded.buffer, encoded.byteOffset, encoded.byteLength));
 					dataView.setUint32(position, metadata | (ACTION_32_BIT << 24)); // use the extended action byte
 					position += 4;
 					if (expiresAt >= 0) {
-						const dataView =
-							encoded.dataView ||
-							(encoded.dataView = new DataView(encoded.buffer, encoded.byteOffset, encoded.byteLength));
 						dataView.setFloat64(position, expiresAt);
 						position += 8;
 					}
 					if (residencyId) {
-						const dataView =
-							encoded.dataView ||
-							(encoded.dataView = new DataView(encoded.buffer, encoded.byteOffset, encoded.byteLength));
 						dataView.setUint32(position, residencyId);
 					}
 				}
@@ -157,7 +150,7 @@ export class RecordEncoder extends Encoder {
 		const superSaveStructures = this.saveStructures;
 		this.saveStructures = function (structures, isCompatible) {
 			const result = superSaveStructures.call(this, structures, isCompatible);
-			this.hasStructureUpdate = true;
+			this.structureUpdate = structures;
 			return result;
 		};
 	}
@@ -251,6 +244,7 @@ export function handleLocalTimeForGets(store, rootStore) {
 	store.rootStore = rootStore;
 	store.encoder.rootStore = rootStore;
 	store.encoder.isRocksDb = isRocksDb;
+	store.decoder = store.encoder;
 	const storeGetEntry = store.getEntry;
 	store.getEntry = function (id, options) {
 		store.readCount++;
@@ -386,6 +380,7 @@ export function recordUpdater(store, tableId, auditStore) {
 		if (store instanceof RocksDatabase) {
 			// with rocksdb, we simplify to just storing the singular version/timestamp
 			timestampNextEncoding = newVersion;
+			audit = true;
 		} else if (audit == null)
 			// if not auditing, there is no local timestamp to reference
 			timestampNextEncoding = NO_TIMESTAMP;
@@ -454,9 +449,30 @@ export function recordUpdater(store, tableId, auditStore) {
 						extendedType |= HAS_BLOBS;
 					}
 				}
-				if (store.encoder?.hasStructureUpdate) {
+				if (store.encoder?.structureUpdate) {
 					extendedType |= HAS_STRUCTURE_UPDATE;
-					store.encoder.hasStructureUpdate = false;
+					const preserveLastValueEncoding = Buffer.from(lastValueEncoding); // copy the last value encoding because it will get destroyed in the encode call
+					// if rocksdb?
+					auditStore.put(
+						null,
+						createAuditEntry(
+							newVersion,
+							tableId,
+							Symbol.for('structures'),
+							0,
+							options?.nodeId ?? server.replication.getThisNodeId(auditStore) ?? 0,
+							username,
+							'structures',
+							store.encoder.encode(store.encoder.structureUpdate),
+							HAS_STRUCTURE_UPDATE,
+							0,
+							0,
+							0
+						),
+						{ transaction: options.transaction }
+					);
+					store.encoder.structureUpdate = null;
+					lastValueEncoding = preserveLastValueEncoding;
 				}
 				if (resolveRecord && existingEntry?.localTime) {
 					const replacingId = existingEntry?.localTime;

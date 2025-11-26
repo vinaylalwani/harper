@@ -25,6 +25,7 @@ import { deleteRootBlobPathsForDB } from './blob.ts';
 import { CUSTOM_INDEXES } from './indexes/customIndexes.ts';
 import * as OpenDBIObjectModule from '../utility/lmdb/OpenDBIObject.js';
 import { RocksDatabase, Store as RocksStore, type RocksDatabaseOptions } from '@harperdb/rocksdb-js';
+import { replayLogs } from './replayLogs.ts';
 
 function OpenDBIObject(dupSort, isPrimary) {
 	// what is going on with esbuild, it suddenly is randomly flip-flopping the module record for OpenDBIObject, sometimes return the correct exports object and sometimes returning the exports as the `default`.
@@ -392,8 +393,10 @@ function readRocksMetaDb(path: string, defaultTable?: string, databaseName: stri
 		const rootStore = openRocksDatabase(path);
 		databaseEnvs.set(path, rootStore);
 		rocksdbDatabaseEnvs.set(path, rootStore);
+		initStores(path, rootStore, databaseName, defaultTable);
+		replayLogs(rootStore, databases[databaseName]);
 
-		return initStores(path, rootStore, databaseName, defaultTable);
+		return rootStore;
 	} catch (error) {
 		error.message += ` opening database ${path}`;
 		throw error;
@@ -910,7 +913,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 
 		let primaryStore;
 		if (rootStore instanceof RocksDatabase) {
-			primaryStore = openRocksDatabase(rootStore.path, { ...internalDbiInit, name: dbiName });
+			primaryStore = openRocksDatabase(rootStore.path, { ...dbiInit, name: dbiName });
 		} else {
 			primaryStore = rootStore.openDB(dbiName, dbiInit);
 		}
@@ -1243,7 +1246,7 @@ export function dropTableMeta({ table: tableName, database: databaseName }) {
 	const removals = [];
 	const dbisDb = rootStore.dbisDb;
 	for (const key of dbisDb.getKeys({ start: tableName + '/', end: tableName + '0' })) {
-		removals.push(dbisDb.remove(key as any));
+		removals.push(dbisDb.remove(key));
 	}
 	return Promise.all(removals);
 }
