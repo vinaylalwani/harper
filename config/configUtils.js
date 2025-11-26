@@ -120,13 +120,15 @@ function createConfigFile(args, skipFsValidation = false) {
 
 	if (schemasArgs) setSchemasConfig(configDoc, schemasArgs);
 
-	// Validates config doc and if required sets default values for some parameters.
-	validateConfig(configDoc, skipFsValidation);
-
-	// Apply HARPER_DEFAULT_CONFIG and HARPER_SET_CONFIG environment variables
+	// Apply HARPER_DEFAULT_CONFIG and HARPER_SET_CONFIG environment variables BEFORE validation
+	// This allows runtime env vars to resolve port conflicts before validation
 	// Must be called AFTER rootPath is set in configDoc
 	// Mutates configDoc in place
 	applyRuntimeEnvVarConfig(configDoc, null, { isInstall: true });
+
+	// Validates config doc and if required sets default values for some parameters.
+	validateConfig(configDoc, skipFsValidation);
+
 	const configObj = configDoc.toJSON();
 	flatConfigObj = flattenConfig(configObj);
 
@@ -757,9 +759,16 @@ function applyRuntimeEnvVarConfig(configDoc, configFilePath, options = {}) {
 		// Apply env vars with source tracking and drift detection
 		applyRuntimeEnvConfig(configObj, rootPath, options);
 
-		// Convert back to YAML document and write to file
+		// Update the YAML document's contents
+		// We update only the 'contents' property to preserve the Document instance and its methods
 		const mergedDoc = YAML.parseDocument(YAML.stringify(configObj), { simpleKeys: true });
-		Object.assign(configDoc, mergedDoc);
+
+		// Check for YAML parsing errors
+		if (mergedDoc.errors?.length > 0) {
+			throw new Error(`Error parsing harperdb-config.yaml: ${mergedDoc.errors}`);
+		}
+
+		configDoc.contents = mergedDoc.contents;
 	} catch (error) {
 		logger.error(`Failed to apply runtime env config: ${error.message}`);
 		throw error;
