@@ -79,7 +79,7 @@ async function updateNodes() {
 			const nodeRecord = allNodes[x];
 
 			if (!natsTerms.NATS_TERM_CONSTRAINTS_RX.test(nodeRecord.name)) {
-				const invalidNodeName = `Node name '${node_record.name}' is invalid, must not contain ., * or >. Please change name and try again.`;
+				const invalidNodeName = `Node name '${nodeRecord.name}' is invalid, must not contain ., * or >. Please change name and try again.`;
 				console.error(invalidNodeName);
 				throw invalidNodeName;
 			}
@@ -164,8 +164,8 @@ async function updateSettingsFile400() {
 
 	// Create the new config file with old settings info.
 	try {
-		hdbLog.info(`Creating new/upgraded settings file at '${new_settings_path}'`);
-		console.log(`Creating new/upgraded settings file at '${new_settings_path}'`);
+		hdbLog.info(`Creating new/upgraded settings file at '${newSettingsPath}'`);
+		console.log(`Creating new/upgraded settings file at '${newSettingsPath}'`);
 		hdbLog.info('Updating env variables with new settings values');
 		const flatConfigObj = configUtils.initOldConfig(settings_path);
 

@@ -81,7 +81,7 @@ async function lmdbCreateAttribute(createAttributeObj) {
 		);
 		if (env.dbis[createAttributeObj.attribute] !== undefined) {
 			throw new Error(
-				`attribute '${create_attribute_obj.attribute}' already exists in ${createAttributeObj.schema}.${createAttributeObj.table}`
+				`attribute '${createAttributeObj.attribute}' already exists in ${createAttributeObj.schema}.${createAttributeObj.table}`
 			);
 		}
 		environmentUtility.createDBI(

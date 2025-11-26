@@ -178,7 +178,7 @@ describe('test lmdbCreateAttribute module', () => {
 		assert.deepStrictEqual(attribute_record, expected_search_result);
 	});
 
-	it('Test that a datastore is created with dup_sort set to true when undefined in create_attribute_obj', async () => {
+	it('Test that a datastore is created with dup_sort set to true when undefined in createAttributeObj', async () => {
 		const test_create_attr_obj = { ...CREATE_ATTR_OBJ_TEST };
 		test_create_attr_obj.attribute = 'attr1';
 		delete test_create_attr_obj.id;
@@ -191,7 +191,7 @@ describe('test lmdbCreateAttribute module', () => {
 		assert.ok(dbi.dupSort);
 	});
 
-	it('Test that a datastore is created with dup_sort set to true when null in create_attribute_obj', async () => {
+	it('Test that a datastore is created with dup_sort set to true when null in createAttributeObj', async () => {
 		const test_create_attr_obj = { ...CREATE_ATTR_OBJ_TEST };
 		test_create_attr_obj.dup_sort = null;
 		test_create_attr_obj.attribute = 'attr2';
@@ -203,7 +203,7 @@ describe('test lmdbCreateAttribute module', () => {
 		assert.ok(dbi.dupSort);
 	});
 
-	it('Test that a datastore is created with dup_sort set to true when true boolean used in create_attribute_obj', async () => {
+	it('Test that a datastore is created with dup_sort set to true when true boolean used in createAttributeObj', async () => {
 		const test_create_attr_obj = { ...CREATE_ATTR_OBJ_TEST };
 		test_create_attr_obj.dup_sort = true;
 		test_create_attr_obj.attribute = 'attr3';
@@ -215,7 +215,7 @@ describe('test lmdbCreateAttribute module', () => {
 		assert.ok(dbi.dupSort);
 	});
 
-	it('Test that a datastore is created with dup_sort set to false when false boolean used in create_attribute_obj', async () => {
+	it('Test that a datastore is created with dup_sort set to false when false boolean used in createAttributeObj', async () => {
 		const test_create_attr_obj = { ...CREATE_ATTR_OBJ_TEST };
 		test_create_attr_obj.dup_sort = false;
 		test_create_attr_obj.attribute = 'attr4';
