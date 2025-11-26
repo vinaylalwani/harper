@@ -371,6 +371,17 @@ async function deployComponent(req) {
 	// Write to root config if the request contains a package identifier
 	// TODO: how can we keep record of the `payload`? Its often too large to stuff into a config file; especially the root config. Maybe we can write it to a file and reference that way?
 	if (req.package) {
+		// Check if component already exists in config to protect against accidental overwrite
+		// TODO: consider also checking against some 'core components' list to prevent overwriting critical components
+		const config = configUtils.getConfigObj();
+		if (config?.[req.project] && !req.force) {
+			throw handleHDBError(
+				new Error(),
+				`Component '${req.project}' already exists. Use force: true to overwrite the existing component.`,
+				HTTP_STATUS_CODES.CONFLICT
+			);
+		}
+
 		const applicationConfig = { package: req.package };
 		// Avoid writing an empty `install:` block
 		if (req.install_command || req.install_timeout) {

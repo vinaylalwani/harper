@@ -518,6 +518,107 @@ describe('Test custom functions operations', () => {
 		});
 	});
 
+	describe('Test deployComponent force flag', () => {
+		beforeEach(() => {
+			// Reset the stub before each test
+			sandbox.restore();
+			sandbox = sinon.createSandbox();
+		});
+
+		after(() => {
+			sandbox.restore();
+		});
+
+		it('Test deployComponent prevents overwriting existing component without force flag', async () => {
+			// Mock config to return an existing component
+			sandbox.stub(configUtils, 'getConfigObj').returns({
+				'existing-component': {
+					package: '@org/existing-component',
+				},
+			});
+
+			let error;
+			try {
+				await operations.deployComponent({
+					project: 'existing-component',
+					package: '@org/new-package',
+				});
+			} catch (err) {
+				error = err;
+			}
+
+			expect(error).to.exist;
+			expect(error.message).to.include("Component 'existing-component' already exists");
+			expect(error.message).to.include('Use force: true to overwrite');
+			expect(error.statusCode).to.equal(409);
+		});
+
+		it('Test deployComponent allows overwriting existing component with force flag', async () => {
+			// Mock config to return an existing component
+			const mockConfig = {
+				'existing-component': {
+					package: '@org/existing-component',
+				},
+			};
+			sandbox.stub(configUtils, 'getConfigObj').returns(mockConfig);
+
+			// Mock addConfig to prevent actual file writes
+			const addConfigStub = sandbox.stub(configUtils, 'addConfig').resolves();
+
+			// Mock prepareApplication to prevent actual installation
+			const prepareApplicationStub = sandbox.stub();
+			operations.__set__('prepareApplication', prepareApplicationStub);
+
+			// Mock replicateOperation
+			const replicateOperationStub = sandbox.stub().resolves({ message: 'success' });
+			operations.__set__('replicateOperation', replicateOperationStub);
+
+			// This should NOT throw an error because force is true
+			await operations.deployComponent({
+				project: 'existing-component',
+				package: '@org/new-package',
+				force: true,
+			});
+
+			// Verify addConfig was called
+			expect(addConfigStub.calledOnce).to.be.true;
+			expect(addConfigStub.firstCall.args[0]).to.equal('existing-component');
+			expect(addConfigStub.firstCall.args[1].package).to.equal('@org/new-package');
+
+			// Verify prepareApplication was called
+			expect(prepareApplicationStub.calledOnce).to.be.true;
+		});
+
+		it('Test deployComponent allows deploying new component without force flag', async () => {
+			// Mock config to return no existing component
+			sandbox.stub(configUtils, 'getConfigObj').returns({});
+
+			// Mock addConfig to prevent actual file writes
+			const addConfigStub = sandbox.stub(configUtils, 'addConfig').resolves();
+
+			// Mock prepareApplication to prevent actual installation
+			const prepareApplicationStub = sandbox.stub();
+			operations.__set__('prepareApplication', prepareApplicationStub);
+
+			// Mock replicateOperation
+			const replicateOperationStub = sandbox.stub().resolves({ message: 'success' });
+			operations.__set__('replicateOperation', replicateOperationStub);
+
+			// This should work fine - no component exists yet
+			await operations.deployComponent({
+				project: 'new-component',
+				package: '@org/new-package',
+			});
+
+			// Verify addConfig was called
+			expect(addConfigStub.calledOnce).to.be.true;
+			expect(addConfigStub.firstCall.args[0]).to.equal('new-component');
+
+			// Verify prepareApplication was called
+			expect(prepareApplicationStub.calledOnce).to.be.true;
+		});
+	});
+
 	describe('Test ssh key operations', () => {
 		it('Test ssh key operations happy path', async () => {
 			// Nothing should exist before keys are added
