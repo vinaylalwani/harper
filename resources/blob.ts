@@ -193,24 +193,17 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 						throw new Error(`Incomplete blob for ${filePath}`);
 					}
 					return new Promise((resolve, reject) => {
-<<<<<<< HEAD
-						if (
-							store.attemptLock(lockKey, 0, () => {
-								writeFinished = true;
-								return resolve(readContents());
-							})
-						) {
-=======
 						const callback = () => {
 							writeFinished = true;
+							// TODO: We shouldn't be unlocking here, right?
 							store.unlock(lockKey, 0);
 							return resolve(readContents());
 						};
-						const lockAcquired = store instanceof RocksDatabase
-							? store.tryLock(lockKey, callback)
-							: store.attemptLock(lockKey, 0, callback);
+						const lockAcquired =
+							store instanceof RocksDatabase
+								? store.tryLock(lockKey, callback)
+								: store.attemptLock(lockKey, 0, callback);
 						if (lockAcquired) {
->>>>>>> 73b8ee4f2 (Update lock api)
 							writeFinished = true;
 							store.unlock(lockKey, 0);
 							return resolve(readContents());
@@ -918,7 +911,7 @@ export function decodeBlobsWithWrites(callback: () => void, store?: LMDBStore, b
 	currentBlobCallback = undefined;
 	const finished = promisedWrites.length < 2 ? promisedWrites[0] : Promise.all(promisedWrites);
 	promisedWrites = undefined;
-	// eslint-disable-next-line no-unsafe-finally
+
 	return finished;
 }
 
