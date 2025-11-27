@@ -14,7 +14,12 @@ export class Headers extends Map<string, string | string[]> {
 	}
 	set(name, value) {
 		if (typeof name !== 'string') name = '' + name;
-		if (typeof value !== 'string') value = '' + value;
+		if (Array.isArray(value)) {
+			// Ensure all array elements are strings
+			value = value.map((v) => (typeof v === 'string' ? v : '' + v));
+		} else if (typeof value !== 'string') {
+			value = '' + value;
+		}
 		return super.set(name.toLowerCase(), [name, value]);
 	}
 	get(name) {
@@ -48,16 +53,8 @@ export class Headers extends Map<string, string | string[]> {
 		}
 		return super.set(lowerName, [name, value]);
 	}
-	*[Symbol.iterator]() {
-		for (const [name, value] of super.values()) {
-			// Set-Cookie must be sent as separate headers per RFC 6265, not comma-separated,
-			// because Set-Cookie values may contain commas which would create ambiguity.
-			if (Array.isArray(value) && name.toLowerCase() === 'set-cookie') {
-				for (const v of value) yield [name, v];
-				continue;
-			}
-			yield [name, value];
-		}
+	[Symbol.iterator]() {
+		return super.values()[Symbol.iterator]();
 	}
 }
 
@@ -92,7 +89,20 @@ export function mergeHeaders(target: any, source: Headers) {
 	if (typeof target.set !== 'function' || typeof target.has !== 'function') target = new Headers(target);
 	for (const [name, value] of source) {
 		if (!target.has(name)) target.set(name, value);
-		else if (name.toLowerCase() === 'set-cookie') target.append?.(name, value, true);
+		else if (name.toLowerCase() === 'set-cookie') {
+			// Set-Cookie headers must NEVER be comma-delimited
+			// If value is an array, append each one separately; otherwise append the single value
+			const values = Array.isArray(value) ? value : [value];
+			if (target.append) {
+				for (const v of values) target.append(name, v);
+			} else {
+				// Fallback for Map or objects without append method
+				// We know existing exists because we're in the else-if branch (target.has(name) is true)
+				const existing = target.get(name);
+				const newValue = Array.isArray(existing) ? [...existing, ...values] : [existing, ...values];
+				target.set(name, newValue);
+			}
+		}
 	}
 	return target;
 }
