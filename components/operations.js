@@ -25,7 +25,6 @@ const rootDir = env.get(hdbTerms.CONFIG_PARAMS.ROOTPATH);
 const sshDir = path.join(rootDir, 'ssh');
 const knownHostsFile = path.join(sshDir, 'known_hosts');
 const { Resources } = require('../resources/Resources.ts');
-const { TRUSTED_RESOURCE_LOADERS } = require('./componentLoader.ts');
 
 const { Application, prepareApplication } = require('./Application.ts');
 
@@ -373,6 +372,8 @@ async function deployComponent(req) {
 	// TODO: how can we keep record of the `payload`? Its often too large to stuff into a config file; especially the root config. Maybe we can write it to a file and reference that way?
 	if (req.package) {
 		// Check if trying to overwrite a core component (requires force)
+		// Lazy-load to avoid circular dependency with componentLoader
+		const { TRUSTED_RESOURCE_LOADERS } = require('./componentLoader.ts');
 		if (TRUSTED_RESOURCE_LOADERS[req.project] && !req.force) {
 			throw handleHDBError(
 				new Error(),
