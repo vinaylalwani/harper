@@ -291,7 +291,11 @@ function startMonitoringTxns() {
 					...(DEBUG_LONG_TXNS ? ['starting stack trace', txn.stackTraces] : [])
 				);
 				// reset the transaction
-				txn.commit();
+				try {
+					txn.commit();
+				} catch (error) {
+					harperLogger.debug?.(`Error committing timed out transaction: ${error.message}`);
+				}
 				txn.timeout = txnExpiration;
 			} else {
 				txn.timeout -= txnExpiration;

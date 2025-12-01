@@ -48,7 +48,7 @@ export class RocksAuditStore {
 		throw new Error('Not implemented');
 	}
 	loadLogs() {
-		this.nodeLogs = [];
+		this.nodeLogs ??= [];
 		for (const logName of this.rootStore.listLogs()) {
 			const nodeId = server.replication.exportIdMapping()?.[logName] ?? 0;
 			this.nodeLogs[nodeId] ??= this.rootStore.useLog(logName);
@@ -113,5 +113,18 @@ export class RocksAuditStore {
 		return []; // TODO: implement this
 		options.onlyKeys = true;
 		return this.getRange(options);
+	}
+	getStats() {
+		let totalSize = 0;
+		const logs = [];
+		for (const log of this.loadLogs()) {
+			const size = log.getLogFileSize() as number;
+			totalSize += size;
+			logs.push({ name: log.name, size });
+		}
+		return {
+			logs,
+			totalSize,
+		};
 	}
 }

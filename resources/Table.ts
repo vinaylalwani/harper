@@ -2983,7 +2983,11 @@ export function makeTable(options) {
 		}
 		static getAuditSize() {
 			const stats = auditStore?.getStats();
-			return stats && (stats.treeBranchPageCount + stats.treeLeafPageCount + stats.overflowPages) * stats.pageSize;
+			return (
+				stats &&
+				(stats.totalSize ??
+					(stats.treeBranchPageCount + stats.treeLeafPageCount + stats.overflowPages) * stats.pageSize)
+			);
 		}
 		static getStorageStats() {
 			const storePath = primaryStore.path;
