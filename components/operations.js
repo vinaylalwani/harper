@@ -25,6 +25,7 @@ const rootDir = env.get(hdbTerms.CONFIG_PARAMS.ROOTPATH);
 const sshDir = path.join(rootDir, 'ssh');
 const knownHostsFile = path.join(sshDir, 'known_hosts');
 const { Resources } = require('../resources/Resources.ts');
+const { TRUSTED_RESOURCE_LOADERS } = require('./componentLoader.ts');
 
 const { Application, prepareApplication } = require('./Application.ts');
 
@@ -371,13 +372,11 @@ async function deployComponent(req) {
 	// Write to root config if the request contains a package identifier
 	// TODO: how can we keep record of the `payload`? Its often too large to stuff into a config file; especially the root config. Maybe we can write it to a file and reference that way?
 	if (req.package) {
-		// Check if component already exists in config to protect against accidental overwrite
-		// TODO: consider also checking against some 'core components' list to prevent overwriting critical components
-		const config = configUtils.getConfigObj();
-		if (config?.[req.project] && !req.force) {
+		// Check if trying to overwrite a core component (requires force)
+		if (TRUSTED_RESOURCE_LOADERS[req.project] && !req.force) {
 			throw handleHDBError(
 				new Error(),
-				`Component '${req.project}' already exists. Use force: true to overwrite the existing component.`,
+				`Cannot deploy component with name '${req.project}': this is a protected core component name. Use force: true to overwrite.`,
 				HTTP_STATUS_CODES.CONFLICT
 			);
 		}
