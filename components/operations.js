@@ -371,6 +371,17 @@ async function deployComponent(req) {
 	// Write to root config if the request contains a package identifier
 	// TODO: how can we keep record of the `payload`? Its often too large to stuff into a config file; especially the root config. Maybe we can write it to a file and reference that way?
 	if (req.package) {
+		// Check if trying to overwrite a core component (requires force)
+		// Lazy-load to avoid circular dependency with componentLoader
+		const { TRUSTED_RESOURCE_LOADERS } = require('./componentLoader.ts');
+		if (TRUSTED_RESOURCE_LOADERS[req.project] && !req.force) {
+			throw handleHDBError(
+				new Error(),
+				`Cannot deploy component with name '${req.project}': this is a protected core component name. Use force: true to overwrite.`,
+				HTTP_STATUS_CODES.CONFLICT
+			);
+		}
+
 		const applicationConfig = { package: req.package };
 		// Avoid writing an empty `install:` block
 		if (req.install_command || req.install_timeout) {
