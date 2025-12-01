@@ -1,11 +1,11 @@
-import { type TransactionLog, RocksDatabase, TransactionLogReader } from '@harperdb/rocksdb-js';
+import { type TransactionLog, RocksDatabase } from '@harperdb/rocksdb-js';
 export class RocksAuditStore {
 	log: TransactionLog;
-	readLogs?: TransactionLogReader[]; // whatever the type of the read logger
+	nodeLogs?: TransactionLog[]; // whatever the type of the read logger
 	rootStore: RocksDatabase;
+	reusableIterable = true; // flag indicating that iterable can be reused to resume iterating through audit log
 	constructor(rootDatabase: RocksDatabase) {
-		this.log = rootDatabase.useLog(0);
-		this.logReader = new TransactionLogReader(this.log);
+		this.log = rootDatabase.useLog('local');
 		this.rootStore = rootDatabase;
 	}
 
@@ -16,13 +16,18 @@ export class RocksAuditStore {
 	 * @param txnId
 	 */
 	put(suggestedKey: any, entry: Buffer, options: any) {
-		this.log.addEntry(entry, options.transaction.id);
+		const nodeId = options.nodeId;
+		const log = nodeId ? (this.nodeLogs[nodeId] ?? this.loadLogs()[nodeId]) : this.log;
+		log.addEntry(entry, options.transaction.id);
 	}
+
 	putSync(suggestedKey: any, value: any, options: any) {
 		if (typeof suggestedKey === 'symbol') {
 			this.rootStore.putSync(suggestedKey, value, options);
 		} else {
-			this.log.addEntry(value, options.transaction.id);
+			const nodeId = options.nodeId;
+			const log = nodeId ? (this.nodeLogs[nodeId] ?? this.loadLogs()[nodeId]) : this.log;
+			log.addEntry(value, options.transaction.id);
 		}
 	}
 	get(key: any) {
@@ -42,22 +47,27 @@ export class RocksAuditStore {
 	getEntry() {
 		throw new Error('Not implemented');
 	}
+	loadLogs() {
+		this.nodeLogs = [];
+		for (const logName of this.rootStore.listLogs()) {
+			const nodeId = server.replication.exportIdMapping()?.[logName] ?? 0;
+			this.nodeLogs[nodeId] ??= this.rootStore.useLog(logName);
+		}
+		return this.nodeLogs;
+	}
 
 	/**
 	 * Get all entries matching the range, from all the transaction logs, sorted by timestamp
 	 * @param options
 	 */
 	getRange(options: { start?: number; end?: number; log?: string; onlyKeys: boolean } = {}): Iterable<any> {
-		if (!this.readLogs) {
-			this.readLogs = this.rootStore
-				.listLogs()
-				.map((logName) => new TransactionLogReader(this.rootStore.useLog(logName)));
-		}
 		if (options.log) {
-			return this.readLogs.find((readLog) => readLog.name === options.log)?.query(options);
+			const matchName = (readLog) => readLog.name === options.log;
+			const log = this.nodeLogs.find(matchName) || this.loadLogs().find(matchName);
+			return log?.query(options);
 		}
 		const onlyKeys = options.onlyKeys;
-		const iterators = this.readLogs.map((log) => log.query(options)[Symbol.iterator]());
+		const iterators = (this.nodeLogs || this.loadLogs()).map((log) => log.query(options)[Symbol.iterator]());
 		// get the earliest entry from each iterator
 		const nextEntries = iterators.map((iterator) => iterator.next());
 		const aggregateIterator = {

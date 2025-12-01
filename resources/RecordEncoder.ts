@@ -218,6 +218,7 @@ export class RecordEncoder extends Encoder {
 				);
 				lastMetadata = {
 					localTime,
+					version: localTime,
 					[METADATA]: metadataFlags,
 					expiresAt,
 					residencyId,
@@ -380,7 +381,6 @@ export function recordUpdater(store, tableId, auditStore) {
 		if (store instanceof RocksDatabase) {
 			// with rocksdb, we simplify to just storing the singular version/timestamp
 			timestampNextEncoding = newVersion;
-			audit = true;
 		} else if (audit == null)
 			// if not auditing, there is no local timestamp to reference
 			timestampNextEncoding = NO_TIMESTAMP;
@@ -442,7 +442,7 @@ export function recordUpdater(store, tableId, auditStore) {
 				}
 			}
 			if (audit) {
-				const username = options?.user?.username;
+				const username = options?.user?.username ?? options?.user;
 				if (auditRecord) {
 					encodeBlobsWithFilePath(() => store.encoder.encode(auditRecord), id, store.rootStore);
 					if (blobsWereEncoded) {

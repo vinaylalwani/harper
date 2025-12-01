@@ -4,6 +4,7 @@ import { tables } from './databases.ts';
 import { Resource } from './Resource.ts';
 import { recordUpdater } from './RecordEncoder.ts';
 import * as logger from '../utility/logging/harper_logger.js';
+import { INVALIDATED } from './Table.ts';
 
 export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void> {
 	return new Promise((resolve, reject) => {
@@ -19,24 +20,28 @@ export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void>
 		rootStore.listLogs().forEach((logName) => {
 			// replay each log
 			try {
-				const logReader = new TransactionLogReader(rootStore.useLog(logName));
-				for (const { timestamp, data } of logReader.query({ start: 0, readUncommitted: true })) {
+				const log = rootStore.useLog(logName);
+				for (const { timestamp, data } of log.query({ start: 0, readUncommitted: true })) {
 					try {
 						const auditEntry = readAuditEntry(data);
-						const { type, tableId, nodeId, recordId, version, extendedType } = auditEntry;
+						const { type, tableId, nodeId, recordId, version, residencyId, expiresAt, originatingOperation, user } =
+							auditEntry;
 						const table = tableById.get(tableId);
 						const context = { nodeId, alreadyLogged: true, version };
 						const { primaryStore, auditStore } = table;
 						const record = auditEntry.getValue(primaryStore);
 						const update = recordUpdater(primaryStore, tableId, auditStore);
 						primaryStore.transactionSync((transaction) => {
-							const options = { transaction };
+							const options = { transaction, context, residencyId, expiresAt, originatingOperation };
 
 							switch (type) {
 								case 'put':
 								case 'patch':
 								case 'delete':
-									update(recordId, record, null, version, extendedType, false, options);
+									update(recordId, record, null, version, 0, false, options);
+									break;
+								case 'invalidate':
+									update(recordId, record, null, version, INVALIDATED, false, options);
 									break;
 								case 'structures':
 									primaryStore.putSync(

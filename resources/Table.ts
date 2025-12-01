@@ -5,9 +5,10 @@
  */
 
 import { CONFIG_PARAMS, OPERATIONS_ENUM, SYSTEM_TABLE_NAMES, SYSTEM_SCHEMA_NAME } from '../utility/hdbTerms.ts';
-import { SKIP, type Database } from 'lmdb';
+import { type Database } from 'lmdb';
 import { getIndexedValues, getNextMonotonicTime } from '../utility/lmdb/commonUtility.js';
 import lodash from 'lodash';
+import { ExtendedIterable, SKIP } from '@harperdb/extended-iterable';
 import type {
 	ResourceInterface,
 	SubscriptionRequest,
@@ -182,7 +183,6 @@ export function makeTable(options) {
 			}
 		}
 	}
-	const RangeIterable = primaryStore.getRange({ start: false, end: false }).constructor;
 	const MAX_PREFETCH_SEQUENCE = 10;
 	const MAX_PREFETCH_BUNDLE = 6;
 	if (audit) addDeleteRemoval();
@@ -2134,7 +2134,7 @@ export function makeTable(options) {
 			readTxn: any,
 			transformToRecord: Function
 		) {
-			let results = new RangeIterable();
+			let results = new ExtendedIterable();
 			if (sort) {
 				// there might be some situations where we don't need to transform to entries for sorting, not sure
 				entries = transformToEntries(entries, select, context, readTxn, null);
@@ -3381,7 +3381,7 @@ export function makeTable(options) {
 				if ((valuesToRemove.length > 0 || valuesToAdd.length > 0) && LMDB_PREFETCH_WRITES) {
 					// prefetch any values that have been removed or added
 					const valuesToPrefetch = valuesToRemove.concat(valuesToAdd).map((v) => ({ key: v, value: id }));
-					index.prefetch(valuesToPrefetch, noop);
+					index.prefetch?.(valuesToPrefetch, noop);
 				}
 				//if the update cleared out the attribute value we need to delete it from the index
 				for (let i = 0, l = valuesToRemove.length; i < l; i++) {
@@ -3389,7 +3389,7 @@ export function makeTable(options) {
 				}
 			} else if (valuesToAdd?.length > 0 && LMDB_PREFETCH_WRITES) {
 				// no old values, just new
-				index.prefetch(
+				index.prefetch?.(
 					valuesToAdd.map((v) => ({ key: v, value: id })),
 					noop
 				);

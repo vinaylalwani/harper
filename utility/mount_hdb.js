@@ -30,7 +30,6 @@ async function mountHdb(hdbPath) {
  * @returns {Promise<void>}
  */
 async function createTables() {
-	// eslint-disable-next-line global-require
 	const CreateTableObject = require('../dataLayer/CreateTableObject.js');
 
 	let tables = Object.keys(systemSchema);
@@ -44,8 +43,8 @@ async function createTables() {
 			let primaryKeyAttribute = createTable.attributes.find(({ attribute }) => attribute === hash_attribute);
 			primaryKeyAttribute.isPrimaryKey = true;
 
-			// Array of tables to enable audit store, config file doesn't exist yet so we need to manually set which tables to audit
-			if (!NON_REPLICATING_SYSTEM_TABLES.includes(tableName)) createTable.audit = true;
+			// with RocksDB at least, we need to audit everything or there will be lost data
+			createTable.audit = true;
 			await bridge.createTable(tableName, createTable);
 		} catch (e) {
 			hdbLogger.error(`issue creating environment for ${terms.SYSTEM_SCHEMA_NAME}.${tableName}: ${e}`);

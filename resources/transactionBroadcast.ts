@@ -112,10 +112,21 @@ function notifyFromTransactionData(subscriptions) {
 	auditStore.resetReadTxn?.();
 	nextTransaction(subscriptions.auditStore);
 	let subscribersWithTxns;
-	for (const { key: localTime, value: auditEntryEncoded } of auditStore.getRange({
-		start: subscriptions.lastTxnTime,
-		exclusiveStart: true,
-	})) {
+	if (auditStore.reusableIterable) {
+	}
+	const getIterator = () =>
+		auditStore.getRange({
+			start: subscriptions.lastTxnTime,
+			exclusiveStart: true,
+		});
+	let auditLogIterator;
+	if (auditStore.reusableIterable) {
+		auditLogIterator = subscriptions.auditLogIterator;
+		if (!auditLogIterator) {
+			auditLogIterator = subscriptions.auditLogIterator = getIterator();
+		}
+	} else auditLogIterator = getIterator();
+	for (const { key: localTime, value: auditEntryEncoded } of auditLogIterator) {
 		subscriptions.lastTxnTime = localTime;
 		const auditEntry = readAuditEntry(auditEntryEncoded);
 		if (!ACTIONS_OF_INTEREST.includes(auditEntry.type)) continue;
