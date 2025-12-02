@@ -90,7 +90,7 @@ function startServers() {
 					const { port, fd, data } = message;
 					if (fd) {
 						// Create a socket from the file descriptor for the socket that was routed to us.
-						deliverSocket(fd, port, data);
+						httpComponent.deliverSocket(fd, port, data);
 					} else if (message.requestId) {
 						// Windows doesn't support passing file descriptors, so we have to resort to manually proxying the socket
 						// data for each request
