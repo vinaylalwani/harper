@@ -77,6 +77,8 @@ export const BACK_PRESSURE_RATIO_POSITION = 6;
 export const RECEIVING_STATUS_WAITING = 0;
 export const RECEIVING_STATUS_RECEIVING = 1;
 
+const MAX_PAYLOAD = 100_000_000;
+
 export const tableUpdateListeners = new Map();
 // This a map of the database name to the subscription object, for the subscriptions from our tables to the replication module
 // when we receive messages from other nodes, we then forward them on to as a notification on these subscriptions
@@ -1139,6 +1141,7 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 						const sendQueuedData = () => {
 							if (position - encodingStart > 8) {
 								// if we have more than just a txn time, send it
+								if (checkExcessMessageSize(position - encodingStart)) return;
 								ws.send(encodingBuffer.subarray(encodingStart, position));
 								logger.debug?.(connectionId, 'Sent message, size:', position - encodingStart);
 								if (databaseName !== 'system') {
@@ -1540,6 +1543,7 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 			for await (const buffer of blob.stream()) {
 				if (lastBuffer) {
 					logger.debug?.('Sending blob chunk', id, 'length', lastBuffer.length);
+					if (checkExcessMessageSize(lastBuffer.length)) throw new Error('Blob chunk too large');
 					// do the previous buffer so we know if it is the last one or not
 					ws.send(
 						encode([
@@ -1561,6 +1565,7 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 				recordAction(buffer.length, 'bytes-sent', `${remoteNodeName}.${databaseName}`, 'replication', 'blob');
 			}
 			logger.debug?.('Sending final blob chunk', id, 'length', lastBuffer.length);
+			if (checkExcessMessageSize(lastBuffer.length)) throw new Error('Blob chunk too large');
 			ws.send(
 				encode([
 					BLOB_CHUNK,
@@ -1950,6 +1955,21 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 			encodingStart = 0;
 			encodingBuffer = newBuffer;
 			dataView = new DataView(encodingBuffer.buffer, 0, encodingBuffer.length);
+		}
+	}
+
+	function checkExcessMessageSize(messageSize) {
+		if (messageSize > MAX_PAYLOAD) {
+			logger.error?.(
+				connectionId,
+				'Message too large to send, size:',
+				messageSize,
+				'remote node:',
+				remoteNodeName,
+				'database:',
+				databaseName
+			);
+			return true;
 		}
 	}
 	// Check the attributes in the msg vs the table and if they dont match call ensureTable to create them

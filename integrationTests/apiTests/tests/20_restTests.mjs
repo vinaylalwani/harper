@@ -1,8 +1,9 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import request from 'supertest';
 import { reqRest } from '../utils/request.mjs';
 import { timestamp } from '../utils/timestamp.mjs';
-
+import { envUrlRest, headers } from '../config/envConfig.mjs';
 
 describe('20. REST tests', () => {
 	beforeEach(timestamp);
@@ -84,5 +85,10 @@ describe('20. REST tests', () => {
 		return reqRest('/Related/?id==3')
 			.expect((r) => assert.equal(r.body[0].id, '3', r.text))
 			.expect(200);
+	});
+
+	it('[rest] Request POST with too large of body', () => {
+		const bigProperty = Array(1000000).fill('this is a test');
+		return request(envUrlRest).post('/Related/').set(headers).send({ bigProperty }).expect(413);
 	});
 });
