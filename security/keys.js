@@ -1184,7 +1184,7 @@ function hostnamesFromCert(cert /*X509Certificate*/) {
 			.filter((part) => part); // filter out any empty names
 	}
 	// finally we fall back to the common name
-	const commonName = certObj.subject?.match(/CN=(.*)/)?.[1];
+	const commonName = cert.subject?.match(/CN=(.*)/)?.[1];
 	return commonName ? [commonName] : [];
 }
 

@@ -72,6 +72,7 @@
 		"format:fix": "npm run format -- --write",
 		"lint": "eslint .",
 		"lint:fix": "npm run lint -- --fix",
+		"lint:required": "eslint --no-eslintrc -c .eslintrc.required.json .",
 		"cluster:ip:local": "pushd utility/dev && docker compose -f docker-compose.ip.yml --project-directory ../.. build && docker compose -f docker-compose.ip.yml --project-directory ../.. up; popd",
 		"cluster:ip:latest": "pushd utility/dev && docker compose -f docker-compose.ip.yml --project-directory ../.. pull && docker compose -f docker-compose.ip.yml --project-directory ../.. up; popd",
 		"cluster:delete": "pushd utility/dev && docker compose -f docker-compose.ip.yml --project-directory ../.. down --remove-orphans; popd",

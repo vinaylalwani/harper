@@ -5,7 +5,6 @@ const harperBridge = require('./harperBridge/harperBridge.js');
 const GetBackupObject = require('./GetBackupObject.js');
 const hdbUtils = require('../utility/common_utils.js');
 const hdbTerms = require('../utility/hdbTerms.ts');
-const envMgr = require('../utility/environment/environmentManager.js');
 const { handleHDBError, hdbErrors } = require('../utility/errors/hdbError.js');
 const { HDB_ERROR_MSGS, HTTP_STATUS_CODES } = hdbErrors;
 
@@ -37,5 +36,5 @@ async function getBackup(getBackupObject) {
 		);
 	}
 
-	return await harperBridge.getBackup(readAuditLogObject);
+	return harperBridge.getBackup(getBackupObject);
 }

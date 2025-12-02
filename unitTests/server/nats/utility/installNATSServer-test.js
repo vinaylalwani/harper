@@ -23,7 +23,6 @@ describe('test checkGoVersion', () => {
 			throw Error('no go');
 		});
 
-		// eslint-disable-next-line radar/no-duplicate-string
 		let cmd_restore = installer.__set__('runCommand', cmd_stub);
 		let semver_spy = sandbox.spy(installer.__get__('semver'), 'gte');
 		let console_log_spy = sandbox.spy(console, 'log');
