@@ -1,7 +1,6 @@
 'use strict';
 
 const hdbTerms = require('../hdbTerms.ts');
-const hdbUtils = require('../common_utils.js');
 const natsConfig = require('../../server/nats/utility/natsConfig.js');
 const natsUtils = require('../../server/nats/utility/natsUtils.js');
 const natsTerms = require('../../server/nats/utility/natsTerms.js');
@@ -22,10 +21,8 @@ module.exports = {
 	kill,
 	startAllServices,
 	startService,
-	restartHdb,
 	startClusteringProcesses,
 	startClusteringThreads,
-	isHdbRestartRunning,
 	getHdbPid,
 	cleanupChildrenProcesses,
 	reloadClustering,
@@ -179,21 +176,6 @@ async function restartHdb() {
 }
 
 /**
- * Checks to see if the HDB restart script is currently running.
- * @returns {Promise<boolean>}
- */
-async function isHdbRestartRunning() {
-	const allProcesses = await list();
-	for (const p in allProcesses) {
-		const proc = allProcesses[p];
-		if (proc.name === hdbTerms.PROCESS_DESCRIPTORS.RESTART_HDB) {
-			return true;
-		}
-	}
-
-	return false;
-}
-/**
  * Checks to see if Harper is currently running, returning the pid if it is
  * @returns {number|undefined}
  */
@@ -270,31 +252,6 @@ async function startService(serviceName, noKill = false) {
 	start(startConfig, noKill);
 }
 
-/**
- * Will check the env setting vars to see if there has been a change in number or services running.
- * If no change reload is called. If values have changed, service is stopped and started.
- * @param serviceName
- * @returns {Promise<void>}
- */
-async function reloadStopStart(serviceName) {
-	// Check to see if there has been an update to the max process setting value. If there has been we need to stop the service and start it again.
-	const settingProcessCount =
-		envMangr.get(hdbTerms.CONFIG_PARAMS.THREADS_COUNT) ?? envMangr.get(hdbTerms.CONFIG_PARAMS.THREADS);
-	const currentProcess = await describe(serviceName);
-	const currentProcessCount = hdbUtils.isEmptyOrZeroLength(currentProcess) ? 0 : currentProcess.length;
-	if (settingProcessCount !== currentProcessCount) {
-		await stop(serviceName);
-		await startService(serviceName);
-	} else if (serviceName === hdbTerms.PROCESS_DESCRIPTORS.HDB) {
-		// To restart HDB we need to fork a temp process which calls restart.
-		await restartHdb();
-	} else {
-		// If no change to the max process values just call reload.
-		await reload(serviceName);
-	}
-}
-
-let ingestWorker;
 let replyWorker;
 /**
  * Starts all the processes that make up clustering
@@ -332,22 +289,6 @@ async function startClusteringThreads() {
 			hdbLogger.info('Starting clustering upgrade 4.0.0 process');
 			startWorker(hdbTerms.LAUNCH_SERVICE_SCRIPTS.NODES_UPGRADE_4_0_0, { name: 'Upgrade-4-0-0' });
 			break;
-		}
-	}
-}
-
-/**
- * Stop all the services that make up clustering
- */
-async function stopClustering() {
-	for (const proc in hdbTerms.CLUSTERING_PROCESSES) {
-		if (proc === hdbTerms.CLUSTERING_PROCESSES.CLUSTERING_INGEST_PROC_DESCRIPTOR) {
-			// TODO: send a broadcast so worker threads that are doing subscribers can stop their subscription
-		} else if (proc === hdbTerms.CLUSTERING_PROCESSES.CLUSTERING_REPLY_SERVICE_DESCRIPTOR) {
-			await replyWorker.terminate();
-		} else {
-			const service = hdbTerms.CLUSTERING_PROCESSES[proc];
-			await stop(service);
 		}
 	}
 }
