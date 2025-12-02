@@ -689,7 +689,13 @@ describe('Test custom functions operations', () => {
 
 			// List SSH Keys and get the known hosts
 			result = await operations.listSSHKeys({});
-			expect(result).to.eql([{ name: 'testkey1' }]);
+			expect(result).to.eql([
+				{
+					host: 'testkey1.gitlab.com',
+					hostname: 'gitlab.com',
+					name: 'testkey1'
+				}
+			]);
 			result = await operations.getSSHKnownHosts({});
 			expect(result).to.eql({ known_hosts: 'gitlab.com fake1\ngitlab.com fake2' });
 			result = await operations.getSSHKey({ name: 'testkey1' });
@@ -711,7 +717,18 @@ describe('Test custom functions operations', () => {
 
 			// List SSH Keys and get the known_hosts
 			result = await operations.listSSHKeys({});
-			expect(result).to.eql([{ name: 'testkey1' }, { name: 'testkey2' }]);
+			expect(result).to.eql([
+				{
+					host: 'testkey1.gitlab.com',
+					hostname: 'gitlab.com',
+					name: 'testkey1'
+				},
+				{
+					host: 'testkey2.github.com',
+					hostname: 'github.com',
+					name: 'testkey2'
+				}
+			]);
 			result = await operations.getSSHKnownHosts({});
 			// It should have the 2 added from the first key + some more from github
 			expect(result.known_hosts.split('\n').length).is.greaterThan(2);
@@ -726,7 +743,13 @@ describe('Test custom functions operations', () => {
 
 			//list/get
 			result = await operations.listSSHKeys({});
-			expect(result).to.eql([{ name: 'testkey1' }]);
+			expect(result).to.eql([
+				{
+					host: 'testkey1.gitlab.com',
+					hostname: 'gitlab.com',
+					name: 'testkey1'
+				}
+			]);
 		});
 
 		it('Test ssh key operations errors', async () => {
