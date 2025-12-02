@@ -30,7 +30,7 @@ import { Resources } from '../resources/Resources.ts';
 import { ServerError } from '../utility/errors/hdbError.js';
 
 const DEFAULT_HEADERS_TIMEOUT = 60000;
-const REQ_MAX_BODY_SIZE = 1024 * 1024 * 1024; //this is 1GB in bytes
+const REQ_MAX_BODY_SIZE = env.get(terms.CONFIG_PARAMS.OPERATIONSAPI_NETWORK_MAXREQUESTBODYSIZE) ?? 1024 * 1024 * 1024; //this defaults to 1GB in bytes
 const TRUE_COMPARE_VAL = 'TRUE';
 
 const { CONFIG_PARAMS } = terms;

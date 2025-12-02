@@ -458,9 +458,23 @@ export function hasAsyncSerialization() {
 }
 
 function streamToBuffer(stream: Readable): Promise<Buffer> {
+	const MAX_REQUEST_BODY_SIZE = envMgr.get(CONFIG_PARAMS.HTTP_MAXREQUESTBODYSIZE) ?? 10_000_000;
 	return new Promise((resolve, reject) => {
 		const buffers = [];
-		stream.on('data', (data) => buffers.push(data));
+		let size = 0;
+		stream.on('data', (data) => {
+			size += data.length;
+			if (size > MAX_REQUEST_BODY_SIZE) {
+				const error = new ClientError(
+					`Request body too large, maximum size is ${MAX_REQUEST_BODY_SIZE} bytes`,
+					413
+				);
+				buffers.length = 0; // free up memory
+				reject(error);
+				return;
+			}
+			buffers.push(data);
+		});
 		stream.on('end', () => resolve(Buffer.concat(buffers)));
 		stream.on('error', reject);
 	});
