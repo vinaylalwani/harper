@@ -16,7 +16,7 @@ const {
 async function hdbCore(server) {
 	server.decorate('hdbCore', {
 		preValidation: [reqBodyValidationHandler, authHandler],
-		request: (request) => convertAsyncIterators(handlePostRequest(request, response)),
+		request: (request, reply) => convertAsyncIterators(handlePostRequest(request, reply)),
 		requestWithoutAuthentication: (request, response) =>
 			convertAsyncIterators(handlePostRequest(request, response, true)),
 	});
