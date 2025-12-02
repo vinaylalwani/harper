@@ -224,7 +224,7 @@ const OVERLAPPING_RESTART_TYPES = [hdbTerms.THREAD_TYPES.HTTP];
 
 async function restartWorkers(
 	name = null,
-	maxWorkersDown = Math.max(workerCount > 3, 1), // restart 1/8 of the threads at a time, but at least 1
+	maxWorkersDown = Math.max(Math.floor(workerCount / 8), 1), // restart 1/8 of the threads at a time, but at least 1
 	startReplacementThreads = true
 ) {
 	if (isMainThread) {
