@@ -1,9 +1,9 @@
-import type { Request } from './ResourceInterface.ts';
+import type { Request } from '../server/serverHelpers/Request.ts';
 import { _assignPackageExport } from '../globals.js';
-import { DatabaseTransaction, TRANSACTION_STATE } from './DatabaseTransaction.ts';
+import { DatabaseTransaction, TRANSACTION_STATE, type Transaction } from './DatabaseTransaction.ts';
 
-export function transaction<T>(context: Request, callback: (transaction: TransactionSet) => T, options?: any): T;
-export function transaction<T>(callback: (transaction: TransactionSet) => T): T;
+export function transaction<T>(context: Request, callback: (transaction: Transaction) => T, options?: any): T;
+export function transaction<T>(callback: (transaction: Transaction) => T): T;
 /**
  * Start and run a new transaction. This can be called with a request to hold the transaction, or a new request object will be created
  * @param context
@@ -11,8 +11,8 @@ export function transaction<T>(callback: (transaction: TransactionSet) => T): T;
  * @returns
  */
 export function transaction<T>(
-	context: Request | ((transaction: TransactionSet) => T),
-	callback?: (transaction: TransactionSet) => T,
+	context: Request | ((transaction: Transaction) => T),
+	callback?: (transaction: Transaction) => T,
 	options?: any
 ): T {
 	if (!callback) {

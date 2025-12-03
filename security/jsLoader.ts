@@ -47,7 +47,7 @@ export async function secureImport(filePath) {
 declare class Compartment extends CompartmentClass {}
 async function getCompartment(getGlobalVars) {
 	const { StaticModuleRecord } = await import('@endo/static-module-record');
-	require('ses');
+	await import('ses');
 	lockdown({
 		domainTaming: 'unsafe',
 		consoleTaming: 'unsafe',

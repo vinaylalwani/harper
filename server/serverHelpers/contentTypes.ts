@@ -504,7 +504,7 @@ const BUFFER_ENCODINGS = [
 	'binary',
 	'hex',
 ];
-function isBufferEncoding(value: string): value is BufferEncoding {
+function isBufferEncoding(value: string): value is NodeJS.BufferEncoding {
 	return BUFFER_ENCODINGS.includes(value);
 }
 
@@ -576,8 +576,7 @@ function deserializerUnknownType(contentType: ContentType): Deserialize {
 				try {
 					// if the first byte is `{` then it is likely JSON
 					if (data?.[0] === 123) return JSONParse(data);
-					// eslint-disable-next-line sonarjs/no-ignored-exceptions
-				} catch (error) {
+				} catch {
 					// continue if cannot parse as JSON
 				}
 			}

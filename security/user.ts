@@ -2,7 +2,6 @@
 
 const USERNAME_REQUIRED = 'username is required';
 const ALTERUSER_NOTHING_TO_UPDATE = 'nothing to update, must supply active, role or password to update';
-// eslint-disable-next-line sonarjs/no-hardcoded-passwords
 const EMPTY_PASSWORD = 'password cannot be an empty string';
 const EMPTY_ROLE = 'If role is specified, it cannot be empty.';
 const ACTIVE_BOOLEAN = 'active must be true or false';
@@ -316,7 +315,6 @@ async function listUsers(): Promise<Map<string, User>> {
 
 	const userMap: Map<string, User> = new Map();
 	for (let user of users) {
-		// eslint-disable-next-line sonarjs/updated-loop-counter
 		user = _.cloneDeep(user);
 		user.role = roleMapObj[user.role];
 		appendSystemTablesToRole(user.role);
