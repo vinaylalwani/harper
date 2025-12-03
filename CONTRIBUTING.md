@@ -77,7 +77,7 @@ These are the steps @Ethan-Arrowood has been following to synchronize the reposi
 12. Push all changes and open the PR for review
 13. Merge using a Merge Commit so that all relative history is retained and things like the formatting change hash stays the same as recorded.
 
-Last Synchronized Commit: `2030325c105abede4c324511d92d8f0c6357877b`
+Last Synchronized Commit: `5edb685e036c88941cba58f8294dea0888137596`
 
 ## Code of Conduct
 
