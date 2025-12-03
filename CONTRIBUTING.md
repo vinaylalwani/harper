@@ -56,9 +56,9 @@ These are the steps @Ethan-Arrowood has been following to synchronize the reposi
    - The start-commit will be excluded so always include the last commit from `old/main` that was synchronized previously.
    - The hash for that commit is recorded at the end of this section and should be updated after each synchronization
 5. Go through commits one-by-one, from the top to the bottom of the `commits-to-pick.txt` file, following these steps:
-   1. If `git rev-parse $(commit)^2 &>/dev/null 2>&1` exits with 0 then its a merge commit
+   1. If `git rev-parse $(commit)^2 &>/dev/null 2>&1` exits with 0 then it's a merge commit
       1. Execute `git cherry-pick -m 1 $(commit)`
-   2. Else its a regular commit
+   2. Else it's a regular commit
       1. Execute `git cherry-pick $(commit)`
    3. If either cherry-pick command results in a non-zero exit code that means there is a merge conflict
       1. If the conflict is a content, resolve it manually and `git add` the file
@@ -67,7 +67,7 @@ These are the steps @Ethan-Arrowood has been following to synchronize the reposi
          - Example: `CONFLICT (modify/delete): unitTests/bin/copyDB-test.js deleted in HEAD and modified in f75d9170b`
       3. Then check `git status`, if there is nothing you can `git cherry-pick --skip`
          - Note: in this circumstance, running `git cherry-pick --continue` results in a non-zero exit code with the message `The previous cherry-pick is now empty, possibly due to conflict resolution.` Maybe we use this to then run `--skip`? Or maybe there is a way to parse the output of previous `git status` step?
-6. After all commits have been picked, manually check that everything brought over was supposed to be. Look out for any source code we do not want open sourced or things like unit tests which we are actively migrating separately (and will eventually include as part of the synchronization process)
+6. After all commits have been picked, manually check that everything brought over was supposed to be. Look out for any source code we do not want open-sourced or things like unit tests which we are actively migrating separately (and will eventually include as part of the synchronization process)
    - The GitHub PR UI is useful for this step; but make sure to leave the PR as a draft until all synchronization steps are complete
 7. Once everything looks good, run `npm run format:write` to ensure formatting is correct
 8. Commit the formatting changes
