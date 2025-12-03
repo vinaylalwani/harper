@@ -33,7 +33,7 @@
 		"build": "tsc --project tsconfig.build.json",
 		"build:watch": "npm run build -- --watch --incremental",
 		"lint": "eslint .",
-		"lint:required": "eslint --no-eslintrc -c .eslintrc.required.json .",
+		"lint:required": "eslint --no-config-lookup --quiet -c eslint.required.config.mjs .",
 		"format:check": "prettier --check .",
 		"format:write": "prettier --write .",
 		"test:integration": "node --test integrationTests/apiTests/tests/testSuite.mjs",
