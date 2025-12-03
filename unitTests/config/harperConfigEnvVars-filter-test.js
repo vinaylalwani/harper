@@ -231,11 +231,7 @@ describe('filterArgsAgainstRuntimeConfig', function () {
 
 			const result = filterArgsAgainstRuntimeConfig(args);
 
-			assert.strictEqual(
-				result.http_port,
-				'9926',
-				'Individual env vars should override HARPER_DEFAULT_CONFIG'
-			);
+			assert.strictEqual(result.http_port, '9926', 'Individual env vars should override HARPER_DEFAULT_CONFIG');
 			assert.strictEqual(result.rootpath, '/var/hdb');
 		});
 	});

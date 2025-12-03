@@ -465,10 +465,7 @@ function streamToBuffer(stream: Readable): Promise<Buffer> {
 		stream.on('data', (data) => {
 			size += data.length;
 			if (size > MAX_REQUEST_BODY_SIZE) {
-				const error = new ClientError(
-					`Request body too large, maximum size is ${MAX_REQUEST_BODY_SIZE} bytes`,
-					413
-				);
+				const error = new ClientError(`Request body too large, maximum size is ${MAX_REQUEST_BODY_SIZE} bytes`, 413);
 				buffers.length = 0; // free up memory
 				reject(error);
 				return;

@@ -10,7 +10,7 @@
 	},
 	"root": true,
 	"rules": {
-    "no-undef": "error",
+		"no-undef": "error",
 		"no-console": "off",
 		"no-constant-condition": "off",
 		"no-prototype-builtins": "off",
@@ -50,7 +50,5 @@
 		"server": "readonly",
 		"databases": "readonly"
 	},
-	"ignorePatterns": [
-		"unitTests/*"
-	]
+	"ignorePatterns": ["unitTests/*"]
 }

@@ -115,7 +115,10 @@ export function listMetricsOp(req: ListMetricsRequest): Promise<ListMetricsRespo
 	return listMetrics(req.metric_types, req.custom_metrics_window);
 }
 
-export async function listMetrics(metricTypes: MetricType[] = ['builtin'], customWindow: number = defaultCustomMetricWindow): Promise<string[]> {
+export async function listMetrics(
+	metricTypes: MetricType[] = ['builtin'],
+	customWindow: number = defaultCustomMetricWindow
+): Promise<string[]> {
 	let metrics: string[] = [];
 
 	const builtins: BuiltInMetricName[] = Object.values(METRIC);
@@ -126,11 +129,13 @@ export async function listMetrics(metricTypes: MetricType[] = ['builtin'], custo
 
 	if (metricTypes.includes('custom')) {
 		const oldestCustomId = Date.now() - customWindow;
-		const conditions: Conditions = [{
-			attribute: 'id',
-			comparator: 'greater_than',
-			value: oldestCustomId,
-		}];
+		const conditions: Conditions = [
+			{
+				attribute: 'id',
+				comparator: 'greater_than',
+				value: oldestCustomId,
+			},
+		];
 		const metricConditions = builtins.map((c) => {
 			return {
 				attribute: 'metric',

@@ -465,13 +465,13 @@ export async function installApplications() {
 			// Then do proper error-based validation with TypeScript `asserts` to provide type safety
 			// This will throw if the config is invalid
 			assertApplicationConfig(name, applicationConfig);
-	
+
 			const application = new Application({
 				name,
 				packageIdentifier: applicationConfig.package,
 				install: applicationConfig.install,
 			});
-	
+
 			// Lock check: only install if not already installed with matching configuration
 			if (
 				existsSync(application.dirPath) &&
@@ -481,9 +481,9 @@ export async function installApplications() {
 				logger.info(`Application ${name} is already installed with matching configuration; skipping installation`);
 				continue;
 			}
-	
+
 			applicationInstallationPromises.push(prepareApplication(application));
-	
+
 			harperApplicationLock.applications[name] = applicationConfig;
 		} catch (error) {
 			logger.error(`Skipping installation of application ${name} due to invalid configuration: ${error.message}`);
