@@ -11,6 +11,7 @@ const cliOperations = require('./cliOperations.js');
 const { packageJson, PACKAGE_ROOT } = require('../utility/packageUtils.js');
 const checkNode = require('../launchServiceScripts/utility/checkNodeVersion.js');
 const hdbTerms = require('../utility/hdbTerms.ts');
+const { HDB_COMPONENT_CONFIG_FILE } = require('../utility/hdbTerms');
 const { SERVICE_ACTIONS_ENUM } = hdbTerms;
 
 const HELP = `
@@ -119,6 +120,14 @@ async function harperdb() {
 				} else {
 					process.env.RUN_HDB_APP = appFolder;
 				}
+			} else if (fs.existsSync(hdbTerms.HDB_COMPONENT_CONFIG_FILE) || fs.existsSync('schema.graphql')) {
+				console.warn(
+					`It appears you are running Harper within an application folder, but did not specify the path. If you want to run this application, execute "harperdb ${service} ."`
+				);
+			} else if (fs.existsSync(hdbTerms.HDB_CONFIG_FILE)) {
+				console.warn(
+					`It appears you are running Harper within a root data folder, but did not specify the path. If you want to run Harper using this folder, execute "harperdb ${service} ."`
+				);
 			}
 		}
 		// fall through
