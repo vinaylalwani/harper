@@ -406,8 +406,9 @@ export class Resource implements ResourceInterface {
 		return new IterableEventQueue();
 	}
 
-	connect(incomingMessages: IterableEventQueue, query?: {}): AsyncIterable<any> {
+	connect(target: RequestTarget, incomingMessages: IterableEventQueue): AsyncIterable<any> {
 		// convert subscription to an (async) iterator
+		const query = this.constructor.loadAsInstance === false ? target : incomingMessages;
 		if (query?.subscribe !== false) {
 			// subscribing is the default action, but can be turned off
 			return this.subscribe?.(query);
@@ -619,7 +620,7 @@ function transactional(action, options) {
 				query = new RequestTarget();
 				query.id = id;
 				if (id == null) {
-					if (!hasContent) {
+					if (options.method === 'get') {
 						logger.warn?.(
 							`Using an argument with a value of ${id} for ${options.method}, is deprecated`,
 							new Error('Invalid id')

@@ -383,7 +383,9 @@ function getHTTPServer(port, secure, isOperationsServer, isMtls) {
 			function onError(error) {
 				const headers = error.headers;
 				const status = error.statusCode || 500;
-				nodeResponse.writeHead(status, headers && (headers[Symbol.iterator] ? Array.from(headers) : headers));
+				try {
+					nodeResponse.writeHead(status, headers && (headers[Symbol.iterator] ? Array.from(headers) : headers));
+				} catch {} // silently ignore errors writing headers, because they may have been set already
 				nodeResponse.end(errorToString(error));
 				logRequest(nodeRequest, status, requestId, performance.now() - startTime);
 				// a status code is interpreted as an expected error, so just info or warn, otherwise log as error

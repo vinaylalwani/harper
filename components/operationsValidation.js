@@ -239,6 +239,7 @@ function deployComponentValidator(req) {
 		restart: Joi.alternatives().try(Joi.boolean(), Joi.string().valid('rolling')).optional(),
 		install_command: Joi.string().optional(),
 		install_timeout: Joi.number().optional(),
+		force: Joi.boolean().optional(),
 	});
 
 	return validator.validateBySchema(req, deployProjSchema);

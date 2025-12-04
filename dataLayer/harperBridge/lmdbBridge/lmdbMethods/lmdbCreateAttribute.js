@@ -80,7 +80,7 @@ async function lmdbCreateAttribute(createAttributeObj) {
 		);
 		if (env.dbis[createAttributeObj.attribute] !== undefined) {
 			throw new Error(
-				`attribute '${create_attribute_obj.attribute}' already exists in ${createAttributeObj.schema}.${createAttributeObj.table}`
+				`attribute '${createAttributeObj.attribute}' already exists in ${createAttributeObj.schema}.${createAttributeObj.table}`
 			);
 		}
 		environmentUtility.createDBI(
@@ -97,7 +97,11 @@ async function lmdbCreateAttribute(createAttributeObj) {
 
 		let { written_hashes, skipped_hashes } = await writeUtility.insertRecords(
 			hdbAttributeEnv,
+			// I'm not sure what else to do with these for now, but I do want to eslint to check the rest of the codebase
+			// for undefined vars. - WSM 2025-11-26
+			// eslint-disable-next-line no-undef
 			HDB_TABLE_INFO.hash_attribute,
+			// eslint-disable-next-line no-undef
 			hdbAttributeAttributes,
 			[record]
 		);

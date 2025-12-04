@@ -47,11 +47,11 @@ const hdbTable = Joi.alternatives(
 ).required();
 
 function checkValidTable(propertyName, value) {
-	if (!value) return `'${property_name}' is required`;
-	if (typeof value !== 'string') return `'${property_name}' must be a string`;
-	if (!value.length) return `'${property_name}' must be at least one character`;
-	if (value.length > commonValidators.schema_length.maximum) return `'${property_name}' maximum of 250 characters`;
-	if (!schemaRegex.test(value)) return `'${property_name}' has illegal characters`;
+	if (!value) return `'${propertyName}' is required`;
+	if (typeof value !== 'string') return `'${propertyName}' must be a string`;
+	if (!value.length) return `'${propertyName}' must be at least one character`;
+	if (value.length > commonValidators.schema_length.maximum) return `'${propertyName}' maximum of 250 characters`;
+	if (!schemaRegex.test(value)) return `'${propertyName}' has illegal characters`;
 	return '';
 }
 
@@ -75,7 +75,7 @@ function validateTableExists(value, helpers) {
 function validateSchemaName(value, helpers) {
 	if (value.toLowerCase() === hdbTerms.SYSTEM_SCHEMA_NAME) {
 		return helpers.message(
-			`'subscriptions[${helpers.state.path[1]}]' invalid database name, '${hdb_terms.SYSTEM_SCHEMA_NAME}' name is reserved`
+			`'subscriptions[${helpers.state.path[1]}]' invalid database name, '${hdbTerms.SYSTEM_SCHEMA_NAME}' name is reserved`
 		);
 	}
 

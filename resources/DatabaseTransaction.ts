@@ -258,6 +258,7 @@ export class DatabaseTransaction implements Transaction {
 					}
 					// now reset transactions tracking; this transaction be reused and committed again
 					this.writes = [];
+					if (this.#context?.resourceCache) this.#context.resourceCache = null;
 					this.next = null;
 					this.timestamp = 0; // reset the timestamp as well
 					return Promise.all(completions).then(() => {
@@ -295,6 +296,7 @@ export class DatabaseTransaction implements Transaction {
 		this.open = TRANSACTION_STATE.CLOSED;
 		// reset the transaction
 		this.writes = [];
+		if (this.#context?.resourceCache) this.#context.resourceCache = null;
 	}
 	getContext() {
 		return this.#context;

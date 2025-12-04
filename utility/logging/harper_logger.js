@@ -478,7 +478,7 @@ function createLogger({
 	function logStdOut(log) {
 		if (log_to_file) {
 			if (logger.logToStdstreams) {
-				// eslint-disable-next-line no-control-regex,sonarjs/no-control-regex
+				// eslint-disable-next-line no-control-regex
 				logToFile(log.replace(/\x1b\[[0-9;]*m/g, '')); // remove color codes
 				loggingEnabled = false;
 				try {

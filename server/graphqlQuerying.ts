@@ -2,6 +2,7 @@ import * as graphql from 'graphql';
 import type { RequestParams } from 'graphql-http';
 import { getDeserializer } from './serverHelpers/contentTypes.ts';
 import { resources } from '../resources/Resources.ts';
+import logger from '../utility/logging/harper_logger.js';
 
 // This code makes heavy use of the word "node" to refer to a node in the GraphQL AST.
 
@@ -646,7 +647,6 @@ export function start(options) {
 
 						break;
 					}
-					// eslint-disable-next-line sonarjs/prefer-default-last, sonarjs/sonar-no-fallthrough
 					default:
 						logger.info(`Unsupported accept header, ${responseType}, defaulting to application/graphql-response+json`);
 					// eslint-disable-next-line no-fallthrough

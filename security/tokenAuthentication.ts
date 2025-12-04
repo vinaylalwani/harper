@@ -186,7 +186,7 @@ export async function validateRefreshToken(token: string): Promise<any> {
 	return validateToken(token, TOKEN_TYPE.REFRESH);
 }
 
-async function validateToken(token: string, tokenType: TOKEN_TYPE): Promise<any> {
+async function validateToken(token: string, tokenType: string): Promise<any> {
 	try {
 		const keys: JWTRSAKeys = await getJWTRSAKeys();
 		const tokenVerified: any = await jwt.verify(token, keys.publicKey, {
