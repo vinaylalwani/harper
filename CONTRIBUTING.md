@@ -21,6 +21,16 @@ Run unit tests using `npm run test:unit <unit-test-file>` or `npm run test:unit:
 
 > Unit tests currently use [Mocha](https://mochajs.org/) as the test runner, but since they are implemented in TypeScript and are sometimes executing TypeScript source code, it also uses [TSX](https://tsx.is/) for compilation and execution. The npm script `test:unit` sets the appropriate env vars and mocha configuration file. Make sure that the `TSX_TSCONFIG_PATH` environment variable points to the correct `tsconfig.json` file for the unit tests (i.e. `./unitTests/tsconfig.json`) and not the root-level `tsconfig.json`.
 
+## Code Formatting & Linting
+
+We currently use [prettier](https://prettier.io) and [eslint](https://eslint.org) to enforce code formatting and
+linting, respectively. While we do enforce conformity to prettier's ruleset in CI, we're taking an incremental approach
+with eslint. Rules that can be globally enforced are enabled in the `eslint.required.config.mjs` file, while the
+aspirational rules are in `eslint.config.mjs`. This is because when editing or linting new code locally, we want to
+adhere to the full ruleset in `eslint.config.mjs`. But in CI we only want to enforce those rules enabled in
+`eslint.required.config.mjs`. We will enable additional rules in `eslint.required.config.mjs` over time until there is
+one ruleset that is enforced everywhere. PRs that allow enabling additional eslint rules are welcome!
+
 ## Dependency Version Updates
 
 We use [Renovate](https://www.mend.io/renovate/) to automatically update dependencies on a regular schedule (with a cooldown period to help guard against supply chain attacks).
