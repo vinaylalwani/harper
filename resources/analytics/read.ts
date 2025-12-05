@@ -5,6 +5,9 @@ import { getAnalyticsHostnameTable } from './hostnames.ts';
 import type { Condition, Conditions } from '../ResourceInterface.ts';
 import { METRIC, type BuiltInMetricName } from './metadata.ts';
 
+// default to one week time window for finding custom metrics
+const defaultCustomMetricWindow = 1000 * 60 * 60 * 24 * 7;
+
 const log = forComponent('analytics').conditional;
 
 async function lookupHostname(nodeId: number): Promise<string> {
@@ -103,15 +106,19 @@ type MetricType = 'builtin' | 'custom';
 
 interface ListMetricsRequest {
 	metric_types: MetricType[];
+	custom_metrics_window?: number;
 }
 
 type ListMetricsResponse = string[];
 
 export function listMetricsOp(req: ListMetricsRequest): Promise<ListMetricsResponse> {
-	return listMetrics(req.metric_types);
+	return listMetrics(req.metric_types, req.custom_metrics_window);
 }
 
-export async function listMetrics(metricTypes: MetricType[] = ['builtin']): Promise<string[]> {
+export async function listMetrics(
+	metricTypes: MetricType[] = ['builtin'],
+	customWindow: number = defaultCustomMetricWindow
+): Promise<string[]> {
 	let metrics: string[] = [];
 
 	const builtins: BuiltInMetricName[] = Object.values(METRIC);
@@ -121,13 +128,22 @@ export async function listMetrics(metricTypes: MetricType[] = ['builtin']): Prom
 	}
 
 	if (metricTypes.includes('custom')) {
-		const conditions = builtins.map((c) => {
+		const oldestCustomId = Date.now() - customWindow;
+		const conditions: Conditions = [
+			{
+				attribute: 'id',
+				comparator: 'greater_than',
+				value: oldestCustomId,
+			},
+		];
+		const metricConditions = builtins.map((c) => {
 			return {
 				attribute: 'metric',
 				comparator: 'not_equal',
 				value: c,
-			};
+			} as Condition;
 		});
+		conditions.push(...metricConditions);
 		const customMetricsSearch = {
 			select: ['metric'],
 			conditions: conditions,

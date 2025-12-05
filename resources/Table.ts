@@ -1609,7 +1609,7 @@ export function makeTable(options) {
 					this.#changes = undefined; // once we are committing to write this update, we no longer should track the changes, and want to avoid double application (of any CRDTs)
 					this.#version = txnTime;
 					const existingRecord = existingEntry?.value;
-					let incrementalUpdateToApply: bool;
+					let incrementalUpdateToApply: boolean;
 
 					this.#saveMode = 0;
 					let omitLocalRecord = false;

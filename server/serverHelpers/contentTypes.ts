@@ -458,9 +458,20 @@ export function hasAsyncSerialization() {
 }
 
 function streamToBuffer(stream: Readable): Promise<Buffer> {
+	const MAX_REQUEST_BODY_SIZE = envMgr.get(CONFIG_PARAMS.HTTP_MAXREQUESTBODYSIZE) ?? 10_000_000;
 	return new Promise((resolve, reject) => {
 		const buffers = [];
-		stream.on('data', (data) => buffers.push(data));
+		let size = 0;
+		stream.on('data', (data) => {
+			size += data.length;
+			if (size > MAX_REQUEST_BODY_SIZE) {
+				const error = new ClientError(`Request body too large, maximum size is ${MAX_REQUEST_BODY_SIZE} bytes`, 413);
+				buffers.length = 0; // free up memory
+				reject(error);
+				return;
+			}
+			buffers.push(data);
+		});
 		stream.on('end', () => resolve(Buffer.concat(buffers)));
 		stream.on('error', reject);
 	});
@@ -493,7 +504,7 @@ const BUFFER_ENCODINGS = [
 	'binary',
 	'hex',
 ];
-function isBufferEncoding(value: string): value is BufferEncoding {
+function isBufferEncoding(value: string): value is NodeJS.BufferEncoding {
 	return BUFFER_ENCODINGS.includes(value);
 }
 
@@ -565,8 +576,7 @@ function deserializerUnknownType(contentType: ContentType): Deserialize {
 				try {
 					// if the first byte is `{` then it is likely JSON
 					if (data?.[0] === 123) return JSONParse(data);
-					// eslint-disable-next-line sonarjs/no-ignored-exceptions
-				} catch (error) {
+				} catch {
 					// continue if cannot parse as JSON
 				}
 			}

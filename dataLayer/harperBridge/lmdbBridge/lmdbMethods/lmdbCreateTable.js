@@ -13,7 +13,7 @@ const createTxnEnvironments = require('../lmdbUtility/lmdbCreateTransactionsAudi
 module.exports = lmdbCreateTable;
 
 /**
- * Writes new table data to the system tables creates the enivronment file and creates two datastores to track created and updated
+ * Writes new table data to the system tables creates the environment file and creates two datastores to track created and updated
  * timestamps for new table data.
  * @param tableSystemData
  * @param tableCreateObj
@@ -55,9 +55,16 @@ async function lmdbCreateTable(tableSystemData, tableCreateObj) {
 			);
 
 			//add the meta data to system.hdb_table
-			await writeUtility.insertRecords(hdbTableEnv, HDB_TABLE_INFO.hash_attribute, hdbTableAttributes, [
-				tableSystemData,
-			]);
+			await writeUtility.insertRecords(
+				hdbTableEnv,
+				// I'm not sure what else to do with these for now, but I do want to eslint to check the rest of the codebase
+				// for undefined vars. - WSM 2025-11-26
+				// eslint-disable-next-line no-undef
+				HDB_TABLE_INFO.hash_attribute,
+				// eslint-disable-next-line no-undef
+				hdbTableAttributes,
+				[tableSystemData]
+			);
 			//create attributes for hash attribute created/updated time stamps
 			createdTimeAttr.skip_table_check = true;
 			updatedTimeAttr.skip_table_check = true;

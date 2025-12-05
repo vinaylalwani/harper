@@ -15,11 +15,28 @@ Install dependencies using `npm install`
 
 Build the project using `npm run build` or `npm run build:watch` to automatically rebuild on file changes.
 
-Run integration tests using `npm run test:integration`. Make sure to read the [integration test instructions](./integrationTests/apiTests/README.md) for setup.
+Run integration tests using `npm run test:integration`. Make sure to read the [integration test instructions](./integrationTests/README.md) for setup requirements (particularly the loopback address configuration).
 
 Run unit tests using `npm run test:unit <unit-test-file>` or `npm run test:unit:all`, but make sure to build the project first since unit tests depend on the built source files.
 
 > Unit tests currently use [Mocha](https://mochajs.org/) as the test runner, but since they are implemented in TypeScript and are sometimes executing TypeScript source code, it also uses [TSX](https://tsx.is/) for compilation and execution. The npm script `test:unit` sets the appropriate env vars and mocha configuration file. Make sure that the `TSX_TSCONFIG_PATH` environment variable points to the correct `tsconfig.json` file for the unit tests (i.e. `./unitTests/tsconfig.json`) and not the root-level `tsconfig.json`.
+
+## Code Formatting & Linting
+
+We currently use [prettier](https://prettier.io) and [eslint](https://eslint.org) to enforce code formatting and
+linting, respectively. While we do enforce conformity to prettier's ruleset in CI, we're taking an incremental approach
+with eslint. Rules that can be globally enforced are enabled in the `eslint.required.config.mjs` file, while the
+aspirational rules are in `eslint.config.mjs`. This is because when editing or linting new code locally, we want to
+adhere to the full ruleset in `eslint.config.mjs`. But in CI we only want to enforce those rules enabled in
+`eslint.required.config.mjs`. We will enable additional rules in `eslint.required.config.mjs` over time until there is
+one ruleset that is enforced everywhere. PRs that allow enabling additional eslint rules are welcome!
+
+## Dependency Version Updates
+
+We use [Renovate](https://www.mend.io/renovate/) to automatically update dependencies on a regular schedule (with a cooldown period to help guard against supply chain attacks).
+This is configured in the `renovate.json` file in the project root. Renovate will open pull requests when it detects available updates and
+Harper staff will review these and merge them on a case-by-case basis. But contributors should feel free to comment on any pull requests
+they have feedback on. But in general, manually opening PRs to update dependencies is not necessary thanks to this automation.
 
 ## Repository Structure
 
@@ -49,9 +66,9 @@ These are the steps @Ethan-Arrowood has been following to synchronize the reposi
    - The start-commit will be excluded so always include the last commit from `old/main` that was synchronized previously.
    - The hash for that commit is recorded at the end of this section and should be updated after each synchronization
 5. Go through commits one-by-one, from the top to the bottom of the `commits-to-pick.txt` file, following these steps:
-   1. If `git rev-parse $(commit)^2 &>/dev/null 2>&1` exits with 0 then its a merge commit
+   1. If `git rev-parse $(commit)^2 &>/dev/null 2>&1` exits with 0 then it's a merge commit
       1. Execute `git cherry-pick -m 1 $(commit)`
-   2. Else its a regular commit
+   2. Else it's a regular commit
       1. Execute `git cherry-pick $(commit)`
    3. If either cherry-pick command results in a non-zero exit code that means there is a merge conflict
       1. If the conflict is a content, resolve it manually and `git add` the file
@@ -60,7 +77,7 @@ These are the steps @Ethan-Arrowood has been following to synchronize the reposi
          - Example: `CONFLICT (modify/delete): unitTests/bin/copyDB-test.js deleted in HEAD and modified in f75d9170b`
       3. Then check `git status`, if there is nothing you can `git cherry-pick --skip`
          - Note: in this circumstance, running `git cherry-pick --continue` results in a non-zero exit code with the message `The previous cherry-pick is now empty, possibly due to conflict resolution.` Maybe we use this to then run `--skip`? Or maybe there is a way to parse the output of previous `git status` step?
-6. After all commits have been picked, manually check that everything brought over was supposed to be. Look out for any source code we do not want open sourced or things like unit tests which we are actively migrating separately (and will eventually include as part of the synchronization process)
+6. After all commits have been picked, manually check that everything brought over was supposed to be. Look out for any source code we do not want open-sourced or things like unit tests which we are actively migrating separately (and will eventually include as part of the synchronization process)
    - The GitHub PR UI is useful for this step; but make sure to leave the PR as a draft until all synchronization steps are complete
 7. Once everything looks good, run `npm run format:write` to ensure formatting is correct
 8. Commit the formatting changes
@@ -70,7 +87,7 @@ These are the steps @Ethan-Arrowood has been following to synchronize the reposi
 12. Push all changes and open the PR for review
 13. Merge using a Merge Commit so that all relative history is retained and things like the formatting change hash stays the same as recorded.
 
-Last Synchronized Commit: `2030325c105abede4c324511d92d8f0c6357877b`
+Last Synchronized Commit: `5edb685e036c88941cba58f8294dea0888137596`
 
 ## Code of Conduct
 

@@ -75,7 +75,7 @@ export function loadComponentDirectories(loadedPluginModules?: Map<any, any>, lo
 	});
 }
 
-const TRUSTED_RESOURCE_PLUGINS = {
+export const TRUSTED_RESOURCE_PLUGINS = {
 	REST, // for backwards compatibility with older configs
 	rest: REST,
 	graphql: graphqlQueryHandler,
@@ -246,7 +246,6 @@ export async function loadComponent(
 		if (existsSync(configPath)) {
 			config = isRoot ? getConfigObj() : parseDocument(readFileSync(configPath, 'utf8')).toJSON();
 			// if not found, look for the generic config.yaml, the config filename we have historically used, but only if not the root
-			// eslint-disable-next-line sonarjs/no-nested-assignment
 		} else if (!isRoot && existsSync((configPath = join(componentDirectory, 'config.yaml')))) {
 			config = parseDocument(readFileSync(configPath, 'utf8')).toJSON();
 		} else {

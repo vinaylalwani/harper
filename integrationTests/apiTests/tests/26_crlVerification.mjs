@@ -47,13 +47,16 @@ describe('26. CRL Certificate Verification Tests', () => {
 	const certsPath = join(crlUtilsPath, 'generated');
 	let certificatesGenerated = false;
 
+	// Get random path to avoid conflicts with any test components
+	const testPath = `/ocsp-test-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
 	before(async function () {
 		// Check if HTTPS is available on both endpoints
 		try {
 			// Check operations endpoint (used for certificate management)
 			await secureReq().send({ operation: 'describe_all' }).timeout(2000);
 			// Check REST endpoint (used for certificate verification tests)
-			await secureReqRest('/').timeout(2000);
+			await secureReqRest(testPath).timeout(2000);
 		} catch (error) {
 			if (error.code === 'ECONNREFUSED' || error.message.includes('ECONNREFUSED')) {
 				httpsAvailable = false;
@@ -101,8 +104,24 @@ operationsApi:
 				},
 			});
 
-			// Using Harper's CA certificate for CRL testing
-			console.log("Using Harper's CA certificate for CRL testing");
+			// Read the generated CA certificate
+			const testCA = readFileSync(join(certsPath, 'harper-ca.crt'), 'utf8');
+
+			// Add our test CA to Harper's certificate store
+			const addCAResponse = await req().send({
+				operation: 'add_certificate',
+				name: 'crl-test-ca',
+				certificate: testCA,
+				is_authority: true,
+				uses: ['client_authentication'],
+			});
+
+			if (addCAResponse.status !== 200) {
+				// CA might already exist, which is fine
+				console.log('Note: Test CA may already exist in Harper');
+			} else {
+				console.log('Test CA added to Harper successfully');
+			}
 
 			// Create users for certificate CNs
 			console.log('Creating users for certificate authentication...');
@@ -170,8 +189,18 @@ operationsApi:
 			crlServer.kill();
 		}
 
-		// Note: We don't remove Harper's CA since we're using Harper's own CA certificate
+		// Remove test CA from Harper
 		if (certificatesGenerated) {
+			try {
+				await req().send({
+					operation: 'remove_certificate',
+					name: 'crl-test-ca',
+				});
+				console.log('Test CA removed from Harper');
+			} catch (error) {
+				console.log('Note: Failed to remove test CA:', error.message);
+			}
+
 			// Remove test users
 			try {
 				await req().send({
@@ -216,7 +245,7 @@ operationsApi:
 		const ca = readFileSync(join(certsPath, 'harper-ca.crt'));
 
 		try {
-			const response = await secureReqRest('/', {
+			const response = await secureReqRest(testPath, {
 				cert: cert,
 				key: key,
 				ca: ca,
@@ -250,7 +279,7 @@ operationsApi:
 		let rejected = false;
 		let response;
 		try {
-			response = await secureReqRest('/', {
+			response = await secureReqRest(testPath, {
 				cert: cert,
 				key: key,
 				ca: ca,
@@ -320,14 +349,14 @@ operationsApi:
 		const ca = readFileSync(join(certsPath, 'harper-ca.crt'));
 
 		// Make two requests in quick succession - second should use cache
-		const response1 = await secureReqRest('/', {
+		const response1 = await secureReqRest(testPath, {
 			cert: cert,
 			key: key,
 			ca: ca,
 			rejectUnauthorized: false,
 		});
 
-		const response2 = await secureReqRest('/', {
+		const response2 = await secureReqRest(testPath, {
 			cert: cert,
 			key: key,
 			ca: ca,

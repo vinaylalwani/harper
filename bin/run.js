@@ -96,7 +96,13 @@ async function initialize(calledByInstall = false, calledByMain = false) {
 	// we do not need to update/backup the config file on run.
 	if (!calledByInstall) {
 		// If run is called with cmd/env vars we create a backup of config and update config file.
-		const parsedArgs = assignCMDENVVariables(Object.keys(terms.CONFIG_PARAM_MAP), true);
+		let parsedArgs = assignCMDENVVariables(Object.keys(terms.CONFIG_PARAM_MAP), true);
+
+		// If HARPER_SET_CONFIG is present, filter out any config keys that are set in it
+		// to prevent individual env vars from overriding explicit runtime configuration
+		const { filterArgsAgainstRuntimeConfig } = require('../config/harperConfigEnvVars.ts');
+		parsedArgs = filterArgsAgainstRuntimeConfig(parsedArgs);
+
 		if (!hdbUtils.isEmpty(parsedArgs) && !hdbUtils.isEmptyOrZeroLength(Object.keys(parsedArgs))) {
 			configUtils.updateConfigValue(undefined, undefined, parsedArgs, true, true);
 		}

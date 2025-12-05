@@ -92,7 +92,7 @@ async function dropAttributeFromSystem(dropAttributeObj) {
 	);
 	if (commonUtils.isEmptyOrZeroLength(attribute)) {
 		throw new Error(
-			`Attribute '${drop_attribute_obj.attribute}' was not found in '${drop_attribute_obj.schema}.${drop_attribute_obj.table}'`
+			`Attribute '${dropAttributeObj.attribute}' was not found in '${dropAttributeObj.schema}.${dropAttributeObj.table}'`
 		);
 	}
 

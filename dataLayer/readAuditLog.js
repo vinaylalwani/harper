@@ -52,7 +52,7 @@ async function readAuditLog(readAuditLogObject) {
 	}
 
 	if (!hdbUtils.isEmpty(readAuditLogObject.search_type) && SEARCH_TYPES.indexOf(readAuditLogObject.search_type) < 0) {
-		throw new Error(`Invalid searchType '${read_audit_log_object.search_type}'`);
+		throw new Error(`Invalid searchType '${readAuditLogObject.search_type}'`);
 	}
 
 	return await harperBridge.readAuditLog(readAuditLogObject);

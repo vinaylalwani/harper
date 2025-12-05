@@ -16,8 +16,8 @@ import * as pkijs from 'pkijs';
 import { webcrypto, X509Certificate } from 'node:crypto';
 
 // Ed25519/Ed448 OIDs (these are standardized object identifiers, not IP addresses)
-const ED25519_OID = '1.3.101.112' as const; // eslint-disable-line sonarjs/no-hardcoded-ip
-const ED448_OID = '1.3.101.113' as const; // eslint-disable-line sonarjs/no-hardcoded-ip
+const ED25519_OID = '1.3.101.112' as const;
+const ED448_OID = '1.3.101.113' as const;
 type EdDSAOID = typeof ED25519_OID | typeof ED448_OID;
 
 // Algorithm names as constants
@@ -129,8 +129,7 @@ export function applyEd25519Patch(): void {
 				const nodeIssuer = new X509Certificate(Buffer.from(issuerDer));
 
 				return nodeCert.verify(nodeIssuer.publicKey);
-				// eslint-disable-next-line sonarjs/no-ignored-exceptions
-			} catch (error) {
+			} catch {
 				// Any failure in verification should return false
 				return false;
 			}
@@ -175,8 +174,7 @@ export function applyEd25519Patch(): void {
 
 					// Verify the signature
 					return await cryptoSubtle.verify(algorithmName, publicKey, signatureValue, data);
-					// eslint-disable-next-line sonarjs/no-ignored-exceptions
-				} catch (error) {
+				} catch {
 					// Any failure in verification should return false
 					return false;
 				}
