@@ -592,8 +592,8 @@ export function makeTable(options) {
 		 */
 		static getResource(id: Id, request: Context, resourceOptions?: any): Promise<TableResource> | TableResource {
 			const resource: TableResource = super.getResource(id, request, resourceOptions) as any;
-			if (this.loadAsInstance === false) request._freezeRecords = true;
-			if (id != null && this.loadAsInstance !== false) {
+			if (!this.loadAsInstance) request._freezeRecords = true;
+			if (id != null && this.loadAsInstance) {
 				checkValidId(id);
 				try {
 					if (resource.getRecord?.()) return resource; // already loaded, don't reload, current version may have modifications
@@ -970,7 +970,7 @@ export function makeTable(options) {
 		 */
 		get(target?: RequestTarget): Promise<object | void> {
 			const constructor: Resource = this.constructor;
-			if (typeof target === 'string' && constructor.loadAsInstance !== false) return this.getProperty(target);
+			if (typeof target === 'string' && constructor.loadAsInstance) return this.getProperty(target);
 			if (isSearchTarget(target)) return this.search(target);
 			if (target && target.id === undefined && !target.toString()) {
 				const description = {
@@ -992,7 +992,7 @@ export function makeTable(options) {
 				}
 				return description;
 			}
-			if (target !== undefined && constructor.loadAsInstance === false) {
+			if (target !== undefined && !constructor.loadAsInstance) {
 				const context = this.getContext();
 				const txn = txnForContext(context);
 				const readTxn = txn.getReadTxn();
@@ -1714,7 +1714,7 @@ export function makeTable(options) {
 					let recordToStore: any;
 					if (fullUpdate && !incrementalUpdateToApply) recordToStore = recordUpdate;
 					else {
-						if (this.constructor.loadAsInstance === false)
+						if (!this.constructor.loadAsInstance)
 							recordToStore = updateAndFreeze(existingRecord, incrementalUpdateToApply ?? recordUpdate);
 						else {
 							this.#record = existingRecord;
@@ -3126,7 +3126,7 @@ export function makeTable(options) {
 										});
 										if (value?.then) hasPromises = true;
 										// for now, we shouldn't be getting promises until rocksdb
-										if (TableResource.loadAsInstance === false) Object.freeze(returnEntry ? value?.value : value);
+										if (!TableResource.loadAsInstance) Object.freeze(returnEntry ? value?.value : value);
 										return value;
 									});
 									return relationship.filterMissing
@@ -3141,7 +3141,7 @@ export function makeTable(options) {
 									transaction: txnForContext(context).getReadTxn(),
 								});
 								// for now, we shouldn't be getting promises until rocksdb
-								if (TableResource.loadAsInstance === false) Object.freeze(returnEntry ? value?.value : value);
+								if (!TableResource.loadAsInstance) Object.freeze(returnEntry ? value?.value : value);
 								return value;
 							};
 							attribute.set = (object, related) => {
