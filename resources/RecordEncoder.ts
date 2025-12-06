@@ -539,8 +539,8 @@ export function recordUpdater(store, tableId, auditStore) {
 }
 export function removeEntry(store: any, entry: any, existingVersion?: number) {
 	if (!entry) return;
-	if (entry.value && entry.metadataFlags & HAS_BLOBS && !store.auditStore?.getBinaryFast(entry.localTime)) {
-		// if it used to have blobs, and it doesn't exist in the audit store, we need to delete the old blobs
+	if (entry.value && entry.metadataFlags & HAS_BLOBS) {
+		// if it used to have blobs, we need to delete the old blobs
 		deleteBlobsInObject(entry.value);
 	}
 	return store.remove(entry.key, existingVersion);
