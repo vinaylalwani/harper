@@ -27,6 +27,7 @@ import * as OpenDBIObjectModule from '../utility/lmdb/OpenDBIObject.js';
 import { RocksDatabase, Store as RocksStore, type RocksDatabaseOptions } from '@harperdb/rocksdb-js';
 import { replayLogs } from './replayLogs.ts';
 import { totalmem } from 'node:os';
+import { RocksIndexStore } from './RocksIndexStore.ts';
 
 function OpenDBIObject(dupSort, isPrimary) {
 	// what is going on with esbuild, it suddenly is randomly flip-flopping the module record for OpenDBIObject, sometimes return the correct exports object and sometimes returning the exports as the `default`.
@@ -168,14 +169,18 @@ function openRocksDatabase(path: string, options?: RocksDatabaseOptions) {
 	if (!options) options = {};
 	options.disableWAL ??= true;
 	const availableMemory = process.constrainedMemory?.() || totalmem();
-	options.blockCacheSize = availableMemory * 0.25;
-	const db = RocksDatabase.open(path, options) as RocksRootDatabase;
-	db.env = {};
-	db.getEntry = (id, options) => {
-		return {
-			value: db.getSync(id, options),
+	RocksDatabase.config({ blockCacheSize: availableMemory * 0.25 });
+	let db = RocksDatabase.open(path, options) as RocksRootDatabase;
+	if (options.dupSort) {
+		db = new RocksIndexStore(db, options);
+	} else {
+		db.env = {};
+		db.getEntry = (id, options) => {
+			return {
+				value: db.getSync(id, options),
+			};
 		};
-	};
+	}
 	return db;
 }
 

@@ -1773,7 +1773,7 @@ export function makeTable(options) {
 							}
 						})()
 					);
-					updateIndices(id, existingRecord, recordToStore);
+					updateIndices(id, existingRecord, recordToStore, { transaction });
 
 					writeCommit(true);
 					if (context.expiresAt) scheduleCleanup();
@@ -3342,7 +3342,7 @@ export function makeTable(options) {
 	if (expirationMs) TableResource.setTTLExpiration(expirationMs / 1000);
 	if (expiresAtProperty) runRecordExpirationEviction();
 	return TableResource;
-	function updateIndices(id, existingRecord, record?) {
+	function updateIndices(id: any, existingRecord: any, record: any, options: any) {
 		let hasChanges;
 		// iterate the entries from the record
 		// for-in is about 5x as fast as for-of Object.entries, and this is extremely time sensitive since it can be
@@ -3389,7 +3389,7 @@ export function makeTable(options) {
 				}
 				//if the update cleared out the attribute value we need to delete it from the index
 				for (let i = 0, l = valuesToRemove.length; i < l; i++) {
-					index.remove(valuesToRemove[i], id);
+					index.remove(valuesToRemove[i], id, options);
 				}
 			} else if (valuesToAdd?.length > 0 && LMDB_PREFETCH_WRITES) {
 				// no old values, just new
@@ -3400,7 +3400,7 @@ export function makeTable(options) {
 			}
 			if (valuesToAdd) {
 				for (let i = 0, l = valuesToAdd.length; i < l; i++) {
-					index.put(valuesToAdd[i], id);
+					index.put(valuesToAdd[i], id, options);
 				}
 			}
 		}
