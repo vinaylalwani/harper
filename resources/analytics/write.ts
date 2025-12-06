@@ -322,18 +322,35 @@ function storeDBSizeMetrics(analyticsTable: Table, databases: Databases) {
 			if (!dbAuditSize) {
 				return;
 			}
-			const dbTotalSize = fs.statSync(firstTable.primaryStore.env.path).size;
-			const dbUsedSize = storeTableSizeMetrics(analyticsTable, db, tables);
-			const dbFree = dbTotalSize - dbUsedSize;
-			const metric = {
-				metric: METRIC.DATABASE_SIZE,
-				database: db,
-				size: dbTotalSize,
-				used: dbUsedSize,
-				free: dbFree,
-				audit: dbAuditSize,
-			};
-			storeMetric(analyticsTable, metric);
+			if (firstTable.primaryStore instanceof RocksDatabase) {
+				const dbPath = firstTable.primaryStore.store.path;
+				let dbSize = 0;
+				for (const filename of fs.readdirSync(dbPath)) {
+					if (filename.endsWith('.sst')) {
+						dbSize += fs.statSync(join(dbPath, filename)).size;
+					}
+				}
+				const metric = {
+					metric: METRIC.DATABASE_SIZE,
+					database: db,
+					size: dbSize,
+					transactionLog: dbAuditSize,
+				};
+				storeMetric(analyticsTable, metric);
+			} else {
+				const dbTotalSize = fs.statSync(firstTable.primaryStore.env.path).size;
+				const dbUsedSize = storeTableSizeMetrics(analyticsTable, db, tables);
+				const dbFree = dbTotalSize - dbUsedSize;
+				const metric = {
+					metric: METRIC.DATABASE_SIZE,
+					database: db,
+					size: dbTotalSize,
+					used: dbUsedSize,
+					free: dbFree,
+					audit: dbAuditSize,
+				};
+				storeMetric(analyticsTable, metric);
+			}
 			log.trace?.(`database ${db} size metric: ${JSON.stringify(metric)}`);
 		} catch (error) {
 			// a table or db was deleted, could get an error here

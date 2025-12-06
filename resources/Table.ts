@@ -2981,7 +2981,7 @@ export function makeTable(options) {
 			const stats = primaryStore.getStats();
 			return (stats.treeBranchPageCount + stats.treeLeafPageCount + stats.overflowPages) * stats.pageSize;
 		}
-		static getAuditSize() {
+		static getAuditSize(): number {
 			const stats = auditStore?.getStats();
 			return (
 				stats &&
