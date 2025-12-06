@@ -1785,7 +1785,7 @@ export function makeTable(options) {
 							storeRecord ? existingEntry : { ...existingEntry, value: undefined },
 							txnTime,
 							omitLocalRecord ? INVALIDATED : 0,
-							audit,
+							options?.replay ? false : audit,
 							{
 								omitLocalRecord,
 								user: context?.user,
@@ -1794,7 +1794,7 @@ export function makeTable(options) {
 								transaction,
 								nodeId: options?.nodeId,
 								originatingOperation: context?.originatingOperation,
-								tableToTrack: databaseName === 'system' ? null : tableName, // don't track analytics on system tables
+								tableToTrack: databaseName === 'system' ? null : options?.replay ? null : tableName, // don't track analytics on system tables
 							},
 							type,
 							false,

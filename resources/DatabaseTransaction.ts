@@ -142,7 +142,7 @@ export class DatabaseTransaction implements Transaction {
 			throw new Error('Can not use a transaction that is no longer open');
 		}
 		if (!this.transaction) {
-			this.transaction = new RocksTransaction(this.store as RocksStore);
+			this.transaction = new RocksTransaction(this.store.store as RocksStore);
 		}
 		let txnTime = this.timestamp;
 		if (!txnTime) txnTime = this.timestamp = getNextMonotonicTime();

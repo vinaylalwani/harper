@@ -1,10 +1,12 @@
-import { RocksDatabase, TransactionLogReader } from '@harperdb/rocksdb-js';
+import { RocksDatabase, Transaction } from '@harperdb/rocksdb-js';
 import { readAuditEntry } from './auditStore.ts';
 import { tables } from './databases.ts';
 import { Resource } from './Resource.ts';
+import type { Context } from './ResourceInterface.ts';
 import { recordUpdater } from './RecordEncoder.ts';
 import * as logger from '../utility/logging/harper_logger.js';
 import { INVALIDATED } from './Table.ts';
+import { DatabaseTransaction } from './DatabaseTransaction.ts';
 
 export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void> {
 	return new Promise((resolve, reject) => {
@@ -21,41 +23,63 @@ export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void>
 			// replay each log
 			try {
 				const log = rootStore.useLog(logName);
+				let transaction: DatabaseTransaction;
+				let lastTimestamp = 0;
 				for (const { timestamp, data } of log.query({ start: 0, readUncommitted: true })) {
 					try {
 						const auditEntry = readAuditEntry(data);
 						const { type, tableId, nodeId, recordId, version, residencyId, expiresAt, originatingOperation, user } =
 							auditEntry;
-						const table = tableById.get(tableId);
-						const context = { nodeId, alreadyLogged: true, version };
-						const { primaryStore, auditStore } = table;
+						const Table = tableById.get(tableId);
+						const context: Context = { nodeId, alreadyLogged: true, version, expiresAt, user };
+						const { primaryStore, auditStore } = Table;
+						const tableInstance = Table.getResource(null, context, {});
 						const record = auditEntry.getValue(primaryStore);
-						const update = recordUpdater(primaryStore, tableId, auditStore);
-						primaryStore.transactionSync((transaction) => {
-							const options = { transaction, context, residencyId, expiresAt, originatingOperation };
-
-							switch (type) {
-								case 'put':
-								case 'patch':
-								case 'delete':
-									update(recordId, record, null, version, 0, false, options);
-									break;
-								case 'invalidate':
-									update(recordId, record, null, version, INVALIDATED, false, options);
-									break;
-								case 'structures':
-									primaryStore.putSync(
-										Symbol.for('structures'),
-										asBinary(auditEntry.getBinaryValue(primaryStore)),
-										options
-									);
+						if (lastTimestamp !== timestamp) {
+							lastTimestamp = timestamp;
+							try {
+								transaction?.transaction?.commitSync();
+							} catch (error) {
+								logger.error('Error committing replay transaction', error);
 							}
-						});
+							transaction = new DatabaseTransaction();
+							transaction.store = primaryStore;
+							transaction.timestamp = timestamp;
+						}
+						context.transaction = transaction;
+						const options = { context, residencyId, nodeId, originatingOperation, replay: true };
+
+						switch (type) {
+							case 'put':
+								tableInstance._writeUpdate(recordId, record, true, options);
+								break;
+							case 'patch':
+								tableInstance._writeUpdate(recordId, record, false, options);
+								break;
+							case 'delete':
+								tableInstance._writeDelete(recordId, options);
+								break;
+							case 'invalidate':
+								tableInstance._writeInvalidate(recordId, record, options);
+								break;
+							case 'structures': {
+								const rocksTransaction = new Transaction(primaryStore.store);
+								primaryStore.putSync(Symbol.for('structures'), asBinary(auditEntry.getBinaryValue(primaryStore)), {
+									transaction: rocksTransaction,
+								});
+								rocksTransaction.commitSync();
+							}
+						}
 					} catch (err) {
 						logger.error(`Error writing from replay of log ${logName}`, err, {
 							timestamp,
 						});
 					}
+				}
+				try {
+					transaction?.transaction?.commitSync();
+				} catch (error) {
+					logger.error('Error committing replay transaction', error);
 				}
 			} catch (err) {
 				logger.error(`Error reading replay from log ${logName}`, err);

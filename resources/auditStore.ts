@@ -452,7 +452,8 @@ export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined) {
 			tableId,
 			nodeId,
 			get recordId() {
-				return readKey(buffer, recordIdStart, recordIdEnd);
+				// use a subarray to protect against the underlying buffer being modified
+				return readKey(buffer.subarray(0, recordIdEnd), recordIdStart, recordIdEnd);
 			},
 			getBinaryRecordId() {
 				return buffer.subarray(recordIdStart, recordIdEnd);
