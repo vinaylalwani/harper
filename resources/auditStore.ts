@@ -445,7 +445,9 @@ export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined) {
 			version,
 			previousLocalTime,
 			get user() {
-				return usernameEnd > usernameStart ? readKey(buffer, usernameStart, usernameEnd) : undefined;
+				return usernameEnd > usernameStart
+					? readKey(buffer.subarray(0, usernameEnd), usernameStart, usernameEnd)
+					: undefined;
 			},
 			get encoded() {
 				return start ? buffer.subarray(start, end) : buffer;
