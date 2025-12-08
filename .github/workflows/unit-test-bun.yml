@@ -25,7 +25,7 @@ jobs:
         run: bun run build || true # we currently have type errors so just ignore that
 
       - name: Run tests (CJS)
-        run: bun run test:unit:all
+        run: bun --bun run test:unit:all
 
       - name: Run tests (TypeStrip)
-        run: bun run test:unit:typestrip:all
+        run: bun --bun run test:unit:typestrip:all
