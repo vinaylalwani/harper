@@ -570,7 +570,7 @@ describe('5. NoSQL Role Testing', () => {
 		const myHeaders = createHeaders('bad_username', testData.password);
 		return reqAsNonSU(myHeaders)
 			.send({ operation: 'create_schema', schema: 'auth' })
-			.expect((r) => assert.ok(r.text.includes('Login failed')))
+			.expect((r) => assert.ok(r.text.includes('Login failed'), r.text))
 			.expect(401);
 	});
 
@@ -578,7 +578,7 @@ describe('5. NoSQL Role Testing', () => {
 		const myHeaders = createHeaders(testData.username, 'bad_password');
 		return reqAsNonSU(myHeaders)
 			.send({ operation: 'create_schema', schema: 'auth' })
-			.expect((r) => assert.ok(r.text.includes('Login failed')))
+			.expect((r) => assert.ok(r.text.includes('Login failed'), r.text))
 			.expect(401);
 	});
 
@@ -1434,7 +1434,8 @@ describe('5. NoSQL Role Testing', () => {
 			.expect((r) =>
 				assert.equal(
 					r.body.error,
-					"Internal timestamp attributes - '__createdtime_' and '__updatedtime__' - cannot be inserted to or updated by HDB users."
+					"Internal timestamp attributes - '__createdtime_' and '__updatedtime__' - cannot be inserted to or updated by HDB users.",
+					r.text
 				)
 			)
 			.expect(403);
@@ -1674,7 +1675,8 @@ describe('5. NoSQL Role Testing', () => {
 			.expect((r) =>
 				assert.equal(
 					r.body.error,
-					"Invalid hash value: 'null' is not a valid hash attribute value, check log for more info"
+					"Invalid hash value: 'null' is not a valid hash attribute value, check log for more info",
+					r.text
 				)
 			)
 			.expect(400);
