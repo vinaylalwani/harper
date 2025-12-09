@@ -95,6 +95,14 @@ async function install() {
 	// Check to see if any cmd/env vars are passed that override install prompts.
 	const promptOverride = checkForPromptOverride();
 	Object.assign(promptOverride, configFromFile);
+	if (
+		promptOverride[hdbTerms.INSTALL_PROMPTS.REPLICATION_HOSTNAME] &&
+		!promptOverride[hdbTerms.INSTALL_PROMPTS.NODE_HOSTNAME]
+	) {
+		promptOverride[hdbTerms.INSTALL_PROMPTS.NODE_HOSTNAME] =
+			promptOverride[hdbTerms.INSTALL_PROMPTS.REPLICATION_HOSTNAME];
+	}
+
 	// For backwards compatibility for a time before DEFAULTS_MODE (and host name) assume prod when these args used
 	if (
 		promptOverride[hdbTerms.INSTALL_PROMPTS.ROOTPATH] &&

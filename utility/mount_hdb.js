@@ -8,6 +8,7 @@ const bridge = require('../dataLayer/harperBridge/harperBridge.js');
 const systemSchema = require('../json/systemSchema.json');
 const initPaths = require('../dataLayer/harperBridge/lmdbBridge/lmdbUtility/initializePaths.js');
 const { NON_REPLICATING_SYSTEM_TABLES } = require('../resources/databases.ts');
+const { PACKAGE_ROOT } = require('../utility/packageUtils');
 
 module.exports = mountHdb;
 
@@ -20,7 +21,7 @@ async function mountHdb(hdbPath) {
 	makeDirectory(path.join(hdbPath, 'log'));
 	makeDirectory(path.join(hdbPath, 'database'));
 	makeDirectory(path.join(hdbPath, 'components'));
-	copySync(path.resolve(__dirname, '../../static/README.md'), path.join(hdbPath, 'README.md'));
+	copySync(path.join(PACKAGE_ROOT, 'static/README.md'), path.join(hdbPath, 'README.md'));
 
 	await createTables();
 }
