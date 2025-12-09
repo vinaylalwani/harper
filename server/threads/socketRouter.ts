@@ -51,7 +51,7 @@ export async function startHTTPThreads(threadCount = 2, dynamicThreads?: boolean
 		for (let i = 0; i < threadCount; i++) {
 			startHTTPWorker(i, threadCount);
 		}
-		return Promise.all(workersReady);
+		await Promise.all(workersReady);
 	} finally {
 		threadsHaveStarted();
 	}
