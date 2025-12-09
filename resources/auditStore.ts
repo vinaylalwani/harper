@@ -103,7 +103,7 @@ export function openAuditStore(rootStore) {
 	let lastCleanupResolution: Promise<void>;
 	let cleanupPriority = 0;
 	let auditCleanupDelay = DEFAULT_AUDIT_CLEANUP_DELAY;
-	onStorageReclamation(auditStore.path, (priority) => {
+	onStorageReclamation(rootStore.path, (priority) => {
 		cleanupPriority = priority; // update the priority
 		if (priority) {
 			// and if we have a priority, schedule cleanup soon
