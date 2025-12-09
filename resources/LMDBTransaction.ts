@@ -57,12 +57,8 @@ export class LMDBTransaction extends DatabaseTransaction {
 		}
 		if (this.open !== TRANSACTION_STATE.OPEN) return; // can not start a new read transaction as there is no future commit that will take place, just have to allow the read to latest database state
 
-		if (this.db instanceof RocksDatabase) {
-			this.readTxn = new RocksTransaction(this.db.store);
-		} else {
-			// Get a read transaction from lmdb-js; make sure we do this first, as it can fail, we don't want to leave the transaction in a bad state with readTxnsUsed > 0
-			this.readTxn = this.db.useReadTransaction();
-		}
+		// Get a read transaction from lmdb-js; make sure we do this first, as it can fail, we don't want to leave the transaction in a bad state with readTxnsUsed > 0
+		this.readTxn = this.db.useReadTransaction();
 
 		this.readTxnsUsed = 1;
 		if (this.readTxn.openTimer) this.readTxn.openTimer = 0;
@@ -197,20 +193,13 @@ export class LMDBTransaction extends DatabaseTransaction {
 			const write = this.writes[writeIndex++];
 			if (write) {
 				if (write.key) {
-					if (write.store instanceof RocksDatabase) {
-						if (retries > 0 || !write.entry) {
-							write.entry = write.store.getEntry(write.key);
-						}
-						nextCondition();
-					} else {
-						if (retries > 0 || !write.entry) {
-							// if the first optimistic attempt failed, we need to try again with the very latest version
-							write.entry = write.store.getEntry(write.key);
-						}
-
-						const conditionResolution = write.store.ifVersion(write.key, write.entry?.version ?? null, nextCondition);
-						resolution = resolution || conditionResolution;
+					if (retries > 0 || !write.entry) {
+						// if the first optimistic attempt failed, we need to try again with the very latest version
+						write.entry = write.store.getEntry(write.key);
 					}
+
+					const conditionResolution = write.store.ifVersion(write.key, write.entry?.version ?? null, nextCondition);
+					resolution = resolution || conditionResolution;
 				} else {
 					nextCondition();
 				}
@@ -341,7 +330,7 @@ function startMonitoringTxns() {
 				const url = txn.getContext()?.url;
 				harperLogger.error(
 					`Transaction was open too long and has been aborted, from table: ${
-						txn.store?.name + (url ? ' path: ' + url : '')
+						txn.db?.name + (url ? ' path: ' + url : '')
 					}`
 				);
 				txn.abort();

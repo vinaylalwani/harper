@@ -20,7 +20,7 @@ import * as harperLogger from '../utility/logging/harper_logger.js';
 import './blob.ts';
 import { blobsWereEncoded, decodeFromDatabase, deleteBlobsInObject, encodeBlobsWithFilePath } from './blob.ts';
 import { recordAction } from './analytics/write.ts';
-import { RocksDatabase } from '@harperdb/rocksdb-js';
+import { RocksDatabase, Transaction as RocksTransaction } from '@harperdb/rocksdb-js';
 export type Entry = {
 	key: any;
 	value: any;
@@ -147,11 +147,28 @@ export class RecordEncoder extends Encoder {
 				return lastValueEncoding;
 			}
 		};
-		const superSaveStructures = this.saveStructures;
-		this.saveStructures = function (structures, isCompatible) {
-			const result = superSaveStructures.call(this, structures, isCompatible);
-			this.structureUpdate = structures;
-			return result;
+		this.saveStructures = function (structures, isCompatible): boolean | undefined {
+			return this.rootStore.transactionSync((txn) => {
+				if (options.name?.startsWith?.('hdb_node'))
+					harperLogger.warn('Saving structures', structures, JSON.stringify(structures.get?.('named')), result);
+				const sharedStructuresKey = [Symbol.for('structures'), this.name];
+				const existingStructuresBuffer = txn.getBinarySync(sharedStructuresKey);
+				const existingStructures = existingStructuresBuffer ? this(existingStructuresBuffer) : undefined;
+				if (typeof isCompatible == 'function') {
+					if (!isCompatible(existingStructures)) {
+						return false;
+					}
+				} else if (existingStructures && existingStructures.length !== isCompatible) {
+					return false;
+				}
+				txn.putSync(sharedStructuresKey, structures);
+				this.structureUpdate = structures;
+			});
+		};
+		this.getStructures = function (): any {
+			const sharedStructuresKey = [Symbol.for('structures'), this.name];
+			const buffer = this.rootStore.getBinarySync(sharedStructuresKey);
+			return buffer ? this.decode(buffer) : undefined;
 		};
 	}
 	decode(buffer, options) {
@@ -299,6 +316,7 @@ export function handleLocalTimeForGets(store, rootStore) {
 			if (lastMetadata) {
 				entry.metadataFlags = lastMetadata[METADATA];
 				entry.localTime = lastMetadata.localTime;
+				if (isRocksDb) entry.version = lastMetadata.localTime;
 				entry.residencyId = lastMetadata.residencyId;
 				if (lastMetadata.expiresAt >= 0) entry.expiresAt = lastMetadata.expiresAt;
 				lastMetadata = null;
@@ -451,28 +469,7 @@ export function recordUpdater(store, tableId, auditStore) {
 				}
 				if (store.encoder?.structureUpdate) {
 					extendedType |= HAS_STRUCTURE_UPDATE;
-					const preserveLastValueEncoding = Buffer.from(lastValueEncoding); // copy the last value encoding because it will get destroyed in the encode call
-					// if rocksdb?
-					auditStore.put(
-						null,
-						createAuditEntry(
-							newVersion,
-							tableId,
-							Symbol.for('structures'),
-							0,
-							options?.nodeId ?? server.replication.getThisNodeId(auditStore) ?? 0,
-							username,
-							'structures',
-							store.encoder.encode(store.encoder.structureUpdate),
-							HAS_STRUCTURE_UPDATE,
-							0,
-							0,
-							0
-						),
-						{ transaction: options.transaction }
-					);
 					store.encoder.structureUpdate = null;
-					lastValueEncoding = preserveLastValueEncoding;
 				}
 				if (resolveRecord && existingEntry?.localTime) {
 					const replacingId = existingEntry?.localTime;

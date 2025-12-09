@@ -57,7 +57,7 @@ export type TransactionWrite = {
 export class DatabaseTransaction implements Transaction {
 	#context: Context;
 	writes: TransactionWrite[] = []; // the set of writes to commit if the conditions are met
-	store: RootDatabaseKind;
+	db: RootDatabaseKind;
 	transaction: RocksTransaction;
 	readTxn: ReadTransaction;
 	readTxnRefCount: number;
@@ -93,7 +93,7 @@ export class DatabaseTransaction implements Transaction {
 		}
 		if (this.open !== TRANSACTION_STATE.OPEN) return; // can not start a new read transaction as there is no future commit that will take place, just have to allow the read to latest database state
 
-		this.transaction = new RocksTransaction(this.store.store);
+		this.transaction = new RocksTransaction(this.db.store);
 
 		this.readTxnsUsed = 1;
 		if (DEBUG_LONG_TXNS) {
@@ -142,7 +142,7 @@ export class DatabaseTransaction implements Transaction {
 			throw new Error('Can not use a transaction that is no longer open');
 		}
 		if (!this.transaction) {
-			this.transaction = new RocksTransaction(this.store.store as RocksStore);
+			this.transaction = new RocksTransaction(this.db.store as RocksStore);
 		}
 		let txnTime = this.timestamp;
 		if (!txnTime) txnTime = this.timestamp = getNextMonotonicTime();
@@ -170,6 +170,7 @@ export class DatabaseTransaction implements Transaction {
 						null;
 		} else {
 			// no more reads need to be performed, just commit/abort based if there are any writes
+			trackedTxns.delete(this);
 			commitResolution = this.writes.length > 0 ? this.transaction?.commit() : this.transaction?.abort();
 		}
 
@@ -287,7 +288,7 @@ function startMonitoringTxns() {
 				const url = txn.getContext()?.url;
 				harperLogger.error(
 					`Transaction was open too long and has been committed, from table: ${
-						txn.store?.name + (url ? ' path: ' + url : '')
+						txn.db?.name + (url ? ' path: ' + url : '')
 					}`,
 					...(txn.startedFrom ? [`was started from ${txn.startedFrom.resourceName}.${txn.startedFrom.method}`] : []),
 					...(DEBUG_LONG_TXNS ? ['starting stack trace', txn.stackTraces] : [])

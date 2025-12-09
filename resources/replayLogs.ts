@@ -1,11 +1,8 @@
-import { RocksDatabase, Transaction } from '@harperdb/rocksdb-js';
+import { RocksDatabase, Transaction as RocksTransaction } from '@harperdb/rocksdb-js';
 import { readAuditEntry } from './auditStore.ts';
-import { tables } from './databases.ts';
 import { Resource } from './Resource.ts';
 import type { Context } from './ResourceInterface.ts';
-import { recordUpdater } from './RecordEncoder.ts';
 import * as logger from '../utility/logging/harper_logger.js';
-import { INVALIDATED } from './Table.ts';
 import { DatabaseTransaction } from './DatabaseTransaction.ts';
 
 export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void> {
@@ -34,6 +31,8 @@ export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void>
 						const context: Context = { nodeId, alreadyLogged: true, version, expiresAt, user };
 						const { primaryStore, auditStore } = Table;
 						const tableInstance = Table.getResource(null, context, {});
+						// TODO: If this throws an error due to being unable to access structures, we need to iterate through
+						// other transaction logs to get the latest structure. Ultimately we may have to skip records
 						const record = auditEntry.getValue(primaryStore);
 						if (lastTimestamp !== timestamp) {
 							lastTimestamp = timestamp;
@@ -43,7 +42,7 @@ export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void>
 								logger.error('Error committing replay transaction', error);
 							}
 							transaction = new DatabaseTransaction();
-							transaction.store = primaryStore;
+							transaction.db = primaryStore;
 							transaction.timestamp = timestamp;
 						}
 						context.transaction = transaction;
@@ -63,11 +62,39 @@ export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void>
 								tableInstance._writeInvalidate(recordId, record, options);
 								break;
 							case 'structures': {
-								const rocksTransaction = new Transaction(primaryStore.store);
-								primaryStore.putSync(Symbol.for('structures'), asBinary(auditEntry.getBinaryValue(primaryStore)), {
+								const rocksTransaction = new RocksTransaction(primaryStore.store);
+								const structuresAsBinary = auditEntry.getBinaryValue(primaryStore);
+								const updatedStructures = structuresAsBinary
+									? primaryStore.decoder.decode(structuresAsBinary)
+									: undefined;
+								const existingStructures = primaryStore.getSync(Symbol.for('structures'), {
+									transaction: rocksTransaction,
+								});
+								if (existingStructures) {
+									if (existingStructures instanceof Array) {
+										if (updatedStructures.length < existingStructures.length) {
+											logger.warn(
+												`Found ${existingStructures.length} structures in audit store, but ${updatedStructures.length} in replay log. Using ${updatedStructures.length} structures.`
+											);
+										}
+									} else {
+										if (existingStructures.get('named').length > updatedStructures.get('named').length) {
+											logger.warn(
+												`Found named ${existingStructures.length} structures in audit store, but ${updatedStructures.length} in replay log. Using named ${updatedStructures.length} structures.`
+											);
+										}
+										if (existingStructures.get('typed').length > updatedStructures.get('typed').length) {
+											logger.warn(
+												`Found named ${existingStructures.length} structures in audit store, but ${updatedStructures.length} in replay log. Using named ${updatedStructures.length} structures.`
+											);
+										}
+									}
+								}
+								primaryStore.putSync(Symbol.for('structures'), asBinary(structuresAsBinary), {
 									transaction: rocksTransaction,
 								});
 								rocksTransaction.commitSync();
+								primaryStore.decoder.structure = updatedStructures;
 							}
 						}
 					} catch (err) {
@@ -85,6 +112,7 @@ export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void>
 				logger.error(`Error reading replay from log ${logName}`, err);
 			}
 		});
+		console.log('Replay complete');
 		// we never actually release the lock because we only want to ever run one time
 		// rootStore.unlock('replayLogs');
 	});

@@ -165,8 +165,7 @@ class HarperStore extends RocksStore {
 	}
 }
 
-function openRocksDatabase(path: string, options?: RocksDatabaseOptions) {
-	if (!options) options = {};
+function openRocksDatabase(path: string, options: RocksDatabaseOptions) {
 	options.disableWAL ??= true;
 	const availableMemory = process.constrainedMemory?.() || totalmem();
 	RocksDatabase.config({ blockCacheSize: availableMemory * 0.25 });
@@ -398,7 +397,7 @@ export function readMetaDb(
 function readRocksMetaDb(path: string, defaultTable?: string, databaseName: string = DEFAULT_DATABASE_NAME) {
 	try {
 		logger.trace(`loading rocksdb database: ${path}`);
-		const rootStore = openRocksDatabase(path);
+		const rootStore = openRocksDatabase(path, { disableWAL: false });
 		databaseEnvs.set(path, rootStore);
 		rocksdbDatabaseEnvs.set(path, rootStore);
 		initStores(path, rootStore, databaseName, defaultTable);

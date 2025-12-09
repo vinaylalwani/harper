@@ -3649,21 +3649,21 @@ export function makeTable(options) {
 	function txnForContext(context: Context) {
 		let transaction = context?.transaction;
 		if (transaction) {
-			if (!transaction.store) {
+			if (!transaction.db && primaryStore instanceof RocksDatabase) {
 				// this is an uninitialized DatabaseTransaction, we can claim it
-				transaction.store = primaryStore;
+				transaction.db = primaryStore;
 				return transaction;
 			}
 			do {
 				// See if this is a transaction for our database and if so, use it
-				if (transaction.store?.path === primaryStore.path) return transaction;
+				if (transaction.db?.path === primaryStore.path) return transaction;
 				// try the next one:
 				const nextTxn = transaction.next;
 				if (!nextTxn) {
 					// no next one, then add our database
 					transaction = transaction.next =
 						primaryStore instanceof RocksDatabase ? new DatabaseTransaction() : new LMDBTransaction();
-					transaction.store = primaryStore;
+					transaction.db = primaryStore;
 					return transaction;
 				}
 				transaction = nextTxn;
