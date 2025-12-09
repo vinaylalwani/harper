@@ -1,7 +1,10 @@
 import { type TransactionLog, RocksDatabase } from '@harperdb/rocksdb-js';
+import logger from '../utility/logging/harper_logger.js';
+
 export class RocksAuditStore {
 	log: TransactionLog;
 	nodeLogs?: TransactionLog[]; // whatever the type of the read logger
+	logByName: Map<string, TransactionLog> = new Map();
 	rootStore: RocksDatabase;
 	reusableIterable = true; // flag indicating that iterable can be reused to resume iterating through audit log
 	constructor(rootDatabase: RocksDatabase) {
@@ -50,8 +53,9 @@ export class RocksAuditStore {
 	loadLogs() {
 		this.nodeLogs ??= [];
 		for (const logName of this.rootStore.listLogs()) {
-			const nodeId = server.replication.exportIdMapping()?.[logName] ?? 0;
+			const nodeId = (server.replication.exportIdMapping(this)?.[logName] ?? 0) as number;
 			this.nodeLogs[nodeId] ??= this.rootStore.useLog(logName);
+			this.logByName.set(logName, this.nodeLogs[nodeId]);
 		}
 		return this.nodeLogs;
 	}
@@ -62,9 +66,15 @@ export class RocksAuditStore {
 	 */
 	getRange(options: { start?: number; end?: number; log?: string; onlyKeys: boolean } = {}): Iterable<any> {
 		if (options.log) {
-			const matchName = (readLog) => readLog.name === options.log;
-			const log = this.nodeLogs.find(matchName) || this.loadLogs().find(matchName);
-			return log?.query(options);
+			let log = this.logByName.get(options.log);
+			if (!log) {
+				this.loadLogs();
+				log = this.logByName.get(options.log);
+				if (!log) {
+					log = this.rootStore.useLog(options.log);
+				}
+			}
+			return log.query(options);
 		}
 		const onlyKeys = options.onlyKeys;
 		const iterators = (this.nodeLogs || this.loadLogs()).map((log) => log.query(options)[Symbol.iterator]());
@@ -104,9 +114,6 @@ export class RocksAuditStore {
 			[Symbol.iterator]() {
 				return aggregateIterator;
 			},
-			[Symbol.asyncIterator]() {
-				return aggregateIterator;
-			},
 		};
 	}
 	getKeys(options) {
@@ -118,7 +125,7 @@ export class RocksAuditStore {
 		let totalSize = 0;
 		const logs = [];
 		for (const log of this.loadLogs()) {
-			const size = log.getLogFileSize() as number;
+			const size = log.getLogFileSize();
 			totalSize += size;
 			logs.push({ name: log.name, size });
 		}
@@ -126,5 +133,13 @@ export class RocksAuditStore {
 			logs,
 			totalSize,
 		};
+	}
+
+	getUserSharedBuffer(
+		key: string | symbol,
+		defaultBuffer: ArrayBuffer,
+		options?: { callback?: (listener: any) => void }
+	) {
+		return this.rootStore.getUserSharedBuffer(key, defaultBuffer, options);
 	}
 }
