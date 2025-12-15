@@ -611,7 +611,7 @@ export function makeTable(options) {
 					return loadLocalRecord(
 						id,
 						request,
-						{ transaction: readTxn, ensureLoaded: resourceOptions?.ensureLoaded },
+						{ transaction: readTxn, ensureLoaded: resourceOptions?.ensureLoaded, type: resourceOptions?.type },
 						sync,
 						(entry) => {
 							if (entry) {
@@ -3466,7 +3466,7 @@ export function makeTable(options) {
 
 			// skip recording reads for most system tables except hdb_analytics
 			// we want to track analytics reads in licensing, etc.
-			if (databaseName !== 'system' || tableName === 'hdb_analytics') {
+			if (databaseName !== 'system' && (options.type === 'read' || !options.type)) {
 				harperLogger.trace?.('Recording db-read action for', `${databaseName}.${tableName}`);
 				recordAction(entry?.size ?? 1, 'db-read', tableName, null);
 			}

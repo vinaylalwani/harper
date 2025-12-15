@@ -6,6 +6,7 @@ import { INVALIDATED, EVICTED } from './Table.ts';
 import type { DirectCondition, Id } from './ResourceInterface.ts';
 import { RequestTarget } from './RequestTarget.ts';
 import { lastMetadata } from './RecordEncoder.ts';
+import { recordAction } from './analytics/write';
 // these are ratios/percentages of overall table size
 const OPEN_RANGE_ESTIMATE = 0.3;
 const BETWEEN_ESTIMATE = 0.1;
@@ -338,6 +339,7 @@ export function searchByIndex(
 				: (entry) => {
 						if (entry.value == null && !(entry.metadataFlags & (INVALIDATED | EVICTED))) return SKIP;
 						if (context?._freezeRecords) Object.freeze(entry.value);
+						recordRead(entry);
 						return entry;
 					}
 		);
@@ -350,6 +352,7 @@ export function searchByIndex(
 				if (typeof entry === 'object' && entry) {
 					const { key, ...otherProps } = entry;
 					const loadedEntry = Table.primaryStore.getEntry(key);
+					recordRead(loadedEntry);
 					if (context?._freezeRecords) Object.freeze(loadedEntry?.value);
 					return { ...otherProps, ...loadedEntry };
 				}
@@ -382,13 +385,18 @@ export function searchByIndex(
 	} else {
 		return Table.primaryStore
 			.getRange(reverse ? { end: true, transaction, reverse: true } : { start: true, transaction })
-			.map(function ({ key, value }) {
-				if (this.isSync) return value && filter(value) ? key : SKIP;
+			.map(function (entry) {
+				const { key, value } = entry;
+				if (this.isSync) {
+					recordRead(entry);
+					return value && filter(value) ? key : SKIP;
+				}
 				// for filter operations, we intentionally yield the event turn so that scanning queries
 				// do not hog resources
 				return new Promise((resolve, reject) =>
 					setImmediate(() => {
 						try {
+							recordRead(entry);
 							resolve(value && filter(value) ? key : SKIP);
 						} catch (error) {
 							reject(error);
@@ -396,6 +404,11 @@ export function searchByIndex(
 					})
 				);
 			});
+	}
+	function recordRead(entry) {
+		if ((Table.databaseName !== 'system' || Table.name === 'hdb_analytics') && entry?.value) {
+			recordAction(entry.size ?? 1, 'db-read', Table.name, null);
+		}
 	}
 }
 
