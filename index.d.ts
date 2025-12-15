@@ -1,7 +1,14 @@
 export { Resource } from './resources/Resource';
 import { Resource as ResourceImport } from './resources/Resource.ts';
-export { ResourceInterface, Query, Context, SubscriptionRequest } from './resources/ResourceInterface.ts';
-export { User } from './security/user.ts';
+export type {
+	ResourceInterface,
+	Query,
+	Context,
+	SubscriptionRequest,
+	RequestTargetOrId,
+} from './resources/ResourceInterface.ts';
+export type { User } from './security/user.ts';
+export type { RecordObject } from './resources/RecordEncoder.ts';
 export { RequestTarget } from './resources/RequestTarget.ts';
 export { server } from './server/Server';
 import { server as serverImport } from './server/Server.ts';

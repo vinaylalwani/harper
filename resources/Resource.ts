@@ -1,4 +1,15 @@
-import type { ResourceInterface, SubscriptionRequest, Id, Context, Query, SourceContext } from './ResourceInterface.ts';
+import { User } from '../security/user.js';
+import type { RecordObject } from './RecordEncoder.js';
+import {
+	ResourceInterface,
+	SubscriptionRequest,
+	Id,
+	Context,
+	Query,
+	SourceContext,
+	RequestTargetOrId,
+	UpdatableRecord,
+} from './ResourceInterface.ts';
 import { randomUUID } from 'crypto';
 import { DatabaseTransaction, type Transaction } from './DatabaseTransaction.ts';
 import { IterableEventQueue } from './IterableEventQueue.ts';
@@ -31,7 +42,7 @@ const EXTENSION_TYPES = {
  * internal actions are wrapped in a transaction. The base Resource class intended to be extended, and the instance
  * methods can be overriden to provide specific implementations of actions like get, put, post, delete, and subscribe.
  */
-export class Resource implements ResourceInterface {
+export class Resource<Record extends object = any> implements ResourceInterface<Record> {
 	readonly #id: Id;
 	readonly #context: Context;
 	#isCollection: boolean;
@@ -76,7 +87,7 @@ export class Resource implements ResourceInterface {
 			method: 'get',
 		}
 	);
-	get?(query?): Promise<any>;
+
 	/**
 	 * Store the provided record by the provided id. If no id is provided, it is auto-generated.
 	 */
@@ -277,7 +288,10 @@ export class Resource implements ResourceInterface {
 		{ hasContent: true, type: 'delete', method: 'move' }
 	);
 
-	async post(target: RequestTarget, newRecord: any) {
+	async post(
+		target: RequestTargetOrId,
+		newRecord: Partial<Record & RecordObject>
+	): Promise<void | (Record & Partial<RecordObject>)> {
 		if (this.constructor.loadAsInstance === false) {
 			if (target.isCollection && this.create) {
 				newRecord = await this.create(target, newRecord);
@@ -397,7 +411,7 @@ export class Resource implements ResourceInterface {
 	 * @param query
 	 * @param options
 	 */
-	subscribe(options?: {}): AsyncIterable<{ id: any; operation: string; value: object }> {
+	subscribe(request: SubscriptionRequest): AsyncIterable<{ id: any; operation: string; value: object }> {
 		return new IterableEventQueue();
 	}
 
@@ -412,16 +426,16 @@ export class Resource implements ResourceInterface {
 	}
 
 	// Default permissions (super user only accesss):
-	allowRead(user: any, target: RequestTarget): boolean {
+	allowRead(user: User, target: RequestTarget, context: Context): boolean | Promise<boolean> {
 		return user?.role.permission.super_user;
 	}
-	allowUpdate(user, updatedData: any, target: RequestTarget): boolean {
+	allowUpdate(user: User, record: Promise<Record & RecordObject>, context: Context): boolean | Promise<boolean> {
 		return user?.role.permission.super_user;
 	}
-	allowCreate(user, newData: any, target: RequestTarget): boolean {
+	allowCreate(user: User, record: Promise<Record & RecordObject>, context: Context): boolean | Promise<boolean> {
 		return user?.role.permission.super_user;
 	}
-	allowDelete(user, target: RequestTarget): boolean {
+	allowDelete(user: User, target: RequestTarget, context: Context): boolean | Promise<boolean> {
 		return user?.role.permission.super_user;
 	}
 	/**
@@ -438,6 +452,31 @@ export class Resource implements ResourceInterface {
 	getContext(): Context | SourceContext {
 		return this.#context;
 	}
+
+	get?(
+		target?: RequestTargetOrId
+	):
+		| (Record & Partial<RecordObject>)
+		| Promise<Record & Partial<RecordObject>>
+		| AsyncIterable<Record & Partial<RecordObject>>
+		| Promise<AsyncIterable<Record & Partial<RecordObject>>>;
+
+	search?(target: RequestTargetOrId): AsyncIterable<Record & Partial<RecordObject>>;
+
+	create?(
+		target: RequestTargetOrId,
+		newRecord: Partial<Record & RecordObject>
+	): Promise<void | (Record & Partial<RecordObject>)>;
+	put?(target: RequestTargetOrId, record: Record & RecordObject): void | (Record & Partial<RecordObject>) | Promise<void | (Record & Partial<RecordObject>)>;
+	patch?(
+		target: RequestTargetOrId,
+		record: Partial<Record & RecordObject>
+	): void | (Record & Partial<RecordObject>) | Promise<void | (Record & Partial<RecordObject>)>;
+
+	delete?(target: RequestTargetOrId): boolean | Promise<boolean>;
+	invalidate?(target: RequestTargetOrId): void | Promise<void>;
+
+	publish?(target: RequestTargetOrId, record: Record): void;
 }
 
 _assignPackageExport('Resource', Resource);

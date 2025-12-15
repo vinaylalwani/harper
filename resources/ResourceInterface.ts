@@ -5,26 +5,45 @@ import { IterableEventQueue } from './IterableEventQueue.js';
 import type { Entry, RecordObject } from './RecordEncoder.ts';
 import { RequestTarget } from './RequestTarget.ts';
 
-export interface ResourceInterface<Record extends object = any> extends RecordObject, Pick<UpdatableRecord<Record>, 'addTo' | 'subtractFrom'> {
-	new(identifier: Id, source: any);
+export interface ResourceInterface<Record extends object = any>
+	extends RecordObject,
+		Pick<UpdatableRecord<Record>, 'addTo' | 'subtractFrom'> {
+	new (identifier: Id, source: any);
 
-	allowRead(user: User, target: RequestTarget): boolean | Promise<boolean>;
-	get?(id: Id): Promise<Record & RecordObject>;
-	get?(query: RequestTargetOrId): Promise<AsyncIterable<Record & RecordObject>>;
-	search?(query: RequestTarget): AsyncIterable<Record & RecordObject>;
+	allowRead(user: User, target: RequestTarget, context: Context): boolean | Promise<boolean>;
+	get?(
+		target?: RequestTargetOrId
+	):
+		| (Record & Partial<RecordObject>)
+		| Promise<Record & Partial<RecordObject>>
+		| AsyncIterable<Record & Partial<RecordObject>>
+		| Promise<AsyncIterable<Record & Partial<RecordObject>>>;
+	search?(target: RequestTarget): AsyncIterable<Record & Partial<RecordObject>>;
 
-	allowCreate(user: User, record: Record & RecordObject, target: RequestTarget): boolean | Promise<boolean>;
-	create?(target: RequestTargetOrId, record: Partial<Record & RecordObject>): void;
-	post?(target: RequestTargetOrId, record: Partial<Record & RecordObject>): void;
+	allowCreate(user: User, record: Promise<Record & RecordObject>, context: Context): boolean | Promise<boolean>;
+	create?(target: RequestTargetOrId, newRecord: Partial<Record & RecordObject>): void;
+	post?(
+		target: RequestTargetOrId,
+		newRecord: Partial<Record & RecordObject>
+	): void | (Record & Partial<RecordObject>) | Promise<void | (Record & Partial<RecordObject>)>;
 
-	allowUpdate(user: User, record: Record & RecordObject, target: RequestTarget): boolean | Promise<boolean>;
-	put?(target: RequestTargetOrId, record: Record & RecordObject): void;
-	patch?(target: RequestTargetOrId, record: Partial<Record & RecordObject>): void;
-	update?(updates: Record & RecordObject, fullUpdate: true): ResourceInterface<Record & RecordObject>;
-	update?(updates: Partial<Record & RecordObject>, fullUpdate?: boolean): ResourceInterface<Record & RecordObject> | Promise<ResourceInterface<Record & RecordObject> | UpdatableRecord<Record & RecordObject>>;
+	allowUpdate(user: User, record: Promise<Record & RecordObject>, context: Context): boolean | Promise<boolean>;
+	put?(target: RequestTargetOrId, record: Record & RecordObject): void | (Record & Partial<RecordObject>) | Promise<void | (Record & Partial<RecordObject>)>;
+	patch?(
+		target: RequestTargetOrId,
+		record: Partial<Record & RecordObject>
+	): void | (Record & Partial<RecordObject>) | Promise<void | (Record & Partial<RecordObject>)>;
+	update?(updates: Record & RecordObject, fullUpdate: true): ResourceInterface<Record & Partial<RecordObject>>;
+	update?(
+		updates: Partial<Record & RecordObject>,
+		fullUpdate?: boolean
+	):
+		| ResourceInterface<Record & Partial<RecordObject>>
+		| Promise<ResourceInterface<Record & Partial<RecordObject>> | UpdatableRecord<Record & Partial<RecordObject>>>;
 
-	allowDelete(user: User, target: RequestTarget): boolean | Promise<boolean>;
-	delete?(target: RequestTargetOrId): boolean;
+	allowDelete(user: User, target: RequestTarget, context: Context): boolean | Promise<boolean>;
+	delete?(target: RequestTargetOrId): boolean | Promise<boolean>;
+
 	invalidate(target: RequestTargetOrId): void | Promise<void>;
 
 	publish?(target: RequestTargetOrId, record: Record): void;
