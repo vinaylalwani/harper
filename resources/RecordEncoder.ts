@@ -7,7 +7,6 @@
 
 import { Encoder } from 'msgpackr';
 import {
-	readAuditEntry,
 	HAS_PREVIOUS_RESIDENCY_ID,
 	HAS_CURRENT_RESIDENCY_ID,
 	HAS_EXPIRATION_EXTENDED_TYPE,
@@ -390,6 +389,7 @@ export function handleLocalTimeForGets(store, rootStore) {
 				if (isRocksDB) entry.version = lastMetadata.localTime;
 				entry.residencyId = lastMetadata.residencyId;
 				entry.nodeId = lastMetadata.nodeId;
+				entry.size = lastMetadata.size;
 				if (lastMetadata.expiresAt >= 0) entry.expiresAt = lastMetadata.expiresAt;
 				lastMetadata = null;
 			}

@@ -586,9 +586,9 @@ export function makeTable(options) {
 		/**
 		 * Gets a resource instance, as defined by the Resource class, adding the table-specific handling
 		 * of also loading the stored record into the resource instance.
-		 * @param id
+		 * @param target
 		 * @param request
-		 * @param options An important option is ensureLoaded, which can be used to indicate that it is necessary for a caching table to load data from the source if there is not a local copy of the data in the table (usually not necessary for a delete, for example).
+		 * @param resourceOptions An important option is ensureLoaded, which can be used to indicate that it is necessary for a caching table to load data from the source if there is not a local copy of the data in the table (usually not necessary for a delete, for example).
 		 * @returns
 		 */
 		static getResource<Record extends object = any>(
@@ -3571,7 +3571,7 @@ export function makeTable(options) {
 		function withLocalEntry(entry) {
 			// skip recording reads for most system tables except hdb_analytics
 			// we want to track analytics reads in licensing, etc.
-			if (databaseName !== 'system' || tableName === 'hdb_analytics') {
+			if (databaseName !== 'system' && (options.type === 'read' || !options.type)) {
 				harperLogger.trace?.('Recording db-read action for', `${databaseName}.${tableName}`);
 				recordAction(entry?.size ?? 1, 'db-read', tableName, null);
 			}
