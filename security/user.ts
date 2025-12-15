@@ -1,4 +1,7 @@
 import { readFileSync } from 'node:fs';
+import { hdbErrors } from '../utility/errors/hdbError.js';
+
+const { AUTHENTICATION_ERROR_MSGS, HDB_ERROR_MSGS, HTTP_STATUS_CODES } = hdbErrors;
 
 const USERNAME_REQUIRED = 'username is required';
 const ALTERUSER_NOTHING_TO_UPDATE = 'nothing to update, must supply active, role or password to update';
