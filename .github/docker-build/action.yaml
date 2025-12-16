@@ -66,8 +66,8 @@ inputs:
     description: 'which version of node do we want for our container. defaults to 22'
     required: false
     default: '22'
-  latestNodeVersion:
-    description: 'just used to track the latest lts node version, currently `22`'
+  defaultNodeVersion:
+    description: 'the default version of Node when the user does not specify'
     required: false
     default: '22'
 
@@ -148,11 +148,11 @@ runs:
           ${{ steps.alt_name.outputs.containerImageAltName }}
         # generate Docker tags based on the following events/attributes
         tags: |
-          type=raw,enable=${{ inputs.containerImage != 'harperdb/private' && inputs.nodeVersion == inputs.latestNodeVersion }},value=${{ inputs.harperdbVersion }}
+          type=raw,enable=${{ inputs.containerImage != 'harperdb/private' && inputs.nodeVersion == inputs.defaultNodeVersion }},value=${{ inputs.harperdbVersion }}
           type=raw,enable=${{ inputs.containerImage == 'harperdb/private'}},value=${{ inputs.harperdbVersion }}-${{ github.run_number }}
           type=raw,enable=${{ inputs.containerImage == 'tar'}},value=${{ inputs.harperdbVersion }}-${{ github.run_number }}
-          type=raw,enable=${{ inputs.nodeVersion != inputs.latestNodeVersion }},value=${{ inputs.harperdbVersion }}_node-${{ inputs.nodeVersion }}
-          type=raw,value=latest,enable=${{ inputs.nodeVersion == inputs.latestNodeVersion && inputs.tagLatest || false }}
+          type=raw,enable=${{ inputs.nodeVersion != inputs.defaultNodeVersion }},value=${{ inputs.harperdbVersion }}_node-${{ inputs.nodeVersion }}
+          type=raw,value=latest,enable=${{ inputs.nodeVersion == inputs.defaultNodeVersion && inputs.tagLatest || false }}
           type=raw,value=${{ github.sha }}
           
 

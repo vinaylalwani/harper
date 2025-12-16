@@ -510,7 +510,7 @@ jobs:
         container:
           - 'harpersystems/harper'
           - 'harpersystems/harper-openshift'
-        nodeVersion: [ 16, 22 ]
+        nodeVersion: [ 16, 20, 22, 24, 25 ]
         include:
           - container: 'harpersystems/harper'
             dockerFile: 'utility/Docker/Dockerfile'
