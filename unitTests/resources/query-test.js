@@ -148,6 +148,9 @@ describe('Querying through Resource API', () => {
 			});
 		}
 		await last;
+		// rewrite one of them to ensure the prototype doesn't get messed up
+		const id12 = await QueryTable.get('id-12');
+		await QueryTable.put(id12.toJSON());
 	});
 	// This test should be working. My local reproduction works fine with the code changes. I'm sure this has to do with how I created the tables and records in the `before()` maybe?
 	it('should properly evaluate an `and` operation', async function () {
@@ -308,6 +311,16 @@ describe('Querying through Resource API', () => {
 			}
 			assert.equal(results.length, 1);
 			assert.equal(results[0].related.name, 'related name 1');
+		});
+		it('Query data in a table with relationships that has been re-saved', async function () {
+			let results = [];
+			for await (let record of QueryTable.search({
+				conditions: [{ attribute: 'id', comparator: 'equals', value: 'id-12' }],
+			})) {
+				results.push(record);
+			}
+			assert.equal(results.length, 1);
+			assert.equal(results[0].related.name, 'related name 2');
 		});
 
 		it('Query relational data in a table with one-to-many', async function () {
@@ -1713,7 +1726,7 @@ describe('Querying through Resource API', () => {
 				id: 'zzz-10002',
 				name: 'yet-another-one',
 				dynamic: 'baz',
-			}
+			},
 		];
 
 		before(async () => {
@@ -1750,9 +1763,7 @@ describe('Querying through Resource API', () => {
 			let results = [];
 			for await (let record of QueryTable.search({
 				allowConditionsOnDynamicAttributes: true,
-				conditions: [
-					{ attribute: 'dynamic', comparator: 'starts_with', value: 'ba' },
-				],
+				conditions: [{ attribute: 'dynamic', comparator: 'starts_with', value: 'ba' }],
 			})) {
 				results.push(record);
 			}
