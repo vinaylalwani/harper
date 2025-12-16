@@ -1,4 +1,4 @@
-export { Resource } from './resources/Resource';
+export { Resource } from './resources/Resource.ts';
 import { Resource as ResourceImport } from './resources/Resource.ts';
 export type {
 	ResourceInterface,
@@ -12,7 +12,7 @@ export type { RecordObject } from './resources/RecordEncoder.ts';
 export { RequestTarget } from './resources/RequestTarget.ts';
 export { server } from './server/Server';
 import { server as serverImport } from './server/Server.ts';
-export { tables, databases } from './resources/databases';
+export { tables, databases } from './resources/databases.ts';
 import { tables as dbTables, databases as dbDatabases } from './resources/databases.ts';
 import { BlobCreationOptions } from './resources/blob.ts';
 export { Scope } from './components/Scope.ts';

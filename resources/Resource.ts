@@ -1,4 +1,4 @@
-import { User } from '../security/user.js';
+import type { User } from '../security/user.ts';
 import type { RecordObject } from './RecordEncoder.js';
 import {
 	ResourceInterface,
@@ -8,7 +8,6 @@ import {
 	Query,
 	SourceContext,
 	RequestTargetOrId,
-	UpdatableRecord,
 } from './ResourceInterface.ts';
 import { randomUUID } from 'crypto';
 import { DatabaseTransaction, type Transaction } from './DatabaseTransaction.ts';
@@ -40,7 +39,7 @@ const EXTENSION_TYPES = {
  * This base Resource class provides a set of static methods that are main entry points for querying and updating data
  * in resources/tables. The static methods provide the default handling of arguments, context, and ensuring that
  * internal actions are wrapped in a transaction. The base Resource class intended to be extended, and the instance
- * methods can be overriden to provide specific implementations of actions like get, put, post, delete, and subscribe.
+ * methods can be overridden to provide specific implementations of actions like get, put, post, delete, and subscribe.
  */
 export class Resource<Record extends object = any> implements ResourceInterface<Record> {
 	readonly #id: Id;
@@ -291,7 +290,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	async post(
 		target: RequestTargetOrId,
 		newRecord: Partial<Record & RecordObject>
-	): Promise<void | (Record & Partial<RecordObject>)> {
+	): Promise<Record & Partial<RecordObject>> {
 		if (this.constructor.loadAsInstance === false) {
 			if (target.isCollection && this.create) {
 				newRecord = await this.create(target, newRecord);
@@ -464,13 +463,16 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	search?(target: RequestTargetOrId): AsyncIterable<Record & Partial<RecordObject>>;
 
 	create?(
-		target: RequestTargetOrId,
-		newRecord: Partial<Record & RecordObject>
-	): Promise<void | (Record & Partial<RecordObject>)>;
-	put?(target: RequestTargetOrId, record: Record & RecordObject): void | (Record & Partial<RecordObject>) | Promise<void | (Record & Partial<RecordObject>)>;
+		newRecord: Partial<Record & RecordObject>,
+		target: RequestTargetOrId
+	): Promise<Record & Partial<RecordObject>>;
+	put?(
+		record: Record & RecordObject,
+		target: RequestTargetOrId
+	): void | (Record & Partial<RecordObject>) | Promise<void | (Record & Partial<RecordObject>)>;
 	patch?(
-		target: RequestTargetOrId,
-		record: Partial<Record & RecordObject>
+		record: Partial<Record & RecordObject>,
+		target: RequestTargetOrId
 	): void | (Record & Partial<RecordObject>) | Promise<void | (Record & Partial<RecordObject>)>;
 
 	delete?(target: RequestTargetOrId): boolean | Promise<boolean>;

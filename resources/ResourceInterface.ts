@@ -1,7 +1,7 @@
-import { User } from '../security/user.ts';
+import type { User } from '../security/user.ts';
 import type { OperationFunctionName } from '../server/serverHelpers/serverUtilities.ts';
 import { DatabaseTransaction } from './DatabaseTransaction.ts';
-import { IterableEventQueue } from './IterableEventQueue.js';
+import { IterableEventQueue } from './IterableEventQueue.ts';
 import type { Entry, RecordObject } from './RecordEncoder.ts';
 import { RequestTarget } from './RequestTarget.ts';
 
@@ -21,17 +21,23 @@ export interface ResourceInterface<Record extends object = any>
 	search?(target: RequestTarget): AsyncIterable<Record & Partial<RecordObject>>;
 
 	allowCreate(user: User, record: Promise<Record & RecordObject>, context: Context): boolean | Promise<boolean>;
-	create?(target: RequestTargetOrId, newRecord: Partial<Record & RecordObject>): void;
+	create?(
+		newRecord: Partial<Record & RecordObject>,
+		target: RequestTargetOrId
+	): void | (Record & Partial<RecordObject>) | Promise<Record & Partial<RecordObject>>;
 	post?(
 		target: RequestTargetOrId,
 		newRecord: Partial<Record & RecordObject>
-	): void | (Record & Partial<RecordObject>) | Promise<void | (Record & Partial<RecordObject>)>;
+	): void | (Record & Partial<RecordObject>) | Promise<Record & Partial<RecordObject>>;
 
 	allowUpdate(user: User, record: Promise<Record & RecordObject>, context: Context): boolean | Promise<boolean>;
-	put?(target: RequestTargetOrId, record: Record & RecordObject): void | (Record & Partial<RecordObject>) | Promise<void | (Record & Partial<RecordObject>)>;
+	put?(
+		record: Record & RecordObject,
+		target: RequestTargetOrId
+	): void | (Record & Partial<RecordObject>) | Promise<void | (Record & Partial<RecordObject>)>;
 	patch?(
-		target: RequestTargetOrId,
-		record: Partial<Record & RecordObject>
+		record: Partial<Record & RecordObject>,
+		target: RequestTargetOrId
 	): void | (Record & Partial<RecordObject>) | Promise<void | (Record & Partial<RecordObject>)>;
 	update?(updates: Record & RecordObject, fullUpdate: true): ResourceInterface<Record & Partial<RecordObject>>;
 	update?(
@@ -181,8 +187,8 @@ interface TypedUpdatableRecord<Record extends object, Property extends keyof Rec
 	subtractFrom(property: Property, value: Record[Property]): void;
 }
 
-interface Subscription<Event extends object = any> extends IterableEventQueue<Event> {
-	new(listener: Listener<Event>);
+export interface Subscription<Event extends object = any> extends IterableEventQueue<Event> {
+	new (listener: Listener<Event>);
 
 	listener: Listener<Event>;
 	subscriptions: Listener<Event>[];
