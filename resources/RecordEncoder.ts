@@ -255,6 +255,11 @@ export function handleLocalTimeForGets(store, rootStore) {
 				lastMetadata = null;
 			}
 			if (entry.value) {
+				if (!this.encoder.structPrototype.isPrototypeOf(entry.value)) {
+					const originalValue = entry.value;
+					entry.value = Object.create(this.encoder.structPrototype);
+					for (const key in originalValue) entry.value[key] = originalValue[key];
+				}
 				entryMap.set(entry.value, entry); // allow the record to access the entry
 			}
 			entry.key = id;
@@ -287,6 +292,13 @@ export function handleLocalTimeForGets(store, rootStore) {
 				entry.residencyId = lastMetadata.residencyId;
 				if (lastMetadata.expiresAt >= 0) entry.expiresAt = lastMetadata.expiresAt;
 				lastMetadata = null;
+			}
+			if (entry.value) {
+				if (!this.encoder.structPrototype.isPrototypeOf(entry.value)) {
+					const originalValue = entry.value;
+					entry.value = Object.create(this.encoder.structPrototype);
+					for (const key in originalValue) entry.value[key] = originalValue[key];
+				}
 			}
 			return entry;
 		});
