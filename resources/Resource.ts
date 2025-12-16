@@ -184,7 +184,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 				method: 'create',
 			};
 			const resource = new this(id, context);
-			const results = (await resource.create) ? resource.create(id, record) : missingMethod(resource, 'create');
+			const results = resource.create ? await resource.create(id, record) : missingMethod(resource, 'create');
 			context.newLocation = id ?? results?.[this.primaryKey];
 			context.createdResource = true;
 			return this.loadAsInstance === false ? results : resource;
