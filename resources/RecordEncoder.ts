@@ -151,9 +151,10 @@ export class RecordEncoder extends Encoder {
 			return this.rootStore.transactionSync((txn) => {
 				if (options.name?.startsWith?.('hdb_node'))
 					harperLogger.warn('Saving structures', structures, JSON.stringify(structures.get?.('named')), result);
+				// TODO: Do we have access to name?
 				const sharedStructuresKey = [Symbol.for('structures'), this.name];
 				const existingStructuresBuffer = txn.getBinarySync(sharedStructuresKey);
-				const existingStructures = existingStructuresBuffer ? this(existingStructuresBuffer) : undefined;
+				const existingStructures = existingStructuresBuffer ? this.decode(existingStructuresBuffer) : undefined;
 				if (typeof isCompatible == 'function') {
 					if (!isCompatible(existingStructures)) {
 						return false;

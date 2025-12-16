@@ -22,7 +22,7 @@ export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void>
 				const log = rootStore.useLog(logName);
 				let transaction: DatabaseTransaction;
 				let lastTimestamp = 0;
-				for (const { timestamp, data } of log.query({ start: 0, readUncommitted: true })) {
+				for (const { timestamp, data } of log.query({ startFromLastFlushed: true, readUncommitted: true })) {
 					try {
 						const auditEntry = readAuditEntry(data);
 						const { type, tableId, nodeId, recordId, version, residencyId, expiresAt, originatingOperation, user } =
@@ -33,6 +33,7 @@ export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void>
 						const tableInstance = Table.getResource(null, context, {});
 						// TODO: If this throws an error due to being unable to access structures, we need to iterate through
 						// other transaction logs to get the latest structure. Ultimately we may have to skip records
+						console.error('replaying', Table.name, recordId);
 						const record = auditEntry.getValue(primaryStore);
 						if (lastTimestamp !== timestamp) {
 							lastTimestamp = timestamp;
