@@ -257,7 +257,7 @@ export function handleLocalTimeForGets(store, rootStore) {
 			if (entry.value) {
 				if (!this.encoder.structPrototype.isPrototypeOf(entry.value)) {
 					const originalValue = entry.value;
-					entry.value = Object.create(this.encoder.structPrototype);
+					entry.value = new this.encoder.structPrototype.constructor();
 					for (const key in originalValue) entry.value[key] = originalValue[key];
 				}
 				entryMap.set(entry.value, entry); // allow the record to access the entry
@@ -296,7 +296,7 @@ export function handleLocalTimeForGets(store, rootStore) {
 			if (entry.value) {
 				if (!this.encoder.structPrototype.isPrototypeOf(entry.value)) {
 					const originalValue = entry.value;
-					entry.value = Object.create(this.encoder.structPrototype);
+					entry.value = new this.encoder.structPrototype.constructor();
 					for (const key in originalValue) entry.value[key] = originalValue[key];
 				}
 			}
