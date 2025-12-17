@@ -255,7 +255,8 @@ export function handleLocalTimeForGets(store, rootStore) {
 				lastMetadata = null;
 			}
 			if (entry.value) {
-				if (!this.encoder.structPrototype.isPrototypeOf(entry.value)) {
+				if (entry.value.constructor === Object) {
+					// if an object was deserialized as a plain object, give it the right prototype for computed properties to be accessible
 					const originalValue = entry.value;
 					entry.value = new this.encoder.structPrototype.constructor();
 					for (const key in originalValue) entry.value[key] = originalValue[key];
@@ -294,7 +295,8 @@ export function handleLocalTimeForGets(store, rootStore) {
 				lastMetadata = null;
 			}
 			if (entry.value) {
-				if (!this.encoder.structPrototype.isPrototypeOf(entry.value)) {
+				if (entry.value.constructor === Object) {
+					// if an object was deserialized as a plain object, give it the right prototype for computed properties to be accessible
 					const originalValue = entry.value;
 					entry.value = new this.encoder.structPrototype.constructor();
 					for (const key in originalValue) entry.value[key] = originalValue[key];
