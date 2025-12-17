@@ -275,7 +275,8 @@ describe('12. Configuration', () => {
 			.set('Accept-Encoding', 'gzip, deflate, br')
 			.expect('content-type', 'text/html; charset=UTF-8')
 			.expect((r) => {
-				assert.ok(r.text.includes('<!doctype html>'), r.text);
+				assert.ok(r.text.includes('html>'), r.text);
+				assert.ok(r.text.includes('html lang'), r.text);
 				assert.ok(r.text.includes('<title>Harper'), r.text);
 			})
 			.expect(200);
