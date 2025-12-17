@@ -12,7 +12,7 @@ import { getNextAvailableLoopbackAddress, releaseLoopbackAddress } from './loopb
 // Constants
 const HTTP_PORT = 9926;
 const OPERATIONS_API_PORT = 9925;
-const DEFAULT_ADMIN_USERNAME = 'HDB_ADMIN';
+const DEFAULT_ADMIN_USERNAME = 'admin';
 const DEFAULT_ADMIN_PASSWORD = 'abc123';
 const DEFAULT_STARTUP_DELAY_MS = parseInt(process.env.HARPER_INTEGRATION_TEST_STARTUP_DELAY_MS, 10) || 5000;
 
@@ -39,7 +39,7 @@ export interface ContextWithHarper extends SuiteContext, TestContext {
 		installDir: string;
 		/** Admin credentials for the Harper instance */
 		admin: {
-			/** Admin username (default: 'HDB_ADMIN') */
+			/** Admin username (default: 'admin') */
 			username: string;
 			/** Admin password (default: 'abc123') */
 			password: string;
