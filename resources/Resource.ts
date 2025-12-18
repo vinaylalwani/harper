@@ -407,10 +407,8 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	 * This is called by protocols that wish to make a subscription for real-time notification/updates.
 	 * This default implementation simply provides a streaming iterator that does not deliver any notifications
 	 * but implementors can call send with
-	 * @param query
-	 * @param options
 	 */
-	subscribe(request: SubscriptionRequest): AsyncIterable<{ id: any; operation: string; value: object }> {
+	async subscribe(request: SubscriptionRequest): Promise<AsyncIterable<Record>> {
 		return new IterableEventQueue();
 	}
 
@@ -478,7 +476,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	delete?(target: RequestTargetOrId): boolean | Promise<boolean>;
 	invalidate?(target: RequestTargetOrId): void | Promise<void>;
 
-	publish?(target: RequestTargetOrId, record: Record): void;
+	publish?(target: RequestTargetOrId, record: Record, options?: any): void;
 }
 
 _assignPackageExport('Resource', Resource);

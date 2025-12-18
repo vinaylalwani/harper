@@ -6,9 +6,9 @@ import type { Entry, RecordObject } from './RecordEncoder.ts';
 import { RequestTarget } from './RequestTarget.ts';
 
 export interface ResourceInterface<Record extends object = any>
-	extends RecordObject,
+	extends Partial<RecordObject>,
 		Pick<UpdatableRecord<Record>, 'addTo' | 'subtractFrom'> {
-	new (identifier: Id, source: any);
+	// new (identifier: Id, source: Record);
 
 	allowRead(user: User, target: RequestTarget, context: Context): boolean | Promise<boolean>;
 	get?(
@@ -52,8 +52,8 @@ export interface ResourceInterface<Record extends object = any>
 
 	invalidate(target: RequestTargetOrId): void | Promise<void>;
 
-	publish?(target: RequestTargetOrId, record: Record): void;
-	subscribe?(request: SubscriptionRequest): Promise<Subscription<Record & RecordObject>>;
+	publish?(target: RequestTargetOrId, record: Record, options?: any): void;
+	subscribe?(request: SubscriptionRequest): Promise<AsyncIterable<Record>>;
 
 	doesExist(): boolean;
 	wasLoadedFromSource(): boolean | void;

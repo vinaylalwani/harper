@@ -18,6 +18,7 @@ import type {
 	SubSelect,
 	RequestTargetOrId,
 } from './ResourceInterface.ts';
+import type { User } from '../security/user.ts';
 import lmdbProcessRows from '../dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbProcessRows.js';
 import { Resource, contextStorage, transformForSelect } from './Resource.ts';
 import { DatabaseTransaction, ImmediateTransaction } from './DatabaseTransaction.ts';
@@ -209,13 +210,14 @@ export function makeTable(options) {
 			return this.addTo(property, -value);
 		}
 	}
-	class TableResource extends Resource {
+	class TableResource<Record extends object = any> extends Resource<Record> {
 		#record: any; // the stored/frozen record from the database and stored in the cache (should not be modified directly)
 		#changes: any; // the changes to the record that have been made (should not be modified directly)
 		#version?: number; // version of the record
 		#entry?: Entry; // the entry from the database
 		#saveMode?: boolean; // indicates that the record is currently being saved
 		#loadedFromSource?: boolean; // indicates that the record was loaded from the source
+
 		declare getProperty: (name: string) => any;
 		static name = tableName; // for display/debugging purposes
 		static primaryStore = primaryStore;
@@ -591,7 +593,11 @@ export function makeTable(options) {
 		 * @param options An important option is ensureLoaded, which can be used to indicate that it is necessary for a caching table to load data from the source if there is not a local copy of the data in the table (usually not necessary for a delete, for example).
 		 * @returns
 		 */
-		static getResource(id: Id, request: Context, resourceOptions?: any): Promise<TableResource> | TableResource {
+		static getResource<Record extends object = any>(
+			id: Id,
+			request: Context,
+			resourceOptions?: any
+		): Promise<TableResource<Record>> | TableResource<Record> {
 			const resource: TableResource = super.getResource(id, request, resourceOptions) as any;
 			if (this.loadAsInstance === false) request._freezeRecords = true;
 			if (id != null && this.loadAsInstance !== false) {
@@ -969,7 +975,7 @@ export function makeTable(options) {
 		 * This retrieves the data of this resource. By default, with no argument, just return `this`.
 		 * @param target - If included, is an identifier/query that specifies the requested target to retrieve and query
 		 */
-		get(target?: RequestTarget): Promise<object | void> {
+		get(target?: RequestTarget): any | Record | AsyncIterable<Record> | Promise<Record | AsyncIterable<Record> | void> {
 			const constructor: Resource = this.constructor;
 			if (typeof target === 'string' && constructor.loadAsInstance !== false) return this.getProperty(target);
 			if (isSearchTarget(target)) return this.search(target);
@@ -1005,7 +1011,7 @@ export function makeTable(options) {
 				let allowed = true;
 				if (target.checkPermission) {
 					// requesting authorization verification
-					allowed = this.allowRead(context.user, target);
+					allowed = this.allowRead(context.user, target, context);
 				}
 				return when(
 					when(allowed, (allowed: boolean) => {
@@ -1047,10 +1053,8 @@ export function makeTable(options) {
 		}
 		/**
 		 * Determine if the user is allowed to get/read data from the current resource
-		 * @param user The current, authenticated user
-		 * @param target The parsed query from the search part of the URL
 		 */
-		allowRead(user: any, target: RequestTarget): boolean {
+		allowRead(user: User, target: RequestTarget, context: Context): boolean {
 			const tablePermission = getTablePermissions(user, target);
 			if (tablePermission?.read) {
 				if (tablePermission.isSuperUser) return true;
@@ -1074,7 +1078,7 @@ export function makeTable(options) {
 										if (!property.name) property = { name: property };
 										if (!property.checkPermission && target.checkPermission)
 											property.checkPermission = target.checkPermission;
-										if (!relatedTable.prototype.allowRead.call(null, user, property)) return false;
+										if (!relatedTable.prototype.allowRead.call(null, user, property, context)) return false;
 										if (!property.select) return property.name; // no select was applied, just return the name
 									}
 									return property;
@@ -1086,7 +1090,7 @@ export function makeTable(options) {
 							.filter((attribute) => attribute.read && !propertyResolvers[attribute.attribute_name])
 							.map((attribute) => attribute.attribute_name);
 					}
-					return target;
+					return true;
 				} else {
 					return true;
 				}
@@ -1095,12 +1099,10 @@ export function makeTable(options) {
 
 		/**
 		 * Determine if the user is allowed to update data from the current resource
-		 * @param user The current, authenticated user
-		 * @param updatedData
-		 * @param fullUpdate
 		 */
-		allowUpdate(user: any, updatedData: any, target: RequestTarget) {
-			const tablePermission = getTablePermissions(user, target);
+		// @ts-expect-error Tables only allow synchronous allowUpdate checks.
+		allowUpdate(user: User, updatedData: Record, context: Context): boolean {
+			const tablePermission = getTablePermissions(user);
 			if (tablePermission?.update) {
 				const attribute_permissions = tablePermission.attribute_permissions;
 				if (attribute_permissions?.length > 0) {
@@ -1121,14 +1123,14 @@ export function makeTable(options) {
 				return checkContextPermissions(this.getContext());
 			}
 		}
+
 		/**
 		 * Determine if the user is allowed to create new data in the current resource
-		 * @param user The current, authenticated user
-		 * @param newData
 		 */
-		allowCreate(user: any, newData: any, target: RequestTarget) {
+		// @ts-expect-error Tables only allow synchronous allowCreate checks.
+		allowCreate(user: User, newData: Record, context: Context): boolean {
 			if (this.isCollection) {
-				const tablePermission = getTablePermissions(user, target);
+				const tablePermission = getTablePermissions(user);
 				if (tablePermission?.insert) {
 					const attribute_permissions = tablePermission.attribute_permissions;
 					if (attribute_permissions?.length > 0) {
@@ -1146,26 +1148,26 @@ export function makeTable(options) {
 				// creating *within* a record resource just means we are adding some data to a current record, which is
 				// an update to the record, it is not an insert of a new record into the table, so not a table create operation
 				// so does not use table insert permissions
-				return this.allowUpdate(user, {});
+				return this.allowUpdate(user, newData, context);
 			}
 		}
 
 		/**
 		 * Determine if the user is allowed to delete from the current resource
-		 * @param user The current, authenticated user
 		 */
-		allowDelete(user: any, target: RequestTarget) {
+		allowDelete(user: User, target: RequestTarget, context: Context): boolean {
 			const tablePermission = getTablePermissions(user, target);
-			return tablePermission?.delete && checkContextPermissions(this.getContext());
+			return !!tablePermission?.delete && checkContextPermissions(context);
 		}
 
 		/**
 		 * Start updating a record. The returned resource will record changes which are written
 		 * once the corresponding transaction is committed. These changes can (eventually) include CRDT type operations.
-		 * @param updates This can be a record to update the current resource with.
-		 * @param fullUpdate The provided data in updates is the full intended record; any properties in the existing record that are not in the updates, should be removed
 		 */
-		update(target: RequestTarget, updates?: any) {
+		update(updates: Record & RecordObject, fullUpdate: true);
+		update(updates: Partial<Record & RecordObject>, target?: RequestTarget);
+		update(target: RequestTarget, updates?: any);
+		update(target: any, updates?: any) {
 			let id: Id;
 			// determine if it is a legacy call
 			const directInstance =
@@ -1209,7 +1211,7 @@ export function makeTable(options) {
 					if (target == undefined) throw new TypeError('Can not put a record without a target');
 					if (target.checkPermission) {
 						// requesting authorization verification
-						allowed = this.allowUpdate(context.user, updates, target);
+						allowed = this.allowUpdate(context.user, updates, context);
 					}
 					return when(allowed, (allowed) => {
 						if (!allowed) {
@@ -1457,10 +1459,11 @@ export function makeTable(options) {
 		/**
 		 * Store the provided record data into the current resource. This is not written
 		 * until the corresponding transaction is committed.
-		 * @param record
-		 * @param options
 		 */
-		put(target: RequestTarget, record: any): void | Promise<void> {
+		put(
+			target: RequestTarget,
+			record: Record & RecordObject
+		): void | (Record & Partial<RecordObject>) | Promise<void | (Record & Partial<RecordObject>)> {
 			if (record === undefined || record instanceof URLSearchParams) {
 				// legacy argument position, shift the arguments and go through the update method for back-compat
 				this.update(target, true);
@@ -1470,7 +1473,7 @@ export function makeTable(options) {
 				const context = this.getContext();
 				if (target.checkPermission) {
 					// requesting authorization verification
-					allowed = this.allowUpdate(context.user, record, target);
+					allowed = this.allowUpdate(context.user, record, context);
 				}
 				return when(allowed, (allowed) => {
 					if (!allowed) {
@@ -1490,7 +1493,11 @@ export function makeTable(options) {
 			}
 			// always return undefined
 		}
-		create(target: RequestTarget, record: any): void | Promise<void> {
+
+		create(
+			target: RequestTarget,
+			record: Partial<Record & RecordObject>
+		): void | (Record & Partial<RecordObject>) | Promise<Record & Partial<RecordObject>> {
 			let allowed = true;
 			const context = this.getContext();
 			if (!record && !(target instanceof URLSearchParams)) {
@@ -1503,7 +1510,7 @@ export function makeTable(options) {
 			}
 			if (target?.checkPermission) {
 				// requesting authorization verification
-				allowed = this.allowCreate(context.user, record, target);
+				allowed = this.allowCreate(context.user, record, context);
 			}
 			return when(allowed, (allowed) => {
 				if (!allowed) {
@@ -1520,7 +1527,12 @@ export function makeTable(options) {
 				return record;
 			});
 		}
-		patch(target: RequestTarget, recordUpdate: any): void | Promise<void> {
+
+		// @ts-expect-error The implementation handles the possibility of target and recordUpdate being swapped
+		patch(
+			target: RequestTarget,
+			recordUpdate: Partial<Record & RecordObject>
+		): void | (Record & Partial<RecordObject>) | Promise<void | (Record & Partial<RecordObject>)> {
 			if (recordUpdate === undefined || recordUpdate instanceof URLSearchParams) {
 				// legacy argument position, shift the arguments and go through the update method for back-compat
 				this.update(target, false);
@@ -1801,7 +1813,7 @@ export function makeTable(options) {
 			transaction.addWrite(write);
 		}
 
-		async delete(target: RequestTarget): Promise<boolean> | boolean {
+		async delete(target: RequestTarget): Promise<boolean> {
 			if (isSearchTarget(target)) {
 				target.select = ['$id']; // just get the primary key of each record so we can delete them
 				for await (const entry of this.search(target)) {
@@ -1869,14 +1881,14 @@ export function makeTable(options) {
 			return true;
 		}
 
-		search(target: RequestTarget): AsyncIterable<any> {
+		search(target: RequestTarget): AsyncIterable<Record & Partial<RecordObject>> {
 			const context = this.getContext();
 			const txn = txnForContext(context);
 			if (!target) throw new Error('No query provided');
 			if (target.parseError) throw target.parseError; // if there was a parse error, we can throw it now
 			if (target.checkPermission) {
 				// requesting authorization verification
-				const allowed = this.allowRead(context.user, target);
+				const allowed = this.allowRead(context.user, target, context);
 				if (!allowed) {
 					throw new AccessViolation(context.user);
 				}
@@ -2477,7 +2489,7 @@ export function makeTable(options) {
 			return transform;
 		}
 
-		async subscribe(request: SubscriptionRequest) {
+		async subscribe(request: SubscriptionRequest): Promise<AsyncIterable<Record>> {
 			if (!auditStore) throw new Error('Can not subscribe to a table without an audit log');
 			if (!audit) {
 				table({ table: tableName, database: databaseName, schemaDefined, attributes, audit: true });
@@ -2693,7 +2705,7 @@ export function makeTable(options) {
 		 * @param message
 		 * @param options
 		 */
-		publish(target: RequestTarget, message: any, options?: any) {
+		publish(target: RequestTarget, message: Record, options?: any) {
 			if (message === undefined || message instanceof URLSearchParams) {
 				// legacy arg format, shift the args
 				this._writePublish(this.getId(), target, message);
@@ -2702,7 +2714,7 @@ export function makeTable(options) {
 				const context = this.getContext();
 				if (target.checkPermission) {
 					// requesting authorization verification
-					allowed = this.allowCreate(context.user, target, context);
+					allowed = this.allowCreate(context.user, message, context);
 				}
 				return when(allowed, (allowed: boolean) => {
 					if (!allowed) {
@@ -3563,7 +3575,7 @@ export function makeTable(options) {
 			}
 		});
 	}
-	function getTablePermissions(user: any, target?: RequestTarget) {
+	function getTablePermissions(user: User, target?: RequestTarget) {
 		let permission = target?.checkPermission; // first check to see the request target specifically provides the permissions to authorize
 		if (typeof permission !== 'object') {
 			if (!user?.role) return;
@@ -3998,7 +4010,7 @@ export function makeTable(options) {
 	 * Verify that the context does not have any replication parameters that are not allowed
 	 * @param context
 	 */
-	function checkContextPermissions(context: Context) {
+	function checkContextPermissions(context: Context): boolean {
 		if (!context) return true;
 		if (context.user?.role?.permission?.super_user) return true;
 		if (context.replicateTo)
