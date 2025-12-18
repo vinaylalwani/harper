@@ -1,5 +1,7 @@
-import { type TransactionLog, RocksDatabase } from '@harperdb/rocksdb-js';
+import { type TransactionLog, RocksDatabase, shutdown } from '@harperdb/rocksdb-js';
 import logger from '../utility/logging/harper_logger.js';
+// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+process.on('exit', shutdown);
 
 export class RocksAuditStore {
 	log: TransactionLog;

@@ -1,7 +1,7 @@
 import { ClientError, ServerError, Violation } from '../utility/errors/hdbError.js';
 import { OVERFLOW_MARKER, MAX_SEARCH_KEY_LENGTH, SEARCH_TYPES } from '../utility/lmdb/terms.js';
 import { compareKeys, MAXIMUM_KEY } from 'ordered-binary';
-import { SKIP } from '@harperdb/extended-iterable';
+import { SKIP } from '@harperfast/extended-iterable';
 import { INVALIDATED, EVICTED } from './Table.ts';
 import type { DirectCondition, Id } from './ResourceInterface.ts';
 import { MultiPartId } from './Resource.ts';

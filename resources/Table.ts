@@ -8,7 +8,7 @@ import { CONFIG_PARAMS, OPERATIONS_ENUM, SYSTEM_TABLE_NAMES, SYSTEM_SCHEMA_NAME 
 import { type Database } from 'lmdb';
 import { getIndexedValues, getNextMonotonicTime } from '../utility/lmdb/commonUtility.js';
 import lodash from 'lodash';
-import { ExtendedIterable, SKIP } from '@harperdb/extended-iterable';
+import { ExtendedIterable, SKIP } from '@harperfast/extended-iterable';
 import type {
 	ResourceInterface,
 	SubscriptionRequest,

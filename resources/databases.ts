@@ -799,6 +799,7 @@ function openIndex(dbiKey: string, rootStore: LMDBRootDatabase | RocksRootDataba
 	let dbi: LMDBDatabase | (RocksDatabase & { customIndex?: any; isIndexing?: boolean; indexNulls?: boolean });
 	if (rootStore instanceof RocksDatabase) {
 		dbi = openRocksDatabase(rootStore.path, { ...dbiInit, name: dbiKey });
+		dbi.rootStore = rootStore;
 	} else {
 		dbi = rootStore.openDB(dbiKey, dbiInit);
 	}
