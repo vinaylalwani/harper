@@ -249,7 +249,7 @@ export async function installApplication(application: Application) {
 	// If custom install command is specified, run it
 	if (application.install?.command) {
 		const [command, ...args] = application.install.command.split(' ');
-		const { stderr, code } = await nonInteractiveSpawn(
+		const { stdout, stderr, code } = await nonInteractiveSpawn(
 			application.name,
 			command,
 			args,
@@ -260,8 +260,13 @@ export async function installApplication(application: Application) {
 		if (code === 0) {
 			return;
 		}
-		// otherwise, print the stderr output
-		printStderr(application.name, stderr, 'error');
+		if (stdout) {
+			printStd(application.name, command, stdout, 'stdout', 'warn');
+		}
+
+		if (stderr) {
+			printStd(application.name, command, stderr, 'stderr', 'warn');
+		}
 		// and throw a descriptive error
 		throw new Error(
 			`Failed to install dependencies for ${application.name} using custom install command: ${application.install.command}. Exit code: ${code}`
@@ -300,7 +305,7 @@ export async function installApplication(application: Application) {
 		// Would result in `pnpm@7` being used as the executable.
 		// Important note: an `npm` version should not be specifiable; the only valid npm version is the one installed alongside Node.js
 
-		const { stderr, code } = await nonInteractiveSpawn(
+		const { stdout, stderr, code } = await nonInteractiveSpawn(
 			application.name,
 			packageManager.name,
 			['install'], // All of `npm`, `yarn`, and `pnpm` support the `install` command. If we need to configure options here we may have to use some other defaults though
@@ -315,18 +320,30 @@ export async function installApplication(application: Application) {
 
 		// Otherwise handle failure case based on `onFail` value
 		if (onFail === 'error') {
-			// Log the stderr using the error log level (in case the user doesn't have debug level set)
-			printStderr(packageManager.name, stderr, 'error');
+			// Log the std outputs using the error log level (in case the user doesn't have debug level set)
+			if (stdout) {
+				printStd(application.name, packageManager.name, stdout, 'stdout', 'error');
+			}
+
+			if (stderr) {
+				printStd(application.name, packageManager.name, stderr, 'stderr', 'error');
+			}
+
 			// And throw an error instead of continuing
 			throw new Error(
 				`Failed to install dependencies for ${application.name} using ${packageManager.name}. Exit code: ${code}`
 			);
 		}
 
-		// If onFail is 'warn', print out stderr using the warn level, plus an additional message
+		// If onFail is 'warn', print outputs using the warn level, plus an additional message
 		if (onFail === 'warn') {
-			// Log the stderr using the warn log level
-			printStderr(packageManager.name, stderr, 'warn');
+			if (stdout) {
+				printStd(application.name, packageManager.name, stdout, 'stdout', 'warn');
+			}
+
+			if (stderr) {
+				printStd(application.name, packageManager.name, stderr, 'stderr', 'warn');
+			}
 
 			application.logger.warn(
 				`Failed to install dependencies for ${application.name} using ${packageManager.name}. Exit code: ${code}`
@@ -337,7 +354,7 @@ export async function installApplication(application: Application) {
 	}
 
 	// Finally, default to running `npm install`
-	const { stderr, code } = await nonInteractiveSpawn(
+	const { stdout, stderr, code } = await nonInteractiveSpawn(
 		application.name,
 		'npm',
 		['install', '--force'],
@@ -349,8 +366,14 @@ export async function installApplication(application: Application) {
 		return;
 	}
 
-	// Otherwise, print the stderr output
-	printStderr(application.name, stderr, 'error');
+	// Otherwise, print the stdout and stderr outputs
+	if (stdout) {
+		printStd(application.name, 'npm', stdout, 'stdout', 'warn');
+	}
+
+	if (stderr) {
+		printStd(application.name, 'npm', stderr, 'stderr', 'error');
+	}
 
 	// and throw a descriptive error
 	throw new Error(`Failed to install dependencies for ${application.name} using npm default. Exit code: ${code}`);
@@ -560,7 +583,7 @@ export function nonInteractiveSpawn(
 			clearTimeout(timeout);
 			// Print out stderr before rejecting
 			if (stderr) {
-				printStderr(applicationName, command, stderr);
+				printStd(applicationName, command, stderr, 'stderr');
 			}
 			reject(error);
 		});
@@ -568,7 +591,7 @@ export function nonInteractiveSpawn(
 		childProcess.on('close', (code) => {
 			clearTimeout(timeout);
 			if (stderr) {
-				printStderr(applicationName, command, stderr);
+				printStd(applicationName, command, stderr, 'stderr');
 			}
 			logger.loggerWithTag(`${applicationName}:spawn:${command}`).debug(`Process exited with code ${code}`);
 			resolve({
@@ -580,15 +603,15 @@ export function nonInteractiveSpawn(
 	});
 }
 
-function printStderr(
+function printStd(
 	applicationName: string,
 	command: string,
-	stderr: string,
-	level: 'debug' | 'warn' | 'error' = 'debug'
+	stdString: string,
+	stdStreamLabel: 'stdout' | 'stderr',
+	level: 'debug' | 'warn' | 'error' = 'debug',
 ) {
-	const stderrLogger = logger.loggerWithTag(`${applicationName}:spawn:${command}:stderr`);
-	for (const line of stderr.split('\n')) {
-		// Intentionally using the `debug` loglevel here since many CLIs, and predominantly package managers use stderr to report progress and metadata.
-		stderrLogger[level](line);
+	const stdLogger = logger.loggerWithTag(`${applicationName}:spawn:${command}:${stdStreamLabel}`);
+	for (const line of stdString.split('\n')) {
+		stdLogger[level](line);
 	}
 }
