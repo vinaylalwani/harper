@@ -9,10 +9,7 @@ import { connect } from 'mqtt';
 import { readFileSync } from 'fs';
 import { start as startMQTT } from '../../ts-build/server/mqtt.js';
 import axios from 'axios';
-import {
-	setNATSReplicator,
-	setPublishToStream,
-} from '../../ts-build/server/nats/natsReplicator.js';
+import { setNATSReplicator, setPublishToStream } from '../../ts-build/server/nats/natsReplicator.js';
 describe('test MQTT connections and commands', () => {
 	let available_records;
 	let client, client2;
@@ -450,7 +447,7 @@ describe('test MQTT connections and commands', () => {
 				clientId: 'with-patches',
 			});
 			client.on('error', reject);
-			client.on('message', (topic, payload, packet) => {
+			client.on('message', (topic, payload, _packet) => {
 				let record = JSON.parse(payload);
 				messages.push(record);
 				if (messages.length == 3) {

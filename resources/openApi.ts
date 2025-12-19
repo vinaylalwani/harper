@@ -1,5 +1,6 @@
 import { packageJson } from '../utility/packageUtils.js';
 import { Resources } from './Resources.ts';
+import { Resource } from './Resource.ts';
 
 const OPENAPI_VERSION = '3.0.3';
 // Maps graphql primitive types to open api types
@@ -249,9 +250,14 @@ export function generateJsonApi(resources: Resources, serverHttpURL: string) {
 		}
 
 		if (hasDelete) {
-			api.paths[urlById].delete = new Delete([primaryKeyParam], security, 'delete a record with the given primary key', {
-				'204': new Response204(),
-			});
+			api.paths[urlById].delete = new Delete(
+				[primaryKeyParam],
+				security,
+				'delete a record with the given primary key',
+				{
+					'204': new Response204(),
+				}
+			);
 		}
 
 		// API for path structure /my-resource/<record-id>.property

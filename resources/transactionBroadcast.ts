@@ -9,12 +9,19 @@ const allSameThreadSubscriptions = Object.create(null); // using it as a map tha
  * This module/function is responsible for the main work of tracking subscriptions and listening for new transactions
  * that have occurred on any thread, and then reading through the transaction log to notify listeners. This is
  * responsible for cleanup of subscriptions as well.
- * @param path
- * @param dbi
+ * @param table
  * @param key
  * @param listener
+ * @param startTime
+ * @param options
  */
-export function addSubscription(table, key, listener?: (key) => any, startTime: number, options) {
+export function addSubscription(
+	table,
+	key,
+	listener?: (key) => any,
+	startTime?: number,
+	options?
+) {
 	const path = table.primaryStore.env.path;
 	const tableId = table.primaryStore.tableId;
 	// set up the subscriptions map. We want to just use a single map (per table) for efficient delegation
@@ -33,7 +40,8 @@ export function addSubscription(table, key, listener?: (key) => any, startTime: 
 			});
 		}
 	}
-	const databaseSubscriptions = baseSubscriptions[path] || (baseSubscriptions[path] = []);
+	const databaseSubscriptions =
+		baseSubscriptions[path] || (baseSubscriptions[path] = []);
 	databaseSubscriptions.auditStore = table.auditStore;
 	if (databaseSubscriptions.lastTxnTime == null) {
 		databaseSubscriptions.lastTxnTime = Date.now();
@@ -69,7 +77,12 @@ export function addSubscription(table, key, listener?: (key) => any, startTime: 
  * subscription and get the initial state.
  */
 class Subscription extends IterableEventQueue {
-	listener: (recordId: Id, auditEntry: any, localTime: number, beginTxn: boolean) => void;
+	listener: (
+		recordId: Id,
+		auditEntry: any,
+		localTime: number,
+		beginTxn: boolean
+	) => void;
 	subscriptions: [];
 	startTime?: number;
 	includeDescendants?: boolean;
@@ -109,7 +122,10 @@ function notifyFromTransactionData(subscriptions) {
 	auditStore.resetReadTxn();
 	nextTransaction(subscriptions.auditStore);
 	let subscribersWithTxns;
-	for (const { key: localTime, value: auditEntryEncoded } of auditStore.getRange({
+	for (const {
+		key: localTime,
+		value: auditEntryEncoded,
+	} of auditStore.getRange({
 		start: subscriptions.lastTxnTime,
 		exclusiveStart: true,
 	})) {
@@ -130,7 +146,10 @@ function notifyFromTransactionData(subscriptions) {
 				for (const subscription of keySubscriptions) {
 					if (
 						ancestorLevel > 0 && // only ancestors if the subscription is for ancestors (and apply onlyChildren filtering as necessary)
-						!(subscription.includeDescendants && !(subscription.onlyChildren && ancestorLevel > 1))
+						!(
+							subscription.includeDescendants &&
+							!(subscription.onlyChildren && ancestorLevel > 1)
+						)
 					)
 						continue;
 					if (subscription.startTime >= localTime) {
@@ -139,7 +158,10 @@ function notifyFromTransactionData(subscriptions) {
 					}
 					try {
 						let beginTxn;
-						if (subscription.supportsTransactions && subscription.txnInProgress !== auditEntry.version) {
+						if (
+							subscription.supportsTransactions &&
+							subscription.txnInProgress !== auditEntry.version
+						) {
 							// if the subscriber supports transactions, we mark this as the beginning of a new transaction
 							// tracking the subscription so that we can delimit the transaction on next transaction
 							// (with a beginTxn flag, which may be on an endTxn event)
@@ -175,7 +197,12 @@ function notifyFromTransactionData(subscriptions) {
 		// any subscribers with open transactions need to have an event to indicate that their transaction has been ended
 		for (const subscription of subscribersWithTxns) {
 			subscription.txnInProgress = null; // clean up
-			subscription.listener(null, { type: 'end_txn' }, subscriptions.lastTxnTime, true);
+			subscription.listener(
+				null,
+				{ type: 'end_txn' },
+				subscriptions.lastTxnTime,
+				true
+			);
 		}
 	}
 }
@@ -198,7 +225,10 @@ export function listenToCommits(primaryStore, auditStore) {
 				if (!store.threadLocalWrites)
 					// initiate the shared buffer if needed
 					store.threadLocalWrites = new Float64Array(
-						store.getUserSharedBuffer('last-thread-local-write', new ArrayBuffer(8))
+						store.getUserSharedBuffer(
+							'last-thread-local-write',
+							new ArrayBuffer(8)
+						)
 					);
 				subscriptions.txnTime = store.threadLocalWrites[0] || Date.now(); // start from last one
 				try {

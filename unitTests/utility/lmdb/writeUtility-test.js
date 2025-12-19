@@ -2,9 +2,9 @@
 
 const rewire = require('rewire');
 const common = require('../../../utility/lmdb/commonUtility');
-const write_utility = rewire('../../../utility/lmdb/writeUtility');
-const environment_utility = rewire('../../../utility/lmdb/environmentUtility');
-const rw_write_validator = write_utility.__get__('validateWrite');
+const writeUtility = rewire('../../../utility/lmdb/writeUtility');
+const environmentUtility = rewire('../../../utility/lmdb/environmentUtility');
+const rw_write_validator = writeUtility.__get__('validateWrite');
 const search_util = require('../../../utility/lmdb/searchUtility');
 const assert = require('assert');
 const path = require('path');
@@ -65,7 +65,7 @@ describe('Test writeUtility module', () => {
 			await fs.remove(test_utils.getMockLMDBPath());
 			await fs.mkdirp(BASE_TEST_PATH);
 			TEST_ENVIRONMENT_NAME = uuid();
-			env = await environment_utility.createEnvironment(BASE_TEST_PATH, TEST_ENVIRONMENT_NAME);
+			env = await environmentUtility.createEnvironment(BASE_TEST_PATH, TEST_ENVIRONMENT_NAME);
 		});
 
 		after(async () => {
@@ -127,7 +127,7 @@ describe('Test writeUtility module', () => {
 	describe('Test setTimestamps function', () => {
 		let rw_set_timestamps;
 		before(() => {
-			rw_set_timestamps = write_utility.__get__('setTimestamps');
+			rw_set_timestamps = writeUtility.__get__('setTimestamps');
 			sandbox.restore();
 			get_monotonic_time_stub = sandbox.stub(common, 'getNextMonotonicTime').returns(TXN_TIMESTAMP);
 		});
@@ -195,15 +195,15 @@ describe('Test writeUtility module', () => {
 			get_monotonic_time_stub = sandbox.stub(common, 'getNextMonotonicTime').returns(TXN_TIMESTAMP);
 			global.lmdb_map = undefined;
 			try {
-				if (env) await lmdb_env_util.closeEnvironment(env);
+				if (env) await environmentUtility.closeEnvironment(env);
 			} catch (e) {}
 			await fs.remove(test_utils.getMockLMDBPath());
 			await fs.mkdirp(BASE_TEST_PATH);
 			TEST_ENVIRONMENT_NAME = uuid();
-			env = await environment_utility.createEnvironment(BASE_TEST_PATH, TEST_ENVIRONMENT_NAME);
-			await environment_utility.createDBI(env, 'id', false, true);
-			await environment_utility.createDBI(env, 'name', true);
-			await environment_utility.createDBI(env, 'age', true);
+			env = await environmentUtility.createEnvironment(BASE_TEST_PATH, TEST_ENVIRONMENT_NAME);
+			await environmentUtility.createDBI(env, 'id', false, true);
+			await environmentUtility.createDBI(env, 'name', true);
+			await environmentUtility.createDBI(env, 'age', true);
 		});
 
 		afterEach(async () => {
@@ -215,46 +215,46 @@ describe('Test writeUtility module', () => {
 		});
 
 		it('test validation', () => {
-			test_utils.assertErrorAsync(write_utility.insertRecords, [], LMDB_TEST_ERRORS.ENV_REQUIRED, 'pass no args');
+			test_utils.assertErrorAsync(writeUtility.insertRecords, [], LMDB_TEST_ERRORS.ENV_REQUIRED, 'pass no args');
 			test_utils.assertErrorAsync(
-				write_utility.insertRecords,
+				writeUtility.insertRecords,
 				['test'],
 				LMDB_TEST_ERRORS.INVALID_ENVIRONMENT,
 				'pass invalid env'
 			);
 			test_utils.assertErrorAsync(
-				write_utility.insertRecords,
+				writeUtility.insertRecords,
 				[env],
 				LMDB_TEST_ERRORS.HASH_ATTRIBUTE_REQUIRED,
 				'pass valid env, no other args'
 			);
 			test_utils.assertErrorAsync(
-				write_utility.insertRecords,
+				writeUtility.insertRecords,
 				[env, HASH_ATTRIBUTE_NAME],
 				LMDB_TEST_ERRORS.WRITE_ATTRIBUTES_REQUIRED,
 				'pass valid env hash_attribute'
 			);
 			test_utils.assertErrorAsync(
-				write_utility.insertRecords,
+				writeUtility.insertRecords,
 				[env, HASH_ATTRIBUTE_NAME, HASH_ATTRIBUTE_NAME],
 				LMDB_TEST_ERRORS.WRITE_ATTRIBUTES_MUST_BE_ARRAY,
 				'pass valid env hash_attribute, invalid all_attributes'
 			);
 			test_utils.assertErrorAsync(
-				write_utility.insertRecords,
+				writeUtility.insertRecords,
 				[env, HASH_ATTRIBUTE_NAME, ALL_ATTRIBUTES],
 				LMDB_TEST_ERRORS.RECORDS_REQUIRED,
 				'pass valid env hash_attribute all_attributes'
 			);
 			let record = test_utils.deepClone(ONE_RECORD_ARRAY[0]);
 			test_utils.assertErrorAsync(
-				write_utility.insertRecords,
+				writeUtility.insertRecords,
 				[env, HASH_ATTRIBUTE_NAME, ALL_ATTRIBUTES, record],
 				LMDB_TEST_ERRORS.RECORDS_MUST_BE_ARRAY,
 				'pass valid env hash_attribute all_attributes, invalid records'
 			);
 			test_utils.assertErrorAsync(
-				write_utility.insertRecords,
+				writeUtility.insertRecords,
 				[env, HASH_ATTRIBUTE_NAME, ALL_ATTRIBUTES, []],
 				undefined,
 				'pass valid env hash_attribute all_attributes records'
@@ -280,7 +280,7 @@ describe('Test writeUtility module', () => {
 
 			let insert_records = test_utils.deepClone(ONE_RECORD_ARRAY);
 			let result = await test_utils.assertErrorAsync(
-				write_utility.insertRecords,
+				writeUtility.insertRecords,
 				[env, HASH_ATTRIBUTE_NAME, ALL_ATTRIBUTES, insert_records],
 				undefined,
 				'pass valid env hash_attribute all_attributes records'
@@ -341,7 +341,7 @@ describe('Test writeUtility module', () => {
 			insert_records[0].__updatedtime__ = 123456;
 			insert_records[0].__createdtime__ = 123456;
 			let result = await test_utils.assertErrorAsync(
-				write_utility.insertRecords,
+				writeUtility.insertRecords,
 				[env, HASH_ATTRIBUTE_NAME, ALL_ATTRIBUTES, insert_records, false],
 				undefined,
 				'pass valid env hash_attribute all_attributes records'
@@ -375,7 +375,7 @@ describe('Test writeUtility module', () => {
 		it("test insert one row don't generate timestamps, but no timestamps on row", async () => {
 			let insert_records = test_utils.deepClone(ONE_RECORD_ARRAY);
 			let result = await test_utils.assertErrorAsync(
-				write_utility.insertRecords,
+				writeUtility.insertRecords,
 				[env, HASH_ATTRIBUTE_NAME, ALL_ATTRIBUTES, insert_records, false],
 				undefined,
 				'pass valid env hash_attribute all_attributes records'
@@ -409,7 +409,7 @@ describe('Test writeUtility module', () => {
 		it('test insert one row that already exists', async () => {
 			let insert_records = test_utils.deepClone(ONE_RECORD_ARRAY);
 			let result = await test_utils.assertErrorAsync(
-				write_utility.insertRecords,
+				writeUtility.insertRecords,
 				[env, HASH_ATTRIBUTE_NAME, ALL_ATTRIBUTES, insert_records],
 				undefined,
 				'pass valid env hash_attribute all_attributes records'
@@ -447,7 +447,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(records, [1]);
 
 			result = await test_utils.assertErrorAsync(
-				write_utility.insertRecords,
+				writeUtility.insertRecords,
 				[env, HASH_ATTRIBUTE_NAME, ALL_ATTRIBUTES, insert_records],
 				undefined,
 				'pass valid env hash_attribute all_attributes records'
@@ -465,7 +465,7 @@ describe('Test writeUtility module', () => {
 			};
 
 			let result = await test_utils.assertErrorAsync(
-				write_utility.insertRecords,
+				writeUtility.insertRecords,
 				[env, HASH_ATTRIBUTE_NAME, ['id', 'text'], [record]],
 				undefined
 			);
@@ -493,7 +493,7 @@ describe('Test writeUtility module', () => {
 			};
 
 			let result = await test_utils.assertErrorAsync(
-				write_utility.insertRecords,
+				writeUtility.insertRecords,
 				[env, HASH_ATTRIBUTE_NAME, ['id', 'timestamp', 'rando'], [record]],
 				undefined
 			);
@@ -537,15 +537,15 @@ describe('Test writeUtility module', () => {
 			get_monotonic_time_stub = sandbox.stub(common, 'getNextMonotonicTime').returns(TXN_TIMESTAMP);
 			global.lmdb_map = undefined;
 			try {
-				if (env) await lmdb_env_util.closeEnvironment(env);
+				if (env) await environmentUtility.closeEnvironment(env);
 			} catch (e) {}
 			await fs.remove(test_utils.getMockLMDBPath());
 			await fs.mkdirp(BASE_TEST_PATH);
 			TEST_ENVIRONMENT_NAME = uuid();
-			env = await environment_utility.createEnvironment(BASE_TEST_PATH, TEST_ENVIRONMENT_NAME);
-			await environment_utility.createDBI(env, 'id', false, true);
+			env = await environmentUtility.createEnvironment(BASE_TEST_PATH, TEST_ENVIRONMENT_NAME);
+			await environmentUtility.createDBI(env, 'id', false, true);
 			let insert_records = test_utils.deepClone(ONE_RECORD_ARRAY);
-			await write_utility.insertRecords(env, HASH_ATTRIBUTE_NAME, test_utils.deepClone(ALL_ATTRIBUTES), insert_records);
+			await writeUtility.insertRecords(env, HASH_ATTRIBUTE_NAME, test_utils.deepClone(ALL_ATTRIBUTES), insert_records);
 		});
 
 		afterEach(async () => {
@@ -557,46 +557,46 @@ describe('Test writeUtility module', () => {
 		});
 
 		it('test validation', async () => {
-			await test_utils.assertErrorAsync(write_utility.updateRecords, [], LMDB_TEST_ERRORS.ENV_REQUIRED, 'pass no args');
+			await test_utils.assertErrorAsync(writeUtility.updateRecords, [], LMDB_TEST_ERRORS.ENV_REQUIRED, 'pass no args');
 			await test_utils.assertErrorAsync(
-				write_utility.updateRecords,
+				writeUtility.updateRecords,
 				['test'],
 				LMDB_TEST_ERRORS.INVALID_ENVIRONMENT,
 				'pass invalid env'
 			);
 			await test_utils.assertErrorAsync(
-				write_utility.updateRecords,
+				writeUtility.updateRecords,
 				[env],
 				LMDB_TEST_ERRORS.HASH_ATTRIBUTE_REQUIRED,
 				'pass valid env, no other args'
 			);
 			await test_utils.assertErrorAsync(
-				write_utility.updateRecords,
+				writeUtility.updateRecords,
 				[env, HASH_ATTRIBUTE_NAME],
 				LMDB_TEST_ERRORS.WRITE_ATTRIBUTES_REQUIRED,
 				'pass valid env hash_attribute'
 			);
 			await test_utils.assertErrorAsync(
-				write_utility.updateRecords,
+				writeUtility.updateRecords,
 				[env, HASH_ATTRIBUTE_NAME, HASH_ATTRIBUTE_NAME],
 				LMDB_TEST_ERRORS.WRITE_ATTRIBUTES_MUST_BE_ARRAY,
 				'pass valid env hash_attribute, invalid all_attributes'
 			);
 			await test_utils.assertErrorAsync(
-				write_utility.updateRecords,
+				writeUtility.updateRecords,
 				[env, HASH_ATTRIBUTE_NAME, ALL_ATTRIBUTES],
 				LMDB_TEST_ERRORS.RECORDS_REQUIRED,
 				'pass valid env hash_attribute all_attributes'
 			);
 			let insert_record = test_utils.deepClone(ONE_RECORD_ARRAY[0]);
 			await test_utils.assertErrorAsync(
-				write_utility.updateRecords,
+				writeUtility.updateRecords,
 				[env, HASH_ATTRIBUTE_NAME, ALL_ATTRIBUTES, insert_record],
 				LMDB_TEST_ERRORS.RECORDS_MUST_BE_ARRAY,
 				'pass valid env hash_attribute all_attributes, invalid records'
 			);
 			await test_utils.assertErrorAsync(
-				write_utility.updateRecords,
+				writeUtility.updateRecords,
 				[env, HASH_ATTRIBUTE_NAME, ALL_ATTRIBUTES, []],
 				undefined,
 				'pass valid env hash_attribute all_attributes records'
@@ -620,13 +620,13 @@ describe('Test writeUtility module', () => {
 			let update_records = test_utils.deepClone(UPDATE_ONE_RECORD_ARRAY);
 			update_records[0]['__createdtime__'] = 'bad value';
 			let results = await test_utils.assertErrorAsync(
-				write_utility.updateRecords,
+				writeUtility.updateRecords,
 				[env, HASH_ATTRIBUTE_NAME, all_attributes_for_update, update_records],
 				undefined
 			);
 			assert.deepStrictEqual(results, expected_update_response);
 
-			let all_dbis = test_utils.assertErrorSync(environment_utility.listDBIs, [env], undefined);
+			let all_dbis = test_utils.assertErrorSync(environmentUtility.listDBIs, [env], undefined);
 			assert.deepStrictEqual(all_dbis, all_attributes_for_update);
 
 			records = [];
@@ -654,13 +654,13 @@ describe('Test writeUtility module', () => {
 			let update_records = test_utils.deepClone(UPDATE_ONE_RECORD_ARRAY);
 			update_records[0]['__updatedtime__'] = TIMESTAMP - 100;
 			let results = await test_utils.assertErrorAsync(
-				write_utility.updateRecords,
+				writeUtility.updateRecords,
 				[env, HASH_ATTRIBUTE_NAME, all_attributes_for_update, update_records, false],
 				undefined
 			);
 			assert.deepStrictEqual(results, expected_update_response);
 
-			let all_dbis = test_utils.assertErrorSync(environment_utility.listDBIs, [env], undefined);
+			let all_dbis = test_utils.assertErrorSync(environmentUtility.listDBIs, [env], undefined);
 			assert.deepStrictEqual(all_dbis, all_attributes_for_update);
 
 			records = [];
@@ -686,13 +686,13 @@ describe('Test writeUtility module', () => {
 			let update_records = test_utils.deepClone(UPDATE_ONE_RECORD_ARRAY);
 			update_records[0]['__createdtime__'] = 'bad value';
 			let results = await test_utils.assertErrorAsync(
-				write_utility.updateRecords,
+				writeUtility.updateRecords,
 				[env, HASH_ATTRIBUTE_NAME, all_attributes_for_update, update_records, false],
 				undefined
 			);
 			assert.deepStrictEqual(results, expected_update_response);
 
-			let all_dbis = test_utils.assertErrorSync(environment_utility.listDBIs, [env], undefined);
+			let all_dbis = test_utils.assertErrorSync(environmentUtility.listDBIs, [env], undefined);
 			assert.deepStrictEqual(all_dbis, all_attributes_for_update);
 
 			records = [];
@@ -721,13 +721,13 @@ describe('Test writeUtility module', () => {
 			update_records[0]['__createdtime__'] = 'bad value';
 			update_records[0]['__updatedtime__'] = updated_time;
 			let results = await test_utils.assertErrorAsync(
-				write_utility.updateRecords,
+				writeUtility.updateRecords,
 				[env, HASH_ATTRIBUTE_NAME, all_attributes_for_update, update_records, false],
 				undefined
 			);
 			assert.deepStrictEqual(results, expected_update_response);
 
-			let all_dbis = test_utils.assertErrorSync(environment_utility.listDBIs, [env], undefined);
+			let all_dbis = test_utils.assertErrorSync(environmentUtility.listDBIs, [env], undefined);
 			assert.deepStrictEqual(all_dbis, all_attributes_for_update);
 
 			records = [];
@@ -751,7 +751,7 @@ describe('Test writeUtility module', () => {
 
 			let update_records = test_utils.deepClone(UPDATE_ONE_RECORD_ARRAY.concat(UPDATE_ONE_FAKE_RECORD));
 			let results = await test_utils.assertErrorAsync(
-				write_utility.updateRecords,
+				writeUtility.updateRecords,
 				[env, HASH_ATTRIBUTE_NAME, all_attributes_for_update, update_records],
 				undefined
 			);
@@ -763,7 +763,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(update_records, expected_update_records);
 			assert.deepStrictEqual(results, expected_update_response);
 
-			let all_dbis = test_utils.assertErrorSync(environment_utility.listDBIs, [env], undefined);
+			let all_dbis = test_utils.assertErrorSync(environmentUtility.listDBIs, [env], undefined);
 			assert.deepStrictEqual(all_dbis, all_attributes_for_update);
 
 			records = [];
@@ -786,13 +786,13 @@ describe('Test writeUtility module', () => {
 			let expected_update_response = new UpdateRecordsResponseObject([1], [], TXN_TIMESTAMP, orig_records);
 
 			let results = await test_utils.assertErrorAsync(
-				write_utility.updateRecords,
+				writeUtility.updateRecords,
 				[env, HASH_ATTRIBUTE_NAME, all_attributes_for_update, [{ id: 1, city: 'Denver' }]],
 				undefined
 			);
 			assert.deepStrictEqual(results, expected_update_response);
 
-			let all_dbis = test_utils.assertErrorSync(environment_utility.listDBIs, [env], undefined);
+			let all_dbis = test_utils.assertErrorSync(environmentUtility.listDBIs, [env], undefined);
 			assert.deepStrictEqual(all_dbis, all_attributes_for_update);
 
 			records = [];
@@ -832,7 +832,7 @@ describe('Test writeUtility module', () => {
 			let expected_update_response = new UpdateRecordsResponseObject([1], [], TXN_TIMESTAMP, orig_records);
 
 			let results = await test_utils.assertErrorAsync(
-				write_utility.updateRecords,
+				writeUtility.updateRecords,
 				[env, HASH_ATTRIBUTE_NAME, all_attributes_for_update, [record]],
 				undefined
 			);
@@ -853,7 +853,7 @@ describe('Test writeUtility module', () => {
 			expected_update_response = new UpdateRecordsResponseObject([1], [], TXN_TIMESTAMP, orig_records);
 
 			results = await test_utils.assertErrorAsync(
-				write_utility.updateRecords,
+				writeUtility.updateRecords,
 				[env, HASH_ATTRIBUTE_NAME, all_attributes_for_update, [{ id: 1, text: null }]],
 				undefined
 			);
@@ -900,7 +900,7 @@ describe('Test writeUtility module', () => {
 			let expected_update_response = new UpdateRecordsResponseObject([1], [], TXN_TIMESTAMP, orig_records);
 
 			let results = await test_utils.assertErrorAsync(
-				write_utility.updateRecords,
+				writeUtility.updateRecords,
 				[env, HASH_ATTRIBUTE_NAME, all_attributes_for_update, [record]],
 				undefined
 			);
@@ -921,7 +921,7 @@ describe('Test writeUtility module', () => {
 			expected_update_response = new UpdateRecordsResponseObject([1], [], TXN_TIMESTAMP, orig_records);
 
 			results = await test_utils.assertErrorAsync(
-				write_utility.updateRecords,
+				writeUtility.updateRecords,
 				[env, HASH_ATTRIBUTE_NAME, all_attributes_for_update, [{ id: 1, json: null }]],
 				undefined
 			);
@@ -948,7 +948,7 @@ describe('Test writeUtility module', () => {
 			};
 
 			let result = await test_utils.assertErrorAsync(
-				write_utility.insertRecords,
+				writeUtility.insertRecords,
 				[env, HASH_ATTRIBUTE_NAME, ['id', 'timestamp', 'rando'], [record]],
 				undefined
 			);
@@ -974,7 +974,7 @@ describe('Test writeUtility module', () => {
 			record = { ...record }; // copy, so we don't modify the record in the cache
 			record.rando = rando_func;
 			result = await test_utils.assertErrorAsync(
-				write_utility.updateRecords,
+				writeUtility.updateRecords,
 				[env, HASH_ATTRIBUTE_NAME, ['id', 'timestamp', 'rando'], [record]],
 				undefined
 			);
@@ -995,7 +995,7 @@ describe('Test writeUtility module', () => {
 		let get_monotonic_time_stub;
 		let uuid_stub;
 		before(() => {
-			uuid_stub = write_utility.__set__('uuid', {
+			uuid_stub = writeUtility.__set__('uuid', {
 				v4: () => {
 					return UUID_VALUE;
 				},
@@ -1010,15 +1010,15 @@ describe('Test writeUtility module', () => {
 			get_monotonic_time_stub = sandbox.stub(common, 'getNextMonotonicTime').returns(TXN_TIMESTAMP);
 			global.lmdb_map = undefined;
 			try {
-				if (env) await lmdb_env_util.closeEnvironment(env);
+				if (env) await environmentUtility.closeEnvironment(env);
 			} catch (e) {}
 			await fs.remove(test_utils.getMockLMDBPath());
 			await fs.mkdirp(BASE_TEST_PATH);
 			TEST_ENVIRONMENT_NAME = uuid();
-			env = await environment_utility.createEnvironment(BASE_TEST_PATH, TEST_ENVIRONMENT_NAME);
-			await environment_utility.createDBI(env, 'id', false, true);
+			env = await environmentUtility.createEnvironment(BASE_TEST_PATH, TEST_ENVIRONMENT_NAME);
+			await environmentUtility.createDBI(env, 'id', false, true);
 			let insert_records = test_utils.deepClone(ONE_RECORD_ARRAY);
-			await write_utility.insertRecords(env, HASH_ATTRIBUTE_NAME, test_utils.deepClone(ALL_ATTRIBUTES), insert_records);
+			await writeUtility.insertRecords(env, HASH_ATTRIBUTE_NAME, test_utils.deepClone(ALL_ATTRIBUTES), insert_records);
 		});
 
 		afterEach(async () => {
@@ -1031,50 +1031,50 @@ describe('Test writeUtility module', () => {
 
 		it('test validation', async () => {
 			await test_utils.assertErrorAsync(
-				write_utility.upsertRecords,
+				writeUtility.upsertRecords,
 				[],
 				generateValidationErr(LMDB_TEST_ERRORS.ENV_REQUIRED.message),
 				'pass no args'
 			);
 			await test_utils.assertErrorAsync(
-				write_utility.upsertRecords,
+				writeUtility.upsertRecords,
 				['test'],
 				generateValidationErr(LMDB_TEST_ERRORS.INVALID_ENVIRONMENT.message),
 				'pass invalid env'
 			);
 			await test_utils.assertErrorAsync(
-				write_utility.upsertRecords,
+				writeUtility.upsertRecords,
 				[env],
 				generateValidationErr(LMDB_TEST_ERRORS.HASH_ATTRIBUTE_REQUIRED.message),
 				'pass valid env, no other args'
 			);
 			await test_utils.assertErrorAsync(
-				write_utility.upsertRecords,
+				writeUtility.upsertRecords,
 				[env, HASH_ATTRIBUTE_NAME],
 				generateValidationErr(LMDB_TEST_ERRORS.WRITE_ATTRIBUTES_REQUIRED.message),
 				'pass valid env hash_attribute'
 			);
 			await test_utils.assertErrorAsync(
-				write_utility.upsertRecords,
+				writeUtility.upsertRecords,
 				[env, HASH_ATTRIBUTE_NAME, HASH_ATTRIBUTE_NAME],
 				generateValidationErr(LMDB_TEST_ERRORS.WRITE_ATTRIBUTES_MUST_BE_ARRAY.message),
 				'pass valid env hash_attribute, invalid all_attributes'
 			);
 			await test_utils.assertErrorAsync(
-				write_utility.upsertRecords,
+				writeUtility.upsertRecords,
 				[env, HASH_ATTRIBUTE_NAME, ALL_ATTRIBUTES],
 				generateValidationErr(LMDB_TEST_ERRORS.RECORDS_REQUIRED.message),
 				'pass valid env hash_attribute all_attributes'
 			);
 			let record = test_utils.deepClone(ONE_RECORD_ARRAY[0]);
 			await test_utils.assertErrorAsync(
-				write_utility.upsertRecords,
+				writeUtility.upsertRecords,
 				[env, HASH_ATTRIBUTE_NAME, ALL_ATTRIBUTES, record],
 				generateValidationErr(LMDB_TEST_ERRORS.RECORDS_MUST_BE_ARRAY.message),
 				'pass valid env hash_attribute all_attributes, invalid records'
 			);
 			await test_utils.assertErrorAsync(
-				write_utility.upsertRecords,
+				writeUtility.upsertRecords,
 				[env, HASH_ATTRIBUTE_NAME, ALL_ATTRIBUTES, []],
 				undefined,
 				'pass valid env hash_attribute all_attributes records'
@@ -1087,7 +1087,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(record, undefined);
 			let insert_records = [{ id: 999, name: 'Cool Dude', age: '?' }];
 			let result = await test_utils.assertErrorAsync(
-				write_utility.upsertRecords,
+				writeUtility.upsertRecords,
 				[env, HASH_ATTRIBUTE_NAME, ALL_ATTRIBUTES, insert_records],
 				undefined,
 				'pass valid env hash_attribute all_attributes records'
@@ -1106,7 +1106,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(record, undefined);
 			let insert_records = [{ name: 'Cool Dude', age: '?' }];
 			let result = await test_utils.assertErrorAsync(
-				write_utility.upsertRecords,
+				writeUtility.upsertRecords,
 				[env, HASH_ATTRIBUTE_NAME, ALL_ATTRIBUTES, insert_records],
 				undefined,
 				'pass valid env hash_attribute all_attributes records'
@@ -1139,13 +1139,13 @@ describe('Test writeUtility module', () => {
 			let upsert_records = test_utils.deepClone(UPDATE_ONE_RECORD_ARRAY);
 			upsert_records[0]['__createdtime__'] = 'bad value';
 			let results = await test_utils.assertErrorAsync(
-				write_utility.upsertRecords,
+				writeUtility.upsertRecords,
 				[env, HASH_ATTRIBUTE_NAME, all_attributes_for_update, upsert_records],
 				undefined
 			);
 			assert.deepStrictEqual(results, expected_upsert_response);
 
-			let all_dbis = test_utils.assertErrorSync(environment_utility.listDBIs, [env], undefined);
+			let all_dbis = test_utils.assertErrorSync(environmentUtility.listDBIs, [env], undefined);
 			assert.deepStrictEqual(all_dbis, all_attributes_for_update);
 
 			records = [];
@@ -1166,7 +1166,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(records, expected);
 			let upsert_records = test_utils.deepClone(UPDATE_ONE_RECORD_ARRAY.concat(UPDATE_ONE_FAKE_RECORD));
 			let results = await test_utils.assertErrorAsync(
-				write_utility.upsertRecords,
+				writeUtility.upsertRecords,
 				[env, HASH_ATTRIBUTE_NAME, all_attributes_for_update, upsert_records],
 				undefined
 			);
@@ -1185,7 +1185,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(upsert_records, expected_upsert_records);
 			assert.deepStrictEqual(results, expected_upsert_response);
 
-			let all_dbis = test_utils.assertErrorSync(environment_utility.listDBIs, [env], undefined);
+			let all_dbis = test_utils.assertErrorSync(environmentUtility.listDBIs, [env], undefined);
 			assert.deepStrictEqual(all_dbis, all_attributes_for_update);
 
 			records = [];
@@ -1213,7 +1213,7 @@ describe('Test writeUtility module', () => {
 			let expected_upsert_response = new UpsertRecordsResponseObject([1], TXN_TIMESTAMP, orig_records);
 
 			let results = await test_utils.assertErrorAsync(
-				write_utility.upsertRecords,
+				writeUtility.upsertRecords,
 				[env, HASH_ATTRIBUTE_NAME, all_attributes_for_upsert, [{ id: 1, city: 'Denver' }]],
 				undefined
 			);
@@ -1259,7 +1259,7 @@ describe('Test writeUtility module', () => {
 			let expected_upsert_response = new UpsertRecordsResponseObject([1], TXN_TIMESTAMP, orig_records);
 
 			let results = await test_utils.assertErrorAsync(
-				write_utility.upsertRecords,
+				writeUtility.upsertRecords,
 				[env, HASH_ATTRIBUTE_NAME, all_attributes_for_upsert, [record]],
 				undefined
 			);
@@ -1283,7 +1283,7 @@ describe('Test writeUtility module', () => {
 			expected_upsert_response = new UpsertRecordsResponseObject([1], TXN_TIMESTAMP, orig_records);
 
 			results = await test_utils.assertErrorAsync(
-				write_utility.upsertRecords,
+				writeUtility.upsertRecords,
 				[env, HASH_ATTRIBUTE_NAME, all_attributes_for_upsert, [{ id: 1, text: null }]],
 				undefined
 			);
@@ -1330,7 +1330,7 @@ describe('Test writeUtility module', () => {
 			let expected_upsert_response = new UpsertRecordsResponseObject([1], TXN_TIMESTAMP, orig_records);
 
 			let results = await test_utils.assertErrorAsync(
-				write_utility.upsertRecords,
+				writeUtility.upsertRecords,
 				[env, HASH_ATTRIBUTE_NAME, all_attributes_for_upsert, [record]],
 				undefined
 			);
@@ -1352,7 +1352,7 @@ describe('Test writeUtility module', () => {
 			expected_upsert_response = new UpsertRecordsResponseObject([1], TXN_TIMESTAMP, orig_records);
 
 			results = await test_utils.assertErrorAsync(
-				write_utility.upsertRecords,
+				writeUtility.upsertRecords,
 				[env, HASH_ATTRIBUTE_NAME, all_attributes_for_upsert, [{ id: 1, json: null }]],
 				undefined
 			);
@@ -1379,7 +1379,7 @@ describe('Test writeUtility module', () => {
 			};
 
 			let result = await test_utils.assertErrorAsync(
-				write_utility.upsertRecords,
+				writeUtility.upsertRecords,
 				[env, HASH_ATTRIBUTE_NAME, ['id', 'timestamp', 'rando'], [record]],
 				undefined
 			);
@@ -1404,7 +1404,7 @@ describe('Test writeUtility module', () => {
 
 			record.rando = rando_func;
 			result = await test_utils.assertErrorAsync(
-				write_utility.upsertRecords,
+				writeUtility.upsertRecords,
 				[env, HASH_ATTRIBUTE_NAME, ['id', 'timestamp', 'rando'], [record]],
 				undefined
 			);

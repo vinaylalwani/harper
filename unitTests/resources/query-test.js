@@ -1509,6 +1509,7 @@ describe('Querying through Resource API', () => {
 
 	it('Query data in a table with bad attribute', async function () {
 		let caught_error;
+		let results = [];
 		try {
 			for await (let record of QueryTable.search({
 				conditions: [{ attribute: [], value: 'id-1' }],

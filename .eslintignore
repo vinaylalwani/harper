@@ -21,6 +21,7 @@ hdb_boot_properties.file
 /unitTests/apiTests/envDir/*
 /unitTests/testApp/node_modules/*
 /unitTests/server/nats/tempTestDir/*
+/unitTests/security/jsLoader/fixtures/*
 coverage.json
 unitTests/server/nats/tempTestDir/*
 dependencies/*
