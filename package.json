@@ -32,8 +32,9 @@
 	"scripts": {
 		"build": "tsc --project tsconfig.build.json",
 		"build:watch": "npm run build -- --watch --incremental",
-		"lint": "eslint .",
-		"lint:required": "eslint --no-config-lookup --quiet -c eslint.required.config.mjs .",
+		"lint": "oxlint --deny-warnings .",
+		"lint:required": "oxlint --quiet .",
+		"lint:fix": "npm run lint -- --fix",
 		"format:check": "prettier --check .",
 		"format:write": "prettier --write .",
 		"test:integration:api-tests": "node --test integrationTests/apiTests/tests/testSuite.mjs",
@@ -57,7 +58,6 @@
 		}
 	},
 	"devDependencies": {
-		"@eslint/js": "^9.39.1",
 		"@harperdb/code-guidelines": "^0.0.6",
 		"@types/gunzip-maybe": "^1.4.3",
 		"@types/micromatch": "^4.0.9",
@@ -67,8 +67,6 @@
 		"@typescript-eslint/parser": "^8.48.1",
 		"axios": "^1.12.2",
 		"chai": "^6.2.0",
-		"eslint": "^9.36.0",
-		"eslint-config-prettier": "^10.1.8",
 		"fast-glob": "^3.3.3",
 		"fs-extra": "^11.3.2",
 		"globals": "^16.5.0",
@@ -79,7 +77,8 @@
 		"tsx": "^4.20.6",
 		"typescript": "^5.7.3",
 		"typescript-eslint": "^8.45.0",
-		"undici": "^7.16.0"
+		"undici": "^7.16.0",
+		"oxlint": "^1.31.0"
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "3.946.0",
