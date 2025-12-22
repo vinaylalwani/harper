@@ -479,20 +479,20 @@ export function recordUpdater(store, tableId, auditStore) {
 						const previousLocalTime = readAuditEntry(replacingEntry).previousLocalTime;
 						result = auditStore.put(
 							replacingId,
-							createAuditEntry(
-								newVersion,
+							{
+								version: newVersion,
 								tableId,
-								id,
+								recordId: id,
 								previousLocalTime,
-								options?.nodeId ?? server.replication.getThisNodeId(auditStore) ?? 0,
+								nodeId: options?.nodeId ?? server.replication.getThisNodeId(auditStore) ?? 0,
 								username,
 								type,
-								lastValueEncoding,
+								recordEncoding: lastValueEncoding,
 								extendedType,
 								residencyId,
 								previousResidencyId,
-								expiresAt
-							),
+								expiresAt,
+							},
 							{ ifVersion: ifVersion, transaction: options.transaction }
 						);
 						return result;
@@ -500,21 +500,21 @@ export function recordUpdater(store, tableId, auditStore) {
 				}
 				result = auditStore.put(
 					record === undefined ? NEW_TIMESTAMP_PLACEHOLDER : LAST_TIMESTAMP_PLACEHOLDER,
-					createAuditEntry(
-						newVersion,
+					{
+						version: newVersion,
 						tableId,
-						id,
-						existingEntry?.localTime ? 1 : 0,
-						options?.nodeId ?? server.replication?.getThisNodeId(auditStore) ?? 0,
+						recordId: id,
+						previousLocalTime: existingEntry?.localTime ? 1 : 0,
+						nodeId: options?.nodeId ?? server.replication?.getThisNodeId(auditStore) ?? 0,
 						username,
 						type,
-						lastValueEncoding,
+						recordEncoding: lastValueEncoding,
 						extendedType,
 						residencyId,
 						previousResidencyId,
 						expiresAt,
-						options?.originatingOperation
-					),
+						originatingOperation: options?.originatingOperation,
+					},
 					{
 						// turn off append flag, as we are concerned this may be related to db corruption issues
 						// append: type !== 'invalidate', // for invalidation, we expect the record to be rewritten, so we don't want to necessarily expect pure sequential writes that create full pages

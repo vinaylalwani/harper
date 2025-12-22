@@ -1,0 +1,212 @@
+import { type TransactionLog, RocksDatabase, shutdown, type TransactionEntry } from '@harperdb/rocksdb-js';
+import { ExtendedIterable } from '@harperfast/extended-iterable';
+import { Decoder, readAuditEntry, ENTRY_DATAVIEW, AuditRecord, createAuditEntry } from './auditStore.ts';
+import logger from '../utility/logging/harper_logger.js';
+if (!process.env.HARPER_NO_FLUSH_ON_EXIT) {
+	// we want to be able to test log replay
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+	process.on('exit', shutdown);
+}
+
+const HAS_32_BIT_FLAG = 0x80000000; // for future use if we need a bigger section for flags
+const HAS_PREVIOUS_RESIDENCY_ID = 0x40000000;
+const HAS_PREVIOUS_VERSION = 0x20000000;
+export class RocksTransactionLogStore {
+	log: TransactionLog;
+	nodeLogs?: TransactionLog[]; // whatever the type of the read logger
+	logByName: Map<string, TransactionLog> = new Map();
+	rootStore: RocksDatabase;
+	reusableIterable = true; // flag indicating that iterable can be reused to resume iterating through audit log
+	constructor(rootDatabase: RocksDatabase) {
+		this.log = rootDatabase.useLog('local');
+		this.rootStore = rootDatabase;
+	}
+
+	/**
+	 * Translate a put to an addEntry
+	 * @param suggestedKey - ignored, only used by LMDB
+	 * @param entry
+	 * @param txnId
+	 */
+	put(suggestedKey: any, auditRecord: AuditRecord | Uint8Array, options: any) {
+		const nodeId = options.nodeId;
+		const log = nodeId ? (this.nodeLogs?.[nodeId] ?? this.loadLogs()[nodeId]) : this.log;
+		let entryBinary: Uint8Array;
+		if (auditRecord instanceof Uint8Array) entryBinary = auditRecord;
+		else {
+			const flagAndStructureVersion =
+				(auditRecord.previousVersion ? HAS_PREVIOUS_VERSION : 0) |
+				(auditRecord.previousResidencyId ? HAS_PREVIOUS_RESIDENCY_ID : 0) |
+				auditRecord.structureVersion;
+			ENTRY_DATAVIEW.setUint32(0, flagAndStructureVersion);
+			let position = 4;
+			if (auditRecord.previousResidencyId) {
+				ENTRY_DATAVIEW.setUint32(4, auditRecord.previousResidencyId);
+				position = 8;
+			}
+			if (auditRecord.previousVersion) {
+				ENTRY_DATAVIEW.setFloat64(position, auditRecord.previousVersion);
+				position += 8;
+			}
+			if (auditRecord.previousNodeId) {
+				ENTRY_DATAVIEW.setUint32(position, auditRecord.previousNodeId);
+				position += 4;
+			}
+			entryBinary = createAuditEntry(auditRecord, position);
+		}
+		log.addEntry(entryBinary, options.transaction.id);
+	}
+
+	putSync(suggestedKey: any, value: any, options: any) {
+		if (typeof suggestedKey === 'symbol') {
+			this.rootStore.putSync(suggestedKey, value, options);
+		} else {
+			const nodeId = options.nodeId;
+			const log = nodeId ? (this.nodeLogs?.[nodeId] ?? this.loadLogs()[nodeId]) : this.log;
+			log.addEntry(value, options.transaction.id);
+		}
+	}
+	get(key: any) {
+		return this.getSync(key);
+	}
+	getSync(key: any) {
+		if (typeof key === 'number') {
+			// this a request for a transaction log entry by a timestamp
+			for (const entry of this.getRange({ start: key, end: key })) {
+				return entry.value;
+			}
+		} else {
+			// Harper puts some metadata in the database, we will just put this in the root store instead
+			return this.rootStore.getSync(key);
+		}
+	}
+	getEntry() {
+		throw new Error('Not implemented');
+	}
+	loadLogs() {
+		this.nodeLogs ??= [];
+		for (const logName of this.rootStore.listLogs()) {
+			const nodeId = ((globalThis as any).server?.replication?.exportIdMapping?.(this)?.[logName] ?? 0) as number;
+			this.nodeLogs[nodeId] ??= this.rootStore.useLog(logName);
+			this.logByName.set(logName, this.nodeLogs[nodeId]);
+		}
+		return this.nodeLogs;
+	}
+
+	/**
+	 * Get all entries matching the range, from all the transaction logs, sorted by timestamp
+	 * @param options
+	 */
+	getRange(options: {
+		start?: number;
+		end?: number;
+		log?: string;
+		onlyKeys?: boolean;
+		startFromLastFlushed?: boolean;
+		readUncommitted?: boolean;
+	}): Iterable<AuditRecord> {
+		let iterable = new ExtendedIterable<TransactionEntry>();
+		if (options.log) {
+			let log = this.logByName.get(options.log);
+			if (!log) {
+				this.loadLogs();
+				log = this.logByName.get(options.log);
+				if (!log) {
+					log = this.rootStore.useLog(options.log);
+				}
+			}
+			const queryIterator = log.query(options);
+			iterable.iterate = () => queryIterator;
+		} else {
+			const onlyKeys = options.onlyKeys;
+			const iterators = (this.nodeLogs || this.loadLogs()).map((log) => log.query(options)[Symbol.iterator]());
+			// get the earliest entry from each iterator
+			const nextEntries = iterators.map((iterator) => iterator.next());
+			const aggregateIterator = {
+				next() {
+					let earliest: any;
+					let earliestIndex = -1;
+					for (let i = 0; i < nextEntries.length; i++) {
+						const result = nextEntries[i];
+						// skip any that are done
+						if (result.done) {
+							// remove the entry from the list, so we don't keep hitting it
+							nextEntries.splice(i--, 1);
+							continue;
+						}
+						// find the earliest one that is not done
+						const next = result.value;
+						if (!earliest || earliest.timestamp < next.timestamp) {
+							earliest = next;
+							earliestIndex = i;
+						}
+					}
+					if (earliestIndex >= 0) {
+						// replace the entry with the next one from the iterator we pulled from
+						nextEntries[earliestIndex] = iterators[earliestIndex].next();
+						return {
+							value: onlyKeys ? earliest.timestamp : { key: earliest.timestamp, value: earliest.data },
+							done: false,
+						};
+					} // else we are done
+					return { value: undefined, done: true };
+				},
+			};
+			iterable.iterate = () => aggregateIterator;
+		}
+		return iterable.map(({ timestamp, data, endTxn }) => {
+			// @ts-ignore
+			const decoder = new Decoder(data.buffer, data.byteOffset, data.byteLength);
+			data.dataView = decoder;
+			// This represents the data that shouldn't be transferred for replication
+			let structureVersion = decoder.getUint32(0);
+			const headerFlags = structureVersion >> 24;
+			structureVersion &= 0x00ffffff;
+			let position = 4;
+			let previousResidencyId;
+			let previousVersion;
+			if (headerFlags & HAS_PREVIOUS_RESIDENCY_ID) {
+				previousResidencyId = decoder.getUint32(position);
+				position += 4;
+			}
+			if (headerFlags & HAS_PREVIOUS_VERSION) {
+				// does previous residency id and version actually require separate flags?
+				previousVersion = decoder.getFloat64(position);
+				position += 8;
+			}
+			const transactionEntry = readAuditEntry(data, position, undefined, true);
+			transactionEntry.version = timestamp;
+			transactionEntry.endTxn = endTxn;
+			transactionEntry.previousResidencyId = previousResidencyId;
+			transactionEntry.previousVersion = transactionEntry.previousLocalTime = previousVersion;
+			transactionEntry.structureVersion = structureVersion;
+			return transactionEntry;
+		});
+	}
+	getKeys(options: any) {
+		return []; // TODO: implement this
+		options.onlyKeys = true;
+		return this.getRange(options);
+	}
+	getStats() {
+		let totalSize = 0;
+		const logs = [];
+		for (const log of this.loadLogs()) {
+			const size = log.getLogFileSize();
+			totalSize += size;
+			logs.push({ name: log.name, size });
+		}
+		return {
+			logs,
+			totalSize,
+		};
+	}
+
+	getUserSharedBuffer(
+		key: string | symbol,
+		defaultBuffer: ArrayBuffer,
+		options?: { callback?: (listener: any) => void }
+	) {
+		return this.rootStore.getUserSharedBuffer(key, defaultBuffer, options);
+	}
+}
