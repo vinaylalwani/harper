@@ -4,8 +4,10 @@ import type { Context } from './ResourceInterface.ts';
 import * as logger from '../utility/logging/harper_logger.js';
 import { DatabaseTransaction } from './DatabaseTransaction.ts';
 import { RocksTransactionLogStore } from './RocksTransactionLogStore.ts';
+import { isMainThread } from 'node:worker_threads';
 
 export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void> {
+	if (!isMainThread) return; // ideally we don't do it like this, but for now this is predictable
 	return new Promise((resolve, reject) => {
 		const acquired = rootStore.tryLock('replayLogs', async () => {
 			resolve();
@@ -21,17 +23,17 @@ export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void>
 		let lastTimestamp = 0;
 		const txnLog: RocksTransactionLogStore = rootStore.auditStore;
 		for (const auditRecord of txnLog.getRange({ startFromLastFlushed: true, readUncommitted: true })) {
-			const { type, tableId, nodeId, recordId, version, residencyId, expiresAt, originatingOperation, user } =
+			const { type, tableId, nodeId, recordId, version, residencyId, expiresAt, originatingOperation, username } =
 				auditRecord;
 			try {
 				const Table = tableById.get(tableId);
-				const context: Context = { nodeId, alreadyLogged: true, version, expiresAt, user };
+				const context: Context = { nodeId, alreadyLogged: true, version, expiresAt, user: { name: username } };
 				const { primaryStore, auditStore } = Table;
 				const tableInstance = Table.getResource(null, context, {});
 				// TODO: If this throws an error due to being unable to access structures, we need to iterate through
 				// other transaction logs to get the latest structure. Ultimately we may have to skip records
 				console.error('replaying', Table.name, recordId);
-				const record = auditEntry.getValue(primaryStore);
+				const record = auditRecord.getValue(primaryStore);
 				if (lastTimestamp !== version) {
 					lastTimestamp = version;
 					try {
@@ -61,7 +63,7 @@ export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void>
 						break;
 					case 'structures': {
 						const rocksTransaction = new RocksTransaction(primaryStore.store);
-						const structuresAsBinary = auditEntry.getBinaryValue(primaryStore);
+						const structuresAsBinary = auditRecord.getBinaryValue(primaryStore);
 						const updatedStructures = structuresAsBinary ? primaryStore.decoder.decode(structuresAsBinary) : undefined;
 						const existingStructures = primaryStore.getSync(Symbol.for('structures'), {
 							transaction: rocksTransaction,

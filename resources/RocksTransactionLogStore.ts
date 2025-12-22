@@ -120,11 +120,16 @@ export class RocksTransactionLogStore {
 		} else {
 			const onlyKeys = options.onlyKeys;
 			const iterators = (this.nodeLogs || this.loadLogs()).map((log) => log.query(options)[Symbol.iterator]());
-			// get the earliest entry from each iterator
-			const nextEntries = iterators.map((iterator) => iterator.next());
+			// holds the queue of next entries from each iterator
+			let nextEntries = [];
 			const aggregateIterator = {
 				next() {
-					let earliest: any;
+					if (nextEntries.length === 0) {
+						// on the first iteration and any time we finished all the iterators, we re-retrieve all
+						// the next entries (in case we are resuming after being done)
+						nextEntries = iterators.map((iterator) => iterator.next());
+					}
+					let earliest: TransactionEntry;
 					let earliestIndex = -1;
 					for (let i = 0; i < nextEntries.length; i++) {
 						const result = nextEntries[i];
@@ -145,7 +150,7 @@ export class RocksTransactionLogStore {
 						// replace the entry with the next one from the iterator we pulled from
 						nextEntries[earliestIndex] = iterators[earliestIndex].next();
 						return {
-							value: onlyKeys ? earliest.timestamp : { key: earliest.timestamp, value: earliest.data },
+							value: onlyKeys ? earliest.timestamp : earliest,
 							done: false,
 						};
 					} // else we are done
@@ -154,33 +159,31 @@ export class RocksTransactionLogStore {
 			};
 			iterable.iterate = () => aggregateIterator;
 		}
-		return iterable.map(({ timestamp, data, endTxn }) => {
-			// @ts-ignore
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+		return iterable.map(({ timestamp, data, endTxn }: TransactionEntry) => {
 			const decoder = new Decoder(data.buffer, data.byteOffset, data.byteLength);
 			data.dataView = decoder;
 			// This represents the data that shouldn't be transferred for replication
 			let structureVersion = decoder.getUint32(0);
-			const headerFlags = structureVersion >> 24;
-			structureVersion &= 0x00ffffff;
 			let position = 4;
-			let previousResidencyId;
-			let previousVersion;
-			if (headerFlags & HAS_PREVIOUS_RESIDENCY_ID) {
+			let previousResidencyId: number;
+			let previousVersion: number;
+			if (structureVersion & HAS_PREVIOUS_RESIDENCY_ID) {
 				previousResidencyId = decoder.getUint32(position);
 				position += 4;
 			}
-			if (headerFlags & HAS_PREVIOUS_VERSION) {
+			if (structureVersion & HAS_PREVIOUS_VERSION) {
 				// does previous residency id and version actually require separate flags?
 				previousVersion = decoder.getFloat64(position);
 				position += 8;
 			}
-			const transactionEntry = readAuditEntry(data, position, undefined, true);
-			transactionEntry.version = timestamp;
-			transactionEntry.endTxn = endTxn;
-			transactionEntry.previousResidencyId = previousResidencyId;
-			transactionEntry.previousVersion = transactionEntry.previousLocalTime = previousVersion;
-			transactionEntry.structureVersion = structureVersion;
-			return transactionEntry;
+			const auditRecord = readAuditEntry(data, position, undefined, true);
+			auditRecord.version = timestamp;
+			auditRecord.endTxn = endTxn;
+			auditRecord.previousResidencyId = previousResidencyId;
+			auditRecord.previousVersion = auditRecord.previousLocalTime = previousVersion;
+			auditRecord.structureVersion = structureVersion & 0x00ffffff;
+			return auditRecord;
 		});
 	}
 	getKeys(options: any) {

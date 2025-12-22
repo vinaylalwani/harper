@@ -45,6 +45,7 @@ export type AuditRecord = {
 	previousLocalVersion: number;
 	username?: string;
 	nodeId?: number;
+	endTxn?: boolean;
 	structureVersion?: number;
 };
 
@@ -305,7 +306,6 @@ export function createAuditEntry(auditRecord: AuditRecord, start = 0) {
 		previousResidencyId,
 		expiresAt,
 		originatingOperation,
-		start = 0,
 	} = auditRecord;
 	const action = EVENT_TYPES[type];
 	if (!action) {
@@ -327,8 +327,11 @@ export function createAuditEntry(auditRecord: AuditRecord, start = 0) {
 	writeInt(nodeId);
 	writeInt(tableId);
 	writeValue(recordId);
-	ENTRY_DATAVIEW.setFloat64(position, version);
-	position += 8;
+	if (start === 0) {
+		// if we are using LMDB's audit entry, we need to write the version (using start===0 as an indication of that)
+		ENTRY_DATAVIEW.setFloat64(position, version);
+		position += 8;
+	}
 	if (extendedType & HAS_CURRENT_RESIDENCY_ID) writeInt(residencyId);
 	if (extendedType & HAS_PREVIOUS_RESIDENCY_ID) writeInt(previousResidencyId);
 	if (extendedType & HAS_EXPIRATION_EXTENDED_TYPE) {
@@ -415,7 +418,7 @@ function readAction(buffer: Buffer) {
  * @param start
  * @param end
  */
-export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined, skipVersion = false) {
+export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined, skipVersion = false): AuditRecord {
 	try {
 		const decoder =
 			buffer.dataView || (buffer.dataView = new Decoder(buffer.buffer, buffer.byteOffset, buffer.byteLength));

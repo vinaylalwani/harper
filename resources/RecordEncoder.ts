@@ -472,6 +472,7 @@ export function recordUpdater(store, tableId, auditStore) {
 					extendedType |= HAS_STRUCTURE_UPDATE;
 					store.encoder.structureUpdate = null;
 				}
+				const structureVersion = store.encoder.structures.length + store.encoder.typedStructs.length;
 				if (resolveRecord && existingEntry?.localTime) {
 					const replacingId = existingEntry?.localTime;
 					const replacingEntry = auditStore.get(replacingId);
@@ -487,11 +488,12 @@ export function recordUpdater(store, tableId, auditStore) {
 								nodeId: options?.nodeId ?? server.replication.getThisNodeId(auditStore) ?? 0,
 								username,
 								type,
-								recordEncoding: lastValueEncoding,
+								encodedRecord: lastValueEncoding,
 								extendedType,
 								residencyId,
 								previousResidencyId,
 								expiresAt,
+								structureVersion,
 							},
 							{ ifVersion: ifVersion, transaction: options.transaction }
 						);
@@ -508,11 +510,12 @@ export function recordUpdater(store, tableId, auditStore) {
 						nodeId: options?.nodeId ?? server.replication?.getThisNodeId(auditStore) ?? 0,
 						username,
 						type,
-						recordEncoding: lastValueEncoding,
+						encodedRecord: lastValueEncoding,
 						extendedType,
 						residencyId,
 						previousResidencyId,
 						expiresAt,
+						structureVersion,
 						originatingOperation: options?.originatingOperation,
 					},
 					{
