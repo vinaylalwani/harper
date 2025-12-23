@@ -3,7 +3,6 @@
 const { Worker, MessageChannel, parentPort, isMainThread, threadId, workerData } = require('worker_threads');
 const { join, isAbsolute, extname } = require('path');
 const { server } = require('../Server.ts');
-const { watch, readdir } = require('fs/promises');
 const { totalmem } = require('os');
 const { setHeapSnapshotNearHeapLimit } = require('v8');
 const hdbTerms = require('../../utility/hdbTerms.ts');
@@ -12,6 +11,7 @@ const harperLogger = require('../../utility/logging/harper_logger.js');
 const { randomBytes } = require('crypto');
 const { _assignPackageExport } = require('../../globals.js');
 const { PACKAGE_ROOT } = require('../../utility/packageUtils.js');
+const chokidar = require('chokidar');
 const MB = 1024 * 1024;
 const workers = []; // these are our child workers that we are managing
 const connectedPorts = []; // these are all known connected worker ports (siblings, children, parents)
@@ -539,14 +539,18 @@ function notifyMessageListeners(message, port) {
 if (isMainThread) {
 	let beforeRestart, queuedRestart;
 	let changedFiles = new Set();
+	const ignoredPaths = ['node_modules', '.git'];
 	const watchDir = async (dir, beforeRestartCallback) => {
 		if (beforeRestartCallback) beforeRestart = beforeRestartCallback;
-		for (let entry of await readdir(dir, { withFileTypes: true })) {
-			if (entry.isDirectory() && entry.name !== 'node_modules') watchDir(join(dir, entry.name));
-		}
-		try {
-			for await (let { filename } of watch(dir, { persistent: false })) {
-				changedFiles.add(filename);
+		chokidar
+			.watch(dir, {
+				persistent: false,
+				ignored: (path) => {
+					return ignoredPaths.some((ignoredPath) => path.includes(ignoredPath));
+				},
+			})
+			.on('change', (path) => {
+				changedFiles.add(path);
 				if (queuedRestart) clearTimeout(queuedRestart);
 				queuedRestart = setTimeout(async () => {
 					if (beforeRestart) await beforeRestart();
@@ -554,10 +558,7 @@ if (isMainThread) {
 					console.log('Reloaded HarperDB components, changed files:', Array.from(changedFiles));
 					changedFiles.clear();
 				}, 100);
-			}
-		} catch (error) {
-			console.warn('Error trying to watch component directory', dir, error);
-		}
+			});
 	};
 	module.exports.watchDir = watchDir;
 	if (process.env.WATCH_DIR) watchDir(process.env.WATCH_DIR);

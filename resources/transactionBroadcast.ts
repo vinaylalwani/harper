@@ -9,12 +9,13 @@ const allSameThreadSubscriptions = Object.create(null); // using it as a map tha
  * This module/function is responsible for the main work of tracking subscriptions and listening for new transactions
  * that have occurred on any thread, and then reading through the transaction log to notify listeners. This is
  * responsible for cleanup of subscriptions as well.
- * @param path
- * @param dbi
+ * @param table
  * @param key
  * @param listener
+ * @param startTime
+ * @param options
  */
-export function addSubscription(table, key, listener?: (key) => any, startTime: number, options) {
+export function addSubscription(table, key, listener?: (key) => any, startTime?: number, options?) {
 	const path = table.primaryStore.env.path;
 	const tableId = table.primaryStore.tableId;
 	// set up the subscriptions map. We want to just use a single map (per table) for efficient delegation
