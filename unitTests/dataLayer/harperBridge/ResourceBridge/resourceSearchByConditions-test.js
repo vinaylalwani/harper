@@ -24,6 +24,9 @@ const fs = require('fs-extra');
 const sinon = require('sinon');
 const systemSchema = require('../../../../json/systemSchema.json');
 const { sortBy } = require('lodash');
+const environmentUtility = require('../../../../utility/lmdb/environmentUtility.js');
+const writeUtility = require('../../../../utility/lmdb/writeUtility.js');
+
 const TIMESTAMP = Date.now();
 
 const sandbox = sinon.createSandbox();
@@ -75,22 +78,17 @@ describe('test lmdbSearchByConditions module', () => {
 				system: systemSchema,
 			};
 
-			env = await environment_utility.createEnvironment(DEV_SCHEMA_PATH, 'test');
-			await environment_utility.createDBI(env, 'id', false);
-			await environment_utility.createDBI(env, 'temperature', true);
-			await environment_utility.createDBI(env, 'temperature_double', true);
-			await environment_utility.createDBI(env, 'temperature_pos', true);
-			await environment_utility.createDBI(env, 'temperature_neg', true);
-			await environment_utility.createDBI(env, 'temperature_str', true);
-			await environment_utility.createDBI(env, 'state', true);
-			await environment_utility.createDBI(env, 'city', true);
+			env = await environmentUtility.createEnvironment(DEV_SCHEMA_PATH, 'test');
+			await environmentUtility.createDBI(env, 'id', false);
+			await environmentUtility.createDBI(env, 'temperature', true);
+			await environmentUtility.createDBI(env, 'temperature_double', true);
+			await environmentUtility.createDBI(env, 'temperature_pos', true);
+			await environmentUtility.createDBI(env, 'temperature_neg', true);
+			await environmentUtility.createDBI(env, 'temperature_str', true);
+			await environmentUtility.createDBI(env, 'state', true);
+			await environmentUtility.createDBI(env, 'city', true);
 
-			await write_utility.insertRecords(
-				env,
-				'id',
-				['id', 'temperature', 'temperature_str', 'state', 'city'],
-				test_data
-			);
+			await writeUtility.insertRecords(env, 'id', ['id', 'temperature', 'temperature_str', 'state', 'city'], test_data);
 		});
 
 		after(async () => {

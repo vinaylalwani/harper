@@ -515,12 +515,12 @@ export function copyRecord(record, targetResource, attributes) {
 	targetResource.setRecord(record);
 	for (const attribute of attributes) {
 		// do not override existing methods
-		if (targetResource[key] === undefined) {
-			const value = record[key];
+		if (targetResource[attribute] === undefined) {
+			const value = record[attribute];
 			// use copy-on-write for sub-objects
-			if (typeof value === 'object' && value) setSubObject(targetResource, key, value);
+			if (typeof value === 'object' && value) setSubObject(targetResource, attribute, value);
 			// primitives can be directly copied
-			else targetResource[key] = value;
+			else targetResource[attribute] = value;
 		}
 	}
 }

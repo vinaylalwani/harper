@@ -1,5 +1,6 @@
 import assert from 'node:assert';
 import { createECDH } from 'node:crypto';
+import { Resource } from '../../resources/Resource.js';
 
 export class Echo extends Resource {
 	static loadAsInstance = false;

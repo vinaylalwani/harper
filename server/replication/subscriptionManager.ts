@@ -433,7 +433,7 @@ export async function startOnMainThread(options) {
 			if (!failOverConnections || failOverConnections == mainWorkerEntry) continue;
 			const { worker: failOverWorker, nodes: failOverNodes, connected } = failOverConnections;
 			if (!failOverNodes) continue;
-			if (connected === false && failOverNodes[0].shard === restoredNode.shard && node.url === restoredNode.url) {
+			if (connected === false && failOverNodes[0].shard === restoredNode.shard && connection.url === restoredNode.url) {
 				// if it is not connected and has extra nodes, grab them
 				for (let node of failOverNodes) {
 					connectToNextWorker(node, connection.database);

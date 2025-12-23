@@ -1,12 +1,9 @@
 'use strict';
 
-import { assert, expect } from 'chai';
+import { assert } from 'chai';
 import axios from 'axios';
-import { decode, encode, DecoderStream } from 'cbor-x';
-import { getVariables } from './utility.js';
 import { setupTestApp } from './setupTestApp.mjs';
 import { request } from 'http';
-import why_is_node_running from 'why-is-node-still-running';
 
 describe('test REST with property updates', function (options) {
 	let available_records;
@@ -144,10 +141,11 @@ describe('test REST with property updates', function (options) {
 	});
 
 	it('check headers on get', async () => {
-		let response = await axios.get('http://localhost:9926/namespace/SubObject/6', {
-			headers: {
-				'Custom-Header': 'custom-value',
-			},
+		const headersTest = new Headers({
+			'Custom-Header': 'custom-value',
+		});
+		await axios.get('http://localhost:9926/namespace/SubObject/6', {
+			headers: headersTest,
 		});
 		assert.equal(headersTest.get('Custom-Header'), 'custom-value');
 		assert.equal(headersTest.get('CUSTOM-HEADER'), 'custom-value'); // shouldn't be case sensitive
