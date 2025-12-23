@@ -108,7 +108,7 @@ async function getHDBProcessInfo() {
 		} catch (err) {
 			if (err.code === terms.NODE_ERROR_CODES.ENOENT) {
 				log.warn(
-					`Unable to locate 'hdb.pid' file, try stopping and starting HarperDB. This could be because HarperDB is not running.`
+					`Unable to locate 'hdb.pid' file, try stopping and starting Harper. This could be because Harper is not running.`
 				);
 			} else {
 				throw err;

@@ -1372,7 +1372,7 @@ describe('10. Other Role Tests', () => {
 			.expect((r) =>
 				assert.equal(
 					r.body.error,
-					"The 'system' database, tables and records are used internally by HarperDB and cannot be updated or removed."
+					"The 'system' database, tables and records are used internally by Harper and cannot be updated or removed."
 				)
 			)
 			.expect(403);
@@ -1384,7 +1384,7 @@ describe('10. Other Role Tests', () => {
 			.expect((r) =>
 				assert.equal(
 					r.body.error,
-					"The 'system' database, tables and records are used internally by HarperDB and cannot be updated or removed."
+					"The 'system' database, tables and records are used internally by Harper and cannot be updated or removed."
 				)
 			)
 			.expect(403);
@@ -1396,7 +1396,7 @@ describe('10. Other Role Tests', () => {
 			.expect((r) =>
 				assert.equal(
 					r.body.error,
-					"The 'system' database, tables and records are used internally by HarperDB and cannot be updated or removed."
+					"The 'system' database, tables and records are used internally by Harper and cannot be updated or removed."
 				)
 			)
 			.expect(403);
@@ -1408,7 +1408,7 @@ describe('10. Other Role Tests', () => {
 			.expect((r) =>
 				assert.equal(
 					r.body.error,
-					"The 'system' database, tables and records are used internally by HarperDB and cannot be updated or removed."
+					"The 'system' database, tables and records are used internally by Harper and cannot be updated or removed."
 				)
 			)
 			.expect(403);
@@ -1434,7 +1434,7 @@ describe('10. Other Role Tests', () => {
 			.expect((r) =>
 				assert.equal(
 					r.body.error,
-					"The 'system' database, tables and records are used internally by HarperDB and cannot be updated or removed."
+					"The 'system' database, tables and records are used internally by Harper and cannot be updated or removed."
 				)
 			)
 			.expect(403);
@@ -1446,7 +1446,7 @@ describe('10. Other Role Tests', () => {
 			.expect((r) =>
 				assert.equal(
 					r.body.error,
-					"The 'system' database, tables and records are used internally by HarperDB and cannot be updated or removed."
+					"The 'system' database, tables and records are used internally by Harper and cannot be updated or removed."
 				)
 			)
 			.expect(403);
@@ -1458,7 +1458,7 @@ describe('10. Other Role Tests', () => {
 			.expect((r) =>
 				assert.equal(
 					r.body.error,
-					"The 'system' database, tables and records are used internally by HarperDB and cannot be updated or removed."
+					"The 'system' database, tables and records are used internally by Harper and cannot be updated or removed."
 				)
 			)
 			.expect(403);
@@ -1820,7 +1820,7 @@ describe('10. Other Role Tests', () => {
 			.expect((r) =>
 				assert.equal(
 					r.body.error,
-					"The 'system' database, tables and records are used internally by HarperDB and cannot be updated or removed."
+					"The 'system' database, tables and records are used internally by Harper and cannot be updated or removed."
 				)
 			)
 			.expect(403);
@@ -1913,7 +1913,7 @@ describe('10. Other Role Tests', () => {
 			.expect((r) =>
 				assert.equal(
 					r.body.error,
-					"The 'system' database, tables and records are used internally by HarperDB and cannot be updated or removed."
+					"The 'system' database, tables and records are used internally by Harper and cannot be updated or removed."
 				)
 			)
 			.expect(403);
@@ -1930,7 +1930,7 @@ describe('10. Other Role Tests', () => {
 			.expect((r) =>
 				assert.equal(
 					r.body.error,
-					"The 'system' database, tables and records are used internally by HarperDB and cannot be updated or removed."
+					"The 'system' database, tables and records are used internally by Harper and cannot be updated or removed."
 				)
 			)
 			.expect(403);
@@ -1960,7 +1960,7 @@ describe('10. Other Role Tests', () => {
 			.expect((r) =>
 				assert.equal(
 					r.body.error,
-					"The 'system' database, tables and records are used internally by HarperDB and cannot be updated or removed."
+					"The 'system' database, tables and records are used internally by Harper and cannot be updated or removed."
 				)
 			)
 			.expect(403);

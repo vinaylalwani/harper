@@ -27,7 +27,7 @@ server.knownGraphQLDirectives.push(
 /**
  * This is the entry point for handling GraphQL schemas (and server-side defined queries, eventually). This will be
  * called for schemas, and this will parse the schema (into an AST), and use it to ensure all specified tables and their
- * attributes exist. This is intended to be the default/primary way to define a table in HarperDB. This supports various
+ * attributes exist. This is intended to be the default/primary way to define a table in Harper. This supports various
  * directives for configuring indexing, attribute types, table configuration, and more.
  *
  * @param gqlContent

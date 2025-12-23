@@ -32,11 +32,11 @@ let pmUtils;
 let cmdArgs;
 let skipExitListeners = false;
 
-const UPGRADE_COMPLETE_MSG = 'Upgrade complete.  Starting HarperDB.';
-const UPGRADE_ERR = 'Got an error while trying to upgrade your HarperDB instance.  Exiting HarperDB.';
-const HDB_NOT_FOUND_MSG = 'HarperDB not found, starting install process.';
-const INSTALL_ERR = 'There was an error during install, check install_log.log for more details.  Exiting.';
-const HDB_STARTED = 'HarperDB successfully started.';
+const UPGRADE_COMPLETE_MSG = 'Upgrade complete. Starting Harper.';
+const UPGRADE_ERR = 'Got an error while trying to upgrade your Harper instance. Exiting Harper.';
+const HDB_NOT_FOUND_MSG = 'Harper not found, starting install process.';
+const INSTALL_ERR = 'There was an error during install, check install_log.log for more details. Exiting.';
+const HDB_STARTED = 'Harper successfully started.';
 
 function addUnhandleRejectionListener() {
 	process.on('unhandledRejection', (reason, promise) => {
@@ -73,7 +73,7 @@ function addExitListeners() {
  */
 async function initialize(calledByInstall = false, calledByMain = false) {
 	// Check to see if HDB is installed, if it isn't we call install.
-	console.log(chalk.magenta('Starting HarperDB...'));
+	console.log(chalk.magenta('Starting Harper...'));
 
 	addUnhandleRejectionListener();
 
@@ -108,24 +108,24 @@ async function initialize(calledByInstall = false, calledByMain = false) {
 		}
 	}
 
-	// Check to see if HarperDB is already running by checking for a pid file
+	// Check to see if Harper is already running by checking for a pid file
 	// If found confirm it matches a currently running processes
 	let hdbPid = getHdbPid();
 	if (hdbPid) {
-		hdbLogger.debug('Error: HarperDB is already running');
-		console.error(`Error: HarperDB is already running (pid: ${hdbPid})`);
+		hdbLogger.debug('Error: Harper is already running');
+		console.error(`Error: Harper is already running (pid: ${hdbPid})`);
 		process.exit(4);
 	}
 
 	addExitListeners();
 
 	if (calledByMain) {
-		// Write HarperDB PID to file for tracking purposes
+		// Write Harper PID to file for tracking purposes
 		await fs.writeFile(path.join(env.get(hdbTerms.CONFIG_PARAMS.ROOTPATH), hdbTerms.HDB_PID_FILE), `${process.pid}`);
 	}
-	hdbLogger.info('HarperDB PID', process.pid);
+	hdbLogger.info('Harper PID', process.pid);
 
-	// Check to see if an upgrade is needed based on existing hdbInfo data.  If so, we need to force the user to upgrade
+	// Check to see if an upgrade is needed based on existing hdbInfo data. If so, we need to force the user to upgrade
 	// before the server can be started.
 	let upgradeVers;
 	try {
@@ -138,7 +138,7 @@ async function initialize(calledByInstall = false, calledByMain = false) {
 	} catch (err) {
 		if (upgradeVers) {
 			console.error(
-				`Got an error while trying to upgrade your HarperDB instance to version ${upgradeVers}.  Exiting HarperDB.`,
+				`Got an error while trying to upgrade your Harper instance to version ${upgradeVers}. Exiting Harper.`,
 				err
 			);
 			hdbLogger.error(err);
@@ -188,12 +188,12 @@ async function main(calledByInstall = false) {
 function started() {
 	// Console log Harper dog logo
 	hdbLogger.suppressLogging(() => {
-		console.log(chalk.magenta(`HarperDB ${packageJson.version} successfully started`));
+		console.log(chalk.magenta(`Harper ${packageJson.version} successfully started`));
 	});
 	hdbLogger.notify(HDB_STARTED);
 }
 /**
- * Launches a separate process for HarperDB and then exits. This is an unusual practice and is anathema
+ * Launches a separate process for Harper and then exits. This is an unusual practice and is anathema
  * to the way processes are typically handled, both in terminal and for services (systemd), but this functionality
  * is retained for legacy purposes.
  * @returns {Promise<void>} // ha ha, it doesn't!
@@ -297,7 +297,7 @@ function startupLog(portResolutions) {
 			env.get(CONFIG_PARAMS.REPLICATION_SECUREPORT) ?? env.get(CONFIG_PARAMS.OPERATIONSAPI_NETWORK_SECUREPORT);
 
 		repLog += replicationPort ? `WS: ${replicationPort}, ` : '';
-		repLog += replicationSecurePort ? `WSS: ${replicationSecurePort}  ` : '';
+		repLog += replicationSecurePort ? `WSS: ${replicationSecurePort} ` : '';
 		logMsg += `${repLog.slice(0, -2)}\n`;
 	}
 

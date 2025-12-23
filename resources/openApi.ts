@@ -23,7 +23,7 @@ export function generateJsonApi(resources: Resources, serverHttpURL: string) {
 	const api = {
 		openapi: OPENAPI_VERSION,
 		info: {
-			title: 'HarperDB HTTP REST interface',
+			title: 'Harper HTTP REST interface',
 			version: packageJson.version,
 		},
 		servers: [

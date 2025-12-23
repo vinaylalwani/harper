@@ -23,7 +23,7 @@ const EMPTY_GET_VALUE = 'Empty parameter sent to getConfigValue';
 const DEFAULT_CONFIG_FILE_PATH = path.join(__dirname, '../../static', hdbTerms.HDB_DEFAULT_CONFIG_FILE);
 
 const CONFIGURE_SUCCESS_RESPONSE =
-	'Configuration successfully set. You must restart HarperDB for new config settings to take effect.';
+	'Configuration successfully set. You must restart Harper for new config settings to take effect.';
 
 const DEPRECATED_CONFIG = {
 	logging_rotation_retain: 'logging.rotation.retain',
@@ -71,7 +71,7 @@ function resolvePath(relativePath) {
 }
 
 /**
- * Builds the HarperDB config file using user inputs and default values from defaultConfig.yaml
+ * Builds the Harper config file using user inputs and default values from defaultConfig.yaml
  * @param args - any args that the user provided.
  */
 function createConfigFile(args, skipFsValidation = false) {
@@ -232,7 +232,7 @@ function getConfigFilePath(bootPropsFilePath = hdbUtils.getPropsFilePath()) {
 
 /**
  * If in memory config obj is undefined or init is being forced,
- * read and parses the HarperDB config file and add to config object.
+ * read and parses the Harper config file and add to config object.
  * @param force
  */
 function initConfig(force = false) {
@@ -244,7 +244,7 @@ function initConfig(force = false) {
 				fs.accessSync(bootPropsFilePath, fs.constants.F_OK | fs.constants.R_OK);
 			} catch (err) {
 				logger.error(err);
-				throw new Error(`HarperDB properties file at path ${bootPropsFilePath} does not exist`);
+				throw new Error(`Harper properties file at path ${bootPropsFilePath} does not exist`);
 			}
 		}
 
@@ -267,12 +267,12 @@ function initConfig(force = false) {
 			configDoc = parseYamlDoc(configFilePath);
 		} catch (err) {
 			if (err.code === hdbTerms.NODE_ERROR_CODES.ENOENT) {
-				logger.trace(`HarperDB config file not found at ${configFilePath}. 
+				logger.trace(`Harper config file not found at ${configFilePath}. 
 				This can occur during early stages of install where the config file has not yet been created`);
 				return;
 			} else {
 				logger.error(err);
-				throw new Error(`Error reading HarperDB config file at ${configFilePath}`);
+				throw new Error(`Error reading Harper config file at ${configFilePath}`);
 			}
 		}
 
@@ -569,7 +569,7 @@ function backupConfigFile(configPath, hdbRoot) {
 
 const PRESERVED_PROPERTIES = ['databases'];
 /**
- * Flattens the JSON version of HarperDB config with underscores separating each parent/child key.
+ * Flattens the JSON version of Harper config with underscores separating each parent/child key.
  * @param obj
  * @returns {null}
  */
@@ -702,7 +702,7 @@ function readConfigFile() {
 	} catch (err) {
 		if (!hdbUtils.noBootFile()) {
 			logger.error(err);
-			throw new Error(`HarperDB properties file at path ${bootPropsFilePath} does not exist`);
+			throw new Error(`Harper properties file at path ${bootPropsFilePath} does not exist`);
 		}
 	}
 

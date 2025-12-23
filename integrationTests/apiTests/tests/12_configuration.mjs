@@ -192,7 +192,7 @@ describe('12. Configuration', () => {
 			.expect((r) =>
 				assert.equal(
 					r.body.message,
-					'Configuration successfully set. You must restart HarperDB for new config settings to take effect.'
+					'Configuration successfully set. You must restart Harper for new config settings to take effect.'
 				)
 			)
 			.expect(200);
@@ -209,7 +209,7 @@ describe('12. Configuration', () => {
 		return req()
 			.send({ operation: 'set_configuration', http_cors: 'spinach' })
 			.expect((r) =>
-				assert.equal(r.body.error, "HarperDB config file validation error: 'http.cors' must be a boolean", r.text)
+				assert.equal(r.body.error, "Harper config file validation error: 'http.cors' must be a boolean", r.text)
 			)
 			.expect(400);
 	});

@@ -14,7 +14,7 @@ process.setSourceMapsEnabled(true); // this is necessary for source maps to work
 const HELP = `
 Usage: harperdb [command]
 
-With no command, harperdb will simply run HarperDB (in the foreground)
+With no command, harper will simply run Harper (in the foreground)
 
 By default, the CLI also supports certain Operation APIs. Specify the operation name and any required parameters, and omit the 'operation' command.
 
@@ -28,7 +28,7 @@ renew-certs                     - Generate a new set of self-signed certificates
 restart                         - Restart the harperdb background process
 run <path>                      - Run the application in the specified path
 start                           - Starts a separate background process for harperdb and CLI will exit
-status                          - Print the status of HarperDB
+status                          - Print the status of Harper
 stop                            - Stop the harperdb background process
 help                            - Display this output
 upgrade                         - Upgrade harperdb
@@ -80,7 +80,7 @@ async function harper() {
 			// The require is here to better control the flow of imports when this module is called.
 			return require('./upgrade.js')
 				.upgrade(null)
-				.then(() => 'Your instance of HarperDB is up to date!');
+				.then(() => 'Your instance of Harper is up to date!');
 		case SERVICE_ACTIONS_ENUM.STATUS:
 			return require('./status.js')();
 		case SERVICE_ACTIONS_ENUM.RENEWCERTS:

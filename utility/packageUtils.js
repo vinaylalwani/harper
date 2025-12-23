@@ -41,7 +41,7 @@ const packageJsonPath = findPackageJson();
 const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
 
 /**
- * The HarperDB package root directory.
+ * The Harper package root directory.
  *
  * Works across dev and prod (built).
  *

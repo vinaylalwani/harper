@@ -46,11 +46,11 @@ const COMMON_ERROR_MSGS = {
 };
 
 const CONFIG_ERROR_MSGS = {
-	CONFIG_VALIDATION: (msg) => `HarperDB config file validation error: ${msg}`,
+	CONFIG_VALIDATION: (msg) => `Harper config file validation error: ${msg}`,
 };
 
 const BULK_LOAD_ERROR_MSGS = {
-	DEFAULT_BULK_LOAD_ERR: 'There was an error during your bulk load into HarperDB.',
+	DEFAULT_BULK_LOAD_ERR: 'There was an error during your bulk load into Harper.',
 	DOWNLOAD_FILE_ERR: (file_name) => `There was an error downloading '${file_name}'.`,
 	INSERT_JSON_ERR: 'There was an error inserting the downloaded JSON data.',
 	INSERT_CSV_ERR: 'There was an error inserting the downloaded CSV data.',
@@ -135,7 +135,7 @@ const OPERATION_AUTH_ERROR_MSGS = {
 	UNKNOWN_OP_AUTH_ERROR: (op, schema, table) => `There was an error authorizing ${op} op on table '${schema}.${table}'`,
 	USER_HAS_NO_PERMS: (user) => `User ${user} has no role or permissions.  Please assign the user a valid role.`,
 	DROP_SYSTEM:
-		"The 'system' database, tables and records are used internally by HarperDB and cannot be updated or removed.",
+		"The 'system' database, tables and records are used internally by Harper and cannot be updated or removed.",
 };
 
 const ROLE_PERMS_ERROR_MSGS = {
@@ -153,7 +153,7 @@ const ROLE_PERMS_ERROR_MSGS = {
 	MISMATCHED_TABLE_ATTR_PERMS: (schema_table) =>
 		`You have a conflict with TABLE permissions for '${schema_table}' being false and ATTRIBUTE permissions being true`,
 	OUTDATED_PERMS_TRANSLATION_ERROR:
-		"This instance was recently upgraded and uses our new role permissions structure. Please login to this instance in HarperDB Studio, go to 'Roles', and click 'Update Role Permission' for all standard roles to migrate them to the new structure.",
+		"This instance was recently upgraded and uses our new role permissions structure. Please login to this instance in Harper Studio, go to 'Roles', and click 'Update Role Permission' for all standard roles to migrate them to the new structure.",
 	ROLE_ALREADY_EXISTS: (role_name) => `A role with name '${role_name}' already exists`,
 	ROLE_NOT_FOUND: 'Role not found',
 	ROLE_PERMS_ERROR: 'Errors in the role permissions JSON provided',
