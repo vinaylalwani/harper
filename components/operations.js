@@ -414,12 +414,13 @@ async function deployComponent(req) {
 	pseudoResources.isWorker = true;
 	const componentLoader = require('./componentLoader.ts');
 
-	let lastError;
-	componentLoader.setErrorReporter((error) => (lastError = error));
-	await componentLoader.loadComponent(application.dirPath, pseudoResources);
+	if (!process.env.HARPER_SAFE_MODE) {
+		let lastError;
+		componentLoader.setErrorReporter((error) => (lastError = error));
+		await componentLoader.loadComponent(application.dirPath, pseudoResources);
 
-	if (lastError) throw lastError;
-
+		if (lastError) throw lastError;
+	}
 	const rollingRestart = req.restart === 'rolling';
 	// if doing a rolling restart set restart to false so that other nodes don't also restart.
 	req.restart = rollingRestart ? false : req.restart;
@@ -787,7 +788,7 @@ async function listSSHKeys(req) {
 	if (await fs.pathExists(sshDir)) {
 		// Read the config file to get Host and HostName
 		const config_file = path.join(sshDir, 'config');
-		const configContents = await fs.pathExists(config_file) && await fs.readFile(config_file, 'utf8');
+		const configContents = (await fs.pathExists(config_file)) && (await fs.readFile(config_file, 'utf8'));
 
 		(await fs.readdir(sshDir)).forEach((file) => {
 			if (file !== 'known_hosts' && file !== 'config') {

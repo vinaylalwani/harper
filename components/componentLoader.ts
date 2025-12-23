@@ -166,7 +166,7 @@ function symlinkHarperModule(componentDirectory: string) {
  * @returns
  */
 function sequentiallyHandleApplication(scope: Scope, plugin: PluginModule) {
-	return scope.ready.then(() => {
+	return scope.ready.then(async () => {
 		// Timeout priority is user config, plugin default, finally 30 seconds
 		const timeout = scope.options.get(['timeout']) || plugin.defaultTimeout || 30_000; // default 30 second timeout
 		if (typeof timeout !== 'number') {
@@ -187,23 +187,26 @@ function sequentiallyHandleApplication(scope: Scope, plugin: PluginModule) {
 			});
 		}
 		let loadTimeout: NodeJS.Timeout;
-		return Promise.race([
-			Promise.resolve(plugin.handleApplication(scope)).then(async () => {
-				// Wait for any initial entry handler loads to complete
-				// This ensures all async operations (like secureImport) finish before the component is marked as loaded
-				await scope.waitForInitialLoads();
-			}),
-			new Promise(
-				(_, reject) =>
-					(loadTimeout = setTimeout(
-						() => reject(new Error(`handleApplication timed out after ${timeout}ms for ${scope.name}`)),
-						timeout
-					))
-			),
-		]).finally(() => {
+		try {
+			// note that handleApplication can throw sync or async errors, need to run finally block for both
+			await Promise.race([
+				Promise.resolve(plugin.handleApplication(scope)).then(async () => {
+					// Wait for any initial entry handler loads to complete
+					// This ensures all async operations (like secureImport) finish before the component is marked as loaded
+					await scope.waitForInitialLoads();
+				}),
+				new Promise(
+					(_, reject) =>
+						(loadTimeout = setTimeout(
+							() => reject(new Error(`handleApplication timed out after ${timeout}ms for ${scope.name}`)),
+							timeout
+						))
+				),
+			]);
+		} finally {
 			Status.primaryStore.unlock(scope.name, 0);
 			clearTimeout(loadTimeout);
-		});
+		}
 	});
 }
 
@@ -288,8 +291,10 @@ export async function loadComponent(
 						}
 					}
 					if (componentPath) {
-						extensionModule = await loadComponent(componentPath, resources, origin, false);
-						componentFunctionality[componentName] = true;
+						if (!process.env.HARPER_SAFE_MODE) {
+							extensionModule = await loadComponent(componentPath, resources, origin, false);
+							componentFunctionality[componentName] = true;
+						}
 					} else {
 						throw new Error(`Unable to find package ${componentName}:${pkg}`);
 					}
