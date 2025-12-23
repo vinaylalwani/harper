@@ -98,7 +98,7 @@ export function getRecordAtTime(currentEntry, timestamp, store) {
 			case 'delete':
 				record = null;
 		}
-		auditTime = auditEntry.previousLocalTime;
+		auditTime = auditEntry.previousVersion;
 	}
 	// some patches may leave properties in an unknown state, so we need to fill in the blanks
 	// first we determine if there any unknown properties
@@ -130,7 +130,7 @@ export function getRecordAtTime(currentEntry, timestamp, store) {
 				unknownCount--;
 			}
 		}
-		auditTime = auditEntry.previousLocalTime;
+		auditTime = auditEntry.previousVersion;
 	}
 	if (unknownCount > 0) {
 		// if we were unable to determine the value of a property, set it to null

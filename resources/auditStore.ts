@@ -42,9 +42,10 @@ export type AuditRecord = {
 	originatingOperation: string;
 	tableId: number;
 	recordId: number;
-	previousLocalVersion: number;
+	previousVersion: number;
 	username?: string;
 	nodeId?: number;
+	previousNodeId?: number;
 	endTxn?: boolean;
 	structureVersion?: number;
 };
@@ -282,7 +283,7 @@ const ORIGINATING_OPERATIONS = {
  * @param txnTime
  * @param tableId
  * @param recordId
- * @param previousLocalTime
+ * @param previousVersion
  * @param nodeId
  * @param username
  * @param type
@@ -296,7 +297,7 @@ export function createAuditEntry(auditRecord: AuditRecord, start = 0) {
 		version,
 		tableId,
 		recordId,
-		previousLocalTime,
+		previousVersion,
 		nodeId,
 		username,
 		type,
@@ -312,8 +313,8 @@ export function createAuditEntry(auditRecord: AuditRecord, start = 0) {
 		throw new Error(`Invalid audit entry type ${type}`);
 	}
 	let position = start + 1;
-	if (previousLocalTime) {
-		if (previousLocalTime > 1) ENTRY_DATAVIEW.setFloat64(0, previousLocalTime);
+	if (previousVersion) {
+		if (previousVersion > 1) ENTRY_DATAVIEW.setFloat64(0, previousVersion);
 		else ENTRY_HEADER.set(PREVIOUS_TIMESTAMP_PLACEHOLDER);
 		position = start + 9;
 	}
@@ -344,8 +345,8 @@ export function createAuditEntry(auditRecord: AuditRecord, start = 0) {
 
 	if (username) writeValue(username);
 	else ENTRY_HEADER[position++] = 0;
-	if (extendedType) ENTRY_DATAVIEW.setUint32(start + (previousLocalTime ? 8 : 0), action | extendedType | 0xc0000000);
-	else ENTRY_HEADER[start + (previousLocalTime ? 8 : 0)] = action;
+	if (extendedType) ENTRY_DATAVIEW.setUint32(start + (previousVersion ? 8 : 0), action | extendedType | 0xc0000000);
+	else ENTRY_HEADER[start + (previousVersion ? 8 : 0)] = action;
 	const header = ENTRY_HEADER.subarray(0, position);
 	if (encodedRecord) {
 		return Buffer.concat([header, encodedRecord]);
@@ -423,10 +424,10 @@ export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined, s
 		const decoder =
 			buffer.dataView || (buffer.dataView = new Decoder(buffer.buffer, buffer.byteOffset, buffer.byteLength));
 		decoder.position = start;
-		let previousLocalTime;
+		let previousVersion;
 		if (buffer[decoder.position] == 66) {
 			// 66 is the first byte in a date double.
-			previousLocalTime = decoder.readFloat64();
+			previousVersion = decoder.readFloat64();
 		}
 		const action = decoder.readInt();
 		const nodeId = decoder.readInt();
@@ -465,7 +466,7 @@ export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined, s
 				return buffer.subarray(recordIdStart, recordIdEnd);
 			},
 			version,
-			previousLocalTime,
+			previousVersion,
 			get user() {
 				return usernameEnd > usernameStart
 					? readKey(buffer.subarray(0, usernameEnd), usernameStart, usernameEnd)

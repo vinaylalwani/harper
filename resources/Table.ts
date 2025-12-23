@@ -1660,7 +1660,7 @@ export function makeTable(options) {
 										}
 										if (precedesExisting > 0) {
 											// if the existing version is older, we can skip this update
-											localTime = auditRecord.previousLocalTime;
+											localTime = auditRecord.previousVersion;
 											continue;
 										}
 									}
@@ -1674,7 +1674,7 @@ export function makeTable(options) {
 										return writeCommit(false);
 									}
 								}
-								localTime = auditRecord.previousLocalTime;
+								localTime = auditRecord.previousVersion;
 							}
 							if (!localTime) {
 								// if we reached the end of the audit trail, we can just apply the update
@@ -2643,7 +2643,7 @@ export function makeTable(options) {
 									localTime: nextTime,
 									...auditRecord,
 								});
-								nextTime = auditRecord.previousLocalTime;
+								nextTime = auditRecord.previousVersion;
 							} else break;
 							if (count) count--;
 						} while (nextTime > startTime && count !== 0);
@@ -3311,7 +3311,7 @@ export function makeTable(options) {
 						value: auditRecord.getValue(primaryStore, true, nextLocalTime),
 						user: auditRecord.user,
 					});
-					nextLocalTime = auditRecord.previousLocalTime;
+					nextLocalTime = auditRecord.previousVersion;
 				} else break;
 			} while (count < 1000 && nextLocalTime);
 			return history.reverse();

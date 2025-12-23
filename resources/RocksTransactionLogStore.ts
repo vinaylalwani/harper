@@ -181,7 +181,7 @@ export class RocksTransactionLogStore {
 			auditRecord.version = timestamp;
 			auditRecord.endTxn = endTxn;
 			auditRecord.previousResidencyId = previousResidencyId;
-			auditRecord.previousVersion = auditRecord.previousLocalTime = previousVersion;
+			auditRecord.previousVersion = previousVersion;
 			auditRecord.structureVersion = structureVersion & 0x00ffffff;
 			return auditRecord;
 		});

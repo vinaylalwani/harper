@@ -477,14 +477,14 @@ export function recordUpdater(store, tableId, auditStore) {
 					const replacingId = existingEntry?.localTime;
 					const replacingEntry = auditStore.get(replacingId);
 					if (replacingEntry) {
-						const previousLocalTime = readAuditEntry(replacingEntry).previousLocalTime;
+						const previousVersion = readAuditEntry(replacingEntry).previousVersion;
 						result = auditStore.put(
 							replacingId,
 							{
 								version: newVersion,
 								tableId,
 								recordId: id,
-								previousLocalTime,
+								previousVersion,
 								nodeId: options?.nodeId ?? server.replication.getThisNodeId(auditStore) ?? 0,
 								username,
 								type,
@@ -506,7 +506,7 @@ export function recordUpdater(store, tableId, auditStore) {
 						version: newVersion,
 						tableId,
 						recordId: id,
-						previousLocalTime: existingEntry?.localTime ? 1 : 0,
+						previousVersion: existingEntry?.localTime ? 1 : 0,
 						nodeId: options?.nodeId ?? server.replication?.getThisNodeId(auditStore) ?? 0,
 						username,
 						type,
