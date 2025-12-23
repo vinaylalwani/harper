@@ -542,21 +542,23 @@ if (isMainThread) {
 	const ignoredPaths = ['node_modules', '.git'];
 	const watchDir = async (dir, beforeRestartCallback) => {
 		if (beforeRestartCallback) beforeRestart = beforeRestartCallback;
-		chokidar.watch(dir, {
-			persistent: false,
-			ignored: (path) => {
-				return ignoredPaths.some(ignoredPath => path.includes(ignoredPath))
-			}
-		}).on('change', (path) => {
-			changedFiles.add(path);
-			if (queuedRestart) clearTimeout(queuedRestart);
-			queuedRestart = setTimeout(async () => {
-				if (beforeRestart) await beforeRestart();
-				await restartWorkers();
-				console.log('Reloaded HarperDB components, changed files:', Array.from(changedFiles));
-				changedFiles.clear();
-			}, 100);
-		})
+		chokidar
+			.watch(dir, {
+				persistent: false,
+				ignored: (path) => {
+					return ignoredPaths.some((ignoredPath) => path.includes(ignoredPath));
+				},
+			})
+			.on('change', (path) => {
+				changedFiles.add(path);
+				if (queuedRestart) clearTimeout(queuedRestart);
+				queuedRestart = setTimeout(async () => {
+					if (beforeRestart) await beforeRestart();
+					await restartWorkers();
+					console.log('Reloaded HarperDB components, changed files:', Array.from(changedFiles));
+					changedFiles.clear();
+				}, 100);
+			});
 	};
 	module.exports.watchDir = watchDir;
 	if (process.env.WATCH_DIR) watchDir(process.env.WATCH_DIR);
