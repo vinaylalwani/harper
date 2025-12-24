@@ -42,6 +42,22 @@
 		"test:unit": "TSX_TSCONFIG_PATH=./unitTests/tsconfig.json npx mocha --config unitTests/.mocharc.json",
 		"test:unit:all": "npm run test:unit unitTests"
 	},
+	"imports": {
+		"#src/*": {
+			"import": "./*.ts",
+			"require": {
+				"typestrip": "./*.ts",
+				"default": "./dist/*.js"
+			}
+		},
+		"#js/*": {
+			"import": "./*.js",
+			"require": {
+				"typestrip": "./*.js",
+				"default": "./dist/*.js"
+			}
+		}
+	},
 	"engines": {
 		"node": ">=20",
 		"minimum-node": "20.0.0"
