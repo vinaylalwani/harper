@@ -40,7 +40,9 @@
 		"test:integration:api-tests": "node --test integrationTests/apiTests/tests/testSuite.mjs",
 		"test:integration": "node integrationTests/utils/scripts/run.ts",
 		"test:unit": "mocha --config unitTests/.mocharc.json",
-		"test:unit:all": "npm run test:unit unitTests"
+		"test:unit:all": "npm run test:unit unitTests",
+		"test:unit:typestrip": "env NODE_OPTIONS='--conditions=typestrip' npm run test:unit",
+		"test:unit:typestrip:all": "npm run test:unit:typestrip unitTests"
 	},
 	"imports": {
 		"#src/*": {
