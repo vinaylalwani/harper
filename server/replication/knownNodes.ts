@@ -243,7 +243,7 @@ export function* iterateRoutes(options: { routes: (Route | any)[] }) {
 		}
 
 		yield {
-			replicates: !route.subscriptions, // if there is not a list of subscriptions, then this node is authorized to fully replicate
+			replicates: route.replicates ?? !route.subscriptions, // if there is not a list of subscriptions, then this node is authorized to fully replicate
 			url,
 			subscription: route.subscriptions,
 			routes: route.routes,
