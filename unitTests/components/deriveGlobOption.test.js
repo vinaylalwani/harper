@@ -1,5 +1,6 @@
-import assert from 'node:assert/strict';
-import { deriveGlobOptions } from '@/components/deriveGlobOptions';
+const { describe, it } = require('mocha');
+const assert = require('node:assert/strict');
+const { deriveGlobOptions } = require('#src/components/deriveGlobOptions');
 
 // components/deriveGlobOptions.test.ts
 

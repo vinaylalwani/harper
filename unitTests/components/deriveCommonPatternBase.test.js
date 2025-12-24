@@ -1,5 +1,6 @@
-import { deriveCommonPatternBase } from '@/components/deriveCommonPatternBase';
-import assert from 'node:assert/strict';
+const { describe, it } = require('mocha');
+const { deriveCommonPatternBase } = require('#src/components/deriveCommonPatternBase');
+const assert = require('node:assert/strict');
 
 describe('deriveCommonPatternBase', () => {
 	[

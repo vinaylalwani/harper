@@ -1,12 +1,13 @@
-import { EntryHandler } from '@/components/EntryHandler';
-import { EventEmitter, once } from 'node:events';
-import assert from 'node:assert/strict';
-import { join, basename } from 'node:path';
-import { tmpdir } from 'node:os';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
-import { writeFile, mkdir } from 'node:fs/promises';
-import { spy } from 'sinon';
-import { waitFor } from './waitFor';
+const { describe, it, beforeEach, afterEach } = require('mocha');
+const { EntryHandler } = require('#src/components/EntryHandler');
+const { EventEmitter, once } = require('node:events');
+const assert = require('node:assert/strict');
+const { join, basename } = require('node:path');
+const { tmpdir } = require('node:os');
+const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = require('node:fs');
+const { writeFile, mkdir } = require('node:fs/promises');
+const { spy } = require('sinon');
+const { waitFor } = require('./waitFor.js');
 
 function generateFixture(dirPath, fixture) {
 	mkdirSync(dirPath, { recursive: true });

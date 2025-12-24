@@ -1,30 +1,24 @@
-import assert from 'node:assert/strict';
-import { ComponentStatusRegistry } from '@/components/status/ComponentStatusRegistry';
-import { describe, it, before, after } from 'mocha';
+const { describe, it, after } = require('mocha');
+const assert = require('node:assert/strict');
+const { ComponentStatusRegistry } = require('#src/components/status/ComponentStatusRegistry');
+const { componentStatusRegistry } = require('#src/components/status/registry');
 
-describe('componentStatusRegistry singleton', function () {
-	let componentStatusRegistry;
-
-	before(() => {
-		const registry = require('@/components/status/registry');
-		componentStatusRegistry = registry.componentStatusRegistry;
-	});
-
+describe('componentStatusRegistry singleton', () => {
 	after(() => {
 		// Clean up the global singleton after tests
 		componentStatusRegistry.reset();
 	});
 
-	it('should export a ComponentStatusRegistry instance', function () {
+	it('should export a ComponentStatusRegistry instance', () => {
 		assert.ok(componentStatusRegistry instanceof ComponentStatusRegistry);
 	});
 
-	it('should be a singleton instance', function () {
-		const { componentStatusRegistry: registry2 } = require('@/components/status/registry');
+	it('should be a singleton instance', () => {
+		const { componentStatusRegistry: registry2 } = require('#src/components/status/registry');
 		assert.strictEqual(componentStatusRegistry, registry2);
 	});
 
-	it('should have all ComponentStatusRegistry methods', function () {
+	it('should have all ComponentStatusRegistry methods', () => {
 		// Check core methods exist
 		assert.equal(typeof componentStatusRegistry.reset, 'function');
 		assert.equal(typeof componentStatusRegistry.setStatus, 'function');
@@ -40,7 +34,7 @@ describe('componentStatusRegistry singleton', function () {
 		assert.equal(typeof componentStatusRegistry.getStatusSummary, 'function');
 	});
 
-	it('should work with basic operations', function () {
+	it('should work with basic operations', () => {
 		// Clean up any existing state
 		componentStatusRegistry.reset();
 

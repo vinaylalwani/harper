@@ -1,18 +1,18 @@
-import assert from 'node:assert/strict';
-import {
+const { describe, it } = require('mocha');
+const assert = require('node:assert/strict');
+const {
 	ComponentStatusError,
 	CrossThreadTimeoutError,
 	ITCError,
 	AggregationError,
 	ComponentStatusOperationError,
 	CrossThreadCollectionError,
-} from '@/components/status/errors';
-import { HTTP_STATUS_CODES } from '@/utility/errors/commonErrors';
-import { describe, it } from 'mocha';
+} = require('#src/components/status/errors');
+const { HTTP_STATUS_CODES } = require('#js/utility/errors/commonErrors');
 
-describe('Component Status Errors', function () {
-	describe('ComponentStatusError', function () {
-		it('should create base error with default status code', function () {
+describe('Component Status Errors', () => {
+	describe('ComponentStatusError', () => {
+		it('should create base error with default status code', () => {
 			const error = new ComponentStatusError('Test error');
 
 			assert.equal(error.name, 'ComponentStatusError');
@@ -22,15 +22,15 @@ describe('Component Status Errors', function () {
 			assert.ok(error.stack);
 		});
 
-		it('should create base error with custom status code', function () {
+		it('should create base error with custom status code', () => {
 			const error = new ComponentStatusError('Bad request', HTTP_STATUS_CODES.BAD_REQUEST);
 
 			assert.equal(error.statusCode, HTTP_STATUS_CODES.BAD_REQUEST);
 		});
 	});
 
-	describe('CrossThreadTimeoutError', function () {
-		it('should create timeout error with details', function () {
+	describe('CrossThreadTimeoutError', () => {
+		it('should create timeout error with details', () => {
 			const error = new CrossThreadTimeoutError(123, 5000, 3);
 
 			assert.equal(error.name, 'CrossThreadTimeoutError');
@@ -44,8 +44,8 @@ describe('Component Status Errors', function () {
 		});
 	});
 
-	describe('ITCError', function () {
-		it('should create ITC error without cause', function () {
+	describe('ITCError', () => {
+		it('should create ITC error without cause', () => {
 			const error = new ITCError('sendEvent');
 
 			assert.equal(error.name, 'ITCError');
@@ -55,7 +55,7 @@ describe('Component Status Errors', function () {
 			assert.ok(error.message.includes('Unknown error'));
 		});
 
-		it('should create ITC error with cause', function () {
+		it('should create ITC error with cause', () => {
 			const cause = new Error('Network failure');
 			const error = new ITCError('broadcastStatus', cause);
 
@@ -64,8 +64,8 @@ describe('Component Status Errors', function () {
 		});
 	});
 
-	describe('AggregationError', function () {
-		it('should create aggregation error', function () {
+	describe('AggregationError', () => {
+		it('should create aggregation error', () => {
 			const cause = new Error('Invalid data');
 			const error = new AggregationError(10, cause);
 
@@ -77,8 +77,8 @@ describe('Component Status Errors', function () {
 		});
 	});
 
-	describe('ComponentStatusOperationError', function () {
-		it('should create operation error', function () {
+	describe('ComponentStatusOperationError', () => {
+		it('should create operation error', () => {
 			const error = new ComponentStatusOperationError('my-component', 'setStatus', 'Invalid status level');
 
 			assert.equal(error.name, 'ComponentStatusOperationError');
@@ -90,8 +90,8 @@ describe('Component Status Errors', function () {
 		});
 	});
 
-	describe('CrossThreadCollectionError', function () {
-		it('should create collection error for partial success', function () {
+	describe('CrossThreadCollectionError', () => {
+		it('should create collection error for partial success', () => {
 			const result = {
 				success: true,
 				collectedFromThreads: 5,
@@ -110,7 +110,7 @@ describe('Component Status Errors', function () {
 			assert.ok(error.message.includes('3 timed out'));
 		});
 
-		it('should create collection error for complete failure', function () {
+		it('should create collection error for complete failure', () => {
 			const result = {
 				success: false,
 				collectedFromThreads: 0,
@@ -125,7 +125,7 @@ describe('Component Status Errors', function () {
 			assert.ok(error.message.includes('Timeout'));
 		});
 
-		it('should provide detailed diagnostics', function () {
+		it('should provide detailed diagnostics', () => {
 			const result = {
 				success: true,
 				collectedFromThreads: 3,

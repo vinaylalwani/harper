@@ -1,6 +1,6 @@
-import { describe, it } from 'mocha';
-import { Component, ComponentInvalidPatternError } from '@/components/Component';
-import assert from 'node:assert/strict';
+const { describe, it } = require('mocha');
+const { Component, ComponentInvalidPatternError } = require('#src/components/Component');
+const assert = require('node:assert/strict');
 
 describe('Component', () => {
 	const name = 'test-component';

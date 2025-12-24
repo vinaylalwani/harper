@@ -1,5 +1,6 @@
-import { requestRestart, restartNeeded } from '@/components/requestRestart';
-import assert from 'node:assert/strict';
+const { describe, it } = require('mocha');
+const { requestRestart, restartNeeded } = require('#src/components/requestRestart');
+const assert = require('node:assert/strict');
 
 describe('requestRestart', () => {
 	it('should update the shared buffer', () => {

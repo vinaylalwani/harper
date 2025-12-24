@@ -1,8 +1,6 @@
-/* eslint-disable @typescript-eslint/no-require-imports, sonarjs/void-use, sonarjs/assertions-in-tests, sonarjs/no-nested-functions */
-// Not sure why sonar cannot pick up the assertions within the tests. I think its because they are `async`.
-
-import { tmpdir } from 'node:os';
-import {
+const { describe, it, beforeEach, afterEach, after } = require('mocha');
+const { tmpdir } = require('node:os');
+const {
 	processResourceExtensionComponent,
 	ComponentV1,
 	InvalidFilesOptionError,
@@ -13,13 +11,13 @@ import {
 	InvalidRootOptionError,
 	InvalidPathOptionError,
 	InvalidURLPathOptionError,
-} from '@/components/ComponentV1';
-import { Resources } from '@/resources/Resources';
-import assert from 'node:assert/strict';
-import { join } from 'node:path';
-import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
-import { fake, restore, replace } from 'sinon';
-import fg from 'fast-glob';
+} = require('#src/components/ComponentV1');
+const { Resources } = require('#src/resources/Resources');
+const assert = require('node:assert/strict');
+const { join } = require('node:path');
+const { mkdtempSync, writeFileSync, mkdirSync, rmSync } = require('node:fs');
+const { fake, restore, replace } = require('sinon');
+const fg = require('fast-glob');
 
 const TEMP_DIR_PATH = join(tmpdir(), 'harper.unit-test.component-v1-');
 
@@ -45,7 +43,7 @@ function createTempFixture(fixture) {
 describe('ComponentV1', () => {
 	const componentName = 'test-component';
 
-	const harperLogger = require('@/utility/logging/harper_logger');
+	const harperLogger = require('#js/utility/logging/harper_logger');
 
 	beforeEach(() => {
 		replace(harperLogger, 'warn', fake());
