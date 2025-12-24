@@ -145,7 +145,9 @@ describe('test REST with property updates', function (options) {
 			'Custom-Header': 'custom-value',
 		});
 		await axios.get('http://localhost:9926/namespace/SubObject/6', {
-			headers: headersTest,
+			headers: {
+				'Custom-Header': 'custom-value',
+			},
 		});
 		assert.equal(headersTest.get('Custom-Header'), 'custom-value');
 		assert.equal(headersTest.get('CUSTOM-HEADER'), 'custom-value'); // shouldn't be case sensitive
