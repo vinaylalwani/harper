@@ -412,9 +412,9 @@ async function deployComponent(req) {
 	// an error we can immediately detect and report
 	const pseudoResources = new Resources();
 	pseudoResources.isWorker = true;
-	const componentLoader = require('./componentLoader.ts');
 
 	if (!process.env.HARPER_SAFE_MODE) {
+		const componentLoader = require('./componentLoader.ts');
 		let lastError;
 		componentLoader.setErrorReporter((error) => (lastError = error));
 		await componentLoader.loadComponent(application.dirPath, pseudoResources);
