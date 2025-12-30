@@ -44,10 +44,6 @@ export class RocksTransactionLogStore {
 				ENTRY_DATAVIEW.setUint32(4, auditRecord.previousResidencyId);
 				position = 8;
 			}
-			if (auditRecord.previousVersion) {
-				ENTRY_DATAVIEW.setFloat64(position, auditRecord.previousVersion);
-				position += 8;
-			}
 			if (auditRecord.previousNodeId) {
 				ENTRY_DATAVIEW.setUint32(position, auditRecord.previousNodeId);
 				position += 4;
@@ -211,5 +207,8 @@ export class RocksTransactionLogStore {
 		options?: { callback?: (listener: any) => void }
 	) {
 		return this.rootStore.getUserSharedBuffer(key, defaultBuffer, options);
+	}
+	on(eventName: string, listener: any) {
+		return this.rootStore.on(eventName, listener);
 	}
 }

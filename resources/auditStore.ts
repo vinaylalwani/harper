@@ -33,6 +33,7 @@ initSync();
 
 export type AuditRecord = {
 	version?: number;
+	localTime?: number; // only to be used by LMDB (from the key)
 	type: string;
 	encodedRecord: Buffer;
 	extendedType: number;
@@ -43,7 +44,7 @@ export type AuditRecord = {
 	tableId: number;
 	recordId: number;
 	previousVersion: number;
-	username?: string;
+	user?: string;
 	nodeId?: number;
 	previousNodeId?: number;
 	endTxn?: boolean;
@@ -285,7 +286,7 @@ const ORIGINATING_OPERATIONS = {
  * @param recordId
  * @param previousVersion
  * @param nodeId
- * @param username
+ * @param user
  * @param type
  * @param encodedRecord
  * @param extendedType
@@ -299,7 +300,7 @@ export function createAuditEntry(auditRecord: AuditRecord, start = 0) {
 		recordId,
 		previousVersion,
 		nodeId,
-		username,
+		user,
 		type,
 		encodedRecord,
 		extendedType,
@@ -314,8 +315,8 @@ export function createAuditEntry(auditRecord: AuditRecord, start = 0) {
 	}
 	let position = start + 1;
 	if (previousVersion) {
-		if (previousVersion > 1) ENTRY_DATAVIEW.setFloat64(0, previousVersion);
-		else ENTRY_HEADER.set(PREVIOUS_TIMESTAMP_PLACEHOLDER);
+		if (previousVersion > 1) ENTRY_DATAVIEW.setFloat64(start, previousVersion);
+		else ENTRY_HEADER.set(PREVIOUS_TIMESTAMP_PLACEHOLDER, start);
 		position = start + 9;
 	}
 	if (extendedType) {
@@ -328,11 +329,10 @@ export function createAuditEntry(auditRecord: AuditRecord, start = 0) {
 	writeInt(nodeId);
 	writeInt(tableId);
 	writeValue(recordId);
-	if (start === 0) {
-		// if we are using LMDB's audit entry, we need to write the version (using start===0 as an indication of that)
-		ENTRY_DATAVIEW.setFloat64(position, version);
-		position += 8;
-	}
+	// TODO: Once we support multiple format versions, we can conditionally write the version (and the previousResidencyId)
+	//	if (formatVersion === 1) {
+	ENTRY_DATAVIEW.setFloat64(position, version);
+	position += 8;
 	if (extendedType & HAS_CURRENT_RESIDENCY_ID) writeInt(residencyId);
 	if (extendedType & HAS_PREVIOUS_RESIDENCY_ID) writeInt(previousResidencyId);
 	if (extendedType & HAS_EXPIRATION_EXTENDED_TYPE) {
@@ -343,7 +343,7 @@ export function createAuditEntry(auditRecord: AuditRecord, start = 0) {
 		writeInt(ORIGINATING_OPERATIONS[originatingOperation]);
 	}
 
-	if (username) writeValue(username);
+	if (user) writeValue(user);
 	else ENTRY_HEADER[position++] = 0;
 	if (extendedType) ENTRY_DATAVIEW.setUint32(start + (previousVersion ? 8 : 0), action | extendedType | 0xc0000000);
 	else ENTRY_HEADER[start + (previousVersion ? 8 : 0)] = action;
@@ -419,7 +419,7 @@ function readAction(buffer: Buffer) {
  * @param start
  * @param end
  */
-export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined, skipVersion = false): AuditRecord {
+export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined): AuditRecord {
 	try {
 		const decoder =
 			buffer.dataView || (buffer.dataView = new Decoder(buffer.buffer, buffer.byteOffset, buffer.byteLength));
@@ -435,7 +435,8 @@ export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined, s
 		let length = decoder.readInt();
 		const recordIdStart = decoder.position;
 		const recordIdEnd = (decoder.position += length);
-		const version = skipVersion ? 0 : decoder.readFloat64();
+		// TODO: Once we support multiple format versions, we can conditionally read the version (and the previousResidencyId)
+		const version = decoder.readFloat64();
 		let residencyId, previousResidencyId, expiresAt, originatingOperation;
 		if (action & HAS_CURRENT_RESIDENCY_ID) {
 			residencyId = decoder.readInt();

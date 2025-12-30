@@ -7,7 +7,6 @@
 
 import { Encoder } from 'msgpackr';
 import {
-	createAuditEntry,
 	readAuditEntry,
 	HAS_PREVIOUS_RESIDENCY_ID,
 	HAS_CURRENT_RESIDENCY_ID,
@@ -486,7 +485,7 @@ export function recordUpdater(store, tableId, auditStore) {
 								recordId: id,
 								previousVersion,
 								nodeId: options?.nodeId ?? server.replication.getThisNodeId(auditStore) ?? 0,
-								username,
+								user: username,
 								type,
 								encodedRecord: lastValueEncoding,
 								extendedType,
@@ -506,9 +505,9 @@ export function recordUpdater(store, tableId, auditStore) {
 						version: newVersion,
 						tableId,
 						recordId: id,
-						previousVersion: existingEntry?.localTime ? 1 : 0,
+						previousVersion: store instanceof RocksDatabase ? existingEntry?.version : existingEntry?.localTime ? 1 : 0,
 						nodeId: options?.nodeId ?? server.replication?.getThisNodeId(auditStore) ?? 0,
-						username,
+						user: username,
 						type,
 						encodedRecord: lastValueEncoding,
 						extendedType,

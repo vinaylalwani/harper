@@ -126,13 +126,13 @@ function notifyFromTransactionData(subscriptions) {
 			auditLogIterator = subscriptions.auditLogIterator = getIterator();
 		}
 	} else auditLogIterator = getIterator();
-	for (const { key: localTime, value: auditEntryEncoded } of auditLogIterator) {
-		subscriptions.lastTxnTime = localTime;
-		const auditEntry = readAuditEntry(auditEntryEncoded);
-		if (!ACTIONS_OF_INTEREST.includes(auditEntry.type)) continue;
-		const tableSubscriptions = subscriptions[auditEntry.tableId];
+	for (const auditRecord of auditLogIterator) {
+		const timestamp: number = auditRecord.localTime ?? auditRecord.version;
+		subscriptions.lastTxnTime = timestamp;
+		if (!ACTIONS_OF_INTEREST.includes(auditRecord.type)) continue;
+		const tableSubscriptions = subscriptions[auditRecord.tableId];
 		if (!tableSubscriptions) continue;
-		const recordId = auditEntry.recordId;
+		const recordId = auditRecord.recordId;
 		// TODO: How to handle invalidation
 		let matchingKey = keyArrayToString(recordId);
 		let ancestorLevel = 0;
@@ -148,13 +148,13 @@ function notifyFromTransactionData(subscriptions) {
 						!(subscription.includeDescendants && !(subscription.onlyChildren && ancestorLevel > 1))
 					)
 						continue;
-					if (subscription.startTime >= localTime) {
-						info('omitting', recordId, subscription.startTime, localTime);
+					if (subscription.startTime >= timestamp) {
+						info('omitting', recordId, subscription.startTime, timestamp);
 						continue;
 					}
 					try {
 						let beginTxn;
-						if (subscription.supportsTransactions && subscription.txnInProgress !== auditEntry.version) {
+						if (subscription.supportsTransactions && subscription.txnInProgress !== auditRecord.version) {
 							// if the subscriber supports transactions, we mark this as the beginning of a new transaction
 							// tracking the subscription so that we can delimit the transaction on next transaction
 							// (with a beginTxn flag, which may be on an endTxn event)
@@ -167,9 +167,9 @@ function notifyFromTransactionData(subscriptions) {
 							// the version defines the extent of a transaction, all audit records with the same version
 							// are part of the same transaction, and when the version changes, we know it is a new
 							// transaction
-							subscription.txnInProgress = auditEntry.version;
+							subscription.txnInProgress = auditRecord.version;
 						}
-						subscription.listener(recordId, auditEntry, localTime, beginTxn);
+						subscription.listener(recordId, auditRecord, timestamp, beginTxn);
 					} catch (error) {
 						console.error(error);
 						info(error);
