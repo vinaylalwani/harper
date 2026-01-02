@@ -34,7 +34,8 @@
 	"tables": "readonly",
 	"createBlob": "readonly",
 	"lockdown": "readonly",
-	"threads": "readonly"
+	"threads": "readonly",
+	"Resource": "readonly"
   },
   "ignorePatterns": []
 }
