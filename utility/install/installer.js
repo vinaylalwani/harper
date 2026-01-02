@@ -33,10 +33,10 @@ const PROMPT_ANSWER_TRANSFORMER = (answer) => answer;
 const HDB_PROMPT_MSG = (msg) => chalk.magenta.bold(msg);
 const LINE_BREAK = os.EOL;
 const PROMPT_PREFIX = '';
-const INSTALL_START_MSG = 'Starting HarperDB install...';
-const INSTALL_COMPLETE_MSG = 'HarperDB installation was successful.';
-const UPGRADE_MSG = 'An out of date version of HarperDB is already installed.';
-const HDB_EXISTS_MSG = 'It appears that HarperDB is already installed. Exiting install...';
+const INSTALL_START_MSG = 'Starting Harper install...';
+const INSTALL_COMPLETE_MSG = 'Harper installation was successful.';
+const UPGRADE_MSG = 'An out of date version of Harper is already installed.';
+const HDB_EXISTS_MSG = 'It appears that Harper is already installed. Exiting install...';
 const ABORT_MSG = 'Aborting install';
 const PROCESS_HOME = os.homedir();
 const DEFAULT_HDB_ROOT = path.join(PROCESS_HOME, hdbTerms.HDB_ROOT_DIR_NAME);
@@ -60,10 +60,10 @@ const DEV_MODE_CONFIG = {
 
 // Install prompts
 const INSTALL_PROMPTS = {
-	DESTINATION: 'Please enter a destination for HarperDB:',
+	DESTINATION: 'Please enter a destination for Harper:',
 	HDB_USERNAME: 'Please enter a username for the administrative user:',
 	HDB_PASS: 'Please enter a password for the administrative user:',
-	NODE_HOSTNAME: 'Please enter the hostname for the HarperDB instance:',
+	NODE_HOSTNAME: 'Please enter the hostname for the Harper instance:',
 	DEFAULTS_MODE: 'Default Config - dev (easy access/debugging) or prod (security/performance): (dev/prod)',
 };
 
@@ -73,14 +73,14 @@ let conditionalRollback = false;
 let ignoreExisting = false;
 
 /**
- * This module orchestrates the installation of HarperDB.
+ * This module orchestrates the installation of Harper.
  */
 
 module.exports = { install, updateConfigEnv, setIgnoreExisting };
 install.createSuperUser = createSuperUser;
 
 /**
- * Calls all the functions that are needed to install HarperDB.
+ * Calls all the functions that are needed to install Harper.
  * @returns {Promise<void>}
  */
 async function install() {
@@ -112,7 +112,7 @@ async function install() {
 		throw validationError.message;
 	}
 
-	// Check for an existing install of HarperDB.
+	// Check for an existing installation of Harper.
 	await checkForExistingInstall();
 
 	// Prompt the user with params needed for install.
@@ -153,7 +153,7 @@ async function install() {
 	}
 	envManager.setHdbBasePath(hdbRoot);
 
-	// Creates the HarperDB project folder structure and the LMDB environments/dbis.
+	// Creates the Harper project folder structure and the LMDB environments/dbis.
 	await mountHdb(hdbRoot);
 
 	// Creates the boot prop file in user home dir. Boot prop file contains location of hdb config.
@@ -162,7 +162,7 @@ async function install() {
 	// Create the harperdb-config.yaml file
 	await createConfigFile(installParams);
 
-	// At this point there should be config and HarperDB folders so re-init log settings to update
+	// At this point there should be config and Harper folders so re-init log settings to update
 	hdbLogger.initLogSettings(true);
 
 	// Create the super user.
@@ -172,7 +172,7 @@ async function install() {
 	await keys.updateConfigCert();
 	await keys.generateCertsKeys();
 
-	// Insert current version of HarperDB into versions table.
+	// Insert current version of Harper into versions table.
 	await insertHdbVersionInfo();
 
 	// Checks that the RSA keys exist for JWT generation, if not we create them.
@@ -198,7 +198,7 @@ function getConfigFromFile() {
 }
 
 /**
- * Asks the user the questions needed to get HarperDB installed.
+ * Asks the user the questions needed to get Harper installed.
  * If cmd/env vats are passed to install the prompts will not be asked.
  * @param promptOverride - an object that contains all the params needed to install.
  * @returns {Promise<*>}
@@ -365,7 +365,7 @@ function checkForPromptOverride() {
 }
 
 /**
- * Checks for an existing install of HarperDB and prompts user accordingly.
+ * Checks for an existing install of Harper and prompts user accordingly.
  * @returns {Promise<void>}
  */
 async function checkForExistingInstall() {
@@ -448,13 +448,13 @@ async function createBootPropertiesFile() {
 }
 
 /**
- * Calls the util function that creates the HarperDB config file.
+ * Calls the util function that creates the Harper config file.
  * If an error occurs during the create install is rolled backed.
  * @param installParams
  * @returns {Promise<void>}
  */
 async function createConfigFile(installParams) {
-	hdbLogger.trace('Creating HarperDB config file');
+	hdbLogger.trace('Creating Harper config file');
 	const args = assignCMDENVVariables(Object.keys(hdbTerms.CONFIG_PARAM_MAP), true);
 	Object.assign(args, installParams);
 
@@ -495,7 +495,7 @@ async function createConfigFile(installParams) {
 
 	try {
 		if (!cfgEnv[hdbTerms.INSTALL_PROMPTS.HDB_CONFIG]) {
-			// Create the HarperDB config file.
+			// Create the Harper config file.
 			configUtils.createConfigFile(args);
 		}
 
@@ -510,7 +510,7 @@ async function createConfigFile(installParams) {
  * @param errMsg
  */
 function rollbackInstall(errMsg) {
-	hdbLogger.error(`Error creating HarperDB config file. Rolling back install - ${errMsg}`);
+	hdbLogger.error(`Error creating Harper config file. Rolling back install - ${errMsg}`);
 	console.error(errMsg);
 	console.error(ABORT_MSG);
 
@@ -540,7 +540,7 @@ function rollbackInstall(errMsg) {
 }
 
 /**
- * Creates a HarperDB role and then adds a use to that role.
+ * Creates a Harper role and then adds a use to that role.
  * @param role
  * @param adminUser
  * @returns {Promise<void>}
@@ -607,7 +607,7 @@ async function insertHdbVersionInfo() {
 	if (vers) {
 		await hdbInfoController.insertHdbInstallInfo(vers);
 	} else {
-		throw new Error('The version is missing/removed from HarperDB package.json');
+		throw new Error('The version is missing/removed from Harper package.json');
 	}
 }
 

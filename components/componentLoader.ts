@@ -45,7 +45,7 @@ let watchesSetup;
 let resources;
 
 /**
- * Load all the applications registered in HarperDB, those in the components directory as well as any directly
+ * Load all the applications registered in Harper, those in the components directory as well as any directly
  * specified to run
  * @param loadedPluginModules
  * @param loadedResources

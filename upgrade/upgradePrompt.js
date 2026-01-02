@@ -16,7 +16,7 @@ const UPGRADE_PROCEED = ['yes', 'y'];
 async function forceUpdatePrompt(upgradeObj) {
 	let upgradeMessage =
 		`${os.EOL}` +
-		chalk.bold.green('Your current HarperDB version requires that we complete an update process.') +
+		chalk.bold.green('Your current Harper version requires that we complete an update process.') +
 		`${os.EOL}` +
 		'If a backup of your data has not been created, we recommend you cancel this process and backup before proceeding.' +
 		`${os.EOL}${os.EOL}` +
@@ -58,7 +58,7 @@ async function forceDowngradePrompt(upgradeObj) {
 	let downgradeMessage =
 		`${os.EOL}` +
 		chalk.bold.green(
-			'Your installed HarperDB version is older than the version used to create your data.' +
+			'Your installed Harper version is older than the version used to create your data.' +
 				' Downgrading is not recommended as it is not tested and guaranteed to work. However, if you need to' +
 				' downgrade, and a backup of your data has not been created, we recommend you cancel this process and' +
 				' backup before proceeding.' +
@@ -90,7 +90,7 @@ async function upgradeCertsPrompt() {
 	const upgradeCertMessage =
 		`${os.EOL}` +
 		chalk.bold.green(
-			'We now require a Certifacte Authority certificate. HarperDB can generate all new certificates for you (your existing certificates will be backed up) ' +
+			'We now require a Certifacte Authority certificate. Harper can generate all new certificates for you (your existing certificates will be backed up) ' +
 				'or you can keep any existing certificates and add your own CA certificate. To add your own CA certificate set the <certificateAuthority> ' +
 				'parameter in harperdb-config.yaml'
 		);
@@ -102,7 +102,7 @@ async function upgradeCertsPrompt() {
 		properties: {
 			GENERATE_CERTS: {
 				description: chalk.magenta(
-					`${os.EOL}[GENERATE_CERTS] Do you want HarperDB to generate all new certificates? (yes/no)`
+					`${os.EOL}[GENERATE_CERTS] Do you want Harper to generate all new certificates? (yes/no)`
 				),
 				pattern: /y(es)?$|n(o)?$/,
 				message: "Must respond 'yes' or 'no'",

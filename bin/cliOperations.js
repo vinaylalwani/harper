@@ -142,7 +142,7 @@ async function cliOperations(req) {
 		// is running and that we can communicate with it.
 		initConfig();
 		if (!getHdbPid()) {
-			console.error('HarperDB must be running to perform this operation');
+			console.error('Harper must be running to perform this operation');
 			process.exit();
 		}
 

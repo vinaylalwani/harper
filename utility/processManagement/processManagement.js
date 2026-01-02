@@ -106,7 +106,7 @@ function expectedRestartOfChildren() {
 	}
 }
 /**
- * To restart HarperDB we use processManagement to fork a process and then call restart from that process.
+ * To restart Harper we use processManagement to fork a process and then call restart from that process.
  * We do this because we were seeing random errors when HDB was calling restart on itself.
  * @returns {Promise<void>}
  */
@@ -121,7 +121,7 @@ function restartHdb() {
 function getHdbPid() {
 	const harperPath = envMangr.getHdbBasePath();
 	if (!harperPath) return;
-	const pidFile = path.join(harperPath, terms.HDB_PID_FILE);
+	const pidFile = path.join(harperPath, hdbTerms.HDB_PID_FILE);
 	const hdbPid = readPidFile(pidFile);
 	// If the pid file doesn't exist or the pid is the same as the current process, return.
 	// In a Docker container, the pid is usually 1, and so if a previous process crashed, there will still
@@ -165,8 +165,8 @@ async function startService(serviceName, noKill = false) {
 }
 
 /**
- * Reads the HarperDB PID file and returns the PID as a number.
- * @param {string} pidFile - The path to the HarperDB PID file
+ * Reads the Harper PID file and returns the PID as a number.
+ * @param {string} pidFile - The path to the Harper PID file
  * @returns {number|null} - The PID as a number, or null if the file is not found or cannot be read
  */
 function readPidFile(pidFile) {
