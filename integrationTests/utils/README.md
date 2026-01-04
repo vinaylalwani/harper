@@ -152,8 +152,8 @@ interface ContextWithHarper extends SuiteContext, TestContext {
 - **`harper`** - `object` - The Harper instance details
   - **`installDir`** - `string` - The absolute path to the Harper installation directory
   - **`admin`** - `object` - Admin credentials
-    - **`username`** - `string` - The Harper Admin Username (default: `'HDB_ADMIN'`)
-    - **`password`** - `string` - The Harper Admin Password (default: `'abc123'`)
+    - **`username`** - `string` - The Harper Admin Username (default: `'admin'`)
+    - **`password`** - `string` - The Harper Admin Password (default: `'Abc1234!'`)
   - **`httpURL`** - `string` - The HTTP URL for the Harper instance (e.g., `'http://127.0.0.2:9926'`)
   - **`operationsAPIURL`** - `string` - The Operations API URL (e.g., `'http://127.0.0.2:9925'`)
   - **`hostname`** - `string` - The assigned loopback IP address (e.g., `'127.0.0.2'`)
