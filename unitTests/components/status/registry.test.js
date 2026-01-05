@@ -1,24 +1,23 @@
-const { describe, it, after } = require('mocha');
 const assert = require('node:assert/strict');
 const { ComponentStatusRegistry } = require('#src/components/status/ComponentStatusRegistry');
 const { componentStatusRegistry } = require('#src/components/status/registry');
 
-describe('componentStatusRegistry singleton', () => {
-	after(() => {
+describe('componentStatusRegistry singleton', function () {
+	after(function () {
 		// Clean up the global singleton after tests
 		componentStatusRegistry.reset();
 	});
 
-	it('should export a ComponentStatusRegistry instance', () => {
+	it('should export a ComponentStatusRegistry instance', function () {
 		assert.ok(componentStatusRegistry instanceof ComponentStatusRegistry);
 	});
 
-	it('should be a singleton instance', () => {
+	it('should be a singleton instance', function () {
 		const { componentStatusRegistry: registry2 } = require('#src/components/status/registry');
 		assert.strictEqual(componentStatusRegistry, registry2);
 	});
 
-	it('should have all ComponentStatusRegistry methods', () => {
+	it('should have all ComponentStatusRegistry methods', function () {
 		// Check core methods exist
 		assert.equal(typeof componentStatusRegistry.reset, 'function');
 		assert.equal(typeof componentStatusRegistry.setStatus, 'function');
@@ -34,7 +33,7 @@ describe('componentStatusRegistry singleton', () => {
 		assert.equal(typeof componentStatusRegistry.getStatusSummary, 'function');
 	});
 
-	it('should work with basic operations', () => {
+	it('should work with basic operations', function () {
 		// Clean up any existing state
 		componentStatusRegistry.reset();
 

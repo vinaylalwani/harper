@@ -1,4 +1,6 @@
-const { describe, it, beforeEach, afterEach, after } = require('mocha');
+/* eslint-disable @typescript-eslint/no-require-imports, sonarjs/void-use, sonarjs/assertions-in-tests, sonarjs/no-nested-functions */
+// Not sure why sonar cannot pick up the assertions within the tests. I think its because they are `async`.
+
 const { tmpdir } = require('node:os');
 const {
 	processResourceExtensionComponent,

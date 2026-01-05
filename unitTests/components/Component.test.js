@@ -1,4 +1,4 @@
-const { describe, it } = require('mocha');
+/* eslint-disable sonarjs/no-nested-functions */
 const { Component, ComponentInvalidPatternError } = require('#src/components/Component');
 const assert = require('node:assert/strict');
 

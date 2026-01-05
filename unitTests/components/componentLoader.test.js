@@ -1,20 +1,16 @@
-const { describe, it, before, after, beforeEach } = require('mocha');
 const assert = require('node:assert/strict');
 const sinon = require('sinon');
 const path = require('path');
 const { tmpdir } = require('os');
 const { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } = require('fs');
-const { createTestSandbox, cleanupTestSandbox } = require('../testUtils.js');
 
-describe('ComponentLoader Status Integration', () => {
+describe('ComponentLoader Status Integration', function () {
 	let componentStatusRegistry;
 	let tempDir;
 	let componentLoader;
 	let lifecycle;
 
-	before(() => {
-		createTestSandbox();
-
+	before(function () {
 		// Create a temporary directory for test components
 		tempDir = mkdtempSync(path.join(tmpdir(), 'harper-test-components-'));
 
@@ -61,7 +57,7 @@ describe('ComponentLoader Status Integration', () => {
 		componentLoader = require('#src/components/componentLoader');
 	});
 
-	after(async () => {
+	after(function () {
 		// Restore all spies
 		sinon.restore();
 
@@ -72,11 +68,9 @@ describe('ComponentLoader Status Integration', () => {
 
 		// Clear the component status registry
 		componentStatusRegistry.reset();
-
-		await cleanupTestSandbox();
 	});
 
-	beforeEach(() => {
+	beforeEach(function () {
 		// Reset spy history before each test
 		lifecycle.loading.resetHistory();
 		lifecycle.loaded.resetHistory();
@@ -91,8 +85,8 @@ describe('ComponentLoader Status Integration', () => {
 		componentStatusRegistry.reset();
 	});
 
-	describe('Basic component status tracking', () => {
-		it('should initialize loading status for non-root components', async () => {
+	describe('Basic component status tracking', function () {
+		it('should initialize loading status for non-root components', async function () {
 			// Create a test component directory
 			const componentDirName = 'test-component';
 			const componentDir = path.join(tempDir, componentDirName);
@@ -126,7 +120,7 @@ describe('ComponentLoader Status Integration', () => {
 			);
 		});
 
-		it('should track loading for components with trusted loaders', async () => {
+		it('should track loading for components with trusted loaders', async function () {
 			// Create a component using a trusted loader
 			const componentDirName = 'trusted-component';
 			const componentDir = path.join(tempDir, componentDirName);
@@ -159,7 +153,7 @@ describe('ComponentLoader Status Integration', () => {
 			assert.match(loadedCalls[0].args[1], /loaded successfully/);
 		});
 
-		it('should mark component as failed when it loads no functionality', async () => {
+		it('should mark component as failed when it loads no functionality', async function () {
 			// Create a component directory without config
 			// This will use DEFAULT_CONFIG but won't actually load anything
 			const componentDirName = 'empty-component';
@@ -193,8 +187,8 @@ describe('ComponentLoader Status Integration', () => {
 		});
 	});
 
-	describe('Component status verification', () => {
-		it('should properly set status in registry after successful load', async () => {
+	describe('Component status verification', function () {
+		it('should properly set status in registry after successful load', async function () {
 			// Create a component
 			const componentDirName = 'verify-status';
 			const componentDir = path.join(tempDir, componentDirName);
@@ -218,19 +212,19 @@ describe('ComponentLoader Status Integration', () => {
 			assert.ok(status.message, 'Should have a status message');
 		});
 
-		it('should handle component loading errors gracefully', async () => {
+		it('should handle component loading errors gracefully', async function () {
 			// Stub the dataLoader module's handleApplication method to throw an error
-			// const dataLoaderModule = require('#src/resources/dataLoader');
-			// const originalhandleApplication = dataLoaderModule.handleApplication;
-			// sinon.stub(dataLoaderModule, 'handleApplication').throws(new Error('DataLoader failed to initialize'));
+			const dataLoaderModule = require('#src/resources/dataLoader');
+			const originalhandleApplication = dataLoaderModule.handleApplication;
+			sinon.stub(dataLoaderModule, 'handleApplication').throws(new Error('DataLoader failed to initialize'));
 
 			// Create a component that uses dataLoader
 			const componentDirName = 'error-component';
 			const componentDir = path.join(tempDir, componentDirName);
 			mkdirSync(componentDir);
 
-			// Create a bad dataLoader config
-			writeFileSync(path.join(componentDir, 'harperdb-config.yaml'), 'dataLoader:\n  nope: \ninvalid');
+			// Create config that uses dataLoader
+			writeFileSync(path.join(componentDir, 'harperdb-config.yaml'), 'dataLoader:\n  path: "data"');
 
 			// Create mock resources
 			const mockResources = {
@@ -253,7 +247,7 @@ describe('ComponentLoader Status Integration', () => {
 			assert.ok(componentFailure.args[1] instanceof Error, 'Should have passed an Error object');
 			assert.match(
 				String(componentFailure.args[1]),
-				/YAMLParseError: Could not load component 'dataLoader' for application 'error-component'/,
+				/DataLoader failed to initialize/,
 				'Error should contain our error message'
 			);
 
@@ -265,7 +259,7 @@ describe('ComponentLoader Status Integration', () => {
 			assert.ok(errorCall, 'Should have created an ErrorResource');
 
 			// Restore the original handleApplication method
-			// dataLoaderModule.handleApplication = originalhandleApplication;
+			dataLoaderModule.handleApplication = originalhandleApplication;
 		});
 	});
 });

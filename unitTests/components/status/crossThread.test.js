@@ -1,28 +1,27 @@
-const { describe, it, beforeEach, afterEach } = require('mocha');
 const assert = require('node:assert/strict');
 const sinon = require('sinon');
 const { CrossThreadStatusCollector, StatusAggregator } = require('#src/components/status/crossThread');
 const { ComponentStatusRegistry } = require('#src/components/status/ComponentStatusRegistry');
-const itcModule = require('#src/server/threads/itc');
+const itcModule = require('#js/server/threads/itc');
 const manageThreadsModule = require('#js/server/threads/manageThreads');
 
-describe('CrossThread Module #skip-typestrip', () => {
+describe('CrossThread Module', function () {
 	let sendItcEventStub;
 	let onMessageByTypeStub;
 	let getWorkerIndexStub;
 
-	beforeEach(() => {
+	beforeEach(function () {
 		// Stub ITC functions
 		sendItcEventStub = sinon.stub(itcModule, 'sendItcEvent').resolves();
 		onMessageByTypeStub = sinon.stub(manageThreadsModule, 'onMessageByType');
 		getWorkerIndexStub = sinon.stub(manageThreadsModule, 'getWorkerIndex').returns(0);
 	});
 
-	afterEach(() => {
+	afterEach(function () {
 		sinon.restore();
 	});
 
-	describe('CrossThreadStatusCollector', () => {
+	describe('CrossThreadStatusCollector', function () {
 		let collector;
 		let registry;
 
@@ -31,12 +30,12 @@ describe('CrossThread Module #skip-typestrip', () => {
 			registry = new ComponentStatusRegistry();
 		});
 
-		afterEach(() => {
+		afterEach(function () {
 			collector.cleanup();
 			registry.reset();
 		});
 
-		it('should collect status from local thread only when no responses', async () => {
+		it('should collect status from local thread only when no responses', async function () {
 			registry.setStatus('localComp', 'healthy', 'All good');
 			// Test with main thread (undefined)
 			getWorkerIndexStub.returns(undefined);
@@ -57,7 +56,8 @@ describe('CrossThread Module #skip-typestrip', () => {
 			getWorkerCountStub.restore();
 		});
 
-		it('should collect status from multiple threads', async () => {
+		it('should collect status from multiple threads', async function () {
+			this.timeout(5000); // Allow enough time for async operations
 			registry.setStatus('sharedComp', 'healthy', 'Local is healthy');
 			// Test with main thread (undefined)
 			getWorkerIndexStub.returns(undefined);
@@ -117,9 +117,9 @@ describe('CrossThread Module #skip-typestrip', () => {
 
 			// Cleanup
 			getWorkerCountStub.restore();
-		}).timeout(5000);
+		});
 
-		it('should handle ITC send failure', async () => {
+		it('should handle ITC send failure', async function () {
 			registry.setStatus('fallbackComp', 'error', 'Local error');
 			// Test with main thread (undefined)
 			getWorkerIndexStub.returns(undefined);
@@ -142,7 +142,8 @@ describe('CrossThread Module #skip-typestrip', () => {
 			getWorkerCountStub.restore();
 		});
 
-		it('should handle collection timeout', async () => {
+		it('should handle collection timeout', async function () {
+			this.timeout(5000);
 			const shortTimeoutCollector = new CrossThreadStatusCollector(50); // Very short timeout
 			registry.setStatus('timeoutComp', 'loading', 'Loading...');
 			// Test with main thread (undefined)
@@ -162,9 +163,10 @@ describe('CrossThread Module #skip-typestrip', () => {
 
 			shortTimeoutCollector.cleanup();
 			getWorkerCountStub.restore();
-		}).timeout(5000);
+		});
 
-		it('should complete early when all threads respond', async () => {
+		it('should complete early when all threads respond', async function () {
+			this.timeout(5000);
 			registry.setStatus('fastComp', 'healthy', 'Main thread');
 			getWorkerIndexStub.returns(0);
 
@@ -211,9 +213,9 @@ describe('CrossThread Module #skip-typestrip', () => {
 
 			// Cleanup the stub
 			getWorkerCountStub.restore();
-		}).timeout(5000);
+		});
 
-		it('should reuse listener across multiple collections', async () => {
+		it('should reuse listener across multiple collections', async function () {
 			// First collection
 			await collector.collect(registry);
 			assert.equal(onMessageByTypeStub.callCount, 1);
@@ -223,7 +225,7 @@ describe('CrossThread Module #skip-typestrip', () => {
 			assert.equal(onMessageByTypeStub.callCount, 1);
 		});
 
-		it('should properly clean up resources', () => {
+		it('should properly clean up resources', function () {
 			// Set up some pending requests
 			collector['awaitingResponses'].set(1, []);
 			collector['awaitingResponses'].set(2, []);
@@ -240,10 +242,10 @@ describe('CrossThread Module #skip-typestrip', () => {
 		});
 	});
 
-	describe('StatusAggregator', () => {
+	describe('StatusAggregator', function () {
 		let clock;
 
-		beforeEach(() => {
+		beforeEach(function () {
 			clock = sinon.useFakeTimers();
 		});
 
@@ -251,7 +253,7 @@ describe('CrossThread Module #skip-typestrip', () => {
 			clock.restore();
 		});
 
-		it('should aggregate single component from single thread', () => {
+		it('should aggregate single component from single thread', function () {
 			const allStatuses = new Map([
 				[
 					'database@worker-0',
@@ -275,7 +277,7 @@ describe('CrossThread Module #skip-typestrip', () => {
 			assert.equal(aggStatus.abnormalities, undefined);
 		});
 
-		it('should detect abnormalities when statuses differ', () => {
+		it('should detect abnormalities when statuses differ', function () {
 			const allStatuses = new Map([
 				[
 					'api@worker-0',
@@ -318,7 +320,7 @@ describe('CrossThread Module #skip-typestrip', () => {
 			assert.equal(worker0Abnormality.workerIndex, -1); // No workerIndex in input
 		});
 
-		it('should prioritize non-healthy messages', () => {
+		it('should prioritize non-healthy messages', function () {
 			const allStatuses = new Map([
 				[
 					'service@worker-0',
@@ -353,7 +355,7 @@ describe('CrossThread Module #skip-typestrip', () => {
 			assert.equal(aggStatus.latestMessage, 'High latency detected'); // Non-healthy message preferred
 		});
 
-		it('should handle status priority correctly', () => {
+		it('should handle status priority correctly', function () {
 			const testCases = [
 				{ statuses: ['healthy', 'healthy', 'healthy'], expected: 'healthy' },
 				{ statuses: ['healthy', 'unknown', 'healthy'], expected: 'unknown' },
@@ -377,7 +379,7 @@ describe('CrossThread Module #skip-typestrip', () => {
 			}
 		});
 
-		it('should handle main thread correctly', () => {
+		it('should handle main thread correctly', function () {
 			const allStatuses = new Map([
 				[
 					'logger@main',
@@ -404,7 +406,7 @@ describe('CrossThread Module #skip-typestrip', () => {
 			assert.equal(aggStatus.lastChecked.workers[1], 2000);
 		});
 
-		it('should handle worker index in status data', () => {
+		it('should handle worker index in status data', function () {
 			const allStatuses = new Map([
 				[
 					'cache@worker-1',

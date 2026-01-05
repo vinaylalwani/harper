@@ -1,37 +1,40 @@
-const { describe, it, beforeEach, afterEach, after } = require('mocha');
 const assert = require('node:assert/strict');
 const sinon = require('sinon');
 const { ComponentStatusRegistry } = require('#src/components/status/ComponentStatusRegistry');
 const { ComponentStatus } = require('#src/components/status/ComponentStatus');
 const { COMPONENT_STATUS_LEVELS } = require('#src/components/status/types');
 const { StatusAggregator } = require('#src/components/status/crossThread');
+const itcModule = require('#js/server/threads/itc');
 const manageThreadsModule = require('#js/server/threads/manageThreads');
 
-describe('ComponentStatusRegistry', () => {
+describe('ComponentStatusRegistry', function () {
 	let registry;
 	let clock;
 
-	beforeEach(() => {
+	beforeEach(function () {
 		registry = new ComponentStatusRegistry();
 		clock = sinon.useFakeTimers();
 
+		// Stub ITC functions
+		sinon.stub(itcModule, 'sendItcEvent').resolves();
 		sinon.stub(manageThreadsModule, 'onMessageByType');
 		sinon.stub(manageThreadsModule, 'getWorkerIndex').returns(0);
 	});
 
-	afterEach(() => {
+	afterEach(function () {
 		clock.restore();
 		sinon.restore();
+		// Reset the registry to ensure clean state
 		registry.reset();
 	});
 
-	after(() => {
+	after(function () {
 		// Clean up any environment variables that might have been set
 		delete process.env.COMPONENT_STATUS_TIMEOUT;
 	});
 
-	describe('reset', () => {
-		it('should clear all statuses', () => {
+	describe('reset', function () {
+		it('should clear all statuses', function () {
 			registry.setStatus('comp1', 'healthy', 'All good');
 			registry.setStatus('comp2', 'error', 'Failed');
 
@@ -43,8 +46,8 @@ describe('ComponentStatusRegistry', () => {
 		});
 	});
 
-	describe('setStatus', () => {
-		it('should set component status with all parameters', () => {
+	describe('setStatus', function () {
+		it('should set component status with all parameters', function () {
 			const error = new Error('Test error');
 			registry.setStatus('database', 'error', 'Connection failed', error);
 
@@ -55,7 +58,7 @@ describe('ComponentStatusRegistry', () => {
 			assert.equal(status.error, error);
 		});
 
-		it('should set component status without optional parameters', () => {
+		it('should set component status without optional parameters', function () {
 			registry.setStatus('cache', 'healthy');
 
 			const status = registry.getStatus('cache');
@@ -64,7 +67,7 @@ describe('ComponentStatusRegistry', () => {
 			assert.equal(status.error, undefined);
 		});
 
-		it('should overwrite existing status', () => {
+		it('should overwrite existing status', function () {
 			registry.setStatus('api', 'loading', 'Starting up');
 			registry.setStatus('api', 'healthy', 'Ready');
 
@@ -73,7 +76,7 @@ describe('ComponentStatusRegistry', () => {
 			assert.equal(status.message, 'Ready');
 		});
 
-		it('should throw error for invalid component name', () => {
+		it('should throw error for invalid component name', function () {
 			assert.throws(() => registry.setStatus('', 'healthy'), {
 				name: 'ComponentStatusOperationError',
 				message: /Component name must be a non-empty string/,
@@ -85,7 +88,7 @@ describe('ComponentStatusRegistry', () => {
 			});
 		});
 
-		it('should throw error for invalid status level', () => {
+		it('should throw error for invalid status level', function () {
 			assert.throws(() => registry.setStatus('comp4', 'invalid-status'), {
 				name: 'ComponentStatusOperationError',
 				message: /Invalid status level: invalid-status/,
@@ -93,12 +96,12 @@ describe('ComponentStatusRegistry', () => {
 		});
 	});
 
-	describe('getStatus', () => {
-		it('should return undefined for non-existent component', () => {
+	describe('getStatus', function () {
+		it('should return undefined for non-existent component', function () {
 			assert.equal(registry.getStatus('non-existent'), undefined);
 		});
 
-		it('should return ComponentStatus instance', () => {
+		it('should return ComponentStatus instance', function () {
 			registry.setStatus('test', 'healthy');
 			const status = registry.getStatus('test');
 
@@ -106,14 +109,14 @@ describe('ComponentStatusRegistry', () => {
 		});
 	});
 
-	describe('getAllStatuses', () => {
-		it('should return empty map initially', () => {
+	describe('getAllStatuses', function () {
+		it('should return empty map initially', function () {
 			const statuses = registry.getAllStatuses();
 			assert.ok(statuses instanceof Map);
 			assert.equal(statuses.size, 0);
 		});
 
-		it('should return all registered statuses', () => {
+		it('should return all registered statuses', function () {
 			registry.setStatus('comp1', 'healthy');
 			registry.setStatus('comp2', 'warning', 'High memory');
 			registry.setStatus('comp3', 'error', 'Failed');
@@ -126,8 +129,8 @@ describe('ComponentStatusRegistry', () => {
 		});
 	});
 
-	describe('reportHealthy', () => {
-		it('should set status to healthy with message', () => {
+	describe('reportHealthy', function () {
+		it('should set status to healthy with message', function () {
 			registry.reportHealthy('service', 'Running smoothly');
 
 			const status = registry.getStatus('service');
@@ -135,7 +138,7 @@ describe('ComponentStatusRegistry', () => {
 			assert.equal(status.message, 'Running smoothly');
 		});
 
-		it('should set status to healthy without message', () => {
+		it('should set status to healthy without message', function () {
 			registry.reportHealthy('service');
 
 			const status = registry.getStatus('service');
@@ -143,8 +146,8 @@ describe('ComponentStatusRegistry', () => {
 		});
 	});
 
-	describe('reportError', () => {
-		it('should set status to error with Error object', () => {
+	describe('reportError', function () {
+		it('should set status to error with Error object', function () {
 			const error = new Error('Connection timeout');
 			registry.reportError('database', error, 'DB connection failed');
 
@@ -154,7 +157,7 @@ describe('ComponentStatusRegistry', () => {
 			assert.equal(status.error, error);
 		});
 
-		it('should set status to error with string error', () => {
+		it('should set status to error with string error', function () {
 			registry.reportError('api', 'Invalid configuration');
 
 			const status = registry.getStatus('api');
@@ -163,8 +166,8 @@ describe('ComponentStatusRegistry', () => {
 		});
 	});
 
-	describe('reportWarning', () => {
-		it('should set status to warning with message', () => {
+	describe('reportWarning', function () {
+		it('should set status to warning with message', function () {
 			registry.reportWarning('cache', 'Cache size approaching limit');
 
 			const status = registry.getStatus('cache');
@@ -173,9 +176,9 @@ describe('ComponentStatusRegistry', () => {
 		});
 	});
 
-	describe('lifecycle management methods', () => {
-		describe('initializeLoading', () => {
-			it('should set status to loading with custom message', () => {
+	describe('lifecycle management methods', function () {
+		describe('initializeLoading', function () {
+			it('should set status to loading with custom message', function () {
 				registry.initializeLoading('auth', 'Connecting to auth server');
 
 				const status = registry.getStatus('auth');
@@ -183,7 +186,7 @@ describe('ComponentStatusRegistry', () => {
 				assert.equal(status.message, 'Connecting to auth server');
 			});
 
-			it('should set status to loading with default message', () => {
+			it('should set status to loading with default message', function () {
 				registry.initializeLoading('auth');
 
 				const status = registry.getStatus('auth');
@@ -192,8 +195,8 @@ describe('ComponentStatusRegistry', () => {
 			});
 		});
 
-		describe('markLoaded', () => {
-			it('should set status to healthy with custom message', () => {
+		describe('markLoaded', function () {
+			it('should set status to healthy with custom message', function () {
 				registry.markLoaded('storage', 'Storage initialized');
 
 				const status = registry.getStatus('storage');
@@ -201,7 +204,7 @@ describe('ComponentStatusRegistry', () => {
 				assert.equal(status.message, 'Storage initialized');
 			});
 
-			it('should set status to healthy with default message', () => {
+			it('should set status to healthy with default message', function () {
 				registry.markLoaded('storage');
 
 				const status = registry.getStatus('storage');
@@ -210,8 +213,8 @@ describe('ComponentStatusRegistry', () => {
 			});
 		});
 
-		describe('markFailed', () => {
-			it('should set status to error with all parameters', () => {
+		describe('markFailed', function () {
+			it('should set status to error with all parameters', function () {
 				const error = new Error('Init failed');
 				registry.markFailed('logger', error, 'Failed to initialize logger');
 
@@ -221,7 +224,7 @@ describe('ComponentStatusRegistry', () => {
 				assert.equal(status.error, error);
 			});
 
-			it('should set status to error with string error', () => {
+			it('should set status to error with string error', function () {
 				registry.markFailed('logger', 'Configuration missing');
 
 				const status = registry.getStatus('logger');
@@ -231,8 +234,8 @@ describe('ComponentStatusRegistry', () => {
 		});
 	});
 
-	describe('getComponentsByStatus', () => {
-		beforeEach(() => {
+	describe('getComponentsByStatus', function () {
+		beforeEach(function () {
 			registry.setStatus('comp1', 'healthy');
 			registry.setStatus('comp2', 'error', 'Failed');
 			registry.setStatus('comp3', 'healthy');
@@ -240,19 +243,19 @@ describe('ComponentStatusRegistry', () => {
 			registry.setStatus('comp5', 'error', 'Timeout');
 		});
 
-		it('should return components with specific status', () => {
+		it('should return components with specific status', function () {
 			const healthyComponents = registry.getComponentsByStatus(COMPONENT_STATUS_LEVELS.HEALTHY);
 			assert.equal(healthyComponents.length, 2);
 			assert.equal(healthyComponents[0].name, 'comp1');
 			assert.equal(healthyComponents[1].name, 'comp3');
 		});
 
-		it('should return empty array for status with no components', () => {
+		it('should return empty array for status with no components', function () {
 			const loadingComponents = registry.getComponentsByStatus(COMPONENT_STATUS_LEVELS.LOADING);
 			assert.equal(loadingComponents.length, 0);
 		});
 
-		it('should return correct component objects', () => {
+		it('should return correct component objects', function () {
 			const errorComponents = registry.getComponentsByStatus(COMPONENT_STATUS_LEVELS.ERROR);
 			assert.equal(errorComponents.length, 2);
 
@@ -266,8 +269,8 @@ describe('ComponentStatusRegistry', () => {
 		});
 	});
 
-	describe('getStatusSummary', () => {
-		it('should return initial summary with zero counts', () => {
+	describe('getStatusSummary', function () {
+		it('should return initial summary with zero counts', function () {
 			const summary = registry.getStatusSummary();
 
 			assert.equal(summary[COMPONENT_STATUS_LEVELS.HEALTHY], 0);
@@ -277,7 +280,7 @@ describe('ComponentStatusRegistry', () => {
 			assert.equal(summary[COMPONENT_STATUS_LEVELS.UNKNOWN], 0);
 		});
 
-		it('should count components by status', () => {
+		it('should count components by status', function () {
 			registry.setStatus('comp1', 'healthy');
 			registry.setStatus('comp2', 'healthy');
 			registry.setStatus('comp3', 'error');
@@ -296,8 +299,8 @@ describe('ComponentStatusRegistry', () => {
 	});
 
 	// Test aggregate functionality through getAggregatedFromAllThreads
-	describe('aggregation functionality (via getAggregatedFromAllThreads)', () => {
-		it('should aggregate single component from multiple threads', () => {
+	describe('aggregation functionality (via getAggregatedFromAllThreads)', function () {
+		it('should aggregate single component from multiple threads', function () {
 			const allStatuses = new Map([
 				[
 					'myComponent@main',
@@ -338,7 +341,7 @@ describe('ComponentStatusRegistry', () => {
 			assert.equal(aggStatus.abnormalities, undefined); // All healthy, no abnormalities
 		});
 
-		it('should detect abnormalities when statuses differ', () => {
+		it('should detect abnormalities when statuses differ', function () {
 			const allStatuses = new Map([
 				[
 					'database@worker-0',
@@ -381,7 +384,7 @@ describe('ComponentStatusRegistry', () => {
 			assert.equal(worker0Abnormality.workerIndex, -1); // No workerIndex in input
 		});
 
-		it('should prioritize non-healthy messages', () => {
+		it('should prioritize non-healthy messages', function () {
 			const allStatuses = new Map([
 				[
 					'api@worker-0',
@@ -416,7 +419,7 @@ describe('ComponentStatusRegistry', () => {
 			assert.equal(aggStatus.latestMessage, 'High latency detected'); // Non-healthy message preferred
 		});
 
-		it('should handle status priority correctly', () => {
+		it('should handle status priority correctly', function () {
 			const testCases = [
 				{ statuses: ['healthy', 'healthy', 'healthy'], expected: 'healthy' },
 				{ statuses: ['healthy', 'unknown', 'healthy'], expected: 'unknown' },
@@ -440,7 +443,7 @@ describe('ComponentStatusRegistry', () => {
 			}
 		});
 
-		it('should handle worker index in status data', () => {
+		it('should handle worker index in status data', function () {
 			const allStatuses = new Map([
 				[
 					'service@worker-1',
@@ -470,7 +473,7 @@ describe('ComponentStatusRegistry', () => {
 			assert.equal(abnormality.workerIndex, 2);
 		});
 
-		it('should handle main thread correctly', () => {
+		it('should handle main thread correctly', function () {
 			const allStatuses = new Map([
 				[
 					'logger@main',
@@ -498,8 +501,8 @@ describe('ComponentStatusRegistry', () => {
 		});
 	});
 
-	describe('static getAggregatedFromAllThreads method', () => {
-		it('should collect and aggregate statuses', async () => {
+	describe('static getAggregatedFromAllThreads method', function () {
+		it('should collect and aggregate statuses', async function () {
 			// Mock the crossThreadCollector to avoid actual ITC communication
 			const { crossThreadCollector } = require('#src/components/status/crossThread');
 			const originalCollect = crossThreadCollector.collect;
@@ -540,9 +543,9 @@ describe('ComponentStatusRegistry', () => {
 		});
 	});
 
-	describe('getAggregatedStatusFor method', () => {
-		describe('basic aggregation scenarios', () => {
-			it('should return status for exact component match only', async () => {
+	describe('getAggregatedStatusFor method', function () {
+		describe('basic aggregation scenarios', function () {
+			it('should return status for exact component match only', async function () {
 				const consolidatedStatuses = new Map([
 					[
 						'application-template',
@@ -563,7 +566,7 @@ describe('ComponentStatusRegistry', () => {
 				assert.deepEqual(result.lastChecked, { workers: { 0: 1000 } });
 			});
 
-			it('should return aggregated status for sub-components only', async () => {
+			it('should return aggregated status for sub-components only', async function () {
 				const consolidatedStatuses = new Map([
 					[
 						'application-template.rest',
@@ -593,7 +596,7 @@ describe('ComponentStatusRegistry', () => {
 				assert.deepEqual(result.lastChecked, { workers: { 0: 1000 } });
 			});
 
-			it('should combine exact match with sub-components', async () => {
+			it('should combine exact match with sub-components', async function () {
 				const consolidatedStatuses = new Map([
 					[
 						'application-template',
@@ -623,7 +626,7 @@ describe('ComponentStatusRegistry', () => {
 				assert.deepEqual(result.lastChecked, { workers: { 0: 1000 } });
 			});
 
-			it('should return unknown status when component not found', async () => {
+			it('should return unknown status when component not found', async function () {
 				const consolidatedStatuses = new Map([
 					[
 						'other-component',
@@ -644,8 +647,8 @@ describe('ComponentStatusRegistry', () => {
 			});
 		});
 
-		describe('status priority and aggregation logic', () => {
-			it('should prioritize error over other statuses', async () => {
+		describe('status priority and aggregation logic', function () {
+			it('should prioritize error over other statuses', async function () {
 				const consolidatedStatuses = new Map([
 					[
 						'app.component1',
@@ -684,7 +687,7 @@ describe('ComponentStatusRegistry', () => {
 				assert.equal(result.details['app.component2'].status, COMPONENT_STATUS_LEVELS.ERROR);
 			});
 
-			it('should prioritize loading over healthy statuses', async () => {
+			it('should prioritize loading over healthy statuses', async function () {
 				const consolidatedStatuses = new Map([
 					[
 						'service.api',
@@ -714,7 +717,7 @@ describe('ComponentStatusRegistry', () => {
 				assert.equal(result.details['service.database'].status, COMPONENT_STATUS_LEVELS.LOADING);
 			});
 
-			it('should return healthy when all components healthy', async () => {
+			it('should return healthy when all components healthy', async function () {
 				const consolidatedStatuses = new Map([
 					[
 						'webapp.frontend',
@@ -743,7 +746,7 @@ describe('ComponentStatusRegistry', () => {
 				assert.equal(result.details, undefined);
 			});
 
-			it('should handle mixed status scenarios correctly', async () => {
+			it('should handle mixed status scenarios correctly', async function () {
 				const consolidatedStatuses = new Map([
 					[
 						'mixed',
@@ -800,8 +803,8 @@ describe('ComponentStatusRegistry', () => {
 			});
 		});
 
-		describe('details and message generation', () => {
-			it('should include details when components have issues', async () => {
+		describe('details and message generation', function () {
+			it('should include details when components have issues', async function () {
 				const consolidatedStatuses = new Map([
 					[
 						'app.good',
@@ -832,7 +835,7 @@ describe('ComponentStatusRegistry', () => {
 				assert.equal(result.details['app.good'], undefined); // Healthy components not included
 			});
 
-			it('should not include details when all components healthy', async () => {
+			it('should not include details when all components healthy', async function () {
 				const consolidatedStatuses = new Map([
 					[
 						'service.web',
@@ -860,7 +863,7 @@ describe('ComponentStatusRegistry', () => {
 				assert.equal(result.message, 'All components loaded successfully');
 			});
 
-			it('should generate descriptive messages for problem components', async () => {
+			it('should generate descriptive messages for problem components', async function () {
 				const consolidatedStatuses = new Map([
 					[
 						'system.auth',
@@ -889,7 +892,7 @@ describe('ComponentStatusRegistry', () => {
 				assert.equal(result.message, expectedMessage);
 			});
 
-			it('should format component keys correctly in messages', async () => {
+			it('should format component keys correctly in messages', async function () {
 				const consolidatedStatuses = new Map([
 					[
 						'my-app.long-component-name',
@@ -908,8 +911,8 @@ describe('ComponentStatusRegistry', () => {
 			});
 		});
 
-		describe('edge cases and error handling', () => {
-			it('should handle empty consolidated statuses gracefully', async () => {
+		describe('edge cases and error handling', function () {
+			it('should handle empty consolidated statuses gracefully', async function () {
 				const consolidatedStatuses = new Map();
 
 				const result = await registry.getAggregatedStatusFor('any-component', consolidatedStatuses);
@@ -919,7 +922,7 @@ describe('ComponentStatusRegistry', () => {
 				assert.deepEqual(result.lastChecked, { workers: {} });
 			});
 
-			it('should handle null/undefined consolidated statuses', async () => {
+			it('should handle null/undefined consolidated statuses', async function () {
 				// Mock the static method to avoid cross-thread communication in tests
 				const originalMethod = ComponentStatusRegistry.getAggregatedFromAllThreads;
 				ComponentStatusRegistry.getAggregatedFromAllThreads = async () => new Map();
@@ -938,7 +941,7 @@ describe('ComponentStatusRegistry', () => {
 				}
 			});
 
-			it('should work with pre-provided consolidated statuses', async () => {
+			it('should work with pre-provided consolidated statuses', async function () {
 				const consolidatedStatuses = new Map([
 					[
 						'provided.test',
@@ -957,7 +960,7 @@ describe('ComponentStatusRegistry', () => {
 				assert.equal(result.message, 'All components loaded successfully');
 			});
 
-			it('should fetch consolidated statuses when not provided', async () => {
+			it('should fetch consolidated statuses when not provided', async function () {
 				// This test ensures the method works without pre-provided statuses
 				// It will attempt to fetch from ComponentStatusRegistry.getAggregatedFromAllThreads
 				registry.setStatus('test-fetch', COMPONENT_STATUS_LEVELS.HEALTHY, 'Local component');
@@ -989,7 +992,7 @@ describe('ComponentStatusRegistry', () => {
 				}
 			});
 
-			it('should handle missing latestMessage gracefully', async () => {
+			it('should handle missing latestMessage gracefully', async function () {
 				const consolidatedStatuses = new Map([
 					[
 						'no-msg.component',

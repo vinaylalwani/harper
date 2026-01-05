@@ -1,4 +1,4 @@
-const { describe, it, beforeEach, afterEach } = require('mocha');
+/* eslint-disable sonarjs/no-nested-functions */
 const { OptionsWatcher } = require('#src/components/OptionsWatcher');
 const { EventEmitter, once } = require('node:events');
 const assert = require('node:assert/strict');

@@ -1,23 +1,22 @@
-const { describe, it, beforeEach, afterEach } = require('mocha');
 const assert = require('node:assert/strict');
 const sinon = require('sinon');
 const { ComponentStatus } = require('#src/components/status/ComponentStatus');
 const { COMPONENT_STATUS_LEVELS } = require('#src/components/status/types');
 
-describe('ComponentStatus', () => {
+describe('ComponentStatus', function () {
 	let clock;
 
-	beforeEach(() => {
+	beforeEach(function () {
 		// Use fake timers to control Date objects
 		clock = sinon.useFakeTimers();
 	});
 
-	afterEach(() => {
+	afterEach(function () {
 		clock.restore();
 	});
 
-	describe('constructor', () => {
-		it('should create a ComponentStatus with all parameters', () => {
+	describe('constructor', function () {
+		it('should create a ComponentStatus with all parameters', function () {
 			const error = new Error('Test error');
 			const status = new ComponentStatus('error', 'Component failed', error);
 
@@ -28,7 +27,7 @@ describe('ComponentStatus', () => {
 			assert.equal(status.lastChecked.getTime(), 0); // fake timer starts at 0
 		});
 
-		it('should create a ComponentStatus without optional parameters', () => {
+		it('should create a ComponentStatus without optional parameters', function () {
 			const status = new ComponentStatus('healthy');
 
 			assert.equal(status.status, 'healthy');
@@ -37,15 +36,15 @@ describe('ComponentStatus', () => {
 			assert.ok(status.lastChecked instanceof Date);
 		});
 
-		it('should accept string as error', () => {
+		it('should accept string as error', function () {
 			const status = new ComponentStatus('error', 'Component failed', 'String error');
 
 			assert.equal(status.error, 'String error');
 		});
 	});
 
-	describe('updateStatus', () => {
-		it('should update status and message', () => {
+	describe('updateStatus', function () {
+		it('should update status and message', function () {
 			const status = new ComponentStatus('loading', 'Starting up');
 
 			// Advance time
@@ -58,7 +57,7 @@ describe('ComponentStatus', () => {
 			assert.equal(status.lastChecked.getTime(), 1000);
 		});
 
-		it('should clear error when status is not ERROR', () => {
+		it('should clear error when status is not ERROR', function () {
 			const error = new Error('Test error');
 			const status = new ComponentStatus('error', 'Failed', error);
 
@@ -67,7 +66,7 @@ describe('ComponentStatus', () => {
 			assert.equal(status.error, undefined);
 		});
 
-		it('should keep error when status remains ERROR', () => {
+		it('should keep error when status remains ERROR', function () {
 			const error = new Error('Test error');
 			const status = new ComponentStatus('error', 'Failed', error);
 
@@ -76,7 +75,7 @@ describe('ComponentStatus', () => {
 			assert.equal(status.error, error);
 		});
 
-		it('should update without message', () => {
+		it('should update without message', function () {
 			const status = new ComponentStatus('loading');
 
 			status.updateStatus('healthy');
@@ -86,8 +85,8 @@ describe('ComponentStatus', () => {
 		});
 	});
 
-	describe('markHealthy', () => {
-		it('should set status to healthy with custom message', () => {
+	describe('markHealthy', function () {
+		it('should set status to healthy with custom message', function () {
 			const status = new ComponentStatus('loading');
 
 			clock.tick(1000);
@@ -98,7 +97,7 @@ describe('ComponentStatus', () => {
 			assert.equal(status.lastChecked.getTime(), 1000);
 		});
 
-		it('should set status to healthy with default message', () => {
+		it('should set status to healthy with default message', function () {
 			const status = new ComponentStatus('error');
 
 			status.markHealthy();
@@ -107,7 +106,7 @@ describe('ComponentStatus', () => {
 			assert.equal(status.message, 'Component is healthy');
 		});
 
-		it('should clear error when marking healthy', () => {
+		it('should clear error when marking healthy', function () {
 			const status = new ComponentStatus('error', 'Failed', new Error('Test'));
 
 			status.markHealthy();
@@ -116,8 +115,8 @@ describe('ComponentStatus', () => {
 		});
 	});
 
-	describe('markError', () => {
-		it('should set status to error with Error object', () => {
+	describe('markError', function () {
+		it('should set status to error with Error object', function () {
 			const status = new ComponentStatus('healthy');
 			const error = new Error('Something went wrong');
 
@@ -130,7 +129,7 @@ describe('ComponentStatus', () => {
 			assert.equal(status.lastChecked.getTime(), 1000);
 		});
 
-		it('should set status to error with string error', () => {
+		it('should set status to error with string error', function () {
 			const status = new ComponentStatus('healthy');
 
 			status.markError('String error message');
@@ -140,7 +139,7 @@ describe('ComponentStatus', () => {
 			assert.equal(status.message, 'String error message');
 		});
 
-		it('should use error message when no custom message provided', () => {
+		it('should use error message when no custom message provided', function () {
 			const status = new ComponentStatus('healthy');
 			const error = new Error('Error from exception');
 
@@ -150,8 +149,8 @@ describe('ComponentStatus', () => {
 		});
 	});
 
-	describe('markWarning', () => {
-		it('should set status to warning with message', () => {
+	describe('markWarning', function () {
+		it('should set status to warning with message', function () {
 			const status = new ComponentStatus('healthy');
 
 			clock.tick(1000);
@@ -162,7 +161,7 @@ describe('ComponentStatus', () => {
 			assert.equal(status.lastChecked.getTime(), 1000);
 		});
 
-		it('should clear error when marking warning', () => {
+		it('should clear error when marking warning', function () {
 			const status = new ComponentStatus('error', 'Failed', new Error('Test'));
 
 			status.markWarning('Recovered with warnings');
@@ -171,8 +170,8 @@ describe('ComponentStatus', () => {
 		});
 	});
 
-	describe('markLoading', () => {
-		it('should set status to loading with custom message', () => {
+	describe('markLoading', function () {
+		it('should set status to loading with custom message', function () {
 			const status = new ComponentStatus('unknown');
 
 			clock.tick(1000);
@@ -183,7 +182,7 @@ describe('ComponentStatus', () => {
 			assert.equal(status.lastChecked.getTime(), 1000);
 		});
 
-		it('should set status to loading with default message', () => {
+		it('should set status to loading with default message', function () {
 			const status = new ComponentStatus('unknown');
 
 			status.markLoading();
@@ -193,8 +192,8 @@ describe('ComponentStatus', () => {
 		});
 	});
 
-	describe('status check methods', () => {
-		it('should correctly identify healthy status', () => {
+	describe('status check methods', function () {
+		it('should correctly identify healthy status', function () {
 			const healthyStatus = new ComponentStatus('healthy');
 			const errorStatus = new ComponentStatus('error');
 
@@ -202,7 +201,7 @@ describe('ComponentStatus', () => {
 			assert.equal(errorStatus.isHealthy(), false);
 		});
 
-		it('should correctly identify error status', () => {
+		it('should correctly identify error status', function () {
 			const errorStatus = new ComponentStatus('error');
 			const healthyStatus = new ComponentStatus('healthy');
 
@@ -210,7 +209,7 @@ describe('ComponentStatus', () => {
 			assert.equal(healthyStatus.hasError(), false);
 		});
 
-		it('should correctly identify loading status', () => {
+		it('should correctly identify loading status', function () {
 			const loadingStatus = new ComponentStatus('loading');
 			const healthyStatus = new ComponentStatus('healthy');
 
@@ -218,7 +217,7 @@ describe('ComponentStatus', () => {
 			assert.equal(healthyStatus.isLoading(), false);
 		});
 
-		it('should correctly identify warning status', () => {
+		it('should correctly identify warning status', function () {
 			const warningStatus = new ComponentStatus('warning');
 			const healthyStatus = new ComponentStatus('healthy');
 
@@ -227,20 +226,20 @@ describe('ComponentStatus', () => {
 		});
 	});
 
-	describe('getSummary', () => {
-		it('should return summary with message', () => {
+	describe('getSummary', function () {
+		it('should return summary with message', function () {
 			const status = new ComponentStatus('error', 'Database connection failed');
 
 			assert.equal(status.getSummary(), 'ERROR: Database connection failed');
 		});
 
-		it('should return summary without message', () => {
+		it('should return summary without message', function () {
 			const status = new ComponentStatus('healthy');
 
 			assert.equal(status.getSummary(), 'HEALTHY');
 		});
 
-		it('should handle all status levels', () => {
+		it('should handle all status levels', function () {
 			const statusLevels = ['healthy', 'warning', 'error', 'loading', 'unknown'];
 
 			for (const level of statusLevels) {
@@ -250,8 +249,8 @@ describe('ComponentStatus', () => {
 		});
 	});
 
-	describe('status transitions', () => {
-		it('should transition through multiple states correctly', () => {
+	describe('status transitions', function () {
+		it('should transition through multiple states correctly', function () {
 			const status = new ComponentStatus('unknown');
 
 			// Unknown -> Loading

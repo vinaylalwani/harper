@@ -1,4 +1,3 @@
-const { describe, it, beforeEach, afterEach } = require('mocha');
 const { EntryHandler } = require('#src/components/EntryHandler');
 const { EventEmitter, once } = require('node:events');
 const assert = require('node:assert/strict');

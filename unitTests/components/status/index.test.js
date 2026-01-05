@@ -1,15 +1,20 @@
-const { describe, it, beforeEach, after } = require('mocha');
 const assert = require('node:assert/strict');
 const { statusForComponent, reset, STATUS, internal } = require('#src/components/status/index');
 const { ComponentStatus } = internal;
 
-describe('Component Status API', () => {
-	beforeEach(reset);
+describe('Component Status API', function () {
+	beforeEach(function () {
+		// Clear the registry before each test
+		reset();
+	});
 
-	after(reset);
+	after(function () {
+		// Clean up the registry after all tests complete
+		reset();
+	});
 
 	describe('statusForComponent', function () {
-		it('should return a ComponentStatusBuilder instance', () => {
+		it('should return a ComponentStatusBuilder instance', function () {
 			const api = statusForComponent('test-component');
 			assert.ok(api);
 			assert.equal(typeof api.warning, 'function');
@@ -20,28 +25,28 @@ describe('Component Status API', () => {
 			assert.equal(typeof api.get, 'function');
 		});
 
-		it('should return the same instance for the same component name', () => {
+		it('should return the same instance for the same component name', function () {
 			const api1 = statusForComponent('cached-component');
 			const api2 = statusForComponent('cached-component');
 			assert.strictEqual(api1, api2);
 		});
 
-		it('should return different instances for different component names', () => {
+		it('should return different instances for different component names', function () {
 			const api1 = statusForComponent('component-1');
 			const api2 = statusForComponent('component-2');
 			assert.notStrictEqual(api1, api2);
 		});
 	});
 
-	describe('ComponentStatusAPI methods', () => {
+	describe('ComponentStatusAPI methods', function () {
 		let api;
 
-		beforeEach(() => {
+		beforeEach(function () {
 			api = statusForComponent('test-api-component');
 		});
 
 		describe('warning', function () {
-			it('should set component status to warning', () => {
+			it('should set component status to warning', function () {
 				api.warning('High memory usage detected');
 
 				const status = internal.componentStatusRegistry.getStatus('test-api-component');
@@ -52,7 +57,7 @@ describe('Component Status API', () => {
 		});
 
 		describe('error', function () {
-			it('should set component status to error with message only', () => {
+			it('should set component status to error with message only', function () {
 				api.error('Connection failed');
 
 				const status = internal.componentStatusRegistry.getStatus('test-api-component');
@@ -62,7 +67,7 @@ describe('Component Status API', () => {
 				assert.equal(status.error, undefined);
 			});
 
-			it('should set component status to error with message and Error object', () => {
+			it('should set component status to error with message and Error object', function () {
 				const error = new Error('Database timeout');
 				api.error('Failed to connect to database', error);
 
@@ -75,7 +80,7 @@ describe('Component Status API', () => {
 		});
 
 		describe('healthy', function () {
-			it('should set component status to healthy with message', () => {
+			it('should set component status to healthy with message', function () {
 				api.healthy('Component is running smoothly');
 
 				const status = internal.componentStatusRegistry.getStatus('test-api-component');
@@ -84,7 +89,7 @@ describe('Component Status API', () => {
 				assert.equal(status.message, 'Component is running smoothly');
 			});
 
-			it('should set component status to healthy without message', () => {
+			it('should set component status to healthy without message', function () {
 				api.healthy();
 
 				const status = internal.componentStatusRegistry.getStatus('test-api-component');
@@ -95,7 +100,7 @@ describe('Component Status API', () => {
 		});
 
 		describe('loading', function () {
-			it('should set component status to loading with message', () => {
+			it('should set component status to loading with message', function () {
 				api.loading('Initializing database connection');
 
 				const status = internal.componentStatusRegistry.getStatus('test-api-component');
@@ -104,7 +109,7 @@ describe('Component Status API', () => {
 				assert.equal(status.message, 'Initializing database connection');
 			});
 
-			it('should set component status to loading without message', () => {
+			it('should set component status to loading without message', function () {
 				api.loading();
 
 				const status = internal.componentStatusRegistry.getStatus('test-api-component');
@@ -115,7 +120,7 @@ describe('Component Status API', () => {
 		});
 
 		describe('unknown', function () {
-			it('should set component status to unknown with message', () => {
+			it('should set component status to unknown with message', function () {
 				api.unknown('Component state is unclear');
 
 				const status = internal.componentStatusRegistry.getStatus('test-api-component');
@@ -124,7 +129,7 @@ describe('Component Status API', () => {
 				assert.equal(status.message, 'Component state is unclear');
 			});
 
-			it('should set component status to unknown without message', () => {
+			it('should set component status to unknown without message', function () {
 				api.unknown();
 
 				const status = internal.componentStatusRegistry.getStatus('test-api-component');
@@ -135,12 +140,12 @@ describe('Component Status API', () => {
 		});
 
 		describe('get', function () {
-			it('should return undefined for non-existent component', () => {
+			it('should return undefined for non-existent component', function () {
 				const status = api.get();
 				assert.equal(status, undefined);
 			});
 
-			it('should return the current status of the component', () => {
+			it('should return the current status of the component', function () {
 				api.healthy('Running');
 
 				const status = api.get();
@@ -149,7 +154,7 @@ describe('Component Status API', () => {
 				assert.equal(status.message, 'Running');
 			});
 
-			it('should reflect status changes', () => {
+			it('should reflect status changes', function () {
 				// Initially healthy
 				api.healthy('Started');
 				let status = api.get();
@@ -169,7 +174,7 @@ describe('Component Status API', () => {
 	});
 
 	describe('Integration with componentStatusRegistry', function () {
-		it('should properly integrate with the global registry', () => {
+		it('should properly integrate with the global registry', function () {
 			const api1 = statusForComponent('integration-test-1');
 			const api2 = statusForComponent('integration-test-2');
 
@@ -188,7 +193,7 @@ describe('Component Status API', () => {
 			assert.equal(api2.get().status, STATUS.WARNING);
 		});
 
-		it('should work with registry methods', () => {
+		it('should work with registry methods', function () {
 			const api = statusForComponent('registry-integration');
 
 			// Set status via API
@@ -207,7 +212,7 @@ describe('Component Status API', () => {
 	});
 
 	describe('Multiple component workflow', function () {
-		it('should handle multiple components independently', () => {
+		it('should handle multiple components independently', function () {
 			const authApi = statusForComponent('auth-service');
 			const dbApi = statusForComponent('database');
 			const cacheApi = statusForComponent('cache');
@@ -233,7 +238,7 @@ describe('Component Status API', () => {
 	});
 
 	describe('Status transition scenarios', function () {
-		it('should handle component lifecycle transitions', () => {
+		it('should handle component lifecycle transitions', function () {
 			const api = statusForComponent('lifecycle-component');
 
 			// Component starts loading

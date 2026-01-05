@@ -1,4 +1,3 @@
-const { describe, it } = require('mocha');
 const { deriveCommonPatternBase } = require('#src/components/deriveCommonPatternBase');
 const assert = require('node:assert/strict');
 
