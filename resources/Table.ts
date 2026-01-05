@@ -973,9 +973,16 @@ export function makeTable(options) {
 		}
 		/**
 		 * This retrieves the data of this resource. By default, with no argument, just return `this`.
+		 */
+		get(): TableResource<Record> | undefined;
+		/**
+		 * This retrieves the data of this resource.
 		 * @param target - If included, is an identifier/query that specifies the requested target to retrieve and query
 		 */
-		get(target?: RequestTarget): any | Record | AsyncIterable<Record> | Promise<Record | AsyncIterable<Record> | void> {
+		get(target: RequestTargetOrId): Record | AsyncIterable<Record> | Promise<Record | AsyncIterable<Record>>;
+		get(
+			target?: RequestTargetOrId
+		): TableResource<Record> | undefined | Record | AsyncIterable<Record> | Promise<Record | AsyncIterable<Record>> {
 			const constructor: Resource = this.constructor;
 			if (typeof target === 'string' && constructor.loadAsInstance !== false) return this.getProperty(target);
 			if (isSearchTarget(target)) return this.search(target);
@@ -1050,6 +1057,7 @@ export function makeTable(options) {
 			if (this.doesExist() || target?.ensureLoaded === false || this.getContext()?.returnNonexistent) {
 				return this;
 			}
+			return undefined;
 		}
 		/**
 		 * Determine if the user is allowed to get/read data from the current resource
@@ -1813,7 +1821,7 @@ export function makeTable(options) {
 			transaction.addWrite(write);
 		}
 
-		async delete(target: RequestTarget): Promise<boolean> {
+		async delete(target: RequestTargetOrId): Promise<boolean> {
 			if (isSearchTarget(target)) {
 				target.select = ['$id']; // just get the primary key of each record so we can delete them
 				for await (const entry of this.search(target)) {
@@ -3441,10 +3449,9 @@ export function makeTable(options) {
 	function requestTargetToId(target: RequestTargetOrId): Id {
 		return typeof target === 'object' && target ? target.id : (target as Id);
 	}
-	function isSearchTarget(target: RequestTarget) {
-		return typeof target === 'object' && target && target.isCollection;
+	function isSearchTarget(target: RequestTargetOrId): target is RequestTarget {
+		return typeof target === 'object' && target && (target as RequestTarget).isCollection;
 	}
-	function isRequestTarget(target: unknown): target is RequestTarget {}
 	function loadLocalRecord(id, context, options, sync, withEntry) {
 		if (TableResource.getResidencyById && options.ensureLoaded && context?.replicateFrom !== false) {
 			// this is a special case for when the residency can be determined from the id alone (hash-based sharding),
