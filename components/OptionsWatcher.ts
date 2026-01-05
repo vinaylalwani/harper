@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { isDeepStrictEqual } from 'util';
 import harperLogger from '../utility/logging/harper_logger.js';
 import { DEFAULT_CONFIG } from './DEFAULT_CONFIG.js';
+import { cloneDeep } from 'lodash';
 
 export interface Config {
 	[key: string]: ConfigValue;
@@ -236,7 +237,7 @@ export class OptionsWatcher extends EventEmitter<OptionsWatcherEventMap> {
 			value = value[key];
 		}
 
-		return structuredClone(value);
+		return cloneDeep(value);
 	}
 
 	#setValue(keys: string[], value: ConfigValue) {
@@ -311,7 +312,7 @@ export class OptionsWatcher extends EventEmitter<OptionsWatcherEventMap> {
 	 * @returns A deep clone of the entire configuration object.
 	 */
 	getAll(): ConfigValue | undefined {
-		return structuredClone(this.#scopedConfig);
+		return cloneDeep(this.#scopedConfig);
 	}
 
 	/**
@@ -347,6 +348,6 @@ export class OptionsWatcher extends EventEmitter<OptionsWatcherEventMap> {
 	//  * @param value Value to set.
 	//  */
 	// set(key: string, value: any) {
-	// 	this.setValue(key.split('.'), structuredClone(value));
+	// 	this.setValue(key.split('.'), JSON.parse(JSON.stringify(value)));
 	// }
 }
