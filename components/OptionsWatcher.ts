@@ -348,6 +348,6 @@ export class OptionsWatcher extends EventEmitter<OptionsWatcherEventMap> {
 	//  * @param value Value to set.
 	//  */
 	// set(key: string, value: any) {
-	// 	this.setValue(key.split('.'), JSON.parse(JSON.stringify(value)));
+	// 	this.setValue(key.split('.'), cloneDeep(value));
 	// }
 }
