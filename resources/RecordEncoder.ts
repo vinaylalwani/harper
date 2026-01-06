@@ -66,6 +66,7 @@ let lastEncoding,
 export let lastMetadata: Entry | null = null;
 export class RecordEncoder extends Encoder {
 	structureUpdate?: any;
+	isRocksdb: boolean;
 	constructor(options) {
 		options.useBigIntExtension = true;
 		/**
@@ -146,29 +147,41 @@ export class RecordEncoder extends Encoder {
 				return lastValueEncoding;
 			}
 		};
+		const superSaveStructures = this.saveStructures;
+		const superGetStructures = this.getStructures;
 		this.saveStructures = function (structures, isCompatible): boolean | undefined {
-			return this.rootStore.transactionSync((txn) => {
-				if (options.name?.startsWith?.('hdb_node'))
-					harperLogger.warn('Saving structures', structures, JSON.stringify(structures.get?.('named')), result);
-				// TODO: Do we have access to name?
-				const sharedStructuresKey = [Symbol.for('structures'), this.name];
-				const existingStructuresBuffer = txn.getBinarySync(sharedStructuresKey);
-				const existingStructures = existingStructuresBuffer ? this.decode(existingStructuresBuffer) : undefined;
-				if (typeof isCompatible == 'function') {
-					if (!isCompatible(existingStructures)) {
+			if (this.isRocksdb) {
+				return this.rootStore.transactionSync((txn) => {
+					if (options.name?.startsWith?.('hdb_node'))
+						harperLogger.warn('Saving structures', structures, JSON.stringify(structures.get?.('named')), result);
+					// TODO: Do we have access to name?
+					const sharedStructuresKey = [Symbol.for('structures'), this.name];
+					const existingStructuresBuffer = txn.getBinarySync(sharedStructuresKey);
+					const existingStructures = existingStructuresBuffer ? this.decode(existingStructuresBuffer) : undefined;
+					if (typeof isCompatible == 'function') {
+						if (!isCompatible(existingStructures)) {
+							return false;
+						}
+					} else if (existingStructures && existingStructures.length !== isCompatible) {
 						return false;
 					}
-				} else if (existingStructures && existingStructures.length !== isCompatible) {
-					return false;
-				}
-				txn.putSync(sharedStructuresKey, structures);
+					txn.putSync(sharedStructuresKey, structures);
+					this.structureUpdate = structures;
+				});
+			} else {
+				const result = superSaveStructures.call(this, structures, isCompatible);
 				this.structureUpdate = structures;
-			});
+				return result;
+			}
 		};
 		this.getStructures = function (): any {
-			const sharedStructuresKey = [Symbol.for('structures'), this.name];
-			const buffer = this.rootStore.getBinarySync(sharedStructuresKey);
-			return buffer ? this.decode(buffer) : undefined;
+			if (this.isRocksdb) {
+				const sharedStructuresKey = [Symbol.for('structures'), this.name];
+				const buffer = this.rootStore.getBinarySync(sharedStructuresKey);
+				return buffer ? this.decode(buffer) : undefined;
+			} else {
+				return superGetStructures.call(this);
+			}
 		};
 	}
 	decode(buffer, options) {

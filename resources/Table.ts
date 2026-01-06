@@ -1292,7 +1292,7 @@ export function makeTable(options) {
 					partialRecord,
 					applyToSourcesIntermediate.invalidate?.bind(this, context, id)
 				),
-				commit: (txnTime, existingEntry) => {
+				commit: (txnTime, existingEntry, retries, transaction: any) => {
 					if (precedesExistingVersion(txnTime, existingEntry, options?.nodeId) <= 0) return;
 					partialRecord ??= null;
 					for (const name in indices) {
@@ -1315,6 +1315,7 @@ export function makeTable(options) {
 							user: context?.user,
 							residencyId: options?.residencyId,
 							nodeId: options?.nodeId,
+							transaction,
 							tableToTrack: tableName,
 						},
 						'invalidate'
@@ -1334,7 +1335,7 @@ export function makeTable(options) {
 				entry: this.#entry,
 				before: applyToSources.relocate?.bind(this, context, id),
 				beforeIntermediate: applyToSourcesIntermediate.relocate?.bind(this, context, id),
-				commit: (txnTime, existingEntry) => {
+				commit: (txnTime, existingEntry, retries, transaction: any) => {
 					if (precedesExistingVersion(txnTime, existingEntry, options?.nodeId) <= 0) return;
 					const residency = TableResource.getResidencyRecord(options.residencyId);
 					let metadata = 0;
@@ -1365,6 +1366,7 @@ export function makeTable(options) {
 							residencyId: options.residencyId,
 							nodeId: options.nodeId,
 							expiresAt: options.expiresAt,
+							transaction,
 						},
 						'relocate',
 						false,
@@ -1400,7 +1402,7 @@ export function makeTable(options) {
 				existingEntry.version, // version number should not change
 				metadata,
 				true,
-				{ residencyId, expiresAt: entry.expiresAt },
+				{ residencyId, expiresAt: entry.expiresAt, transaction: txnForContext(context).transaction },
 				'relocate',
 				false,
 				null // the audit record value should be empty since there are no changes to the actual data
@@ -1791,9 +1793,9 @@ export function makeTable(options) {
 								user: context?.user,
 								residencyId,
 								expiresAt,
-								transaction,
 								nodeId: options?.nodeId,
 								originatingOperation: context?.originatingOperation,
+								transaction,
 								tableToTrack: databaseName === 'system' ? null : options?.replay ? null : tableName, // don't track analytics on system tables
 							},
 							type,
@@ -1834,9 +1836,9 @@ export function makeTable(options) {
 			return Boolean(this.#record);
 		}
 		_writeDelete(id: Id, options?: any) {
-			const transaction = txnForContext(this.getContext());
-			checkValidId(id);
 			const context = this.getContext();
+			const transaction = txnForContext(context);
+			checkValidId(id);
 			transaction.addWrite({
 				key: id,
 				store: primaryStore,
@@ -1844,7 +1846,7 @@ export function makeTable(options) {
 				nodeName: context?.nodeName,
 				before: applyToSources.delete?.bind(this, context, id),
 				beforeIntermediate: applyToSourcesIntermediate.delete?.bind(this, context, id),
-				commit: (txnTime, existingEntry, retry) => {
+				commit: (txnTime, existingEntry, retry, transaction: any) => {
 					const existingRecord = existingEntry?.value;
 					if (retry) {
 						if (context && existingEntry?.version > (context.lastModified || 0))
@@ -1862,7 +1864,7 @@ export function makeTable(options) {
 							txnTime,
 							0,
 							audit,
-							{ user: context?.user, nodeId: options?.nodeId, tableToTrack: tableName },
+							{ user: context?.user, nodeId: options?.nodeId, transaction, tableToTrack: tableName },
 							'delete'
 						);
 						if (!audit) scheduleCleanup();
@@ -2739,7 +2741,7 @@ export function makeTable(options) {
 					message,
 					applyToSourcesIntermediate.publish?.bind(this, context, id, message)
 				),
-				commit: (txnTime, existingEntry, retries) => {
+				commit: (txnTime, existingEntry, retries, transaction: any) => {
 					// just need to update the version number of the record so it points to the latest audit record
 					// but have to update the version number of the record
 					// TODO: would be faster to use getBinaryFast here and not have the record loaded
@@ -2762,6 +2764,7 @@ export function makeTable(options) {
 							residencyId: options?.residencyId,
 							expiresAt: context?.expiresAt,
 							nodeId: options?.nodeId,
+							transaction,
 							tableToTrack: tableName,
 						},
 						'message',
@@ -3921,7 +3924,7 @@ export function makeTable(options) {
 						entry: existingEntry,
 						nodeName: 'source',
 						before: preCommitBlobsForRecordBefore(updatedRecord),
-						commit: (txnTime, existingEntry) => {
+						commit: (txnTime, existingEntry, retries, transaction: any) => {
 							if (existingEntry?.version !== existingVersion) {
 								// don't do anything if the version has changed
 								return;
@@ -3973,6 +3976,7 @@ export function makeTable(options) {
 										user: sourceContext?.user,
 										expiresAt: sourceContext.expiresAt,
 										residencyId,
+										transaction,
 										tableToTrack: tableName,
 									},
 									'put',
@@ -3992,7 +3996,7 @@ export function makeTable(options) {
 										txnTime,
 										0,
 										(audit && hasChanges) || null,
-										{ user: sourceContext?.user, tableToTrack: tableName },
+										{ user: sourceContext?.user, transaction, tableToTrack: tableName },
 										'delete',
 										Boolean(invalidated)
 									);

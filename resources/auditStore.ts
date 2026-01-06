@@ -79,7 +79,11 @@ export const transactionKeyEncoder = {
 	},
 };
 export const AUDIT_STORE_OPTIONS = {
-	encoding: 'binary',
+	encoder: {
+		encode: (auditRecord: AuditRecord) =>
+			auditRecord && (auditRecord instanceof Uint8Array ? auditRecord : createAuditEntry(auditRecord)),
+		decode: (encoding: Buffer) => readAuditEntry(encoding),
+	},
 	keyEncoder: transactionKeyEncoder,
 };
 

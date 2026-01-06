@@ -160,6 +160,7 @@ async function install() {
 		throw new Error('Installer should have the HDB root param at the stage it is in but it does not.');
 	}
 	envManager.setHdbBasePath(hdbRoot);
+	envManager.setProperty(hdbTerms.CONFIG_PARAMS.STORAGE_ENGINE, installParams.STORAGE_ENGINE);
 
 	// Creates the HarperDB project folder structure and the LMDB environments/dbis.
 	await mountHdb(hdbRoot);

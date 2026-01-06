@@ -11,7 +11,6 @@ import { RocksDatabase, Transaction as RocksTransaction, type Store as RocksStor
 import type { RootDatabaseKind } from './databases.ts';
 import type { Entry } from './RecordEncoder.ts';
 
-const MAX_OPTIMISTIC_SIZE = 100;
 const trackedTxns = new Set<DatabaseTransaction>();
 const MAX_OUTSTANDING_TXN_DURATION = convertToMS(envMngr.get(CONFIG_PARAMS.STORAGE_MAXTRANSACTIONQUEUETIME)) || 45000; // Allow write transactions to be queued for up to 25 seconds before we start rejecting them
 const DEBUG_LONG_TXNS = envMngr.get(CONFIG_PARAMS.STORAGE_DEBUGLONGTRANSACTIONS);
@@ -145,7 +144,7 @@ export class DatabaseTransaction implements Transaction {
 			this.transaction = new RocksTransaction(this.db.store as RocksStore);
 		}
 		let txnTime = this.timestamp;
-		if (!txnTime) txnTime = this.timestamp = getNextMonotonicTime();
+		if (!txnTime) txnTime = this.timestamp = this.transaction.getTimestamp();
 		// immediately execute in this transaction
 		operation.commit(txnTime, operation.entry, 0, this.transaction);
 		// record the write as well in case we need to redo the transaction if it fails
@@ -157,7 +156,9 @@ export class DatabaseTransaction implements Transaction {
 	 */
 	commit(options: CommitOptions = {}): MaybePromise<CommitResolution> {
 		let txnTime = this.timestamp;
-		if (!txnTime) txnTime = this.timestamp = options.timestamp || getNextMonotonicTime();
+		if (!txnTime) {
+			txnTime = this.timestamp = (options.timestamp || this.transaction?.getTimestamp()) ?? getNextMonotonicTime();
+		}
 		if (!options.timestamp) options.timestamp = txnTime;
 		let commitResolution: MaybePromise<void>;
 		if (--this.readTxnsUsed > 0) {
@@ -196,14 +197,15 @@ export class DatabaseTransaction implements Transaction {
 						// and when replication notifications come in, we count the number of confirms until we reach the desired number
 						const databaseName = this.writes[0].store.rootStore.databaseName;
 						const lastWrite = this.writes[this.writes.length - 1];
-						if (confirmReplication && lastWrite)
+						if (confirmReplication && lastWrite) {
 							completions.push(
 								confirmReplication(
 									databaseName,
-									lastWrite.store.getEntry(lastWrite.key).localTime,
+									lastWrite.store.getEntry(lastWrite.key).version,
 									this.replicatedConfirmation
 								)
 							);
+						}
 					}
 					// now reset transactions tracking; this transaction be reused and committed again
 					this.writes = [];

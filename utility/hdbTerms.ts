@@ -153,6 +153,7 @@ export const INSTALL_PROMPTS = {
 	REPLICATION_HOSTNAME: 'REPLICATION_HOSTNAME',
 	HDB_CONFIG: 'HDB_CONFIG',
 	DEFAULTS_MODE: 'DEFAULTS_MODE',
+	STORAGE_ENGINE: 'STORAGE_ENGINE',
 } as const;
 
 /** Insert operation max character size */

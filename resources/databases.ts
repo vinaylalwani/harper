@@ -19,7 +19,7 @@ import { workerData } from 'worker_threads';
 import harperLogger from '../utility/logging/harper_logger.js';
 const { forComponent } = harperLogger;
 import * as manageThreads from '../server/threads/manageThreads.js';
-import { openAuditStore } from './auditStore.ts';
+import { openAuditStore, readAuditEntry, createAuditEntry, type AuditRecord } from './auditStore.ts';
 import { handleLocalTimeForGets } from './RecordEncoder.ts';
 import { deleteRootBlobPathsForDB } from './blob.ts';
 import { CUSTOM_INDEXES } from './indexes/customIndexes.ts';
@@ -100,8 +100,6 @@ export type RootDatabaseKind = LMDBRootDatabase | RocksRootDatabase;
 
 export const tables: Tables = Object.create(null);
 export const databases: Databases = Object.create(null);
-
-const useRocksdb = envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb';
 
 class HarperStore extends RocksStore {
 	SPECIAL_WRITE = 0x10101n;
@@ -254,7 +252,7 @@ export function getDatabases(): Databases {
 				readMetaDb(dbPath, null, dbName);
 				continue;
 			}
-
+			const useRocksdb = envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb';
 			if (useRocksdb) {
 				try {
 					const files = readdirSync(dbPath, { withFileTypes: true });
@@ -442,7 +440,13 @@ function initStores(
 				if (rootStore instanceof RocksDatabase) {
 					auditStore = openAuditStore(rootStore);
 				} else {
-					auditStore = open(envInit);
+					auditStore = open({
+						...envInit,
+						encoder: {
+							encode: (auditRecord: AuditRecord) => createAuditEntry(auditRecord),
+							decode: (encoding: Buffer) => readAuditEntry(encoding),
+						},
+					});
 				}
 				auditStore.isLegacy = true;
 			}
@@ -728,6 +732,7 @@ export function database({ database: databaseName, table: tableName }) {
 			: join(hdbBasePath, LEGACY_DATABASES_DIR_NAME));
 
 	let rootStore: LMDBRootDatabase | RocksRootDatabase;
+	const useRocksdb = envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb';
 	if (useRocksdb) {
 		const path = join(databasePath, tablePath ? tableName : databaseName);
 		rootStore = rocksdbDatabaseEnvs.get(path);
