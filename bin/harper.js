@@ -33,6 +33,7 @@ stop                            - Stop the harperdb background process
 help                            - Display this output
 upgrade                         - Upgrade harperdb
 version                         - Print the version
+deploy                          - Deploy the application locally or remotely with target=<remote url>
 `;
 
 async function harper() {
