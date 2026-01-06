@@ -349,10 +349,9 @@ jobs:
       - build
     strategy:
       matrix:
-        nodeVersion: [16, 22]
+        nodeVersion: [16, 20, 22, 24, 25]
+        dockerFile: ['utility/Docker/Dockerfile']
         include:
-          - nodeVersion: 22
-            dockerFile: 'utility/Docker/Dockerfile'
           - nodeVersion: 16
             dockerFile: 'utility/Docker/Dockerfile-node16'
 
