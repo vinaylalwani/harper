@@ -54,6 +54,7 @@ const {
 	getThisNodeUrl,
 	getThisNodeName,
 	clearThisNodeName,
+	replicateOperation,
 } = require('../server/replication/replicator.ts');
 const { readFileSync, statSync } = require('node:fs');
 const env = require('../utility/environment/environmentManager.js');
@@ -80,7 +81,7 @@ const CERT_ATTRIBUTES = [
  */
 function generateSerialNumber() {
 	const bytes = randomBytes(8);
-	bytes[0] = bytes[0] & 0x7f | 0x01; // Clear high bit with bitmask 0x7F (01111111) and ensure that it is non-zero
+	bytes[0] = (bytes[0] & 0x7f) | 0x01; // Clear high bit with bitmask 0x7F (01111111) and ensure that it is non-zero
 	return bytes.toString('hex');
 }
 
@@ -1068,6 +1069,7 @@ async function listCertificates() {
  * @param req.private_key - optional, private key as a string. Will be written to file and not to hdbCertificate
  * @param req.is_authority - is the certificate a CA
  * @param req.hosts - array of allowable hosts
+ * @param req.replicated - whether or not to replicate this cert to other nodes
  * @returns {Promise<string>}
  */
 async function addCertificate(req) {
@@ -1146,8 +1148,9 @@ async function addCertificate(req) {
 	if (req.ciphers) record.ciphers = req.ciphers;
 
 	await setCertTable(record);
-
-	return 'Successfully added certificate: ' + saniName;
+	let response = await replicateOperation(req);
+	response.message = 'Successfully added certificate: ' + saniName;
+	return response;
 }
 
 /**
@@ -1190,7 +1193,9 @@ async function removeCertificate(req) {
 	}
 
 	await certificateTable.delete(name);
-	return 'Successfully removed ' + name;
+	let response = await replicateOperation(req);
+	response.message = 'Successfully removed ' + name;
+	return response;
 }
 
 function getPrimaryHostName(cert /*X509Certificate*/) {
