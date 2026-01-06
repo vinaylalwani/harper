@@ -141,9 +141,6 @@ describe('test REST with property updates', function (options) {
 	});
 
 	it('check headers on get', async () => {
-		const headersTest = new Headers({
-			'Custom-Header': 'custom-value',
-		});
 		await axios.get('http://localhost:9926/namespace/SubObject/6', {
 			headers: {
 				'Custom-Header': 'custom-value',

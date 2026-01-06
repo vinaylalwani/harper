@@ -35,7 +35,8 @@
 	"createBlob": "readonly",
 	"lockdown": "readonly",
 	"threads": "readonly",
-	"Resource": "readonly"
+	"Resource": "readonly",
+	"headersTest": "readonly"
   },
   "ignorePatterns": []
 }
