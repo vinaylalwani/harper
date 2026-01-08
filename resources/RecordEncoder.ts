@@ -66,7 +66,7 @@ let lastEncoding,
 export let lastMetadata: Entry | null = null;
 export class RecordEncoder extends Encoder {
 	structureUpdate?: any;
-	isRocksdb: boolean;
+	isRocksDB: boolean;
 	constructor(options) {
 		options.useBigIntExtension = true;
 		/**
@@ -118,7 +118,7 @@ export class RecordEncoder extends Encoder {
 				const dataView =
 					encoded.dataView || (encoded.dataView = new DataView(encoded.buffer, encoded.byteOffset, encoded.byteLength));
 				if (timestamp) {
-					if (this.isRocksDb) {
+					if (this.isRocksDB) {
 						// rocksdb, just store the version directly as the timestamp
 						dataView.setFloat64(position, timestamp);
 					} else {
@@ -150,7 +150,7 @@ export class RecordEncoder extends Encoder {
 		const superSaveStructures = this.saveStructures;
 		const superGetStructures = this.getStructures;
 		this.saveStructures = function (structures, isCompatible): boolean | undefined {
-			if (this.isRocksdb) {
+			if (this.isRocksDB) {
 				return this.rootStore.transactionSync((txn) => {
 					if (options.name?.startsWith?.('hdb_node'))
 						harperLogger.warn('Saving structures', structures, JSON.stringify(structures.get?.('named')), result);
@@ -175,7 +175,7 @@ export class RecordEncoder extends Encoder {
 			}
 		};
 		this.getStructures = function (): any {
-			if (this.isRocksdb) {
+			if (this.isRocksDB) {
 				const sharedStructuresKey = [Symbol.for('structures'), this.name];
 				const buffer = this.rootStore.getBinarySync(sharedStructuresKey);
 				return buffer ? this.decode(buffer) : undefined;
@@ -191,14 +191,14 @@ export class RecordEncoder extends Encoder {
 		let nextByte = buffer[start];
 		let metadataFlags = 0;
 		try {
-			if ((this.isRocksDb && nextByte === 66) || (nextByte < 32 && end > 2)) {
+			if ((this.isRocksDB && nextByte === 66) || (nextByte < 32 && end > 2)) {
 				// record with metadata
 				// this means that the record starts with a local timestamp (that was assigned by lmdb-js).
 				// we copy it so we can decode it as float-64; we need to do it first because if structural data
 				// is loaded during decoding the buffer can actually mutate
 				let position = start;
 				let localTime;
-				if (this.isRocksDb) {
+				if (this.isRocksDB) {
 					buffer.copy(TIMESTAMP_HOLDER, 0, position);
 					position += 8;
 					localTime = TIMESTAMP_VIEW.getFloat64(0);
@@ -269,12 +269,12 @@ function getTimestamp() {
 }
 
 export function handleLocalTimeForGets(store, rootStore) {
-	const isRocksDb = store instanceof RocksDatabase;
+	const isRocksDB = store instanceof RocksDatabase;
 	store.readCount = 0;
 	store.cachePuts = false;
 	store.rootStore = rootStore;
 	store.encoder.rootStore = rootStore;
-	store.encoder.isRocksDb = isRocksDb;
+	store.encoder.isRocksDB = isRocksDB;
 	store.decoder = store.encoder;
 	const storeGetEntry = store.getEntry;
 	store.getEntry = function (id, options) {
@@ -291,7 +291,7 @@ export function handleLocalTimeForGets(store, rootStore) {
 				if (lastMetadata.expiresAt >= 0) {
 					entry.expiresAt = lastMetadata.expiresAt;
 				}
-				if (isRocksDb) entry.version = lastMetadata.localTime;
+				if (isRocksDB) entry.version = lastMetadata.localTime;
 				if (entry.value) {
 					entryMap.set(entry.value, entry); // allow the record to access the entry
 				}
@@ -329,7 +329,7 @@ export function handleLocalTimeForGets(store, rootStore) {
 			if (lastMetadata) {
 				entry.metadataFlags = lastMetadata[METADATA];
 				entry.localTime = lastMetadata.localTime;
-				if (isRocksDb) entry.version = lastMetadata.localTime;
+				if (isRocksDB) entry.version = lastMetadata.localTime;
 				entry.residencyId = lastMetadata.residencyId;
 				if (lastMetadata.expiresAt >= 0) entry.expiresAt = lastMetadata.expiresAt;
 				lastMetadata = null;
@@ -338,7 +338,7 @@ export function handleLocalTimeForGets(store, rootStore) {
 		});
 	};
 
-	if (!isRocksDb) {
+	if (!isRocksDB) {
 		// add read transaction tracking
 		const txn = store.useReadTransaction();
 		txn.done();
