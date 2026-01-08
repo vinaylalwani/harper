@@ -5,9 +5,26 @@ if (!workerThreads.isMainThread) {
 	workerThreads.workerData.noServerStart = true;
 }
 const { globals } = require('./server/threads/threadServer.js');
+
+// exported types are needed for parsing as well
+exports.Config = undefined;
+exports.ConfigValue = undefined;
+exports.Context = undefined;
+exports.FileAndURLPathConfig = undefined;
+exports.FilesOption = undefined;
+exports.FilesOptionObject = undefined;
+exports.Query = undefined;
+exports.RecordObject = undefined;
+exports.RequestTarget = undefined;
+exports.RequestTargetOrId = undefined;
+exports.Resource = undefined;
+exports.ResourceInterface = undefined;
+exports.Scope = undefined;
+exports.SubscriptionRequest = undefined;
+exports.User = undefined;
+
 // these are all overwritten by the globals, but need to be here so that Node's static
 // exports parser can analyze them
-exports.Resource = undefined;
 exports.tables = {};
 exports.databases = {};
 exports.getUser = undefined;
