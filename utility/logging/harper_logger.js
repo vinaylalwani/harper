@@ -877,4 +877,4 @@ function AuthAuditLog(username, status, type, originatingIp, requestMethod, path
 	this.path = path;
 }
 // we have to load this at the end to avoid circular dependencies problems
-const { RootConfigWatcher } = require('../../config/RootConfigWatcher');
+const { RootConfigWatcher } = require('../../config/RootConfigWatcher.ts');

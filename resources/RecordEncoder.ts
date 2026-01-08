@@ -298,6 +298,12 @@ export function handleLocalTimeForGets(store, rootStore) {
 				entry.key = id;
 			}
 			if (entry.value) {
+				if (entry.value.constructor === Object) {
+					// if an object was deserialized as a plain object, give it the right prototype for computed properties to be accessible
+					const originalValue = entry.value;
+					entry.value = new this.encoder.structPrototype.constructor();
+					Object.assign(entry.value, originalValue);
+				}
 				entryMap.set(entry.value, entry); // allow the record to access the entry
 			}
 			entry.key = id;
@@ -333,6 +339,14 @@ export function handleLocalTimeForGets(store, rootStore) {
 				entry.residencyId = lastMetadata.residencyId;
 				if (lastMetadata.expiresAt >= 0) entry.expiresAt = lastMetadata.expiresAt;
 				lastMetadata = null;
+			}
+			if (entry.value) {
+				if (entry.value.constructor === Object) {
+					// if an object was deserialized as a plain object, give it the right prototype for computed properties to be accessible
+					const originalValue = entry.value;
+					entry.value = new this.encoder.structPrototype.constructor();
+					for (const key in originalValue) entry.value[key] = originalValue[key];
+				}
 			}
 			return entry;
 		});

@@ -183,7 +183,7 @@ export function startSocketServer(port = 0, sessionAffinityIdentifier?) {
 				recordAction(true, 'socket-routed');
 			});
 		};
-		harperLogger.info(`HarperDB ${packageJson.version} Server running on port ${port}`);
+		harperLogger.info(`Harper ${packageJson.version} Server running on port ${port}`);
 	}
 	server.on('error', (error) => {
 		console.error('Error in socket server', error);

@@ -2,7 +2,7 @@
  * HARPER_DEFAULT_CONFIG and HARPER_SET_CONFIG environment variable support
  *
  * This module provides utilities for applying configuration from environment variables
- * to HarperDB's configuration system with source tracking and drift detection.
+ * to Harper's configuration system with source tracking and drift detection.
  *
  * Features:
  * - Install-time and runtime configuration from env vars

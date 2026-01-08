@@ -4,6 +4,7 @@ import * as harperLogger from '../utility/logging/harper_logger.js';
 import { ServerOptions } from 'http';
 import { ServerError, ClientError } from '../utility/errors/hdbError.js';
 import { Resources } from '../resources/Resources.ts';
+import { Resource } from '../resources/Resource.ts';
 import { parseQuery } from '../resources/search.ts';
 import { IterableEventQueue } from '../resources/IterableEventQueue.ts';
 import { transaction } from '../resources/transaction.ts';
@@ -12,6 +13,7 @@ import { generateJsonApi } from '../resources/openApi.ts';
 import type { Context } from '../resources/ResourceInterface.ts';
 import { Request } from '../server/serverHelpers/Request.ts';
 import { RequestTarget } from '../resources/RequestTarget';
+
 interface Response {
 	status?: number;
 	headers?: any;
@@ -130,7 +132,7 @@ async function http(request: Context & Request, nextHandler) {
 					// websockets? and event-stream
 					return resource.connect(resourceRequest, null, request);
 				case 'TRACE':
-					return 'HarperDB is the terminating server';
+					return 'Harper is the terminating server';
 				case 'QUERY':
 					return resource.query(resourceRequest, request.data, request);
 				case 'COPY': // methods suggested from webdav RFC 4918
@@ -138,7 +140,7 @@ async function http(request: Context & Request, nextHandler) {
 				case 'MOVE':
 					return resource.move(resourceRequest, headersObject.destination, request);
 				case 'BREW': // RFC 2324
-					throw new ClientError("HarperDB is short and stout and can't brew coffee", 418);
+					throw new ClientError("Harper is short and stout and can't brew coffee", 418);
 				default:
 					throw new ServerError(`Method ${method} is not recognized`, 501);
 			}

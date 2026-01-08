@@ -53,7 +53,7 @@ function setHdbBasePath(hdbPath) {
 }
 
 /**
- * Gets a HarperDB configuration value.
+ * Gets a Harper configuration value.
  * @param propName
  * @returns {*}
  */
@@ -85,7 +85,7 @@ function setProperty(propName, value) {
 }
 
 /**
- * Checks to see if the HarperDB boot props file exists.
+ * Checks to see if the Harper boot props file exists.
  * If it does, it grabs the install user and settings path for future reference.
  * @returns {boolean}
  */

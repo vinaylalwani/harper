@@ -20,9 +20,9 @@ const EXTENSION_TYPES = {
 };
 
 /**
- * This is the main class that can be extended for any resource in HarperDB and provides the essential reusable
+ * This is the main class that can be extended for any resource in Harper and provides the essential reusable
  * uniform interface for interacting with data, defining the API for providing data (data sources) and for consuming
- * data. This interface is used pervasively in HarperDB and is implemented by database tables and can be used to define
+ * data. This interface is used pervasively in Harper and is implemented by database tables and can be used to define
  * sources for caching, real-data sources for messaging protocols, and RESTful endpoints, as well as any other types of
  * data aggregation, processing, or monitoring.
  *
@@ -47,10 +47,8 @@ export class Resource implements ResourceInterface {
 	/**
 	 * The get methods are for directly getting a resource, and called for HTTP GET requests.
 	 */
-	static get(identifier: Id, context?: Context): Promise<Resource>;
-	static get(target: RequestTarget, context?: Context): Promise<AsyncIterable<object>>;
 	static get = transactional(
-		function (resource: Resource, query?: RequestTarget, request: Context, data?: any) {
+		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
 			const result = resource.get?.(query);
 			// for the new API we always apply select in the instance method
 			if (!resource.constructor.loadAsInstance) return result;
@@ -83,8 +81,8 @@ export class Resource implements ResourceInterface {
 	 * Store the provided record by the provided id. If no id is provided, it is auto-generated.
 	 */
 	static put = transactional(
-		function (resource: Resource, query?: RequestTarget, request: Context, data?: any) {
-			if (Array.isArray(data) && resource.#isCollection && resource.constructor.loadAsInstance) {
+		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
+			if (Array.isArray(data) && resource.#isCollection && resource.constructor.loadAsInstance !== false) {
 				const results = [];
 				for (const element of data) {
 					const resourceClass = resource.constructor;
@@ -107,7 +105,7 @@ export class Resource implements ResourceInterface {
 	);
 
 	static patch = transactional(
-		function (resource: Resource, query?: RequestTarget, request: Context, data?: any) {
+		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
 			// TODO: Allow array like put?
 			return resource.patch
 				? !resource.constructor.loadAsInstance
@@ -118,10 +116,8 @@ export class Resource implements ResourceInterface {
 		{ hasContent: true, type: 'update', method: 'patch' }
 	);
 
-	static delete(identifier: Id, context?: Context): Promise<boolean>;
-	static delete(request: Context, context?: Context): Promise<object>;
 	static delete = transactional(
-		function (resource: Resource, query?: RequestTarget, request: Context, data?: any) {
+		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
 			return resource.delete ? resource.delete(query) : missingMethod(resource, 'delete');
 		},
 		{ hasContent: false, type: 'delete', method: 'delete' }
@@ -184,14 +180,14 @@ export class Resource implements ResourceInterface {
 		});
 	}
 	static invalidate = transactional(
-		function (resource: Resource, query?: RequestTarget, request: Context, data?: any) {
+		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
 			return resource.invalidate ? resource.invalidate(query) : missingMethod(resource, 'delete');
 		},
 		{ hasContent: false, type: 'update', method: 'invalidate' }
 	);
 
 	static post = transactional(
-		function (resource: Resource, query?: RequestTarget, request: Context, data?: any) {
+		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
 			if (resource.#id != null) resource.update?.(); // save any changes made during post
 			return !resource.constructor.loadAsInstance ? resource.post(query, data) : resource.post(data, query);
 		},
@@ -199,14 +195,14 @@ export class Resource implements ResourceInterface {
 	);
 
 	static update = transactional(
-		function (resource: Resource, query?: RequestTarget, request: Context, data?: any) {
+		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
 			return resource.update(query, data);
 		},
 		{ hasContent: false, type: 'update', method: 'update' }
 	);
 
 	static connect = transactional(
-		function (resource: Resource, query?: RequestTarget, request: Context, data?: any) {
+		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
 			return resource.connect
 				? !resource.constructor.loadAsInstance
 					? resource.connect(query, data)
@@ -216,16 +212,15 @@ export class Resource implements ResourceInterface {
 		{ hasContent: true, type: 'read', method: 'connect' }
 	);
 
-	static subscribe(request: SubscriptionRequest): Promise<AsyncIterable<{ id: any; operation: string; value: object }>>;
 	static subscribe = transactional(
-		function (resource: Resource, query?: RequestTarget, request: Context, data?: any) {
+		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
 			return resource.subscribe ? resource.subscribe(query) : missingMethod(resource, 'subscribe');
 		},
 		{ type: 'read', method: 'subscribe' }
 	);
 
 	static publish = transactional(
-		function (resource: Resource, query?: Map, request: Context, data?: any) {
+		function (resource: Resource, query: Map, request: Context, data: any) {
 			if (resource.#id != null) resource.update?.(); // save any changes made during publish
 			return resource.publish
 				? !resource.constructor.loadAsInstance
@@ -250,7 +245,7 @@ export class Resource implements ResourceInterface {
 	);
 
 	static query = transactional(
-		function (resource: Resource, query?: Map, request: Context, data?: any) {
+		function (resource: Resource, query: Map, request: Context, data: any) {
 			return resource.search
 				? !resource.constructor.loadAsInstance
 					? resource.search(query, data)
@@ -261,7 +256,7 @@ export class Resource implements ResourceInterface {
 	);
 
 	static copy = transactional(
-		function (resource: Resource, query?: Map, request: Context, data?: any) {
+		function (resource: Resource, query: Map, request: Context, data: any) {
 			return resource.copy
 				? !resource.constructor.loadAsInstance
 					? resource.copy(query, data)
@@ -272,7 +267,7 @@ export class Resource implements ResourceInterface {
 	);
 
 	static move = transactional(
-		function (resource: Resource, query?: Map, request: Context, data?: any) {
+		function (resource: Resource, query: Map, request: Context, data: any) {
 			return resource.move
 				? !resource.constructor.loadAsInstance
 					? resource.move(query, data)

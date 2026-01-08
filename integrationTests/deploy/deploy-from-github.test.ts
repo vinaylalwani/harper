@@ -25,7 +25,7 @@ suite('GitHub application deployment', (ctx: ContextWithHarper) => {
 		const response = await fetch(`${ctx.harper.operationsAPIURL}/health`);
 		strictEqual(response.status, 200);
 		const body = await response.text();
-		strictEqual(body, 'HarperDB is running.');
+		strictEqual(body, 'Harper is running.');
 	});
 
 	test('deploy application', async () => {
@@ -43,7 +43,7 @@ suite('GitHub application deployment', (ctx: ContextWithHarper) => {
 		});
 		strictEqual(response.status, 200);
 		const body = await response.json();
-		deepStrictEqual(body, { message: 'Successfully deployed: test-application, restarting HarperDB' });
+		deepStrictEqual(body, { message: 'Successfully deployed: test-application, restarting Harper' });
 		await sleep(5000);
 		ok(existsSync(join(ctx.harper.installDir, 'components', project)));
 

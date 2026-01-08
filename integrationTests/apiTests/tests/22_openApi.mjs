@@ -14,7 +14,7 @@ describe('22. OpenAPI', () => {
 				let openapi_text = JSON.stringify(r.body.openapi);
 				console.log(openapi_text);
 				assert.ok(openapi_text, r.text);
-				assert.ok(r.body.info.title.includes('HarperDB HTTP REST interface'), r.text);
+				assert.ok(r.body.info.title.includes('Harper HTTP REST interface'), r.text);
 				assert.ok(r.body.paths, r.text);
 				assert.ok(r.body.paths.hasOwnProperty('/TableName/'), r.text);
 				assert.ok(r.body.paths.hasOwnProperty('/TableName/{id}'), r.text);

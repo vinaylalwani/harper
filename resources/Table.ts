@@ -1,5 +1,5 @@
 /**
- * This module provides the main table implementation of the Resource API, providing full access to HarperDB
+ * This module provides the main table implementation of the Resource API, providing full access to Harper
  * tables through the interface defined by the Resource class. This module is responsible for handling these
  * table-level interactions, loading records, updating records, querying, and more.
  */
@@ -3505,7 +3505,7 @@ export function makeTable(options) {
 			}
 			return withEntry(entry, id);
 		};
-		// To prefetch or not to prefetch is one of the biggest questions HarperDB has to make.
+		// To prefetch or not to prefetch is one of the biggest questions Harper has to make.
 		// Prefetching has important benefits as it allows any page fault to be executed asynchronously
 		// in the work threads, and it provides event turn yielding, allowing other async functions
 		// to execute. However, prefetching is expensive, and the cost of enqueuing a task with the

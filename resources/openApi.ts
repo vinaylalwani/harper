@@ -1,5 +1,6 @@
 import { packageJson } from '../utility/packageUtils.js';
 import { Resources } from './Resources.ts';
+import { Resource } from './Resource.ts';
 
 const OPENAPI_VERSION = '3.0.3';
 // Maps graphql primitive types to open api types
@@ -22,7 +23,7 @@ export function generateJsonApi(resources: Resources, serverHttpURL: string) {
 	const api = {
 		openapi: OPENAPI_VERSION,
 		info: {
-			title: 'HarperDB HTTP REST interface',
+			title: 'Harper HTTP REST interface',
 			version: packageJson.version,
 		},
 		servers: [
