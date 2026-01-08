@@ -34,7 +34,9 @@
 		"nats-server": "2.10.11"
 	},
 	"exports": {
-		".": "./index.js"
+		".": "./index.js",
+		"./v1": "./index.js",
+		"./v2": "./index.js"
 	},
 	"homepage": "https://www.harperdb.io/",
 	"bugs": "support@harperdb.io",

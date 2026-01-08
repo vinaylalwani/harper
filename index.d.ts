@@ -1,11 +1,18 @@
-export { Resource } from './resources/Resource';
-import { Resource as ResourceImport } from './resources/Resource.ts';
-export { ResourceInterface, Query, Context, SubscriptionRequest } from './resources/ResourceInterface.ts';
-export { User } from './security/user.ts';
+export { ResourceV2 as Resource } from './resources/ResourceV2.ts';
+import { ResourceV2 as ResourceImport } from './resources/ResourceV2.ts';
+export type {
+	Query,
+	Context,
+	SubscriptionRequest,
+	RequestTargetOrId,
+} from './resources/ResourceInterface.ts';
+export { ResourceInterfaceV2 as ResourceInterface } from './resources/ResourceInterfaceV2.ts';
+export type { User } from './security/user.ts';
+export type { RecordObject } from './resources/RecordEncoder.ts';
 export { RequestTarget } from './resources/RequestTarget.ts';
 export { server } from './server/Server';
 import { server as serverImport } from './server/Server.ts';
-export { tables, databases } from './resources/databases';
+export { tables, databases } from './resources/databases.ts';
 import { tables as dbTables, databases as dbDatabases } from './resources/databases.ts';
 import { BlobCreationOptions } from './resources/blob.ts';
 export { Scope } from './components/Scope.ts';
