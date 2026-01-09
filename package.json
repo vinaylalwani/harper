@@ -39,8 +39,26 @@
 		"format:write": "prettier --write .",
 		"test:integration:api-tests": "node --test integrationTests/apiTests/tests/testSuite.mjs",
 		"test:integration": "node integrationTests/utils/scripts/run.ts",
-		"test:unit": "TSX_TSCONFIG_PATH=./unitTests/tsconfig.json npx mocha --config unitTests/.mocharc.json",
-		"test:unit:all": "npm run test:unit unitTests"
+		"test:unit": "mocha --config unitTests/.mocharc.json",
+		"test:unit:all": "npm run test:unit unitTests",
+		"test:unit:typestrip": "env NODE_OPTIONS='--conditions=typestrip' npm run test:unit",
+		"test:unit:typestrip:all": "npm run test:unit:typestrip unitTests"
+	},
+	"imports": {
+		"#src/*": {
+			"import": "./*.ts",
+			"require": {
+				"typestrip": "./*.ts",
+				"default": "./dist/*.js"
+			}
+		},
+		"#js/*": {
+			"import": "./*.js",
+			"require": {
+				"typestrip": "./*.js",
+				"default": "./dist/*.js"
+			}
+		}
 	},
 	"engines": {
 		"node": ">=20",
