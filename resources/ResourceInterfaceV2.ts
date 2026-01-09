@@ -48,7 +48,7 @@ export interface ResourceInterfaceV2<Record extends object = any> extends Resour
 	invalidate(target: RequestTargetOrId): void | Promise<void>;
 
 	publish?(target: RequestTargetOrId, record: Record): void;
-	subscribe?(request: SubscriptionRequest): Promise<AsyncIterable<Record>>;
+	subscribe?(request: SubscriptionRequest): AsyncIterable<Record> | Promise<AsyncIterable<Record>>;
 
 	doesExist(): boolean;
 	wasLoadedFromSource(): boolean | void;
