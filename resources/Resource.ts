@@ -408,7 +408,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	 * This default implementation simply provides a streaming iterator that does not deliver any notifications
 	 * but implementors can call send with
 	 */
-	async subscribe(request: SubscriptionRequest): Promise<AsyncIterable<Record>> {
+	subscribe(request: SubscriptionRequest): AsyncIterable<Record> {
 		return new IterableEventQueue();
 	}
 
