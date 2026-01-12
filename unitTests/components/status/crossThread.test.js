@@ -1,19 +1,17 @@
-import assert from 'node:assert/strict';
-import sinon from 'sinon';
-import { CrossThreadStatusCollector, StatusAggregator } from '@/components/status/crossThread';
-import { ComponentStatusRegistry } from '@/components/status/ComponentStatusRegistry';
+const assert = require('node:assert/strict');
+const sinon = require('sinon');
+const { CrossThreadStatusCollector, StatusAggregator } = require('#src/components/status/crossThread');
+const { ComponentStatusRegistry } = require('#src/components/status/ComponentStatusRegistry');
+const itcModule = require('#js/server/threads/itc');
+const manageThreadsModule = require('#js/server/threads/manageThreads');
 
 describe('CrossThread Module', function () {
 	let sendItcEventStub;
 	let onMessageByTypeStub;
 	let getWorkerIndexStub;
-	let itcModule;
-	let manageThreadsModule;
 
 	beforeEach(function () {
 		// Stub ITC functions
-		itcModule = require('@/server/threads/itc');
-		manageThreadsModule = require('@/server/threads/manageThreads');
 		sendItcEventStub = sinon.stub(itcModule, 'sendItcEvent').resolves();
 		onMessageByTypeStub = sinon.stub(manageThreadsModule, 'onMessageByType');
 		getWorkerIndexStub = sinon.stub(manageThreadsModule, 'getWorkerIndex').returns(0);
@@ -173,7 +171,7 @@ describe('CrossThread Module', function () {
 			getWorkerIndexStub.returns(0);
 
 			// Mock getWorkerCount to return 2 (expecting 2 worker responses)
-			const manageThreadsModule = require('@/server/threads/manageThreads');
+			const manageThreadsModule = require('#js/server/threads/manageThreads');
 			const getWorkerCountStub = sinon.stub(manageThreadsModule, 'getWorkerCount').returns(2);
 
 			// Track when collection completes

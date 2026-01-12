@@ -1,9 +1,11 @@
-import assert from 'node:assert/strict';
-import sinon from 'sinon';
-import { ComponentStatusRegistry } from '@/components/status/ComponentStatusRegistry';
-import { ComponentStatus } from '@/components/status/ComponentStatus';
-import { COMPONENT_STATUS_LEVELS } from '@/components/status/types';
-import { StatusAggregator } from '@/components/status/crossThread';
+const assert = require('node:assert/strict');
+const sinon = require('sinon');
+const { ComponentStatusRegistry } = require('#src/components/status/ComponentStatusRegistry');
+const { ComponentStatus } = require('#src/components/status/ComponentStatus');
+const { COMPONENT_STATUS_LEVELS } = require('#src/components/status/types');
+const { StatusAggregator } = require('#src/components/status/crossThread');
+const itcModule = require('#js/server/threads/itc');
+const manageThreadsModule = require('#js/server/threads/manageThreads');
 
 describe('ComponentStatusRegistry', function () {
 	let registry;
@@ -14,8 +16,6 @@ describe('ComponentStatusRegistry', function () {
 		clock = sinon.useFakeTimers();
 
 		// Stub ITC functions
-		const itcModule = require('@/server/threads/itc');
-		const manageThreadsModule = require('@/server/threads/manageThreads');
 		sinon.stub(itcModule, 'sendItcEvent').resolves();
 		sinon.stub(manageThreadsModule, 'onMessageByType');
 		sinon.stub(manageThreadsModule, 'getWorkerIndex').returns(0);
@@ -504,7 +504,7 @@ describe('ComponentStatusRegistry', function () {
 	describe('static getAggregatedFromAllThreads method', function () {
 		it('should collect and aggregate statuses', async function () {
 			// Mock the crossThreadCollector to avoid actual ITC communication
-			const { crossThreadCollector } = require('@/components/status/crossThread');
+			const { crossThreadCollector } = require('#src/components/status/crossThread');
 			const originalCollect = crossThreadCollector.collect;
 
 			// Create a fresh registry for this test

@@ -1,14 +1,14 @@
 /* eslint-disable sonarjs/no-nested-functions */
-import { OptionsWatcher } from '@/components/OptionsWatcher';
-import { EventEmitter, once } from 'node:events';
-import assert from 'node:assert/strict';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
-import { writeFile, rm } from 'node:fs/promises';
-import { stringify } from 'yaml';
-import { spy } from 'sinon';
-import { DEFAULT_CONFIG } from '@/components/DEFAULT_CONFIG';
+const { OptionsWatcher } = require('#src/components/OptionsWatcher');
+const { EventEmitter, once } = require('node:events');
+const assert = require('node:assert/strict');
+const { join } = require('node:path');
+const { tmpdir } = require('node:os');
+const { mkdtempSync, writeFileSync, rmSync } = require('node:fs');
+const { writeFile, rm } = require('node:fs/promises');
+const { stringify } = require('yaml');
+const { spy } = require('sinon');
+const { DEFAULT_CONFIG } = require('#src/components/DEFAULT_CONFIG');
 
 /**
  * This function asserts that an event is emitted.

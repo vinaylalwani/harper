@@ -1,17 +1,17 @@
-import { Scope, MissingDefaultFilesOptionError } from '@/components/Scope';
-import { EventEmitter } from 'node:events';
-import assert from 'node:assert/strict';
-import { join, basename } from 'node:path';
-import { tmpdir } from 'node:os';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
-import { stringify } from 'yaml';
-import { spy } from 'sinon';
-import { OptionsWatcher } from '@/components/OptionsWatcher';
-import { Resources } from '@/resources/Resources';
-import { EntryHandler } from '@/components/EntryHandler';
-import { restartNeeded, resetRestartNeeded } from '@/components/requestRestart';
-import { writeFile } from 'node:fs/promises';
-import { waitFor } from './waitFor';
+const { Scope, MissingDefaultFilesOptionError } = require('#src/components/Scope');
+const { EventEmitter } = require('node:events');
+const assert = require('node:assert/strict');
+const { join, basename } = require('node:path');
+const { tmpdir } = require('node:os');
+const { mkdtempSync, writeFileSync, rmSync } = require('node:fs');
+const { stringify } = require('yaml');
+const { spy } = require('sinon');
+const { OptionsWatcher } = require('#src/components/OptionsWatcher');
+const { Resources } = require('#src/resources/Resources');
+const { EntryHandler } = require('#src/components/EntryHandler');
+const { restartNeeded, resetRestartNeeded } = require('#src/components/requestRestart');
+const { writeFile } = require('node:fs/promises');
+const { waitFor } = require('./waitFor.js');
 
 describe('Scope', () => {
 	beforeEach(() => {

@@ -1,5 +1,5 @@
-import { resolveBaseURLPath, InvalidBaseURLPathError } from '@/components/resolveBaseURLPath';
-import assert from 'node:assert/strict';
+const { resolveBaseURLPath, InvalidBaseURLPathError } = require('#src/components/resolveBaseURLPath');
+const assert = require('node:assert/strict');
 
 describe('resolveBaseURLPath', () => {
 	const componentName = 'test-component';

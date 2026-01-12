@@ -1,8 +1,7 @@
-import assert from 'node:assert/strict';
-import sinon from 'sinon';
-import { ComponentStatus } from '@/components/status/ComponentStatus';
-import { COMPONENT_STATUS_LEVELS } from '@/components/status/types';
-import { describe, it, beforeEach, afterEach } from 'mocha';
+const assert = require('node:assert/strict');
+const sinon = require('sinon');
+const { ComponentStatus } = require('#src/components/status/ComponentStatus');
+const { COMPONENT_STATUS_LEVELS } = require('#src/components/status/types');
 
 describe('ComponentStatus', function () {
 	let clock;

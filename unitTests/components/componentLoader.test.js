@@ -1,9 +1,8 @@
-import { describe, it, before, beforeEach, after } from 'mocha';
-import assert from 'node:assert/strict';
-import sinon from 'sinon';
-import path from 'path';
-import { tmpdir } from 'os';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from 'fs';
+const assert = require('node:assert/strict');
+const sinon = require('sinon');
+const path = require('path');
+const { tmpdir } = require('os');
+const { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } = require('fs');
 
 describe('ComponentLoader Status Integration', function () {
 	let componentStatusRegistry;
@@ -11,12 +10,12 @@ describe('ComponentLoader Status Integration', function () {
 	let componentLoader;
 	let lifecycle;
 
-	before(() => {
+	before(function () {
 		// Create a temporary directory for test components
 		tempDir = mkdtempSync(path.join(tmpdir(), 'harper-test-components-'));
 
 		// Mock environment to use our temp directory
-		const env = require('@/utility/environment/environmentManager');
+		const env = require('#js/utility/environment/environmentManager');
 		sinon.stub(env, 'get').callsFake((key) => {
 			if (key === 'COMPONENTSROOT') {
 				return tempDir;
@@ -30,7 +29,7 @@ describe('ComponentLoader Status Integration', function () {
 		});
 
 		// Get both the lifecycle and internal objects
-		const statusModule = require('@/components/status');
+		const statusModule = require('#src/components/status/index');
 		const { internal } = statusModule;
 		lifecycle = statusModule.lifecycle;
 		componentStatusRegistry = internal.componentStatusRegistry;
@@ -48,14 +47,14 @@ describe('ComponentLoader Status Integration', function () {
 		sinon.spy(componentStatusRegistry, 'getStatus');
 
 		// Mock getConfigObj to avoid loading real config for root components
-		const configUtils = require('@/config/configUtils');
+		const configUtils = require('#js/config/configUtils');
 		sinon.stub(configUtils, 'getConfigObj').returns({});
 
 		// Clear the componentLoader from require cache to ensure it gets our spied lifecycle
-		delete require.cache[require.resolve('@/components/componentLoader')];
+		delete require.cache[require.resolve('#src/components/componentLoader')];
 
 		// Load componentLoader after setting up spies
-		componentLoader = require('@/components/componentLoader');
+		componentLoader = require('#src/components/componentLoader');
 	});
 
 	after(function () {
@@ -215,7 +214,7 @@ describe('ComponentLoader Status Integration', function () {
 
 		it('should handle component loading errors gracefully', async function () {
 			// Stub the dataLoader module's handleApplication method to throw an error
-			const dataLoaderModule = require('@/resources/dataLoader');
+			const dataLoaderModule = require('#src/resources/dataLoader');
 			const originalhandleApplication = dataLoaderModule.handleApplication;
 			sinon.stub(dataLoaderModule, 'handleApplication').throws(new Error('DataLoader failed to initialize'));
 
