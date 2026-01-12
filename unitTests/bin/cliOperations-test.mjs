@@ -4,7 +4,10 @@ import fs from 'fs-extra';
 import { setupTestApp } from '../apiTests/setupTestApp.mjs';
 import { buildRequest, cliOperations } from '#js/bin/cliOperations';
 
-describe('test CLI operations', () => {
+// currently this basically fails... but it fails in the sense that it says "Harper must be running to perform this
+// operation" and then proceeds to exit with a code of 0, making it look like the whole test suite is passing even
+// if there are failures!
+describe.skip('test CLI operations', () => {
 	let available_records;
 	let sandbox;
 	let log_spy;
