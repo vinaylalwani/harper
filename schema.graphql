@@ -78,41 +78,41 @@ updatedAt: Date @updatedTime
 ```
 """
 directive @table(
-    """
-    Explicit table name. If omitted, a sensible default derived from the
-    type name will be used.
-    """
-    table: String
-    """
-    Logical database/namespace to place this table in.
-    """
-    database: String
-    """
-    Default time-to-live (TTL) for records in seconds. Use a positive value to
-    enable automatic expiration; omit or set to 0 to disable.
-    """
-    expiration: Int
-    """
-    Enable auditing for create/update/delete operations.
-    """
-    audit: Boolean
-    """
-    The amount of time after expiration before a record can be evicted (defaults to zero).
-    """
-    eviction: Int
-    """
-    The interval for scanning for expired records (defaults to one quarter of the
-    total of expiration and eviction).
-    """
-    scanInterval: Int
-    """
-    By default, all tables within a replicated database will be replicated. Transactions
-    are replicated atomically, which may involve data across multiple tables. However,
-    you can also configure replication for individual tables, and disable and exclude
-    replication for specific tables in a database by setting replicate to false in the
-    table definition.
-    """
-    replicate: Boolean
+	"""
+	Explicit table name. If omitted, a sensible default derived from the
+	type name will be used.
+	"""
+	table: String
+	"""
+	Logical database/namespace to place this table in.
+	"""
+	database: String
+	"""
+	Default time-to-live (TTL) for records in seconds. Use a positive value to
+	enable automatic expiration; omit or set to 0 to disable.
+	"""
+	expiration: Int
+	"""
+	Enable auditing for create/update/delete operations.
+	"""
+	audit: Boolean
+	"""
+	The amount of time after expiration before a record can be evicted (defaults to zero).
+	"""
+	eviction: Int
+	"""
+	The interval for scanning for expired records (defaults to one quarter of the
+	total of expiration and eviction).
+	"""
+	scanInterval: Int
+	"""
+	By default, all tables within a replicated database will be replicated. Transactions
+	are replicated atomically, which may involve data across multiple tables. However,
+	you can also configure replication for individual tables, and disable and exclude
+	replication for specific tables in a database by setting replicate to false in the
+	table definition.
+	"""
+	replicate: Boolean
 ) on OBJECT
 
 """
@@ -120,21 +120,21 @@ Expose the table via the REST API. When applied to a `@table` type, routes are
 generated using the type name or the provided alias.
 """
 directive @export(
-    """
-    Optional alias to use for REST endpoints. If omitted, the type/table name is
-    used.
-    """
-    name: String
-    """
-    REST support is, by default, turned on for any exported resource. You may specify
-    false to disable this automatic API support.
-    """
-    rest: Boolean
-    """
-    MQTT support is, by default, turned on for any exported resource. You may specify
-    false to disable this automatic API support.
-    """
-    mqtt: Boolean
+	"""
+	Optional alias to use for REST endpoints. If omitted, the type/table name is
+	used.
+	"""
+	name: String
+	"""
+	REST support is, by default, turned on for any exported resource. You may specify
+	false to disable this automatic API support.
+	"""
+	rest: Boolean
+	"""
+	MQTT support is, by default, turned on for any exported resource. You may specify
+	false to disable this automatic API support.
+	"""
+	mqtt: Boolean
 ) on OBJECT
 """
 As a NoSQL database, HarperDB supports heterogeneous records (also referred to as
@@ -170,38 +170,38 @@ Create an index for the annotated field. Supports traditional and vector/ANN
 index types.
 """
 directive @indexed(
-    """
-    Optional index type, e.g. "HNSW"
-    """
-    type: String
-    """
-    Distance metric for vector indexes (e.g., "euclidean", "cosine").
-    Ignored for non-vector index types.
-    """
-    distance: String
-    """
-    Construction effort/recall parameter (HNSW). Higher values improve recall at
-    the cost of build time and memory.
-    """
-    efConstruction: Int
-    """
-    Maximum number of bi-directional connections per node (HNSW).
-    Typical range: 4–64.
-    """
-    M: Int
-    """
-    Routing optimization level for search graphs (implementation-specific).
-    """
-    optimizeRouting: Int
-    """
-    Additional multiplier for graph links (implementation-specific).
-    """
-    mL: Int
-    """
-    Search-time effort/recall parameter used during construction (implementation-
-    specific). Larger values typically yield better accuracy.
-    """
-    efConstructionSearch: Int
+	"""
+	Optional index type, e.g. "HNSW"
+	"""
+	type: String
+	"""
+	Distance metric for vector indexes (e.g., "euclidean", "cosine").
+	Ignored for non-vector index types.
+	"""
+	distance: String
+	"""
+	Construction effort/recall parameter (HNSW). Higher values improve recall at
+	the cost of build time and memory.
+	"""
+	efConstruction: Int
+	"""
+	Maximum number of bi-directional connections per node (HNSW).
+	Typical range: 4–64.
+	"""
+	M: Int
+	"""
+	Routing optimization level for search graphs (implementation-specific).
+	"""
+	optimizeRouting: Int
+	"""
+	Additional multiplier for graph links (implementation-specific).
+	"""
+	mL: Int
+	"""
+	Search-time effort/recall parameter used during construction (implementation-
+	specific). Larger values typically yield better accuracy.
+	"""
+	efConstructionSearch: Int
 ) on FIELD_DEFINITION
 
 """
@@ -209,15 +209,15 @@ Define a derived field whose value is computed from other fields.
 Useful for denormalized or presentation-friendly data.
 """
 directive @computed(
-    """
-    Computation expression or reference describing how to derive this field from
-    other fields (engine-specific syntax).
-    """
-    from: String
-    """
-    Increment when the computation changes to trigger recomputation.
-    """
-    version: Int
+	"""
+	Computation expression or reference describing how to derive this field from
+	other fields (engine-specific syntax).
+	"""
+	from: String
+	"""
+	Increment when the computation changes to trigger recomputation.
+	"""
+	version: Int
 ) on FIELD_DEFINITION
 """
 Automatically sets this field to the record's creation timestamp. The server
@@ -234,12 +234,12 @@ Declares a relationship to another record or records.
 Use on fields that should resolve to related entities by ID.
 """
 directive @relationship(
-    """
-    Name of field in THIS table containing foreign key(s) (for one-to-many or many-to-many).
-    """
-    from: String
-    """
-    Name of field in OTHER table containing foreign key (for one-to-one or many-to-one).
-    """
-    to: String
+	"""
+	Name of field in THIS table containing foreign key(s) (for one-to-many or many-to-many).
+	"""
+	from: String
+	"""
+	Name of field in OTHER table containing foreign key (for one-to-one or many-to-one).
+	"""
+	to: String
 ) on FIELD_DEFINITION

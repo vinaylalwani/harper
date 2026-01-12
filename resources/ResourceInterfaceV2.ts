@@ -1,11 +1,6 @@
 import type { RecordObject } from './RecordEncoder.ts';
 import { RequestTarget } from './RequestTarget.ts';
-import {
-	RequestTargetOrId,
-	ResourceInterface,
-	SubscriptionRequest,
-	UpdatableRecord,
-} from './ResourceInterface.ts';
+import { RequestTargetOrId, ResourceInterface, SubscriptionRequest, UpdatableRecord } from './ResourceInterface.ts';
 
 // @ts-expect-error We changed the interface in v2 with breaking changes (by flipping target and newRecord/record)
 export interface ResourceInterfaceV2<Record extends object = any> extends ResourceInterface<Record> {

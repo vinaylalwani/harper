@@ -6,9 +6,7 @@ import type { Entry, RecordObject } from './RecordEncoder.ts';
 import { RequestTarget } from './RequestTarget.ts';
 
 export interface ResourceInterface<Record extends object = any>
-	extends Partial<RecordObject>,
-		Pick<UpdatableRecord<Record>, 'addTo' | 'subtractFrom'> {
-
+	extends Partial<RecordObject>, Pick<UpdatableRecord<Record>, 'addTo' | 'subtractFrom'> {
 	allowRead(user: User, target: RequestTarget, context: Context): boolean | Promise<boolean>;
 	get?(
 		target?: RequestTargetOrId
