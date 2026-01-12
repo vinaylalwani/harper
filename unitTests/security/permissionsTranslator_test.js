@@ -10,6 +10,7 @@ const permissionsTranslator_rw = rewire('#js/security/permissionsTranslator');
 const { TEST_NON_SU_ROLE, TEST_SCHEMA_DOG_BREED, TEST_TWO_SCHEMAS } = require('../test_data');
 const terms = require('#src/utility/hdbTerms');
 const { TEST_ROLE_PERMS_ERROR, HTTP_STATUS_CODES, TEST_DEFAULT_ERROR_RESP } = require('../commonTestErrors');
+const { describe } = require('node:test');
 
 const TEST_SCHEMA = 'dev';
 const TEST_PERMS_ENUM = {
@@ -307,6 +308,9 @@ describe('Test permissionsTranslator module', function () {
 		global.hdb_schema = cloneDeep(TEST_SCHEMA_DOG_BREED);
 	});
 	afterEach(() => {
+		// Clear the rolePermsMap cache to ensure clean state between tests
+		const rolePermsMap = permissionsTranslator_rw.__get__('rolePermsMap');
+		Object.keys(rolePermsMap).forEach(key => delete rolePermsMap[key]);
 		sandbox.resetHistory();
 	});
 	after(() => {
@@ -363,11 +367,6 @@ describe('Test permissionsTranslator module', function () {
 
 		before(() => {
 			global.hdb_schema = cloneDeep(TEST_TWO_SCHEMAS);
-		});
-
-		afterEach(() => {
-			sandbox.resetHistory();
-			permissionsTranslator_rw.__set__('translateRolePermissions', translateRolePerms_spy);
 		});
 
 		after(() => {
