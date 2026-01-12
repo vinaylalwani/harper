@@ -1,15 +1,14 @@
 import { getMockLMDBPath } from '../test_utils.js';
 import { fileURLToPath } from 'url';
-import { setProperty } from '../../utility/environment/environmentManager.js';
-import hdbTerms from '../../ts-build/utility/hdbTerms.js';
+import { setProperty } from '#js/utility/environment/environmentManager';
+import hdbTerms from '#src/utility/hdbTerms';
 import { join } from 'path';
 import axios from 'axios';
 import { encode } from 'cbor-x';
 import { createRequire } from 'module';
-import analytics from '../../ts-build/resources/analytics/write.js';
-import { disableNATS } from '../../ts-build/server/nats/natsReplicator.js';
-import { bypassAuth } from '../../ts-build/security/auth.js';
-import { bypassAuth as bypassAuthMQTT } from '../../ts-build/server/mqtt.js';
+import analytics from '#src/resources/analytics/write';
+import { bypassAuth } from '#src/security/auth';
+import { bypassAuth as bypassAuthMQTT } from '#src/server/mqtt';
 const require = createRequire(import.meta.url);
 const config = {};
 
@@ -36,7 +35,6 @@ function makeString() {
 let created_records;
 export async function setupTestApp() {
 	analytics.setAnalyticsEnabled(false);
-	disableNATS();
 	bypassAuth();
 	bypassAuthMQTT();
 	let superGetUser = server.getUser;
@@ -87,12 +85,12 @@ export async function setupTestApp() {
 						random() < 0.3
 							? Math.floor(random() * 400) / 2
 							: random() < 0.3
-							? makeString()
-							: random() < 0.3
-							? true
-							: random() < 0.3
-							? { sub: 'data' }
-							: null;
+								? makeString()
+								: random() < 0.3
+									? true
+									: random() < 0.3
+										? { sub: 'data' }
+										: null;
 				}
 			}
 

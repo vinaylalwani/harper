@@ -7,9 +7,9 @@ import { setupTestApp } from './setupTestApp.mjs';
 import { get as env_get, setProperty } from '../../utility/environment/environmentManager.js';
 import { connect } from 'mqtt';
 import { readFileSync } from 'fs';
-import { start as startMQTT } from '../../ts-build/server/mqtt.js';
+import { start as startMQTT } from '#src/server/mqtt.js';
 import axios from 'axios';
-import { setNATSReplicator, setPublishToStream } from '../../ts-build/server/nats/natsReplicator.js';
+import { setNATSReplicator, setPublishToStream } from '#src/server/nats/natsReplicator.js';
 describe('test MQTT connections and commands', () => {
 	let available_records;
 	let client, client2;

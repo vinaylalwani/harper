@@ -5,7 +5,7 @@ import { decode, encode, DecoderStream } from 'cbor-x';
 import { getVariables } from './utility.js';
 import { setupTestApp } from './setupTestApp.mjs';
 import http from 'node:http';
-import { Request } from '../../ts-build/server/serverHelpers/Request.js';
+import { Request } from '#src/server/serverHelpers/Request';
 const { authorization, url } = getVariables();
 
 describe('test REST calls', () => {

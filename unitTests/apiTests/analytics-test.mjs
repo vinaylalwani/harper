@@ -1,8 +1,8 @@
 import { assert } from 'chai';
 import axios from 'axios';
 import { setupTestApp } from './setupTestApp.mjs';
-import { captureProfile, userCodeFolders } from '../../ts-build/resources/analytics/profile.js';
-import analytics from '../../ts-build/resources/analytics/write.js';
+import { captureProfile, userCodeFolders } from '#src/resources/analytics/profile';
+import analytics from '#src/resources/analytics/write';
 
 describe('Analytics profiling user code', () => {
 	before(async () => {
