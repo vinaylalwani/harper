@@ -7,5 +7,6 @@ import harperConfig from '@harperdb/code-guidelines/prettier';
 
 export default {
 	...harperConfig,
+
 	// Add any project-specific overrides here if needed
 };

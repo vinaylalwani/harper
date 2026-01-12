@@ -1,0 +1,4 @@
+# This file extends the .gitignore file to include files that should not be formatted by Prettier
+# Only list additional files and directories that aren't already in `.gitignore`
+
+unitTests/security/jsLoader/fixtures
