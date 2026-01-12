@@ -24,7 +24,7 @@ const hdb_terms = require('#src/utility/hdbTerms');
 const assert = require('assert');
 const fs = require('fs-extra');
 const sinon = require('sinon');
-const systemSchema = require('#src/json/systemSchema');
+const systemSchema = require('../../../../../json/systemSchema');
 const verify_txn = require('../_verifyTxns');
 
 let insert_date = new Date();

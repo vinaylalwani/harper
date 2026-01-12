@@ -144,21 +144,16 @@ describe('Test configValidator module', () => {
 	const sandbox = sinon.createSandbox();
 
 	describe('Test clustering schema in configValidator function', () => {
-		let validate_pem_file_stub;
-		let validate_pem_file_rw;
 		let does_path_rw;
 		let does_path_stub;
 
 		beforeEach(() => {
-			validate_pem_file_stub = sandbox.stub();
-			validate_pem_file_rw = config_val.__set__('validatePemFile', validate_pem_file_stub);
 			does_path_stub = sandbox.stub();
 			does_path_rw = config_val.__set__('doesPathExist', does_path_stub);
 			does_path_stub.returns(null);
 		});
 
 		afterEach(() => {
-			validate_pem_file_rw();
 			sandbox.restore();
 		});
 
@@ -367,17 +362,9 @@ describe('Test configValidator module', () => {
 	});
 
 	describe('Test config schema in configValidator function', () => {
-		let validate_pem_file_stub;
-		let validate_pem_file_rw;
+		beforeEach(() => {});
 
-		beforeEach(() => {
-			validate_pem_file_stub = sandbox.stub();
-			validate_pem_file_rw = config_val.__set__('validatePemFile', validate_pem_file_stub);
-		});
-
-		afterEach(() => {
-			validate_pem_file_rw();
-		});
+		afterEach(() => {});
 
 		it('Test itc and localStudio in config_schema with bad values', () => {
 			let bad_config_obj = test_utils.deepClone(FAKE_CONFIG);
@@ -458,40 +445,6 @@ describe('Test configValidator module', () => {
 			const result = does_path_exist_rw('/this/does/not/exist');
 
 			expect(result).to.equal('Specified path /this/does/not/exist does not exist.');
-		});
-	});
-
-	describe('Test validatePemFile function', () => {
-		let does_path_exist_stub = sandbox.stub();
-		let does_path_exist_rw;
-		let validate_pem_file = config_val.__get__('validatePemFile');
-
-		beforeEach(() => {
-			does_path_exist_rw = config_val.__set__('doesPathExist', does_path_exist_stub);
-		});
-
-		afterEach(() => {
-			does_path_exist_rw();
-		});
-
-		it('Test happy path with correct pattern and data type', () => {
-			does_path_exist_stub.returns(null);
-			const does_path_exist_rw = config_val.__set__('doesPathExist', does_path_exist_stub);
-			validate_pem_file('/totally/real.pem');
-
-			expect(does_path_exist_stub.firstCall.args[0]).to.equal('/totally/real.pem');
-
-			does_path_exist_rw();
-		});
-
-		it('Test it returns a helpers message if it doesnt exist', () => {
-			does_path_exist_stub.returns(true);
-			const message_stub = sinon.stub().callsFake(() => "Specified path '/totally/fake.pem' does not exist.");
-			const helpers = { message: message_stub };
-
-			const result = validate_pem_file('/totally/fake.pem', helpers);
-
-			expect(result).to.equal("Specified path '/totally/fake.pem' does not exist.");
 		});
 	});
 

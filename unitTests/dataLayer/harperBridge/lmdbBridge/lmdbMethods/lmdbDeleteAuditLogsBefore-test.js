@@ -25,7 +25,7 @@ const DeleteAuditLogsBeforeResults = require('#js/dataLayer/harperBridge/lmdbBri
 const DeleteBeforeObject = require('#js/dataLayer/DeleteBeforeObject');
 const delete_audit_logs_before = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbDeleteAuditLogsBefore');
 const rw_delete_audit_logs_before = rewire(
-	'../../../../../dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbDeleteAuditLogsBefore'
+	'#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbDeleteAuditLogsBefore'
 );
 const delete_txns_function = rw_delete_audit_logs_before.__get__('deleteTransactions');
 const assert = require('assert');

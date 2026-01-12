@@ -23,7 +23,7 @@ const search_utility = require('#js/utility/lmdb/searchUtility');
 const assert = require('assert');
 const fs = require('fs-extra');
 const sinon = require('sinon');
-const systemSchema = require('#src/json/systemSchema');
+const systemSchema = require('../../../../../json/systemSchema');
 const { TEST_WRITE_OPS_ERROR_MSGS } = require('../../../../commonTestErrors');
 
 let insert_date = new Date();

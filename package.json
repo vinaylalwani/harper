@@ -94,6 +94,7 @@
 		"chai-integer": "^0.1.0",
 		"fast-glob": "^3.3.3",
 		"fs-extra": "^11.3.2",
+		"eventsource": "^3.0.5",
 		"globals": "^16.5.0",
 		"mocha": "^11.7.4",
 		"mqtt": "~4.3.8",

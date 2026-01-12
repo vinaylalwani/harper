@@ -18,7 +18,7 @@ const lmdb_create_table = harperBridge.createTable;
 const lmdb_create_attribute = harperBridge.createAttribute;
 const environment_utility = rewire('#js/utility/lmdb/environmentUtility');
 const search_utility = require('#js/utility/lmdb/searchUtility');
-const systemSchema = require('#src/json/systemSchema');
+const systemSchema = require('../../../../../json/systemSchema');
 
 const assert = require('assert');
 const fs = require('fs-extra');

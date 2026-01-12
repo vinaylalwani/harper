@@ -11,7 +11,7 @@ const log = require('#js/utility/logging/harper_logger');
 const hdb_utils = require('#js/utility/common_utils');
 const chai = require('chai');
 const sinon = require('sinon');
-const sinon_chai = require('sinon-chai');
+const sinon_chai = require('sinon-chai').default;
 const { expect } = chai;
 chai.use(sinon_chai);
 

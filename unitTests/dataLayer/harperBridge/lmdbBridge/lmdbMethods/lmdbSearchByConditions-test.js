@@ -24,7 +24,7 @@ const lmdb_search = require('#js/dataLayer/harperBridge/harperBridge').searchByC
 const assert = require('assert');
 const fs = require('fs-extra');
 const sinon = require('sinon');
-const systemSchema = require('#src/json/systemSchema');
+const systemSchema = require('../../../../../json/systemSchema');
 const { sortBy } = require('lodash');
 const TIMESTAMP = Date.now();
 

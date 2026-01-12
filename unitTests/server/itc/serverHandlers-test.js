@@ -4,7 +4,7 @@ const chai = require('chai');
 const sinon = require('sinon');
 const rewire = require('rewire');
 const { expect } = chai;
-const sinon_chai = require('sinon-chai');
+const sinon_chai = require('sinon-chai').default;
 chai.use(sinon_chai);
 const harper_logger = require('#js/utility/logging/harper_logger');
 const user_schema = require('#src/security/user');

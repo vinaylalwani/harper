@@ -3,7 +3,7 @@
 const test_util = require('../test_utils');
 test_util.preTestPrep();
 const assert = require('assert');
-const system_schema = require('#src/json/systemSchema.json');
+const system_schema = require('../../../../json/systemSchema.json');
 const rewire = require('rewire');
 const global_schema = rewire('#js/utility/globalSchema');
 

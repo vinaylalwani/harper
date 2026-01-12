@@ -26,7 +26,7 @@ const lmdb_create_records = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbM
 const assert = require('assert');
 const fs = require('fs-extra');
 const sinon = require('sinon');
-const systemSchema = require('#src/json/systemSchema');
+const systemSchema = require('../../../../../json/systemSchema');
 
 const TIMESTAMP = Date.now();
 

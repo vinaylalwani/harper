@@ -17,7 +17,7 @@ let test_data = require('../../../../testData');
 const rewire = require('rewire');
 const environment_utility = rewire('#js/utility/lmdb/environmentUtility');
 const SearchObject = require('#js/dataLayer/SearchObject');
-const lmdb_drop_attribute = require('#src/dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbDropAllAttributes');
+const lmdb_drop_attribute = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbDropAllAttributes');
 const search_by_value = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbSearchByValue');
 const lmdb_create_schema = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbCreateSchema');
 const lmdb_create_table = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbCreateTable');
@@ -26,7 +26,7 @@ const LMDB_ERRORS = require('../../../../commonTestErrors').LMDB_ERRORS_ENUM;
 const assert = require('assert');
 const fs = require('fs-extra');
 const sinon = require('sinon');
-const systemSchema = require('#src/json/systemSchema');
+const systemSchema = require('../../../../json/systemSchema');
 
 const TIMESTAMP = Date.now();
 

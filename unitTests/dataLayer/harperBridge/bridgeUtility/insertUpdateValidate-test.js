@@ -6,7 +6,7 @@ const insertUpdateValidate = rewire('#js/dataLayer/harperBridge/bridgeUtility/in
 const log = require('#js/utility/logging/harper_logger');
 const chai = require('chai');
 const sinon = require('sinon');
-const sinon_chai = require('sinon-chai');
+const sinon_chai = require('sinon-chai').default;
 const { expect } = chai;
 chai.use(sinon_chai);
 
