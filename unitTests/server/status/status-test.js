@@ -15,43 +15,44 @@ describe('server.status', function () {
 	let getAggregatedStub;
 	let restartNeededStub;
 
-	before(function() {
+	before(function () {
 		// Create stubs for this test suite
 		getAggregatedStub = sinon.stub(ComponentStatusRegistry, 'getAggregatedFromAllThreads').resolves(new Map());
 		restartNeededStub = sinon.stub(requestRestartModule, 'restartNeeded').returns(false);
 	});
 
-	beforeEach(function() {
+	beforeEach(function () {
 		// Initialize/clear the component status registry before each test
 		const { internal } = require('#src/components/status/index');
 		internal.componentStatusRegistry.reset();
-		
+
 		// Reset stub behaviors
 		getAggregatedStub.resetHistory();
 		getAggregatedStub.resolves(new Map());
 		restartNeededStub.resetHistory();
 		restartNeededStub.returns(false);
 	});
-	
-	afterEach(function() {
+
+	afterEach(function () {
 		// Reset stubs to default behavior after each test
 		getAggregatedStub.resetHistory();
 		getAggregatedStub.resolves(new Map());
 		restartNeededStub.resetHistory();
 		restartNeededStub.returns(false);
 	});
-	
-	after(function() {
+
+	after(function () {
 		// Restore original functions
 		getAggregatedStub.restore();
 		restartNeededStub.restore();
-		
+
 		// Clear component status registry
 		const { internal } = require('#src/components/status/index');
 		internal.componentStatusRegistry.reset();
 	});
-	
-	const clearStatus = async () => Promise.all(['primary', 'test', 'maintenance', 'availability'].map((id) => status.clear({ id })));
+
+	const clearStatus = async () =>
+		Promise.all(['primary', 'test', 'maintenance', 'availability'].map((id) => status.clear({ id })));
 	beforeEach(() => clearStatus());
 	after(() => clearStatus());
 
@@ -96,21 +97,21 @@ describe('server.status', function () {
 		};
 		await status.set(statusObj);
 		const result = await status.get({});
-		
+
 		// Result should now be an object with systemStatus, componentStatus, and restartRequired
 		assert.ok(result.systemStatus !== undefined, 'systemStatus should be defined');
 		assert.ok(result.componentStatus !== undefined, 'componentStatus should be defined');
 		assert.ok(Array.isArray(result.componentStatus), 'componentStatus should be an array');
 		assert.ok(result.restartRequired !== undefined, 'restartRequired should be defined');
-		
+
 		// systemStatus is an async iterable, convert to array for testing
 		const systemStatusArray = [];
 		for await (const item of result.systemStatus) {
 			systemStatusArray.push(item);
 		}
-		
+
 		// Check that primary status is in systemStatus
-		const primaryStatus = systemStatusArray.find(s => s.id === 'primary');
+		const primaryStatus = systemStatusArray.find((s) => s.id === 'primary');
 		assert.ok(primaryStatus);
 		assert.equal(primaryStatus.status, 'testing');
 		assertAndOverrideTimestamps(primaryStatus);
@@ -129,26 +130,26 @@ describe('server.status', function () {
 		];
 		await Promise.all(statusObjs.map((sO) => status.set(sO)));
 		const result = await status.get({});
-		
+
 		// Result should now be an object with systemStatus, componentStatus, and restartRequired
 		assert.ok(result.systemStatus);
 		assert.ok(result.componentStatus);
 		assert.ok(result.restartRequired !== undefined);
-		
+
 		// systemStatus is an async iterable, convert to array for testing
 		const systemStatusArray = [];
 		for await (const item of result.systemStatus) {
 			systemStatusArray.push(item);
 		}
 		assert.equal(systemStatusArray.length, 2);
-		
+
 		// Check both statuses are present
-		const primaryStatus = systemStatusArray.find(s => s.id === 'primary');
+		const primaryStatus = systemStatusArray.find((s) => s.id === 'primary');
 		assert.ok(primaryStatus);
 		assert.equal(primaryStatus.status, 'testing');
 		assertAndOverrideTimestamps(primaryStatus);
-		
-		const maintenanceStatus = systemStatusArray.find(s => s.id === 'maintenance');
+
+		const maintenanceStatus = systemStatusArray.find((s) => s.id === 'maintenance');
 		assert.ok(maintenanceStatus);
 		assert.equal(maintenanceStatus.status, 'testing will continue');
 		assertAndOverrideTimestamps(maintenanceStatus);
@@ -184,7 +185,7 @@ describe('server.status', function () {
 		await status.set(validStatus);
 		const result = await status.get({ id: 'availability' });
 		assert.strictEqual(result.status, 'Available');
-		
+
 		// Invalid availability value
 		const invalidStatus = {
 			id: 'availability',
@@ -192,15 +193,15 @@ describe('server.status', function () {
 		};
 		await assert.rejects(async () => status.set(invalidStatus), {
 			name: 'Error',
-			message: 'Status "availability" only accepts these values: Available, Unavailable'
+			message: 'Status "availability" only accepts these values: Available, Unavailable',
 		});
 	});
 
-	describe('getAllStatus functionality', function() {
+	describe('getAllStatus functionality', function () {
 		beforeEach(() => clearStatus());
 		after(() => clearStatus());
 
-		it('should return system status, component status, and restart flag when calling get without id', async function() {
+		it('should return system status, component status, and restart flag when calling get without id', async function () {
 			// Set some system status
 			await status.set({ id: 'primary', status: 'running' });
 			await status.set({ id: 'maintenance', status: 'active' });
@@ -214,9 +215,9 @@ describe('server.status', function () {
 					lastChecked: {
 						main: Date.now(),
 						workers: {
-							1: Date.now()
-						}
-					}
+							1: Date.now(),
+						},
+					},
 				},
 				'another-component': {
 					componentName: 'another-component',
@@ -224,20 +225,22 @@ describe('server.status', function () {
 					latestMessage: 'Failed to start',
 					lastChecked: {
 						main: Date.now(),
-						workers: {}
+						workers: {},
 					},
-					error: 'Startup failed'
-				}
+					error: 'Startup failed',
+				},
 			};
 
 			// Configure the stubs for this test
-			getAggregatedStub.resolves((() => {
-				const map = new Map();
-				Object.entries(mockComponentStatuses).forEach(([name, status]) => {
-					map.set(name, status);
-				});
-				return map;
-			})());
+			getAggregatedStub.resolves(
+				(() => {
+					const map = new Map();
+					Object.entries(mockComponentStatuses).forEach(([name, status]) => {
+						map.set(name, status);
+					});
+					return map;
+				})()
+			);
 
 			restartNeededStub.returns(true);
 
@@ -258,8 +261,8 @@ describe('server.status', function () {
 			// Check component status
 			assert.ok(Array.isArray(result.componentStatus));
 			assert.equal(result.componentStatus.length, 2);
-			
-			const healthyComponent = result.componentStatus.find(c => c.name === 'test-component');
+
+			const healthyComponent = result.componentStatus.find((c) => c.name === 'test-component');
 			assert.ok(healthyComponent);
 			assert.equal(healthyComponent.status, 'healthy');
 			assert.equal(healthyComponent.latestMessage, 'Component loaded successfully');
@@ -267,7 +270,7 @@ describe('server.status', function () {
 			assert.ok(typeof healthyComponent.lastChecked.main === 'number');
 			assert.ok(typeof healthyComponent.lastChecked.workers[1] === 'number');
 
-			const errorComponent = result.componentStatus.find(c => c.name === 'another-component');
+			const errorComponent = result.componentStatus.find((c) => c.name === 'another-component');
 			assert.ok(errorComponent);
 			assert.equal(errorComponent.status, 'error');
 			assert.equal(errorComponent.latestMessage, 'Failed to start');
@@ -277,7 +280,7 @@ describe('server.status', function () {
 			assert.equal(result.restartRequired, true);
 		});
 
-		it('should handle empty component status gracefully', async function() {
+		it('should handle empty component status gracefully', async function () {
 			// Set some system status
 			await status.set({ id: 'primary', status: 'running' });
 
@@ -300,7 +303,7 @@ describe('server.status', function () {
 			assert.equal(result.restartRequired, false);
 		});
 
-		it('should continue working if component status functions are unavailable', async function() {
+		it('should continue working if component status functions are unavailable', async function () {
 			// Set some system status
 			await status.set({ id: 'primary', status: 'running' });
 
@@ -312,13 +315,15 @@ describe('server.status', function () {
 				// This should either work with error handling or throw - depends on implementation
 				// If the implementation doesn't handle errors, this test documents expected behavior
 				const result = await status.get({});
-				
+
 				// If it succeeds, system status should still be available
 				assert.ok(result.systemStatus !== undefined);
 			} catch (error) {
 				// If it fails, that's also acceptable behavior to document
-				assert.ok(error.message.includes('Component status not available') || 
-						 error.message.includes('Restart status not available'));
+				assert.ok(
+					error.message.includes('Component status not available') ||
+						error.message.includes('Restart status not available')
+				);
 			}
 		});
 	});

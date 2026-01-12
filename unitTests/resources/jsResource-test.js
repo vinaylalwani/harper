@@ -108,12 +108,13 @@ describe('jsResource', () => {
 
 			// Now invoke the handler and expect it to throw
 			await assert.rejects(
-				async () => await capturedHandler({
-					entryType: 'file',
-					eventType: 'add',
-					absolutePath: testFile,
-					urlPath: '/bad-resource.js',
-				}),
+				async () =>
+					await capturedHandler({
+						entryType: 'file',
+						eventType: 'add',
+						absolutePath: testFile,
+						urlPath: '/bad-resource.js',
+					}),
 				(error) => {
 					// Should rethrow with context
 					assert.equal(error.name, 'ResourceLoadError', 'Error should be ResourceLoadError');

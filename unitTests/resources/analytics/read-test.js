@@ -4,7 +4,7 @@ const { expect } = require('chai');
 const { describe, it } = require('mocha');
 const sinon = require('sinon');
 const { METRIC } = require('#src/resources/analytics/metadata');
-const { listMetrics, describeMetric, /* collectDistinctValues */ } = require('#src/resources/analytics/read');
+const { listMetrics, describeMetric /* collectDistinctValues */ } = require('#src/resources/analytics/read');
 
 describe('listMetrics', () => {
 	let searchStub;
@@ -12,15 +12,15 @@ describe('listMetrics', () => {
 
 	beforeEach(() => {
 		mockAsyncIterable = {
-			[Symbol.asyncIterator]: async function* () {}
+			[Symbol.asyncIterator]: async function* () {},
 		};
 
 		global.databases = {
 			system: {
 				hdb_analytics: {
-					search: sinon.stub().returns(mockAsyncIterable)
-				}
-			}
+					search: sinon.stub().returns(mockAsyncIterable),
+				},
+			},
 		};
 
 		// Keep a reference to the search stub for easier manipulation in tests
@@ -74,7 +74,7 @@ describe('listMetrics', () => {
 
 		// Each condition after the first should be a 'not_equal' to a built-in metric
 		const builtins = Object.values(METRIC);
-		searchParams.conditions.slice(1).forEach(condition => {
+		searchParams.conditions.slice(1).forEach((condition) => {
 			expect(condition.attribute).to.equal('metric');
 			expect(condition.comparator).to.equal('not_equal');
 			expect(builtins).to.include(condition.value);
@@ -132,7 +132,7 @@ describe('listMetrics', () => {
 	});
 
 	it('should set a default custom metric time window of one week', async () => {
-		const weekAgo = Date.now() - (1000 * 60 * 60 * 24 * 7);
+		const weekAgo = Date.now() - 1000 * 60 * 60 * 24 * 7;
 		await listMetrics(['custom']);
 		const firstCondition = searchStub.firstCall.args[0].conditions[0];
 		expect(firstCondition.attribute).to.be.equal('id');
@@ -195,10 +195,10 @@ describe('listMetrics', () => {
 
 		// Each condition should be checking "not equal" to a built-in metric
 		for (let i = 0; i < builtins.length; i++) {
-			expect(searchParams.conditions[i+1]).to.deep.equal({
+			expect(searchParams.conditions[i + 1]).to.deep.equal({
 				attribute: 'metric',
 				comparator: 'not_equal',
-				value: builtins[i]
+				value: builtins[i],
 			});
 		}
 	});
@@ -219,23 +219,23 @@ describe('describeMetric', () => {
 			method: 'GET',
 			type: 'rest',
 			value: 100,
-			count: 5
+			count: 5,
 		};
 
 		// Mock async iterable for the search results
 		mockAsyncIterable = {
 			[Symbol.asyncIterator]: async function* () {
 				yield mockSearchResults;
-			}
+			},
 		};
 
 		// Setup global databases object with stub method
 		global.databases = {
 			system: {
 				hdb_analytics: {
-					search: sinon.stub().returns(mockAsyncIterable)
-				}
-			}
+					search: sinon.stub().returns(mockAsyncIterable),
+				},
+			},
 		};
 
 		// Keep a reference to the search stub for easier manipulation in tests
@@ -264,11 +264,11 @@ describe('describeMetric', () => {
 		expect(searchParams.conditions[0]).to.deep.equal({
 			attribute: 'metric',
 			comparator: 'equals',
-			value: 'non-existent-metric'
+			value: 'non-existent-metric',
 		});
 		expect(searchParams.sort).to.deep.equal({
 			attribute: 'id',
-			descending: true
+			descending: true,
 		});
 	});
 
@@ -277,14 +277,14 @@ describe('describeMetric', () => {
 
 		expect(result).to.have.property('attributes');
 		expect(result.attributes).to.deep.include.members([
-			{name: 'node', type: 'string'},
-			{name: 'id', type: 'object'},
-			{name: 'metric', type: 'string'},
-			{name: 'path', type: 'string'},
-			{name: 'method', type: 'string'},
-			{name: 'type', type: 'string'},
-			{name: 'value', type: 'number'},
-			{name: 'count', type: 'number'},
+			{ name: 'node', type: 'string' },
+			{ name: 'id', type: 'object' },
+			{ name: 'metric', type: 'string' },
+			{ name: 'path', type: 'string' },
+			{ name: 'method', type: 'string' },
+			{ name: 'type', type: 'string' },
+			{ name: 'value', type: 'number' },
+			{ name: 'count', type: 'number' },
 		]);
 		expect(searchStub.calledOnce).to.be.true;
 	});

@@ -650,12 +650,7 @@ records:
 
 			// Create mock table returning the records with extra fields
 			const mockTable = {
-				get: sinon
-					.stub()
-					.onCall(0)
-					.resolves(recordWithExtraFields1)
-					.onCall(1)
-					.resolves(recordWithExtraFields2),
+				get: sinon.stub().onCall(0).resolves(recordWithExtraFields1).onCall(1).resolves(recordWithExtraFields2),
 				put: sinon.stub().resolves({ inserted: 1 }),
 				patch: sinon.stub().resolves(),
 			};

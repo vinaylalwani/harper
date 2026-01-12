@@ -693,8 +693,8 @@ describe('Test custom functions operations', () => {
 				{
 					host: 'testkey1.gitlab.com',
 					hostname: 'gitlab.com',
-					name: 'testkey1'
-				}
+					name: 'testkey1',
+				},
 			]);
 			result = await operations.getSSHKnownHosts({});
 			expect(result).to.eql({ known_hosts: 'gitlab.com fake1\ngitlab.com fake2' });
@@ -721,13 +721,13 @@ describe('Test custom functions operations', () => {
 				{
 					host: 'testkey1.gitlab.com',
 					hostname: 'gitlab.com',
-					name: 'testkey1'
+					name: 'testkey1',
 				},
 				{
 					host: 'testkey2.github.com',
 					hostname: 'github.com',
-					name: 'testkey2'
-				}
+					name: 'testkey2',
+				},
 			]);
 			result = await operations.getSSHKnownHosts({});
 			// It should have the 2 added from the first key + some more from github
@@ -747,8 +747,8 @@ describe('Test custom functions operations', () => {
 				{
 					host: 'testkey1.gitlab.com',
 					hostname: 'gitlab.com',
-					name: 'testkey1'
-				}
+					name: 'testkey1',
+				},
 			]);
 		});
 

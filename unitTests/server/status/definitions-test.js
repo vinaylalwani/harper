@@ -1,11 +1,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
-const {
-	STATUS_DEFINITIONS,
-	STATUS_IDS,
-	DEFAULT_STATUS_ID
-} = require('#src/server/status/definitions');
+const { STATUS_DEFINITIONS, STATUS_IDS, DEFAULT_STATUS_ID } = require('#src/server/status/definitions');
 
 describe('server.status.definitions', function () {
 	describe('constants', function () {
@@ -14,7 +10,7 @@ describe('server.status.definitions', function () {
 			assert.ok(STATUS_DEFINITIONS.primary);
 			assert.ok(STATUS_DEFINITIONS.maintenance);
 			assert.ok(STATUS_DEFINITIONS.availability);
-			
+
 			// Check structure
 			assert.strictEqual(STATUS_DEFINITIONS.primary.allowedValues, null);
 			assert.strictEqual(STATUS_DEFINITIONS.maintenance.allowedValues, null);
@@ -30,8 +26,6 @@ describe('server.status.definitions', function () {
 		});
 	});
 
-
-
 	describe('exported constants structure', function () {
 		it('should ensure STATUS_IDS contains all keys from STATUS_DEFINITIONS', function () {
 			const definitionKeys = Object.keys(STATUS_DEFINITIONS);
@@ -42,7 +36,7 @@ describe('server.status.definitions', function () {
 			// Verify STATUS_DEFINITIONS structure
 			assert.strictEqual(typeof STATUS_DEFINITIONS, 'object');
 			assert.strictEqual(Object.keys(STATUS_DEFINITIONS).length, 3);
-			
+
 			// Verify each status definition has the expected structure
 			Object.entries(STATUS_DEFINITIONS).forEach(([key, value]) => {
 				assert.ok(value.hasOwnProperty('allowedValues'), `${key} should have allowedValues property`);
@@ -51,11 +45,11 @@ describe('server.status.definitions', function () {
 					`${key}.allowedValues should be null or an array`
 				);
 			});
-			
+
 			// Verify STATUS_IDS is an array
 			assert.ok(Array.isArray(STATUS_IDS));
 			assert.strictEqual(STATUS_IDS.length, 3);
-			
+
 			// Verify DEFAULT_STATUS_ID is a valid status ID
 			assert.ok(STATUS_IDS.includes(DEFAULT_STATUS_ID));
 		});

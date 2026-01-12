@@ -28,11 +28,12 @@ describe('test declared role', () => {
 				operation: 'insert',
 				table: 'SimpleRecord',
 				records: [{ name: 'test', id: '6' }],
-			}, headers
+			},
+			headers
 		);
 		expect(response.status).to.eq(200);
 		response = await axios('http://localhost:9926/SimpleRecord/6', {
-			headers
+			headers,
 		});
 		expect(response.status).to.eq(200);
 		let perm_error;

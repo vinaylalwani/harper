@@ -10,7 +10,6 @@ const ConfigEnvVarError = harperConfigEnvVars.__get__('ConfigEnvVarError');
 const hashConfig = harperConfigEnvVars.__get__('hashConfig');
 
 describe('harperConfigEnvVars', function () {
-
 	describe('hashConfig', function () {
 		it('produces different hashes for different configs', function () {
 			const config1 = { http: { foo: true, mtls: true } };

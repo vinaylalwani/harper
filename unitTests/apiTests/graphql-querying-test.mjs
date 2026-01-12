@@ -696,7 +696,7 @@ describe('graphql querying', () => {
 				'application/json': 200,
 				'application/graphql-response+json': 400,
 			},
-		}
+		},
 	].forEach(({ skip, only, name, data, expectedErrorMessage, expectedErrorCodes }) => {
 		itFilter({ skip, only })(`errors on ${name}`, () =>
 			Promise.all(

@@ -268,7 +268,7 @@ describe('Test hdbInfoController module ', function () {
 		});
 
 		it('getVersionUpdateInfo - error thrown if downgrading major version', async () => {
-			const test_error ='Trying to downgrade major HDB versions is not supported.';
+			const test_error = 'Trying to downgrade major HDB versions is not supported.';
 			version_stub.get(() => OLD_VERSION_NUM);
 
 			let result;
@@ -322,7 +322,11 @@ describe('Test hdbInfoController module ', function () {
 			}
 
 			assert.ok(result instanceof Error, 'Expected error to be thrown');
-			assert.equal(result.message, `Could not find the version number in the package.json file.`, 'Expected error message to be re-thrown');
+			assert.equal(
+				result.message,
+				`Could not find the version number in the package.json file.`,
+				'Expected error message to be re-thrown'
+			);
 		});
 	});
 

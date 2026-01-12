@@ -236,7 +236,7 @@ describe('Test hdbChildIpcHandler module', () => {
 
 		before(() => {
 			componentStatusRequestHandler = server_itc_handlers.__get__('componentStatusRequestHandler');
-			
+
 			// Create stubs
 			getWorkerIndexStub = sandbox.stub();
 			sendItcEventStub = sandbox.stub();
@@ -244,20 +244,20 @@ describe('Test hdbChildIpcHandler module', () => {
 			log_trace_stub = sandbox.stub(harper_logger, 'trace');
 			log_debug_stub = sandbox.stub(harper_logger, 'debug');
 			log_warn_stub = sandbox.stub(harper_logger, 'warn');
-			
+
 			// Mock the component status registry
 			mockRegistry = {
-				getAllStatuses: sandbox.stub()
+				getAllStatuses: sandbox.stub(),
 			};
-			
+
 			// Mock the internal status module
 			componentStatusInternalStub = {
-				componentStatusRegistry: mockRegistry
+				componentStatusRegistry: mockRegistry,
 			};
 
 			// Mock threads global
 			threadsStub = {
-				sendToThread: sendToThreadStub
+				sendToThread: sendToThreadStub,
 			};
 
 			// Rewire dependencies
@@ -269,10 +269,12 @@ describe('Test hdbChildIpcHandler module', () => {
 			getWorkerIndexStub.returns(1);
 			sendItcEventStub.resolves();
 			sendToThreadStub.returns(true);
-			mockRegistry.getAllStatuses.returns(new Map([
-				['component1', { status: 'healthy', message: 'OK', lastChecked: new Date() }],
-				['component2', { status: 'error', message: 'Failed', lastChecked: new Date() }]
-			]));
+			mockRegistry.getAllStatuses.returns(
+				new Map([
+					['component1', { status: 'healthy', message: 'OK', lastChecked: new Date() }],
+					['component2', { status: 'error', message: 'Failed', lastChecked: new Date() }],
+				])
+			);
 		});
 
 		afterEach(() => {
@@ -284,7 +286,7 @@ describe('Test hdbChildIpcHandler module', () => {
 		it('should validate event and log error if validation fails - missing type', async () => {
 			const invalidEvent = {
 				// Missing type property
-				message: { originator: 'test', requestId: 'test-123' }
+				message: { originator: 'test', requestId: 'test-123' },
 			};
 
 			await componentStatusRequestHandler(invalidEvent);
@@ -310,8 +312,8 @@ describe('Test hdbChildIpcHandler module', () => {
 				type: hdbTerms.ITC_EVENT_TYPES.COMPONENT_STATUS_REQUEST,
 				message: {
 					// Missing originator
-					requestId: 'test-123'
-				}
+					requestId: 'test-123',
+				},
 			};
 
 			await componentStatusRequestHandler(invalidEvent);
@@ -325,10 +327,10 @@ describe('Test hdbChildIpcHandler module', () => {
 			// Stub the dynamic requires
 			const manageThreadsStub = sandbox.stub();
 			manageThreadsStub.getWorkerIndex = getWorkerIndexStub;
-			
+
 			const itcStub = sandbox.stub();
 			itcStub.sendItcEvent = sendItcEventStub;
-			
+
 			const requireStub = sandbox.stub();
 			requireStub.withArgs('../../components/status/index.ts').returns({ internal: componentStatusInternalStub });
 			requireStub.withArgs('../threads/manageThreads.js').returns(manageThreadsStub);
@@ -340,28 +342,31 @@ describe('Test hdbChildIpcHandler module', () => {
 				message: {
 					originator: 'thread-1',
 					// Missing requestId - should still work but with undefined requestId in response
-				}
+				},
 			};
 
 			await componentStatusRequestHandler(invalidEvent);
 
 			// Should still process the request
 			expect(mockRegistry.getAllStatuses).to.have.been.calledOnce;
-			expect(sendToThreadStub).to.have.been.calledWith('thread-1', sinon.match({
-				message: sinon.match({
-					requestId: undefined
+			expect(sendToThreadStub).to.have.been.calledWith(
+				'thread-1',
+				sinon.match({
+					message: sinon.match({
+						requestId: undefined,
+					}),
 				})
-			}));
+			);
 		});
 
 		it('should handle valid request from worker thread and send direct response', async () => {
 			// Stub the dynamic requires
 			const manageThreadsStub = sandbox.stub();
 			manageThreadsStub.getWorkerIndex = getWorkerIndexStub;
-			
+
 			const itcStub = sandbox.stub();
 			itcStub.sendItcEvent = sendItcEventStub;
-			
+
 			// Override require to return our stubs
 			const requireStub = sandbox.stub();
 			requireStub.withArgs('../../components/status/index.ts').returns({ internal: componentStatusInternalStub });
@@ -373,8 +378,8 @@ describe('Test hdbChildIpcHandler module', () => {
 				type: hdbTerms.ITC_EVENT_TYPES.COMPONENT_STATUS_REQUEST,
 				message: {
 					originator: 'main-thread',
-					requestId: 'req-123'
-				}
+					requestId: 'req-123',
+				},
 			};
 
 			await componentStatusRequestHandler(validEvent);
@@ -384,15 +389,18 @@ describe('Test hdbChildIpcHandler module', () => {
 
 			// Verify it tried to send direct response
 			expect(sendToThreadStub).to.have.been.calledOnce;
-			expect(sendToThreadStub).to.have.been.calledWith('main-thread', sinon.match({
-				type: hdbTerms.ITC_EVENT_TYPES.COMPONENT_STATUS_RESPONSE,
-				message: sinon.match({
-					requestId: 'req-123',
-					statuses: sinon.match.array,
-					workerIndex: 1,
-					isMainThread: false
+			expect(sendToThreadStub).to.have.been.calledWith(
+				'main-thread',
+				sinon.match({
+					type: hdbTerms.ITC_EVENT_TYPES.COMPONENT_STATUS_RESPONSE,
+					message: sinon.match({
+						requestId: 'req-123',
+						statuses: sinon.match.array,
+						workerIndex: 1,
+						isMainThread: false,
+					}),
 				})
-			}));
+			);
 
 			// Verify it didn't fall back to broadcast
 			expect(sendItcEventStub).to.not.have.been.called;
@@ -406,10 +414,10 @@ describe('Test hdbChildIpcHandler module', () => {
 			// Stub the dynamic requires
 			const manageThreadsStub = sandbox.stub();
 			manageThreadsStub.getWorkerIndex = getWorkerIndexStub;
-			
+
 			const itcStub = sandbox.stub();
 			itcStub.sendItcEvent = sendItcEventStub;
-			
+
 			const requireStub = sandbox.stub();
 			requireStub.withArgs('../../components/status/index.ts').returns({ internal: componentStatusInternalStub });
 			requireStub.withArgs('../threads/manageThreads.js').returns(manageThreadsStub);
@@ -420,19 +428,22 @@ describe('Test hdbChildIpcHandler module', () => {
 				type: hdbTerms.ITC_EVENT_TYPES.COMPONENT_STATUS_REQUEST,
 				message: {
 					originator: 'worker-1',
-					requestId: 'req-456'
-				}
+					requestId: 'req-456',
+				},
 			};
 
 			await componentStatusRequestHandler(validEvent);
 
 			// Verify response has isMainThread = true
-			expect(sendToThreadStub).to.have.been.calledWith('worker-1', sinon.match({
-				message: sinon.match({
-					isMainThread: true,
-					workerIndex: undefined
+			expect(sendToThreadStub).to.have.been.calledWith(
+				'worker-1',
+				sinon.match({
+					message: sinon.match({
+						isMainThread: true,
+						workerIndex: undefined,
+					}),
 				})
-			}));
+			);
 		});
 
 		it('should fall back to broadcast when direct send fails', async () => {
@@ -442,10 +453,10 @@ describe('Test hdbChildIpcHandler module', () => {
 			// Stub the dynamic requires
 			const manageThreadsStub = sandbox.stub();
 			manageThreadsStub.getWorkerIndex = getWorkerIndexStub;
-			
+
 			const itcStub = sandbox.stub();
 			itcStub.sendItcEvent = sendItcEventStub;
-			
+
 			const requireStub = sandbox.stub();
 			requireStub.withArgs('../../components/status/index.ts').returns({ internal: componentStatusInternalStub });
 			requireStub.withArgs('../threads/manageThreads.js').returns(manageThreadsStub);
@@ -456,35 +467,39 @@ describe('Test hdbChildIpcHandler module', () => {
 				type: hdbTerms.ITC_EVENT_TYPES.COMPONENT_STATUS_REQUEST,
 				message: {
 					originator: 'worker-2',
-					requestId: 'req-789'
-				}
+					requestId: 'req-789',
+				},
 			};
 
 			await componentStatusRequestHandler(validEvent);
 
 			// Verify it tried direct send first
 			expect(sendToThreadStub).to.have.been.calledOnce;
-			
+
 			// Verify it fell back to broadcast
 			expect(sendItcEventStub).to.have.been.calledOnce;
-			expect(sendItcEventStub).to.have.been.calledWith(sinon.match({
-				type: hdbTerms.ITC_EVENT_TYPES.COMPONENT_STATUS_RESPONSE,
-				message: sinon.match({
-					requestId: 'req-789'
+			expect(sendItcEventStub).to.have.been.calledWith(
+				sinon.match({
+					type: hdbTerms.ITC_EVENT_TYPES.COMPONENT_STATUS_RESPONSE,
+					message: sinon.match({
+						requestId: 'req-789',
+					}),
 				})
-			}));
-			
-			expect(log_warn_stub).to.have.been.calledWith('Failed to send direct response to thread worker-2, falling back to broadcast');
+			);
+
+			expect(log_warn_stub).to.have.been.calledWith(
+				'Failed to send direct response to thread worker-2, falling back to broadcast'
+			);
 		});
 
 		it('should fall back to broadcast when sendToThread is not available for originator', async () => {
 			// Stub the dynamic requires
 			const manageThreadsStub = sandbox.stub();
 			manageThreadsStub.getWorkerIndex = getWorkerIndexStub;
-			
+
 			const itcStub = sandbox.stub();
 			itcStub.sendItcEvent = sendItcEventStub;
-			
+
 			const requireStub = sandbox.stub();
 			requireStub.withArgs('../../components/status/index.ts').returns({ internal: componentStatusInternalStub });
 			requireStub.withArgs('../threads/manageThreads.js').returns(manageThreadsStub);
@@ -498,35 +513,45 @@ describe('Test hdbChildIpcHandler module', () => {
 				type: hdbTerms.ITC_EVENT_TYPES.COMPONENT_STATUS_REQUEST,
 				message: {
 					originator: 'unknown-thread-999',
-					requestId: 'req-unknown-thread'
-				}
+					requestId: 'req-unknown-thread',
+				},
 			};
 
 			await componentStatusRequestHandler(validEvent);
 
 			// Verify it tried direct send first
 			expect(sendToThreadStub).to.have.been.calledWith('unknown-thread-999');
-			
+
 			// Verify it fell back to broadcast
 			expect(sendItcEventStub).to.have.been.calledOnce;
-			expect(log_warn_stub).to.have.been.calledWith('Failed to send direct response to thread unknown-thread-999, falling back to broadcast');
+			expect(log_warn_stub).to.have.been.calledWith(
+				'Failed to send direct response to thread unknown-thread-999, falling back to broadcast'
+			);
 		});
 
 		it('should convert Map to array correctly for serialization', async () => {
 			// Setup specific status data
 			const testStatuses = new Map([
 				['auth-component', { status: 'healthy', message: 'Auth OK', lastChecked: new Date('2024-01-01') }],
-				['database-component', { status: 'error', message: 'Connection failed', lastChecked: new Date('2024-01-02'), error: new Error('DB Error') }]
+				[
+					'database-component',
+					{
+						status: 'error',
+						message: 'Connection failed',
+						lastChecked: new Date('2024-01-02'),
+						error: new Error('DB Error'),
+					},
+				],
 			]);
 			mockRegistry.getAllStatuses.returns(testStatuses);
 
 			// Stub the dynamic requires
 			const manageThreadsStub = sandbox.stub();
 			manageThreadsStub.getWorkerIndex = getWorkerIndexStub;
-			
+
 			const itcStub = sandbox.stub();
 			itcStub.sendItcEvent = sendItcEventStub;
-			
+
 			const requireStub = sandbox.stub();
 			requireStub.withArgs('../../components/status/index.ts').returns({ internal: componentStatusInternalStub });
 			requireStub.withArgs('../threads/manageThreads.js').returns(manageThreadsStub);
@@ -537,8 +562,8 @@ describe('Test hdbChildIpcHandler module', () => {
 				type: hdbTerms.ITC_EVENT_TYPES.COMPONENT_STATUS_REQUEST,
 				message: {
 					originator: 'test-thread',
-					requestId: 'req-array-test'
-				}
+					requestId: 'req-array-test',
+				},
 			};
 
 			await componentStatusRequestHandler(validEvent);
@@ -560,10 +585,10 @@ describe('Test hdbChildIpcHandler module', () => {
 			// Stub the dynamic requires
 			const manageThreadsStub = sandbox.stub();
 			manageThreadsStub.getWorkerIndex = getWorkerIndexStub;
-			
+
 			const itcStub = sandbox.stub();
 			itcStub.sendItcEvent = sendItcEventStub;
-			
+
 			const requireStub = sandbox.stub();
 			requireStub.withArgs('../../components/status/index.ts').returns({ internal: componentStatusInternalStub });
 			requireStub.withArgs('../threads/manageThreads.js').returns(manageThreadsStub);
@@ -574,16 +599,19 @@ describe('Test hdbChildIpcHandler module', () => {
 				type: hdbTerms.ITC_EVENT_TYPES.COMPONENT_STATUS_REQUEST,
 				message: {
 					originator: 'error-test-thread',
-					requestId: 'req-error'
-				}
+					requestId: 'req-error',
+				},
 			};
 
 			await componentStatusRequestHandler(validEvent);
 
 			// Verify error was logged
-			expect(log_error_stub).to.have.been.calledWith('Error handling component status request:', sinon.match.instanceOf(Error));
+			expect(log_error_stub).to.have.been.calledWith(
+				'Error handling component status request:',
+				sinon.match.instanceOf(Error)
+			);
 			expect(log_error_stub.firstCall.args[1].message).to.equal('Registry error');
-			
+
 			// Verify no response was sent
 			expect(sendToThreadStub).to.not.have.been.called;
 			expect(sendItcEventStub).to.not.have.been.called;
@@ -592,14 +620,14 @@ describe('Test hdbChildIpcHandler module', () => {
 		it('should fall back to broadcast when originator is explicitly undefined in handler', async () => {
 			// This tests the specific case in the handler where originatorThreadId is undefined
 			// even though the event passes validation (e.g., originator: null or similar edge cases)
-			
+
 			// Stub the dynamic requires
 			const manageThreadsStub = sandbox.stub();
 			manageThreadsStub.getWorkerIndex = getWorkerIndexStub;
-			
+
 			const itcStub = sandbox.stub();
 			itcStub.sendItcEvent = sendItcEventStub;
-			
+
 			const requireStub = sandbox.stub();
 			requireStub.withArgs('../../components/status/index.ts').returns({ internal: componentStatusInternalStub });
 			requireStub.withArgs('../threads/manageThreads.js').returns(manageThreadsStub);
@@ -612,10 +640,10 @@ describe('Test hdbChildIpcHandler module', () => {
 				type: hdbTerms.ITC_EVENT_TYPES.COMPONENT_STATUS_REQUEST,
 				message: {
 					originator: 'valid-but-undefined', // Will be treated as undefined in the condition
-					requestId: 'req-edge-case'
-				}
+					requestId: 'req-edge-case',
+				},
 			};
-			
+
 			// Override the sendToThread behavior to simulate the originator check
 			const originalSendToThread = sendToThreadStub;
 			sendToThreadStub = sandbox.stub().callsFake((threadId, message) => {
@@ -634,7 +662,9 @@ describe('Test hdbChildIpcHandler module', () => {
 			expect(sendItcEventStub).to.have.been.calledOnce;
 			// Note: The actual log message might be the "failed to send" instead of "no originator"
 			// because our originator is technically defined, just the sendToThread fails
-			expect(log_warn_stub).to.have.been.calledWith('Failed to send direct response to thread valid-but-undefined, falling back to broadcast');
+			expect(log_warn_stub).to.have.been.calledWith(
+				'Failed to send direct response to thread valid-but-undefined, falling back to broadcast'
+			);
 		});
 
 		it('should handle empty component status map', async () => {
@@ -644,10 +674,10 @@ describe('Test hdbChildIpcHandler module', () => {
 			// Stub the dynamic requires
 			const manageThreadsStub = sandbox.stub();
 			manageThreadsStub.getWorkerIndex = getWorkerIndexStub;
-			
+
 			const itcStub = sandbox.stub();
 			itcStub.sendItcEvent = sendItcEventStub;
-			
+
 			const requireStub = sandbox.stub();
 			requireStub.withArgs('../../components/status/index.ts').returns({ internal: componentStatusInternalStub });
 			requireStub.withArgs('../threads/manageThreads.js').returns(manageThreadsStub);
@@ -658,8 +688,8 @@ describe('Test hdbChildIpcHandler module', () => {
 				type: hdbTerms.ITC_EVENT_TYPES.COMPONENT_STATUS_REQUEST,
 				message: {
 					originator: 'empty-test',
-					requestId: 'req-empty'
-				}
+					requestId: 'req-empty',
+				},
 			};
 
 			await componentStatusRequestHandler(validEvent);

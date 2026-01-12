@@ -415,7 +415,7 @@ describe('Test common_utils module', () => {
 			assert.equal(cu.autoCastBooleanStrict(42), 42);
 		});
 		it('should leave an object intact', () => {
-			assert.deepEqual(cu.autoCastBooleanStrict({foo: 42}), {foo: 42});
+			assert.deepEqual(cu.autoCastBooleanStrict({ foo: 42 }), { foo: 42 });
 		});
 	});
 

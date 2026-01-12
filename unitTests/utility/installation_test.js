@@ -17,7 +17,9 @@ describe('Test isHdbInstalled function', () => {
 	before(() => {
 		fsStatStub = sandbox.stub(fs, 'statSync');
 		envStub = sandbox.stub(envMangr, 'get');
-		envStub.withArgs(terms.HDB_SETTINGS_NAMES.SETTINGS_PATH_KEY).returns(`harperdb${path.sep}unitTests${path.sep}settings.test`);
+		envStub
+			.withArgs(terms.HDB_SETTINGS_NAMES.SETTINGS_PATH_KEY)
+			.returns(`harperdb${path.sep}unitTests${path.sep}settings.test`);
 		loggerStub = {};
 		logErrorStub = sandbox.stub().callsFake(() => {});
 		loggerStub.error = logErrorStub;

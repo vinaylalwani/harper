@@ -208,10 +208,7 @@ describe('configUtils - applyRuntimeEnvVarConfig', function () {
 			process.env.HARPER_DEFAULT_CONFIG = '{"http":{"port":"invalid"}}';
 			applyRuntimeEnvConfigStub.throws(new Error('Invalid port value'));
 
-			assert.throws(
-				() => applyRuntimeEnvVarConfig(mockConfigDoc, '/test/config.yaml'),
-				/Invalid port value/
-			);
+			assert.throws(() => applyRuntimeEnvVarConfig(mockConfigDoc, '/test/config.yaml'), /Invalid port value/);
 
 			assert.strictEqual(loggerStub.error.called, true);
 			assert.match(loggerStub.error.firstCall.args[0], /Failed to apply runtime env config/);
@@ -240,10 +237,7 @@ describe('configUtils - applyRuntimeEnvVarConfig', function () {
 			process.env.HARPER_DEFAULT_CONFIG = '{"http":{"port":9999}}';
 			YAMLStub.parseDocument.throws(new Error('Invalid YAML structure'));
 
-			assert.throws(
-				() => applyRuntimeEnvVarConfig(mockConfigDoc, '/test/config.yaml'),
-				/Invalid YAML structure/
-			);
+			assert.throws(() => applyRuntimeEnvVarConfig(mockConfigDoc, '/test/config.yaml'), /Invalid YAML structure/);
 
 			assert.strictEqual(loggerStub.error.called, true);
 			assert.match(loggerStub.error.firstCall.args[0], /Failed to apply runtime env config/);
