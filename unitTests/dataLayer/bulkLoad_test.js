@@ -14,7 +14,6 @@ let bulkLoad_rewire = rewire('../../dataLayer/bulkLoad');
 const PermissionResponseObject = require('#js/security/data_objects/PermissionResponseObject');
 const hdb_terms = require('#src/utility/hdbTerms');
 const hdb_utils = require('#js/utility/common_utils');
-const nats_utils = require('#src/server/nats/utility/natsUtils');
 const transact_to_clustering_utils = require('#src/utility/clustering/transactToClusteringUtilities');
 const validator = require('#js/validation/fileLoadValidator');
 const insert = require('#js/dataLayer/insert');

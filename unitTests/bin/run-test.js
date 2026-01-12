@@ -13,7 +13,6 @@ const test_util = require('../test_utils');
 const env_mangr = require('#js/utility/environment/environmentManager');
 const hdb_terms = require('#src/utility/hdbTerms');
 const pm2_utils = require('#js/utility/processManagement/processManagement');
-const nats_config = require('#src/server/nats/utility/natsConfig');
 const child_process = require('child_process');
 const settings_test_file = require('../settingsTestFile');
 const { Worker } = require('node:worker_threads');
@@ -82,7 +81,6 @@ describe('Test run module', () => {
 		test_util.preTestPrep();
 		run_rw = rewire('../../bin/run');
 		log_rw = run_rw.__set__('hdbLogger', logger_fake);
-		sandbox.stub(nats_config, 'generateNatsConfig');
 		env_mangr.setProperty(hdb_terms.CONFIG_PARAMS.LOGGING_ROTATION_ENABLED, false);
 	});
 

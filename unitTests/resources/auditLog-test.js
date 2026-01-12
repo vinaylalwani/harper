@@ -5,8 +5,6 @@ const { table } = require('#src/resources/databases');
 const { setAuditRetention } = require('#src/resources/auditStore');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
 const { transaction } = require('#src/resources/transaction');
-// might want to enable an iteration with NATS being assigned as a source
-//const { setNATSReplicator } = require('#src/server/nats/natsReplicator');
 describe('Audit log', () => {
 	let AuditedTable;
 	let events = [];

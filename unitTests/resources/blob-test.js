@@ -18,8 +18,6 @@ const { pack } = require('msgpackr');
 const { randomBytes } = require('crypto');
 const { transaction } = require('#src/resources/transaction');
 
-// might want to enable an iteration with NATS being assigned as a source
-//const { setNATSReplicator } = require('#src/server/nats/natsReplicator');
 describe('Blob test', () => {
 	let BlobTest;
 	before(async function () {

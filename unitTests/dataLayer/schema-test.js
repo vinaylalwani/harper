@@ -22,7 +22,6 @@ const schema_metadata_validator = require('#js/validation/schemaMetadataValidato
 const util = require('util');
 const { cloneDeep } = require('lodash');
 const harperBridge = require('#js/dataLayer/harperBridge/harperBridge');
-const nats_utils = require('#src/server/nats/utility/natsUtils');
 
 // Rewire is used at times as stubbing alone doesn't work when stubbing a function
 // being called inside another function declared within the same file.
@@ -342,7 +341,6 @@ describe('Test schema module', function () {
 
 		before(() => {
 			sandbox.restore();
-			purge_schema_table_stub = sandbox.stub(nats_utils, 'purgeSchemaTableStreams').resolves();
 			check_exists_stub = sandbox.stub().resolves(true);
 		});
 
@@ -429,7 +427,6 @@ describe('Test schema module', function () {
 		before(() => {
 			bridge_drop_table_stub = sandbox.stub(harperBridge, 'dropTable');
 			schema_val_stub = sandbox.stub(schema_metadata_validator, 'checkSchemaTableExists');
-			purge_table_stream_stub = sandbox.stub(nats_utils, 'purgeTableStream');
 		});
 
 		beforeEach(() => {

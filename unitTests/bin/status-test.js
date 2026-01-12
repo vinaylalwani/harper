@@ -8,7 +8,6 @@ const fs = require('fs-extra');
 const env_mgr = require('#js/utility/environment/environmentManager');
 const sys_info = require('#js/utility/environment/systemInformation');
 const hdb_terms = require('#src/utility/hdbTerms');
-const nats_utils = require('#src/server/nats/utility/natsUtils');
 const user = require('#src/security/user');
 const cluster_status = require('#src/utility/clustering/clusterStatus');
 const installation = require('#src/utility/installation');
@@ -111,10 +110,6 @@ describe('Test status module', () => {
 	};
 	const network_stub = sandbox.stub().resolves(fake_network);
 
-	const fake_nats_connection = {
-		close: () => {},
-	};
-
 	const fake_replication_status = {
 		type: 'cluster-status',
 		connections: [
@@ -152,12 +147,9 @@ describe('Test status module', () => {
 		env_mgr.setProperty(hdb_terms.CONFIG_PARAMS.REPLICATION_HOSTNAME, 'unit-test');
 		read_file_stub = sandbox.stub(fs, 'readFile').resolves('62076');
 		get_hdb_process_info_stub = sandbox.stub(sys_info, 'getHDBProcessInfo').resolves(fake_hdb_process_info);
-		get_server_config_stub = sandbox.stub(nats_utils, 'getServerConfig').returns({ port: 1234 });
 		sandbox.stub(user, 'getClusterUser').resolves({ username: 'unit-t-user', decrypt_hash: '123nifoh24' });
-		sandbox.stub(nats_utils, 'createConnection').resolves(fake_nats_connection);
 		status.__set__('clusterNetwork', network_stub);
 		sandbox.stub(cluster_status, 'clusterStatus').resolves(fake_cluster_status);
-		sandbox.stub(nats_utils, 'closeConnection').resolves();
 		sandbox.stub(installation, 'isHdbInstalled').returns(true);
 		http_request_stub = sandbox
 			.stub(hdb_utils, 'httpRequest')

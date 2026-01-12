@@ -4,25 +4,17 @@ import assert from 'node:assert/strict';
 import { decode } from 'cbor-x';
 import { callOperation } from './utility.js';
 import { setupTestApp } from './setupTestApp.mjs';
-import { get as env_get, setProperty } from '../../utility/environment/environmentManager.js';
+import { get as env_get, setProperty } from '#js/utility/environment/environmentManager';
 import { connect } from 'mqtt';
 import { readFileSync } from 'fs';
-import { start as startMQTT } from '#src/server/mqtt.js';
+import { start as startMQTT } from '#src/server/mqtt';
 import axios from 'axios';
-import { setNATSReplicator, setPublishToStream } from '#src/server/nats/natsReplicator.js';
 describe('test MQTT connections and commands', () => {
 	let available_records;
 	let client, client2;
 	let replicated_published_messages = [];
 	before(async () => {
 		available_records = await setupTestApp();
-		setPublishToStream(
-			(subject, stream, header, message) => {
-				replicated_published_messages.push(message);
-			},
-			() => {}
-		);
-		setNATSReplicator('SimpleRecord', 'data', tables.SimpleRecord);
 
 		client = connect('ws://localhost:9926', {
 			wsOptions: {
