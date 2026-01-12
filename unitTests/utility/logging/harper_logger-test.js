@@ -15,7 +15,7 @@ const harperLoggerModule = require('#js/utility/logging/harper_logger');
 const { createLogger } = harperLoggerModule;
 const { getHttpOptions, handleApplication, logRequest, getRequestId } = require('#src/server/http');
 
-const HARPER_LOGGER_MODULE = '../../../utility/logging/harper_logger';
+const HARPER_LOGGER_MODULE = '#js/utility/logging/harper_logger';
 const LOG_DIR_TEST = 'testLogger';
 const LOG_NAME_TEST = 'hdb.log';
 const LOG_PROCESS_NAME_TEST = 'unit_tests';
