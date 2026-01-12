@@ -13,8 +13,8 @@ const TEST_ENVIRONMENT_NAME = 'hdb_schema';
 const HASH_ATTRIBUTE_NAME = 'name';
 
 const rewire = require('rewire');
-const lmdb_create_schema = rewire('../../../../../dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbCreateSchema');
-const environment_utility = rewire('../../../../../utility/lmdb/environmentUtility');
+const lmdb_create_schema = rewire('#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbCreateSchema');
+const environment_utility = rewire('#js/utility/lmdb/environmentUtility');
 const search_utility = require('#js/utility/lmdb/searchUtility');
 const systemSchema = require('#src/json/systemSchema');
 const assert = require('assert');

@@ -2,7 +2,7 @@
 
 const rewire = require('rewire');
 const test_utils = require('../../../test_utils');
-const insertUpdateValidate = rewire('../../../../dataLayer/harperBridge/bridgeUtility/insertUpdateValidate');
+const insertUpdateValidate = rewire('#js/dataLayer/harperBridge/bridgeUtility/insertUpdateValidate');
 const log = require('#js/utility/logging/harper_logger');
 const chai = require('chai');
 const sinon = require('sinon');

@@ -10,7 +10,7 @@ const sinon = require('sinon');
 const sinon_chai = require('sinon-chai');
 chai.use(sinon_chai);
 const rewire = require('rewire');
-let bulkLoad_rewire = rewire('../../dataLayer/bulkLoad');
+let bulkLoad_rewire = rewire('#js/dataLayer/bulkLoad');
 const PermissionResponseObject = require('#js/security/data_objects/PermissionResponseObject');
 const hdb_terms = require('#src/utility/hdbTerms');
 const hdb_utils = require('#js/utility/common_utils');
@@ -595,7 +595,7 @@ describe('Test bulkLoad.js', () => {
 
 		after(() => {
 			sandbox.restore();
-			bulkLoad_rewire = rewire('../../dataLayer/bulkLoad');
+			bulkLoad_rewire = rewire('#js/dataLayer/bulkLoad');
 			global.hdb_schema = undefined;
 		});
 
@@ -690,7 +690,7 @@ describe('Test bulkLoad.js', () => {
 
 		after(() => {
 			sandbox.restore();
-			bulkLoad_rewire = rewire('../../dataLayer/bulkLoad');
+			bulkLoad_rewire = rewire('#js/dataLayer/bulkLoad');
 		});
 
 		it('Should call papaParse if file is CSV', async () => {
@@ -962,7 +962,7 @@ describe('Test bulkLoad.js', () => {
 
 		after(() => {
 			sandbox.restore();
-			bulkLoad_rewire = rewire('../../dataLayer/bulkLoad');
+			bulkLoad_rewire = rewire('#js/dataLayer/bulkLoad');
 		});
 
 		it('NOMINAL - Should call through and return results', async () => {

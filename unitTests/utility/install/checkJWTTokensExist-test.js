@@ -9,7 +9,7 @@ const assert = require('assert');
 const sinon = require('sinon');
 const sandbox = sinon.createSandbox();
 const rewire = require('rewire');
-const check_jwt_token_exist = rewire('../../../utility/install/checkJWTTokensExist');
+const check_jwt_token_exist = rewire('#js/utility/install/checkJWTTokensExist');
 
 const KEYS_PATH = path.join(test_util.getMockTestPath(), 'keys');
 

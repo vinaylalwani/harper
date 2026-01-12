@@ -9,10 +9,9 @@ const env_mgr = require('#js/utility/environment/environmentManager');
 const sys_info = require('#js/utility/environment/systemInformation');
 const hdb_terms = require('#src/utility/hdbTerms');
 const user = require('#src/security/user');
-const cluster_status = require('#src/utility/clustering/clusterStatus');
 const installation = require('#src/utility/installation');
 const hdb_utils = require('#js/utility/common_utils');
-const status = rewire('../../bin/status');
+const status = rewire('#js/bin/status');
 
 describe('Test status module', () => {
 	const sandbox = sinon.createSandbox();
@@ -147,9 +146,6 @@ describe('Test status module', () => {
 		env_mgr.setProperty(hdb_terms.CONFIG_PARAMS.REPLICATION_HOSTNAME, 'unit-test');
 		read_file_stub = sandbox.stub(fs, 'readFile').resolves('62076');
 		get_hdb_process_info_stub = sandbox.stub(sys_info, 'getHDBProcessInfo').resolves(fake_hdb_process_info);
-		sandbox.stub(user, 'getClusterUser').resolves({ username: 'unit-t-user', decrypt_hash: '123nifoh24' });
-		status.__set__('clusterNetwork', network_stub);
-		sandbox.stub(cluster_status, 'clusterStatus').resolves(fake_cluster_status);
 		sandbox.stub(installation, 'isHdbInstalled').returns(true);
 		http_request_stub = sandbox
 			.stub(hdb_utils, 'httpRequest')
@@ -177,7 +173,6 @@ describe('Test status module', () => {
 		env_mgr.setProperty(hdb_terms.CONFIG_PARAMS.REPLICATION_HOSTNAME, undefined);
 		env_mgr.setProperty(hdb_terms.CONFIG_PARAMS.REPLICATION_URL, undefined);
 		const process_exit_stub = sandbox.stub(process, 'exit');
-		get_hdb_process_info_stub.resolves({ core: [], clustering: [] });
 
 		await status();
 		process_exit_stub.restore();

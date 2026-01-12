@@ -6,7 +6,7 @@ const { expect } = chai;
 
 const rewire = require('rewire');
 const { cloneDeep } = require('lodash');
-const permissionsTranslator_rw = rewire('../../security/permissionsTranslator');
+const permissionsTranslator_rw = rewire('#js/security/permissionsTranslator');
 const { TEST_NON_SU_ROLE, TEST_SCHEMA_DOG_BREED, TEST_TWO_SCHEMAS } = require('../test_data');
 const terms = require('#src/utility/hdbTerms');
 const { TEST_ROLE_PERMS_ERROR, HTTP_STATUS_CODES, TEST_DEFAULT_ERROR_RESP } = require('../commonTestErrors');

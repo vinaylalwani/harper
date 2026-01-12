@@ -6,13 +6,13 @@ const assert = require('assert');
 const fg = require('fast-glob');
 const expect = chai.expect;
 const rewire = require('rewire');
-const directive_4_0_0_rw = rewire('../../../upgrade/directives/4-0-0');
+const directive_4_0_0_rw = rewire('#js/upgrade/directives/4-0-0');
 const config_utils = require('#js/config/configUtils');
 const path = require('path');
 const fs = require('fs-extra');
 const env = require('#js/utility/environment/environmentManager');
 const environment_utility = require('#js/utility/lmdb/environmentUtility');
-const lmdbCreateRecords = rewire('../../../dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbCreateRecords.js');
+const lmdbCreateRecords = rewire('#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbCreateRecords.js');
 const InsertObject = require('#js/dataLayer/InsertObject');
 const logger = require('#js/utility/logging/harper_logger');
 const test_utils = require('#js/unitTests/test_utils');
@@ -24,7 +24,7 @@ const PERSON_ATTRIBUTES = ['id', 'first_name', 'state', 'age', 'alive', 'birth_m
 const keys = require('#js/security/keys');
 const upgrade_prompt = require('#js/upgrade/upgradePrompt');
 
-const upgrade_script = rewire('../../../upgrade/directives/upgrade_scripts/4_0_0_reindex_script');
+const upgrade_script = rewire('#js/upgrade/directives/upgrade_scripts/4_0_0_reindex_script');
 const { insertRecords } = require('#js/utility/lmdb/writeUtility');
 
 const ROOT = 'yourcomputer/hdb';

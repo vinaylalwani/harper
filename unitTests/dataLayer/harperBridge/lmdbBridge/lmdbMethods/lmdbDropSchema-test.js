@@ -13,10 +13,10 @@ const DEV_SCHEMA_PATH = path.join(BASE_PATH, 'dev');
 let test_data = require('../../../../testData');
 
 const rewire = require('rewire');
-const environment_utility = rewire('../../../../../utility/lmdb/environmentUtility');
+const environment_utility = rewire('#js/utility/lmdb/environmentUtility');
 const SearchObject = require('#js/dataLayer/SearchObject');
 const DropAttributeObject = require('#js/dataLayer/DropAttributeObject');
-const lmdb_drop_schema = rewire('../../../../../dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbDropSchema');
+const lmdb_drop_schema = rewire('#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbDropSchema');
 const search_by_value = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbSearchByValue');
 const lmdb_create_schema = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbCreateSchema');
 const lmdb_create_table = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbCreateTable');

@@ -2,7 +2,7 @@
 
 const common = require('#js/utility/lmdb/commonUtility');
 const rewire = require('rewire');
-const rw_common = rewire('../../../utility/lmdb/commonUtility');
+const rw_common = rewire('#js/utility/lmdb/commonUtility');
 const assert = require('assert');
 
 const primitive_check = rw_common.__get__('primitiveCheck');

@@ -24,7 +24,7 @@ describe('Test signalling module', () => {
 		test_utils = require('../test_utils');
 		itc_utils = require('#js/server/threads/itc');
 		send_itc_event_stub = sandbox.stub(itc_utils, 'sendItcEvent');
-		signalling = rewire('../../utility/signalling');
+		signalling = rewire('#js/utility/signalling');
 	});
 
 	afterEach(() => {
@@ -34,7 +34,7 @@ describe('Test signalling module', () => {
 
 	after(() => {
 		sandbox.restore();
-		rewire('../../utility/signalling');
+		rewire('#js/utility/signalling');
 	});
 
 	it('Test signalSchemaChange happy path', () => {

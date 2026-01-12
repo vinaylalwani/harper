@@ -2,7 +2,7 @@
 
 const assert = require('node:assert/strict');
 const rewire = require('rewire');
-const harperConfigEnvVars = rewire('../../config/harperConfigEnvVars.ts');
+const harperConfigEnvVars = rewire('#src/config/harperConfigEnvVars');
 
 // Access internal functions for testing
 const parseConfigEnvVar = harperConfigEnvVars.__get__('parseConfigEnvVar');

@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import sinon from 'sinon';
 import fs from 'fs-extra';
 import { setupTestApp } from '../apiTests/setupTestApp.mjs';
-import { buildRequest, cliOperations } from '../../bin/cliOperations.js';
+import { buildRequest, cliOperations } from '#js/bin/cliOperations';
 
 describe('test CLI operations', () => {
 	let available_records;

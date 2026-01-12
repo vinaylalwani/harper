@@ -7,7 +7,7 @@ const assert = require('assert');
 const fs = require('fs-extra');
 const env_util = require('#js/utility/lmdb/environmentUtility');
 const rewire = require('rewire');
-const environment_utility = rewire('../../../../../utility/lmdb/environmentUtility');
+const environment_utility = rewire('#js/utility/lmdb/environmentUtility');
 const get_table_size = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbGetTableSize');
 
 describe('Test getLMDBStats function', function () {

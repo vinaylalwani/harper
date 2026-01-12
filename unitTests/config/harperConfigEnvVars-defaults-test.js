@@ -6,7 +6,7 @@ const fs = require('fs-extra');
 const path = require('node:path');
 const os = require('node:os');
 
-const harperConfigEnvVars = rewire('../../config/harperConfigEnvVars.ts');
+const harperConfigEnvVars = rewire('#src/config/harperConfigEnvVars.ts');
 const applyRuntimeEnvConfig = harperConfigEnvVars.__get__('applyRuntimeEnvConfig');
 
 describe('HARPER_DEFAULT_CONFIG - true defaults behavior', function () {

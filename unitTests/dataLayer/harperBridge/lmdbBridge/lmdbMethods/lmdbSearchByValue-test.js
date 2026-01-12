@@ -14,7 +14,7 @@ const { orderedArray } = test_utils;
 const test_data = require('../../../../testData');
 
 const rewire = require('rewire');
-const environment_utility = rewire('../../../../../utility/lmdb/environmentUtility');
+const environment_utility = rewire('#js/utility/lmdb/environmentUtility');
 const lmdb_terms = require('#js/utility/lmdb/terms');
 const write_utility = require('#js/utility/lmdb/writeUtility');
 const SearchObject = require('#js/dataLayer/SearchObject');

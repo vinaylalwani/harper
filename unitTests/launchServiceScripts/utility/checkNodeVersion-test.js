@@ -1,7 +1,7 @@
 'use strict';
 
 const rewire = require('rewire');
-const check_node = rewire('../../../launchServiceScripts/utility/checkNodeVersion');
+const check_node = rewire('#js/launchServiceScripts/utility/checkNodeVersion');
 
 const chai = require('chai');
 const { expect } = chai;

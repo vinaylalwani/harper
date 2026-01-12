@@ -9,7 +9,7 @@ const sinon = require('sinon');
 const hdb_term = require('#src/utility/hdbTerms');
 const JobObject = require('#js/server/jobs/JobObject');
 const file_load_validator = require('#js/validation/fileLoadValidator');
-const jobs = rewire('../../../server/jobs/jobs');
+const jobs = rewire('#js/server/jobs/jobs');
 
 const INSERT_RESULT = {
 	message: 'inserted 1 of 1 records',

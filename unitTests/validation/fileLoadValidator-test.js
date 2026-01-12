@@ -10,7 +10,7 @@ chai.use(sinon_chai);
 const fs = require('fs');
 const rewire = require('rewire');
 const validator = require('#js/validation/validationWrapper');
-let file_load_validator = rewire('../../validation/fileLoadValidator');
+let file_load_validator = rewire('#js/validation/fileLoadValidator');
 const common_utils = require('#js/utility/common_utils');
 const log = require('#js/utility/logging/harper_logger');
 const { getDatabases } = require('#src/resources/databases');
@@ -125,7 +125,7 @@ describe('Test fileLoadValidator module', () => {
 
 	after(() => {
 		delete global.hdb_schema['hats'];
-		file_load_validator = rewire('../../validation/fileLoadValidator');
+		file_load_validator = rewire('#js/validation/fileLoadValidator');
 		sinon.restore();
 	});
 

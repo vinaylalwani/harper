@@ -8,10 +8,10 @@ const BASE_PATH = test_utils.getMockLMDBPath();
 const BASE_TRANSACTIONS_PATH = path.join(BASE_PATH, TRANSACTIONS_NAME);
 
 const rewire = require('rewire');
-const environment_utility = rewire('../../../../../utility/lmdb/environmentUtility');
+const environment_utility = rewire('#js/utility/lmdb/environmentUtility');
 const lmdb_create_txn_envs = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbCreateTransactionsAuditEnvironment');
 const lmdb_write_txn = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbWriteTransaction');
-const rw_lmdb_write_txn = rewire('../../../../../dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbWriteTransaction');
+const rw_lmdb_write_txn = rewire('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbWriteTransaction');
 const search_util = require('#js/utility/lmdb/searchUtility');
 
 const env_mngr = require('#js/utility/environment/environmentManager');

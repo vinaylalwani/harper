@@ -13,10 +13,10 @@ const DEV_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, 'dev');
 let test_data = require('../../../../testData');
 
 const rewire = require('rewire');
-const environment_utility = rewire('../../../../../utility/lmdb/environmentUtility');
+const environment_utility = rewire('#js/utility/lmdb/environmentUtility');
 const write_utility = require('#js/utility/lmdb/writeUtility');
 const SearchObject = require('#js/dataLayer/SearchObject');
-const lmdb_search = rewire('../../../../../dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbSearch');
+const lmdb_search = rewire('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbSearch');
 const lmdb_terms = require('#js/utility/lmdb/terms');
 const hdb_terms = require('#src/utility/hdbTerms');
 const LMDB_ERRORS = require('../../../../commonTestErrors').LMDB_ERRORS_ENUM;

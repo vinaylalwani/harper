@@ -23,7 +23,7 @@ describe.skip('Test restartHdb scripts', () => {
 	});
 
 	it('Test reload and then delete are called as expected', async () => {
-		await rewire('../../../utility/scripts/restartHdb');
+		await rewire('#js/utility/scripts/restartHdb');
 		await new Promise((resolve) => setTimeout(resolve, 100));
 		expect(reload_stub.getCall(0).args[0]).to.equal(1);
 		expect(reload_stub.getCall(1).args[0]).to.equal(2);

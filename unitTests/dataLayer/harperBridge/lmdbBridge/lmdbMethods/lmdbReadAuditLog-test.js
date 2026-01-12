@@ -5,7 +5,7 @@ test_utils.preTestPrep();
 const BASE_PATH = test_utils.getMockLMDBPath();
 
 const rewire = require('rewire');
-const environment_utility = rewire('../../../../../utility/lmdb/environmentUtility');
+const environment_utility = rewire('#js/utility/lmdb/environmentUtility');
 const lmdb_create_txn_envs = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbCreateTransactionsAuditEnvironment');
 
 const lmdb_write_txn = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbWriteTransaction');
@@ -30,7 +30,7 @@ const LMDBUpdateTransactionObject = require('#js/dataLayer/harperBridge/lmdbBrid
 const LMDBDeleteTransactionObject = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/LMDBDeleteTransactionObject');
 
 const read_audit_log = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbReadAuditLog');
-const rw_read_audit_log = rewire('../../../../../dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbReadAuditLog');
+const rw_read_audit_log = rewire('#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbReadAuditLog');
 const assert = require('assert');
 
 const CREATE_TABLE_OBJ = new CreateTableObject('dev', 'test', 'id');

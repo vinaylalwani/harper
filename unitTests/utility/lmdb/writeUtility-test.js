@@ -2,8 +2,8 @@
 
 const rewire = require('rewire');
 const common = require('#js/utility/lmdb/commonUtility');
-const writeUtility = rewire('../../../utility/lmdb/writeUtility');
-const environmentUtility = rewire('../../../utility/lmdb/environmentUtility');
+const writeUtility = rewire('#js/utility/lmdb/writeUtility');
+const environmentUtility = rewire('#js/utility/lmdb/environmentUtility');
 const rw_write_validator = writeUtility.__get__('validateWrite');
 const search_util = require('#js/utility/lmdb/searchUtility');
 const assert = require('assert');

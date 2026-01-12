@@ -10,7 +10,7 @@ const assert = require('assert');
 const _ = require('lodash');
 const rewire = require('rewire');
 const op_auth = require('#js/utility/operation_authorization');
-const op_auth_rewire = rewire('../../utility/operation_authorization');
+const op_auth_rewire = rewire('#js/utility/operation_authorization');
 const Permission_rw = op_auth_rewire.__get__('permission');
 const write = require('#js/dataLayer/insert');
 const user = require('#src/security/user');
@@ -24,10 +24,10 @@ const PermissionTableResponseObject = require('#js/security/data_objects/Permiss
 const PermissionAttributeResponseObject = require('#js/security/data_objects/PermissionAttributeResponseObject');
 const { TEST_SCHEMA_OP_ERROR, TEST_OPERATION_AUTH_ERROR } = require('../commonTestErrors');
 
-const serverUtilities_rw = rewire('../../server/serverHelpers/serverUtilities');
+const serverUtilities_rw = rewire('#js/server/serverHelpers/serverUtilities');
 const initializeOperationFunctionMap_rw = serverUtilities_rw.__get__('initializeOperationFunctionMap');
 const OPERATION_MAP = initializeOperationFunctionMap_rw();
-rewire('../../server/serverHelpers/serverUtilities');
+rewire('#js/server/serverHelpers/serverUtilities');
 
 const test_terms = test_utils.COMMON_TEST_TERMS;
 const crud_keys = test_terms.TEST_CRUD_PERM_KEYS;

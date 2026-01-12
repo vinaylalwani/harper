@@ -15,7 +15,7 @@ const DEV_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, 'dev');
 let test_data = require('../../../testData');
 
 const rewire = require('rewire');
-const environment_utility = rewire('../../../../utility/lmdb/environmentUtility');
+const environment_utility = rewire('#js/utility/lmdb/environmentUtility');
 const write_utility = require('#js/utility/lmdb/writeUtility');
 const SearchObject = require('#js/dataLayer/SearchObject');
 const harper_bridge = require('#js/dataLayer/harperBridge/harperBridge');

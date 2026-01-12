@@ -13,11 +13,11 @@ const BASE_TXN_PATH = path.join(BASE_PATH, TRANSACTIONS_NAME);
 let test_data = require('../../../../testData');
 
 const rewire = require('rewire');
-const environment_utility = rewire('../../../../../utility/lmdb/environmentUtility');
+const environment_utility = rewire('#js/utility/lmdb/environmentUtility');
 const SearchObject = require('#js/dataLayer/SearchObject');
 const SearchByHashObject = require('#js/dataLayer/SearchByHashObject');
 const DropAttributeObject = require('#js/dataLayer/DropAttributeObject');
-const lmdb_drop_table = rewire('../../../../../dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbDropTable');
+const lmdb_drop_table = rewire('#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbDropTable');
 const search_by_value = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbSearchByValue');
 const search_by_hash = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbSearchByHash');
 const lmdb_create_schema = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbCreateSchema');

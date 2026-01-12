@@ -3,7 +3,7 @@
 const assert = require('assert');
 const rewire = require('rewire');
 const system_information = require('#js/utility/environment/systemInformation');
-const rw_system_information = rewire('../../../utility/environment/systemInformation');
+const rw_system_information = rewire('#js/utility/environment/systemInformation');
 const SystemInformationOperation = require('#src/utility/environment/SystemInformationOperation');
 const env_mgr = require('#js/utility/environment/environmentManager');
 

@@ -12,7 +12,7 @@ const papa_parse = require('papaparse');
 // try to move to /bin directory so our properties reader doesn't explode.
 test_utils.changeProcessToBinDir();
 const rewire = require('rewire');
-const cu_rewire = rewire('../../utility/common_utils');
+const cu_rewire = rewire('#js/utility/common_utils');
 const upgrade_directive = require('#src/upgrade/UpgradeDirective');
 const { expect } = chai;
 const ALL_SPACES = '     ';

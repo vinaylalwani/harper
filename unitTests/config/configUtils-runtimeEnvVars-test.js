@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const rewire = require('rewire');
 const sinon = require('sinon');
 
-const configUtils = rewire('../../config/configUtils.js');
+const configUtils = rewire('#js/config/configUtils');
 const applyRuntimeEnvVarConfig = configUtils.__get__('applyRuntimeEnvVarConfig');
 
 describe('configUtils - applyRuntimeEnvVarConfig', function () {

@@ -9,7 +9,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const rewire = require('rewire');
 const test_utils = require('../../test_utils');
-const read_log = rewire('../../../utility/logging/readLog');
+const read_log = rewire('#js/utility/logging/readLog');
 const hdb_terms = require('#src/utility/hdbTerms');
 const harper_logger = require('#js/utility/logging/harper_logger');
 

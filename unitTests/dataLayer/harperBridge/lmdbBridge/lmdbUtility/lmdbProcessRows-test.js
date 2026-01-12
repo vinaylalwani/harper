@@ -1,7 +1,7 @@
 'use strict';
 
 const rewire = require('rewire');
-const lmdb_process_rows = rewire('../../../../../dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbProcessRows');
+const lmdb_process_rows = rewire('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbProcessRows');
 const validate_hash_function = lmdb_process_rows.__get__('validateHash');
 const validate_attribute_function = lmdb_process_rows.__get__('validateAttribute');
 const process_rows_function = lmdb_process_rows.__get__('processRows');

@@ -10,7 +10,7 @@ const sinon = require('sinon');
 const { expect } = chai;
 
 const rewire = require('rewire');
-let directivesManager_rw = rewire('../../upgrade/directivesManager');
+let directivesManager_rw = rewire('#js/upgrade/directivesManager');
 const upgrade_directive = require('#src/upgrade/UpgradeDirective');
 const directivesController_stub = require('./directives/directivesControllerStub');
 
@@ -19,7 +19,7 @@ directivesManager_rw.__set__('directivesController', directivesController_stub);
 
 describe('processDirectives Module', function () {
 	after(() => {
-		rewire('../../upgrade/directivesManager');
+		rewire('#js/upgrade/directivesManager');
 	});
 
 	describe('Test processDirectives()', () => {
@@ -51,7 +51,7 @@ describe('processDirectives Module', function () {
 
 		after(() => {
 			sandbox.restore();
-			directivesManager_rw = rewire('../../upgrade/directivesManager');
+			directivesManager_rw = rewire('#js/upgrade/directivesManager');
 			directivesManager_rw.__set__('directivesController', directivesController_stub);
 		});
 

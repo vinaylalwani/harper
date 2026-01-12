@@ -4,10 +4,10 @@ import { assert, expect } from 'chai';
 import axios from 'axios';
 import { decode, encode, DecoderStream } from 'cbor-x';
 import { getVariables } from './utility.js';
-import { setProperty } from '../../utility/environment/environmentManager.js';
+import { setProperty } from '#js/utility/environment/environmentManager';
 import { addThreads, setupTestApp, random } from './setupTestApp.mjs';
 import why_is_node_running from 'why-is-node-still-running';
-import { shutdownWorkers, setTerminateTimeout } from '../../server/threads/manageThreads.js';
+import { shutdownWorkers, setTerminateTimeout } from '#js/server/threads/manageThreads';
 const { authorization, url } = getVariables();
 
 describe('Multi-threaded cache updates', () => {

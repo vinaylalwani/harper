@@ -8,7 +8,7 @@ const sinon_chai = require('sinon-chai');
 chai.use(sinon_chai);
 const harper_logger = require('#js/utility/logging/harper_logger');
 const user_schema = require('#src/security/user');
-const server_itc_handlers = rewire('../../../server/itc/serverHandlers');
+const server_itc_handlers = rewire('#js/server/itc/serverHandlers');
 const job_runner = require('#js/server/jobs/jobRunner');
 const global_schema = require('#js/utility/globalSchema');
 const schema_describe = require('#js/dataLayer/schemaDescribe');
@@ -29,7 +29,7 @@ describe('Test hdbChildIpcHandler module', () => {
 
 	after(() => {
 		sandbox.restore();
-		rewire('../../../server/itc/serverHandlers');
+		rewire('#js/server/itc/serverHandlers');
 	});
 
 	describe('Test server_itc_handlers', () => {

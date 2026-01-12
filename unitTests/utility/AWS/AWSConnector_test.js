@@ -31,7 +31,7 @@ describe('Test AWSConnector module', () => {
 	});
 
 	after(() => {
-		rewire('../../../utility/AWS/AWSConnector');
+		rewire('#js/utility/AWS/AWSConnector');
 	});
 
 	describe('Test getS3AuthObj function', () => {
@@ -40,7 +40,7 @@ describe('Test AWSConnector module', () => {
 		const s3_fail = 'auth fail';
 
 		beforeEach(() => {
-			AWSConnector_rw = rewire('../../../utility/AWS/AWSConnector');
+			AWSConnector_rw = rewire('#js/utility/AWS/AWSConnector');
 		});
 
 		it('should return value from call to new S3 object returned from getS3AuthObj ', async () => {

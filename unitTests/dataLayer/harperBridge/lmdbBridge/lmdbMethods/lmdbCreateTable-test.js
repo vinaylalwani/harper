@@ -10,8 +10,8 @@ const BASE_TEST_PATH = path.join(BASE_PATH, LMDB_TEST_FOLDER_NAME);
 
 const rewire = require('rewire');
 const lmdb_create_schema = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbCreateSchema');
-const lmdb_create_table = rewire('../../../../../dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbCreateTable');
-const environment_utility = rewire('../../../../../utility/lmdb/environmentUtility');
+const lmdb_create_table = rewire('#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbCreateTable');
+const environment_utility = rewire('#js/utility/lmdb/environmentUtility');
 const search_utility = require('#js/utility/lmdb/searchUtility');
 const systemSchema = require('#src/json/systemSchema');
 const env = require('#js/utility/environment/environmentManager');

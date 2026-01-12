@@ -476,7 +476,7 @@ describe('Test serverUtilities.js module ', () => {
 			// );
 			//
 			// info_log_stub.resetBehavior();
-			// rewire('../../../server/serverHelpers/serverUtilities');
+			// rewire('#js/server/serverHelpers/serverUtilities');
 		});
 
 		it('Should handle error returned from operation function caller', async function () {

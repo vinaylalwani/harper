@@ -14,7 +14,7 @@ const test_vers3_1_0 = require('./testDirectives/3-1-0_stub');
 const test_vers4_1_1 = require('./testDirectives/4-1-1_stub');
 
 const rewire = require('rewire');
-const directivesController_rw = rewire('../../../upgrade/directives/directivesController');
+const directivesController_rw = rewire('#js/upgrade/directives/directivesController');
 
 let test_map = new Map();
 test_map.set(test_vers4_1_1.version, test_vers4_1_1);
@@ -32,7 +32,7 @@ describe('directivesController Module', () => {
 	});
 
 	after(function () {
-		rewire('../../../upgrade/directives/directivesController');
+		rewire('#js/upgrade/directives/directivesController');
 	});
 
 	describe('test getSortedVersions()', function () {

@@ -1,10 +1,10 @@
 'use strict';
 
 const rewire = require('rewire');
-const search_util = rewire('../../../utility/lmdb/searchUtility');
+const search_util = rewire('#js/utility/lmdb/searchUtility');
 const common = require('#js/utility/lmdb/commonUtility');
 const fs = require('fs-extra');
-const environment_utility = rewire('../../../utility/lmdb/environmentUtility');
+const environment_utility = rewire('#js/utility/lmdb/environmentUtility');
 const write_utility = require('#js/utility/lmdb/writeUtility');
 const test_utils = require('../../test_utils');
 const path = require('path');

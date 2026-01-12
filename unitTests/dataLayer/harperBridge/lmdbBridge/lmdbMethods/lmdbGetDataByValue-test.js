@@ -13,11 +13,11 @@ const { orderedArray } = test_utils;
 const test_data = require('../../../../testData');
 
 const rewire = require('rewire');
-const environment_utility = rewire('../../../../../utility/lmdb/environmentUtility');
+const environment_utility = rewire('#js/utility/lmdb/environmentUtility');
 const write_utility = require('#js/utility/lmdb/writeUtility');
 const delete_utility = require('#js/utility/lmdb/deleteUtility');
 const SearchObject = require('#js/dataLayer/SearchObject');
-const lmdb_search = rewire('../../../../../dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbGetDataByValue');
+const lmdb_search = rewire('#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbGetDataByValue');
 const common_utils = require('#js/utility/common_utils');
 const hdb_terms = require('#src/utility/hdbTerms');
 const assert = require('assert');
