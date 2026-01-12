@@ -40,13 +40,13 @@ export { operationsServer as hdbServer };
 export { operationsServer as start };
 
 /**
- * Builds a HarperDB server.
+ * Builds a Harper server.
  */
 async function operationsServer(options: ServerOptions & { resources?: Resources }) {
 	try {
 		harperLogger.debug('In Fastify server' + process.cwd());
 		harperLogger.debug(`Running with NODE_ENV set as: ${process.env.NODE_ENV}`);
-		harperLogger.debug(`HarperDB server process ${process.pid} starting up.`);
+		harperLogger.debug(`Harper server process ${process.pid} starting up.`);
 
 		global.clustering_on = false;
 		global.isMaster = cluster.isMaster;
@@ -89,7 +89,7 @@ async function operationsServer(options: ServerOptions & { resources?: Resources
  * Makes sure global values are set and that clustering connections are set/ready before server starts.
  */
 async function setUp() {
-	harperLogger.trace('Configuring HarperDB process.');
+	harperLogger.trace('Configuring Harper process.');
 	globalSchema.setSchemaDataToGlobal();
 	return userSchema.setUsersWithRolesCache();
 }
@@ -127,7 +127,7 @@ export interface OperationResult {
  * This method configures and returns a Fastify server - for either HTTP or HTTPS - based on the provided config settings
  */
 function buildServer(isHttps: boolean, resources: Resources): FastifyInstance {
-	harperLogger.debug(`HarperDB process starting to build ${isHttps ? 'HTTPS' : 'HTTP'} server.`);
+	harperLogger.debug(`Harper process starting to build ${isHttps ? 'HTTPS' : 'HTTP'} server.`);
 	const serverOpts = getServerOptions(isHttps);
 
 	const app = fastify(serverOpts);
@@ -165,7 +165,7 @@ function buildServer(isHttps: boolean, resources: Resources): FastifyInstance {
 	registerContentHandlers(app);
 
 	// Add a simple health check
-	app.get('/health', () => 'HarperDB is running.');
+	app.get('/health', () => 'Harper is running.');
 
 	// Add a top-level GET handler for browsers.
 	app.register(fastifyStatic, { root: guidePath.join(PACKAGE_ROOT, 'studio/web') });
@@ -189,7 +189,7 @@ function buildServer(isHttps: boolean, resources: Resources): FastifyInstance {
 		handler
 	);
 
-	harperLogger.debug(`HarperDB process starting up ${isHttps ? 'HTTPS' : 'HTTP'} server listener.`);
+	harperLogger.debug(`Harper process starting up ${isHttps ? 'HTTPS' : 'HTTP'} server listener.`);
 
 	return app;
 }

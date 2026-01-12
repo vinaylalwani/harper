@@ -23,7 +23,7 @@ const routeFolders = new Set();
  * This is the entry point for the fastify route autoloader plugin. This plugin loads JS modules from provided path
  * (configurable) and gives them access to the fastify server, so they can register route handlers. This builds a
  * fastify server instance on-demand, and registers it with the main http access point. Prior to 4.2 this (and static)
- * were basically the only loaders for HarperDB applications, and this supports all legacy custom functions that rely
+ * were basically the only loaders for Harper applications, and this supports all legacy custom functions that rely
  * on fastify routes. Fastify's performance is not as good as our native HTTP handling, so generally this isn't the
  * first choice for new applications where performance is a priority, but certainly is a good option for anyone who
  * likes and/or is familiar with fastify and wants to use its plugins.

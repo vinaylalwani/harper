@@ -12,7 +12,7 @@ const { NON_REPLICATING_SYSTEM_TABLES } = require('../resources/databases.ts');
 module.exports = mountHdb;
 
 async function mountHdb(hdbPath) {
-	hdbLogger.trace('Mounting HarperDB');
+	hdbLogger.trace('Mounting Harper');
 
 	makeDirectory(hdbPath);
 	makeDirectory(path.join(hdbPath, 'backup'));

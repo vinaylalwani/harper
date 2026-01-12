@@ -9,7 +9,7 @@ const { installApplications } = require('../components/Application.ts');
 
 let loadedComponents = new Map();
 /**
- * This is main entry point for loading the main set of global server modules that power HarperDB.
+ * This is main entry point for loading the main set of global server modules that power Harper.
  * @returns {Promise<void>}
  */
 async function loadRootComponents(isWorkerThread = false) {
@@ -24,7 +24,7 @@ async function loadRootComponents(isWorkerThread = false) {
 	resources.isWorker = isWorkerThread;
 
 	await loadCertificates();
-	// the HarperDB root component
+	// the Harper root component
 	await loadComponent(dirname(configUtils.getConfigFilePath()), resources, 'hdb', true, loadedComponents);
 	// once the global plugins are loaded, we now load all the CF and run applications (and their components)
 	await loadComponentDirectories(loadedComponents, resources);

@@ -20,9 +20,9 @@ const EXTENSION_TYPES = {
 };
 
 /**
- * This is the main class that can be extended for any resource in HarperDB and provides the essential reusable
+ * This is the main class that can be extended for any resource in Harper and provides the essential reusable
  * uniform interface for interacting with data, defining the API for providing data (data sources) and for consuming
- * data. This interface is used pervasively in HarperDB and is implemented by database tables and can be used to define
+ * data. This interface is used pervasively in Harper and is implemented by database tables and can be used to define
  * sources for caching, real-data sources for messaging protocols, and RESTful endpoints, as well as any other types of
  * data aggregation, processing, or monitoring.
  *

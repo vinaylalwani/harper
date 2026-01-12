@@ -191,7 +191,7 @@ async function getVersionUpdateInfo() {
 					if (await forceDowngradePrompt(new UpgradeObject(dataVersion, upgradeVersion))) {
 						await insertHdbUpgradeInfo(upgradeVersion.toString());
 					} else {
-						console.log('Cancelled downgrade, closing HarperDB');
+						console.log('Cancelled downgrade, closing Harper');
 						process.exit(0);
 					}
 				}
@@ -217,7 +217,7 @@ async function getVersionUpdateInfo() {
 		// If we get here they are running on an upgraded version that doesn't require any upgrade directives
 		if (hdbUtils.compareVersions(newUpgradeObj.data_version.toString(), newUpgradeObj.upgrade_version.toString()) < 0) {
 			await insertHdbUpgradeInfo(newUpgradeObj.upgrade_version);
-			log.notify(`HarperDB running on upgraded version: ${newUpgradeObj.upgrade_version}`);
+			log.notify(`Harper running on upgraded version: ${newUpgradeObj.upgrade_version}`);
 		}
 	} catch (err) {
 		log.fatal('Error while trying to evaluate the state of hdb data and the installed hdb version');
@@ -233,7 +233,7 @@ async function getVersionUpdateInfo() {
  */
 function checkIfInstallIsSupported(dataVNum) {
 	const errMsg =
-		'You are attempting to upgrade from an old instance of HarperDB that is no longer supported. ' +
+		'You are attempting to upgrade from an old instance of Harper that is no longer supported. ' +
 		'In order to upgrade to this version, you must do a fresh install. If you need support, ' +
 		`please contact ${hdbTerms.HDB_SUPPORT_ADDRESS}`;
 

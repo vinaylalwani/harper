@@ -106,7 +106,7 @@ function expectedRestartOfChildren() {
 	}
 }
 /**
- * To restart HarperDB we use processManagement to fork a process and then call restart from that process.
+ * To restart Harper we use processManagement to fork a process and then call restart from that process.
  * We do this because we were seeing random errors when HDB was calling restart on itself.
  * @returns {Promise<void>}
  */
@@ -165,8 +165,8 @@ async function startService(serviceName, noKill = false) {
 }
 
 /**
- * Reads the HarperDB PID file and returns the PID as a number.
- * @param {string} pidFile - The path to the HarperDB PID file
+ * Reads the Harper PID file and returns the PID as a number.
+ * @param {string} pidFile - The path to the Harper PID file
  * @returns {number|null} - The PID as a number, or null if the file is not found or cannot be read
  */
 function readPidFile(pidFile) {

@@ -33,7 +33,7 @@ async function readTransactionLog(req) {
 		throw handleHDBError(new Error(), invalidSchemaTableMsg, HTTP_STATUS_CODES.NOT_FOUND, undefined, undefined, true);
 	}
 
-	log.info('Reading HarperDB logs used by Plexus');
+	log.info('Reading Harper logs used by Plexus');
 
 	if (req.from || req.to) {
 		req.search_type = 'timestamp';

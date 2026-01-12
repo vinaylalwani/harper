@@ -15,7 +15,7 @@ const path = require('node:path');
 const { unlinkSync } = require('node:fs');
 envMgr.initSync();
 
-const RESTART_RESPONSE = `Restarting HarperDB. This may take up to ${hdbTerms.RESTART_TIMEOUT_MS / 1000} seconds.`;
+const RESTART_RESPONSE = `Restarting Harper. This may take up to ${hdbTerms.RESTART_TIMEOUT_MS / 1000} seconds.`;
 const INVALID_SERVICE_ERR = 'Invalid service';
 
 let calledFromCli;
@@ -35,9 +35,8 @@ if (isMainThread) {
 }
 
 /**
- * Restart HarperDB.
- * In PM2 mode HarperDB, Leaf and Hub servers are managed by PM2. Function will use PM2 to restart these three processes.
- * In good old regular mode (PM2 is nowhere to be seen) it will restart all the child threads and the hub and leaf server processes.
+ * Restart Harper.
+ * It will restart all the child threads and the hub and leaf server processes.
  * @param req
  * @returns {Promise<string>}
  */

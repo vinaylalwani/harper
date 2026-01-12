@@ -29,7 +29,7 @@ module.exports = {
 };
 
 /**
- * Runs the upgrade directives, if needed, for an updated version of HarperDB.
+ * Runs the upgrade directives, if needed, for an updated version of Harper.
  *
  * @param upgradeObj - optional
  * @returns {Promise<void>}
@@ -53,12 +53,12 @@ async function upgrade(upgradeObj) {
 	if (!hdbUpgradeInfo) {
 		hdbUpgradeInfo = await hdbInfoController.getVersionUpdateInfo();
 		if (!hdbUpgradeInfo) {
-			console.log('HarperDB version is current');
+			console.log('Harper version is current');
 			process.exit(0);
 		}
 	}
 
-	printToLogAndConsole(`This version of HarperDB is ${packageJson.version}`, hdbTerms.LOG_LEVELS.INFO);
+	printToLogAndConsole(`This version of Harper is ${packageJson.version}`, hdbTerms.LOG_LEVELS.INFO);
 
 	//The upgrade version should always be included in the hdbUpgradeInfo object returned from the getVersion function
 	// above but testing for it and using the version from package.json just in case it is not
@@ -84,7 +84,7 @@ async function upgrade(upgradeObj) {
 	}
 
 	if (!startUpgrade) {
-		console.log('Cancelled upgrade, closing HarperDB');
+		console.log('Cancelled upgrade, closing Harper');
 		process.exit(exitCode);
 	}
 
@@ -93,7 +93,7 @@ async function upgrade(upgradeObj) {
 	await runUpgrade(hdbUpgradeInfo);
 
 	printToLogAndConsole(
-		`HarperDB was successfully upgraded to version ${hdbUpgradeInfo[UPGRADE_VERSION]}`,
+		`Harper was successfully upgraded to version ${hdbUpgradeInfo[UPGRADE_VERSION]}`,
 		hdbTerms.LOG_LEVELS.INFO
 	);
 }

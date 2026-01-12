@@ -419,7 +419,7 @@ async function deployComponent(req) {
 	let response = await server.replication.replicateOperation(req);
 	if (req.restart === true) {
 		manageThreads.restartWorkers('http');
-		response.message = `Successfully deployed: ${application.name}, restarting HarperDB`;
+		response.message = `Successfully deployed: ${application.name}, restarting Harper`;
 	} else if (rollingRestart) {
 		const serverUtilities = require('../server/serverHelpers/serverUtilities.ts');
 		const jobResponse = await serverUtilities.executeJob({
@@ -429,7 +429,7 @@ async function deployComponent(req) {
 		});
 
 		response.restartJobId = jobResponse.job_id;
-		response.message = `Successfully deployed: ${application.name}, restarting HarperDB`;
+		response.message = `Successfully deployed: ${application.name}, restarting Harper`;
 	} else response.message = `Successfully deployed: ${application.name}`;
 
 	return response;
@@ -631,7 +631,7 @@ async function dropComponent(req) {
 	let response = await server.replication.replicateOperation(req);
 	if (req.restart === true) {
 		manageThreads.restartWorkers('http');
-		response.message = `Successfully dropped: ${projectPath}, restarting HarperDB`;
+		response.message = `Successfully dropped: ${projectPath}, restarting Harper`;
 	} else response.message = `Successfully dropped: ${projectPath}`;
 	return response;
 }

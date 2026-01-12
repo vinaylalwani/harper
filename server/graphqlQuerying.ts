@@ -88,7 +88,7 @@ function processValueNode(valueNode: graphql.ValueNode, resolvedVariables: Map<s
 				{}
 			);
 		case graphql.Kind.LIST:
-		// No longer supporting lists as values, as they are not supported by HarperDB.
+		// No longer supporting lists as values, as they are not supported by Harper.
 		// return valueNode.values.map((valueNode) => processValueNode(valueNode, resolvedVariables));
 		// eslint-disable-next-line no-fallthrough
 		case graphql.Kind.ENUM:
@@ -167,7 +167,7 @@ function processObjectFieldNode(
 		case graphql.Kind.OBJECT:
 			return processObjectValueNode(objectFieldNode.value, attributes, resolvedVariables);
 		case graphql.Kind.LIST:
-		// No longer supporting lists as values, as they are not supported by HarperDB.
+		// No longer supporting lists as values, as they are not supported by Harper.
 		// return {
 		// 	attribute: attributes,
 		// 	value: objectFieldNode.value.values.map((valueNode) => processValueNode(valueNode, resolvedVariables)),
@@ -218,7 +218,7 @@ function processArgumentNode(argumentNode: graphql.ArgumentNode, resolvedVariabl
 		case graphql.Kind.OBJECT:
 			return processObjectValueNode(argumentNode.value, [argumentNode.name.value], resolvedVariables);
 		case graphql.Kind.LIST:
-		// No longer supporting lists as values, as they are not supported by HarperDB.
+		// No longer supporting lists as values, as they are not supported by Harper.
 		// return {
 		// 	attribute: argumentNode.name.value,
 		// 	value: argumentNode.value.values.map((valueNode) => processValueNode(valueNode, resolvedVariables)),
@@ -235,7 +235,7 @@ function processArgumentNode(argumentNode: graphql.ArgumentNode, resolvedVariabl
  *
  * We support two querying forms:
  * 1. Short form: direct attribute and value matching
- * 2. (TODO) Long form: HarperDB Resource Query API
+ * 2. (TODO) Long form: Harper Resource Query API
  *
  * This method should return an array that is assigned to the top level `conditions` field of the query.
  */
@@ -296,8 +296,8 @@ function buildSelectQuery(
 
 /**
  * This is the main execution function for the GraphQL handler.
- * Queries must use HarperDB Resources in the top-level selection set.
- * This function maps those top-level selections to HarperDB Resources, builds a query, and executes the search operation.
+ * Queries must use Harper Resources in the top-level selection set.
+ * This function maps those top-level selections to Harper Resources, builds a query, and executes the search operation.
  * Results are returned as a tuple with the selection (Resource) name and the array of results.
  */
 async function processFieldNode(
@@ -354,7 +354,7 @@ function processConstValueNode(constValueNode: graphql.ConstValueNode) {
 				{}
 			);
 		case graphql.Kind.LIST:
-		// No longer supporting lists as values, as they are not supported by HarperDB.
+		// No longer supporting lists as values, as they are not supported by Harper.
 		// return constValueNode.values.map((currentNode) => processConstValueNode(currentNode));
 		// eslint-disable-next-line no-fallthrough
 		case graphql.Kind.ENUM:
@@ -405,7 +405,7 @@ function resolveVariables(
 /**
  * Executes a GraphQL operation via the OperationDefinitionNode.
  * It starts by resolving variables, then iterating over the top level selections
- * and executing HarperDB search queries using the relative Resources.
+ * and executing Harper search queries using the relative Resources.
  */
 async function executeOperation(
 	operationNode: graphql.OperationDefinitionNode,
@@ -430,7 +430,7 @@ async function executeOperation(
 	const resolvedVariables = resolveVariables(operationNode.variableDefinitions, variables);
 
 	// This is the top level of a query or mutation.
-	// Due to the constraints of our system, users must use HarperDB Resources in the selection set.
+	// Due to the constraints of our system, users must use Harper Resources in the selection set.
 	// Multiple resources can be queried in a single operation and any attribute of a resource can be selected.
 	const results = await Promise.all(
 		fillInFragments(operationNode.selectionSet, fragments).map((fieldNode) =>
@@ -467,12 +467,12 @@ async function resolver({ query, variables = {}, operationName }: RequestParams,
 		// If the document contains only one operation, it can be unnamed. And if that operation has no variables or directives, it can be a shorthand query (omitting the `query` keyword).
 		// Luckily, the AST handles this for us. The definitionNode will have `operation` set to `query` if it is an unnamed or shorthand query. And the `name` property will be undefined.
 
-		// This automatic resolver can only match query/field names to existing HarperDB Resources.
-		// All queries, named or unnamed, must use HarperDB Resources in the selection set. For example, all three of the following queries are identical (aside from their name):
+		// This automatic resolver can only match query/field names to existing Harper Resources.
+		// All queries, named or unnamed, must use Harper Resources in the selection set. For example, all three of the following queries are identical (aside from their name):
 		// 1. `{ Dog { name breed } }` (shorthand query)
 		// 2. `query { Dog { name breed } }` (unnamed query)
 		// 3. `query GetDogs { Dog { name breed } }` (named query)
-		// We must be careful not to conflate the query name with the HarperDB Resource name. The query name is only used to differentiate multiple queries in the same document.
+		// We must be careful not to conflate the query name with the Harper Resource name. The query name is only used to differentiate multiple queries in the same document.
 		// So if the query is `query Dog { name breed }`, we should error.
 		// (This is a pattern we _could_ support, but it may make the resolution process more complex.)
 
@@ -521,7 +521,7 @@ async function resolver({ query, variables = {}, operationName }: RequestParams,
 	}
 
 	// This is where our implementation diverges from the spec.
-	// We will not be executing the operation as specified (using provided GraphQL resolvers), but instead using a custom resolution algorithm based on HarperDB resources.
+	// We will not be executing the operation as specified (using provided GraphQL resolvers), but instead using a custom resolution algorithm based on Harper resources.
 	const responseBody = await executeOperation(operation, variables, fragments, request);
 
 	return {
