@@ -7,7 +7,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 require('../test_utils');
 const chai = require('chai');
-const chaiAsPromised = require('chai-as-promised');
+const chaiAsPromised = require('chai-as-promised').default;
 chai.use(chaiAsPromised);
 const { expect } = chai;
 const sinon = require('sinon');

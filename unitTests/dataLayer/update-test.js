@@ -9,7 +9,6 @@ const sql = require('#js/sqlTranslator/index');
 const update = rewire('#js/dataLayer/update');
 const insert = require('#js/dataLayer/insert');
 const test_utils = require('../test_utils');
-const transact_to_clustering_utilities = require('#src/utility/clustering/transactToClusteringUtilities');
 
 describe('Test update module', () => {
 	const sandbox = sinon.createSandbox();
@@ -28,9 +27,6 @@ describe('Test update module', () => {
 
 	describe('Tests update function', () => {
 		const p_search_stub = sandbox.stub();
-		const transaction_stub = {
-			writeTransaction: (schema, table, callback) => callback(),
-		};
 		const write_stub = {
 			flush: () => {},
 		};
@@ -39,7 +35,6 @@ describe('Test update module', () => {
 		let p_search_rw;
 		let update_records_rw;
 		let alasql_parse_spy;
-		let transaction_rw;
 		let write_rw;
 
 		const fake_table_info = {
@@ -81,7 +76,6 @@ describe('Test update module', () => {
 		const p_get_table_schema_stub = sandbox.stub().resolves(fake_table_info);
 
 		before(() => {
-			transaction_rw = update.__set__('transaction', transaction_stub);
 			p_get_table_schema_rw = update.__set__('pGetTableSchema', p_get_table_schema_stub);
 			p_search_rw = update.__set__('pSearch', p_search_stub);
 			update_records_rw = update.__set__('updateRecords', update_records_stub);
@@ -94,7 +88,6 @@ describe('Test update module', () => {
 			p_search_rw();
 			update_records_rw();
 			write_rw();
-			transaction_rw();
 		});
 
 		afterEach(() => {

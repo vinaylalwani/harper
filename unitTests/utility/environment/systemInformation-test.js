@@ -4,7 +4,7 @@ const assert = require('assert');
 const rewire = require('rewire');
 const system_information = require('#js/utility/environment/systemInformation');
 const rw_system_information = rewire('#js/utility/environment/systemInformation');
-const SystemInformationOperation = require('#src/utility/environment/SystemInformationOperation');
+const SystemInformationOperation = require('#js/utility/environment/SystemInformationObject');
 const env_mgr = require('#js/utility/environment/environmentManager');
 
 const TableSizeObject = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/TableSizeObject');

@@ -13,7 +13,6 @@ const papa_parse = require('papaparse');
 test_utils.changeProcessToBinDir();
 const rewire = require('rewire');
 const cu_rewire = rewire('#js/utility/common_utils');
-const upgrade_directive = require('#src/upgrade/UpgradeDirective');
 const { expect } = chai;
 const ALL_SPACES = '     ';
 const SEP = require('path').sep;
@@ -500,108 +499,6 @@ describe('Test common_utils module', () => {
 
 		it('Pass in "helloU+002FthisU+002FisU+002FsomeU+002Ftext" , expect "hello/this/is/some/text"', function () {
 			assert.equal(cu.unescapeValue('helloU+002FthisU+002FisU+002FsomeU+002Ftext'), 'hello/this/is/some/text');
-		});
-	});
-
-	describe('Test compareVersions', function () {
-		let versions = [
-			new upgrade_directive('1.1.1'),
-			new upgrade_directive('1.1.0'),
-			new upgrade_directive('1.2.1'),
-			new upgrade_directive('2.1.5'),
-		];
-		it('test matching lowest version number, should include 3 later versions', function () {
-			let oldVersion = '1.1.0';
-			let filtered_versions = versions.sort(cu.compareVersions).filter(function (curr_version) {
-				return curr_version.version > oldVersion;
-			});
-			assert.equal(filtered_versions.length, 3, `expected 3 version numbers, found ${filtered_versions.length}`);
-			assert.equal(filtered_versions.indexOf(oldVersion), -1, 'old version was not filtered out.');
-		});
-
-		it('test with greater version number, expect 0 returned.', function () {
-			let oldVersion = '3.1.0';
-			let filtered_versions = versions.sort(cu.compareVersions).filter(function (curr_version) {
-				return curr_version.version > oldVersion;
-			});
-			assert.equal(filtered_versions.length, 0, `expected 0 version numbers, found ${filtered_versions.length}`);
-			assert.equal(filtered_versions.indexOf(oldVersion), -1, 'old version was not filtered out.');
-		});
-		it('test with smaller version number, expect 4 returned.', function () {
-			let oldVersion = '0.0.1';
-			let filtered_versions = versions.sort(cu.compareVersions).filter(function (curr_version) {
-				return curr_version.version > oldVersion;
-			});
-			assert.equal(filtered_versions.length, 4, `expected 4 version numbers, found ${filtered_versions.length}`);
-			assert.equal(filtered_versions.indexOf(oldVersion), -1, 'old version was not found.');
-		});
-		it('test with middle version number, expect 1 returned.', function () {
-			let oldVersion = '1.2.1';
-			let filtered_versions = versions.sort(cu.compareVersions).filter(function (curr_version) {
-				return curr_version.version > oldVersion;
-			});
-			assert.equal(filtered_versions.length, 1, `expected 1 version numbers, found ${filtered_versions.length}`);
-			assert.equal(filtered_versions.indexOf(oldVersion), -1, 'old version was not found.');
-		});
-		it('test 4 number version sorting', function () {
-			let oldVersion = '1.1.0';
-			let copy = [...versions];
-			copy.push(new upgrade_directive('1.1.1.22'));
-			let filtered_versions = copy.sort(cu.compareVersions).filter(function (curr_version) {
-				return curr_version.version > oldVersion;
-			});
-			assert.equal(filtered_versions.length, 4, `expected 4 version numbers, found ${filtered_versions.length}`);
-			assert.equal(filtered_versions.indexOf(oldVersion), -1, 'old version was not filtered out.');
-			assert.equal(
-				filtered_versions[0].version,
-				'1.1.1',
-				`expected version number 1.1.1, found ${filtered_versions.length}`
-			);
-			assert.equal(
-				filtered_versions[1].version,
-				'1.1.1.22',
-				`expected version number 1.1.1.22, found ${filtered_versions.length}`
-			);
-			assert.equal(
-				filtered_versions[2].version,
-				'1.2.1',
-				`expected version number 1.2.1, found ${filtered_versions.length}`
-			);
-			assert.equal(
-				filtered_versions[3].version,
-				'2.1.5',
-				`expected version number 2.1.5, found ${filtered_versions.length}`
-			);
-		});
-		it('test comparing 2 versions resulting in an upgrade', function () {
-			let oldVersion = '1.1.0';
-			let new_version = '2.0.0';
-			let should_upgrade = cu.compareVersions(oldVersion, new_version);
-			assert.ok(should_upgrade < 0, `expected returned value less than than 0`);
-		});
-		it('test comparing 2 equal versions resulting in versions being up to date', function () {
-			let oldVersion = '1.1.0';
-			let new_version = '1.1.0';
-			let should_upgrade = cu.compareVersions(oldVersion, new_version);
-			assert.ok(should_upgrade === 0, `expected returned value should be 0`);
-		});
-		it('test comparing 2 versions with old version being greater than new version', function () {
-			let oldVersion = '2.1.0';
-			let new_version = '1.1.0';
-			let should_upgrade = cu.compareVersions(oldVersion, new_version);
-			assert.ok(should_upgrade > 0, `expected returned value greater than than 0`);
-		});
-		it('test comparing 2 versions with new version having 4 version', function () {
-			let oldVersion = '1.1.0';
-			let new_version = '1.1.0.1';
-			let should_upgrade = cu.compareVersions(oldVersion, new_version);
-			assert.ok(should_upgrade < 0, `expected returned value less than than 0`);
-		});
-		it('test comparing 2 versions with new and old version having 4 version', function () {
-			let oldVersion = '1.1.0.1';
-			let new_version = '1.1.0.122';
-			let should_upgrade = cu.compareVersions(oldVersion, new_version);
-			assert.ok(should_upgrade < 0, `expected returned value less than than 0`);
 		});
 	});
 

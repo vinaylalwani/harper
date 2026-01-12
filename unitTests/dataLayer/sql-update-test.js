@@ -1,6 +1,6 @@
 'use strict';
 
-const { evaluateSQL } = require('#src/sqlTranslator');
+const { evaluateSQL } = require('#js/sqlTranslator/index');
 const promisify = require('util').promisify;
 const sql_test_utils = require('../sqlTestUtils');
 const { setupCSVSqlData, cleanupCSVData, sqlIntegrationData } = sql_test_utils;
