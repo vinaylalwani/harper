@@ -4,8 +4,9 @@ const assert = require('assert');
 const rewire = require('rewire');
 const system_information = require('#js/utility/environment/systemInformation');
 const rw_system_information = rewire('#js/utility/environment/systemInformation');
-const SystemInformationOperation = require('#js/utility/environment/SystemInformationObject');
 const env_mgr = require('#js/utility/environment/environmentManager');
+
+const { SystemInformationRequest } = system_information;
 
 const TableSizeObject = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/TableSizeObject');
 
@@ -409,12 +410,12 @@ describe('test systemInformation module', () => {
 		});
 
 		EXPECTED_PROPERTIES.harperdb_processes.forEach((property) => {
-			assert(results.hasOwnProperty(property));
+			assert(results.hasOwnProperty(property), `expected property "${property}" not found in ${JSON.stringify(results)}`);
 		});
 	});
 
 	it('test systemInformation function fetch all attributes', async () => {
-		let op = new SystemInformationOperation();
+		let op = new SystemInformationRequest();
 		let results = await rw_system_information.systemInformation(op);
 
 		EXPECTED_PROPERTIES.all.forEach((property) => {
@@ -425,22 +426,22 @@ describe('test systemInformation module', () => {
 	it('test systemInformation function fetch some attributes', async () => {
 		let expected_attributes = ['time', 'memory'];
 
-		let op = new SystemInformationOperation(expected_attributes);
+		let op = new SystemInformationRequest(expected_attributes);
 		let results = await rw_system_information.systemInformation(op);
 
-		assert(results.time !== undefined);
-		assert(results.memory !== undefined);
-		assert(results.system === undefined);
-		assert(results.cpu === undefined);
-		assert(results.disk === undefined);
-		assert(results.network === undefined);
-		assert(results.harperdb_processes === undefined);
+		assert(results.time !== undefined, `results.time should be defined but it is ${JSON.stringify(results.time)}`);
+		assert(results.memory !== undefined, `results.memory should be defined but it is ${JSON.stringify(results.memory)}`);
+		assert(results.system === undefined, `results.system should be undefined but it is ${JSON.stringify(results.system)}`);
+		assert(results.cpu === undefined, `results.cpu should be undefined but it is ${JSON.stringify(results.cpu)}`);
+		assert(results.disk === undefined, `results.disk should be undefined but it is ${JSON.stringify(results.disk)}`);
+		assert(results.network === undefined, `results.network should be undefined but it is ${JSON.stringify(results.network)}`);
+		assert(results.harperdb_processes === undefined, `results.harperdb_processes should be undefined but it is ${JSON.stringify(results.harperdb_processes)}`);
 	});
 
 	it('test systemInformation function fetch all of the attributes', async () => {
 		let expected_attributes = EXPECTED_PROPERTIES.all;
 
-		let op = new SystemInformationOperation(expected_attributes);
+		let op = new SystemInformationRequest(expected_attributes);
 		let results = await rw_system_information.systemInformation(op);
 
 		EXPECTED_PROPERTIES.all.forEach((property) => {
