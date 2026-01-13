@@ -266,35 +266,7 @@ describe('Test serverUtilities.js module ', () => {
 			assert.deepStrictEqual(result.job_operation_function, undefined);
 		});
 
-		it('test ADD_NODE', () => {
-			let result = serverUtilities.getOperationFunction({ operation: 'add_node' });
-
-			assert.deepStrictEqual(result.operation_function.name, 'addNode');
-			assert.deepStrictEqual(result.job_operation_function, undefined);
-		});
-
-		it('test UPDATE_NODE', () => {
-			let result = serverUtilities.getOperationFunction({ operation: 'update_node' });
-
-			assert.deepStrictEqual(result.operation_function.name, 'updateNode');
-			assert.deepStrictEqual(result.job_operation_function, undefined);
-		});
-
-		it('test REMOVE_NODE', () => {
-			let result = serverUtilities.getOperationFunction({ operation: 'remove_node' });
-
-			assert.deepStrictEqual(result.operation_function.name, 'removeNode');
-			assert.deepStrictEqual(result.job_operation_function, undefined);
-		});
-
-		it('test CONFIGURE_CLUSTER', () => {
-			let result = serverUtilities.getOperationFunction({ operation: 'configure_cluster' });
-
-			assert.deepStrictEqual(result.operation_function.name, 'configureCluster');
-			assert.deepStrictEqual(result.job_operation_function, undefined);
-		});
-
-		it('test SET_CONGIGURATION', () => {
+		it('test SET_CONFIGURATION', () => {
 			let result = serverUtilities.getOperationFunction({ operation: 'set_configuration' });
 
 			assert.deepStrictEqual(result.operation_function.name, 'setConfiguration');

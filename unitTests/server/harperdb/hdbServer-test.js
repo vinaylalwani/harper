@@ -24,7 +24,7 @@ const config_utils = require('#js/config/configUtils');
 require('#js/server/threads/threadServer');
 
 const { CONFIG_PARAMS } = require('#src/utility/hdbTerms');
-const HDB_SERVER_PATH = '../../../server/operationsServer';
+const HDB_SERVER_PATH = '#src/server/operationsServer';
 const KEYS_PATH = path.join(test_utils.getMockTestPath(), 'utility/keys');
 const PRIVATE_KEY_PATH = path.join(KEYS_PATH, 'privateKey.pem');
 const CERTIFICATE_PATH = path.join(KEYS_PATH, 'certificate.pem');

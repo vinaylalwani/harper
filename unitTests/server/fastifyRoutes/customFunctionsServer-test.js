@@ -20,7 +20,7 @@ const env = require('#js/utility/environment/environmentManager');
 
 const { CONFIG_PARAMS } = require('#src/utility/hdbTerms');
 const config_utils = require('#js/config/configUtils');
-const CF_SERVER_PATH = '../../../server/fastifyRoutes';
+const CF_SERVER_PATH = '#src/server/fastifyRoutes';
 const KEYS_PATH = path.join(test_utils.getMockTestPath(), 'utility/keys');
 const PRIVATE_KEY_PATH = path.join(KEYS_PATH, 'privateKey.pem');
 const CERTIFICATE_PATH = path.join(KEYS_PATH, 'certificate.pem');

@@ -37,7 +37,7 @@ describe('configUtils - applyRuntimeEnvVarConfig', function () {
 
 		// Mock harperConfigEnvVars module
 		configUtils.__set__('require', function (modulePath) {
-			if (modulePath === './harperConfigEnvVars.ts') {
+			if (modulePath.startsWith('./harperConfigEnvVars')) {
 				return { applyRuntimeEnvConfig: applyRuntimeEnvConfigStub };
 			}
 			return require(modulePath);

@@ -1254,116 +1254,6 @@ describe('Test configUtils module', () => {
 		});
 	});
 
-	it('Test getClusteringRoutes returns the correct routes', () => {
-		const fake_json_config = {
-			clustering: {
-				hubServer: {
-					cluster: {
-						network: {
-							routes: [
-								{
-									host: '3.6.3.3',
-									port: 7916,
-								},
-								{
-									host: '4.4.4.6',
-									port: 7117,
-								},
-							],
-						},
-					},
-				},
-				leafServer: {
-					network: {
-						routes: [{ host: 'leaf.server', port: 1111 }],
-					},
-				},
-			},
-		};
-		const read_config_file_stub = sandbox.stub().returns(fake_json_config);
-		config_utils_rw.__set__('readConfigFile', read_config_file_stub);
-		const routes = config_utils_rw.getClusteringRoutes();
-		expect(routes).to.eql({
-			hub_routes: [
-				{
-					host: '3.6.3.3',
-					port: 7916,
-				},
-				{
-					host: '4.4.4.6',
-					port: 7117,
-				},
-			],
-			leaf_routes: [{ host: 'leaf.server', port: 1111 }],
-		});
-	});
-
-	it('Test getClusteringRoutes returns empty array if no routes', () => {
-		const fake_json_config = {
-			clustering: {
-				hubServer: {
-					cluster: {
-						network: {
-							routes: null,
-						},
-					},
-				},
-			},
-		};
-		const read_config_file_stub = sandbox.stub().returns(fake_json_config);
-		config_utils_rw.__set__('readConfigFile', read_config_file_stub);
-		const routes = config_utils_rw.getClusteringRoutes();
-		expect(routes).to.eql({
-			hub_routes: [],
-			leaf_routes: [],
-		});
-	});
-
-	it('Test validation error thrown if there are duplicate hub/leaf routes', () => {
-		const fake_json_config = {
-			clustering: {
-				hubServer: {
-					cluster: {
-						network: {
-							routes: [
-								{
-									host: '3.6.3.3',
-									port: 7916,
-								},
-								{
-									host: '4.4.4.6',
-									port: 7117,
-								},
-							],
-						},
-					},
-				},
-				leafServer: {
-					network: {
-						routes: [
-							{
-								host: '3.6.3.3',
-								port: 7916,
-							},
-						],
-					},
-				},
-			},
-		};
-		const read_config_file_stub = sandbox.stub().returns(fake_json_config);
-		config_utils_rw.__set__('readConfigFile', read_config_file_stub);
-		let error;
-		try {
-			config_utils_rw.getClusteringRoutes();
-		} catch (err) {
-			error = err;
-		}
-
-		expect(error).to.equal(
-			'HarperDB config file validation error: Duplicate hub and leaf routes found [{"host":"3.6.3.3","port":7916}]'
-		);
-	});
-
 	describe('Test initOldConfig function', () => {
 		function matchParam(param, config_obj) {
 			for (const [key, value] of Object.entries(config_obj)) {
@@ -1409,7 +1299,6 @@ describe('Test configUtils module', () => {
 			operationsapi_network_cors: true,
 			logging_level: 'error',
 			logging_root: path.join(__dirname, '../../log'),
-			clustering_enabled: false,
 			threads_count: 12,
 			operationsapi_network_timeout: 120000,
 			operationsapi_network_keepalivetimeout: 5000,
@@ -1495,7 +1384,7 @@ describe('Test configUtils module', () => {
 			// Re-require the module to get a fresh copy
 			delete require.cache[require.resolve('../../config/configUtils.js')];
 			require('#js/config/configUtils');
-			const freshRewire = rewire('#js/config/configUtils.js');
+			const freshRewire = rewire('#js/config/configUtils');
 			// Copy the fresh parseYamlDoc to our rewired module
 			const parseYamlDoc = freshRewire.__get__('parseYamlDoc');
 			config_utils_rw.__set__('parseYamlDoc', parseYamlDoc);

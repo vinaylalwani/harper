@@ -546,7 +546,7 @@ describe('Test custom functions operations', () => {
 
 			// Mock replicateOperation
 			const replicateOperationStub = sandbox.stub().resolves({ message: 'success' });
-			operations.__set__('replicateOperation', replicateOperationStub);
+			server.replication.replicateOperation = replicateOperationStub;
 
 			// This should work - user components can be overwritten without force
 			await operations.deployComponent({
@@ -576,7 +576,7 @@ describe('Test custom functions operations', () => {
 
 			// Mock replicateOperation
 			const replicateOperationStub = sandbox.stub().resolves({ message: 'success' });
-			operations.__set__('replicateOperation', replicateOperationStub);
+			server.replication.replicateOperation = replicateOperationStub;
 
 			// This should work fine - no component exists yet
 			await operations.deployComponent({
@@ -626,7 +626,7 @@ describe('Test custom functions operations', () => {
 
 			// Mock replicateOperation
 			const replicateOperationStub = sandbox.stub().resolves({ message: 'success' });
-			operations.__set__('replicateOperation', replicateOperationStub);
+			server.replication.replicateOperation = replicateOperationStub;
 
 			// This should NOT throw an error because force is true
 			await operations.deployComponent({
