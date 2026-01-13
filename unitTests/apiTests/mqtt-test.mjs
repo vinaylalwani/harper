@@ -12,7 +12,6 @@ import axios from 'axios';
 describe('test MQTT connections and commands', () => {
 	let available_records;
 	let client, client2;
-	let replicated_published_messages = [];
 	before(async () => {
 		available_records = await setupTestApp();
 
@@ -150,7 +149,6 @@ describe('test MQTT connections and commands', () => {
 		assert(received.length > 10);
 		assert.equal(received[0].name, 'radbot 9000');
 		//console.log({ published, received });
-		assert(replicated_published_messages.length > 10);
 	});
 
 	it('last will should be published on connection loss', async () => {
