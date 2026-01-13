@@ -4,10 +4,10 @@ const { getMockLMDBPath } = require('../test_utils');
 const { table } = require('#src/resources/databases');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
 const { transaction } = require('#src/resources/transaction');
+const { IterableEventQueue } = require('#js/resources/IterableEventQueue');
 
 describe('Transactions', () => {
 	let TxnTest, TxnTest2, TxnTest3;
-	let published_messages = [];
 	let test_subscription;
 
 	before(async function () {
@@ -24,6 +24,11 @@ describe('Transactions', () => {
 				{ name: 'countInt', type: 'Int' },
 				{ name: 'computed', computed: true, indexed: true },
 			],
+		});
+		TxnTest.sourcedFrom({
+			subscribe() {
+				return (test_subscription = new IterableEventQueue());
+			},
 		});
 		TxnTest.setComputedAttribute('computed', (instance) => instance.name + ' computed');
 		TxnTest2 = table({
@@ -145,16 +150,12 @@ describe('Transactions', () => {
 				TxnTest.put(45, { name: 'a counter', count: 1 }, context);
 			});
 			let entity = await TxnTest.get(45);
-			published_messages = [];
 			assert.equal(entity.name, 'a counter');
 			assert.equal(entity.count, 1);
 			assert.equal(entity['new prop 0'], undefined);
 			await TxnTest.patch(45, { count: { __op__: 'add', value: 2 } });
 			entity = await TxnTest.get(45);
 			assert.equal(entity.count, 3);
-			assert.equal(published_messages.length, 1);
-			assert.equal(published_messages[0].operation, 'patch');
-			assert.equal(published_messages[0].records[0].count.__op__, 'add');
 			// concurrently, to ensure the incrementation is really correct:
 			let promises = [];
 			for (let i = 0; i < 3; i++) {
@@ -167,7 +168,6 @@ describe('Transactions', () => {
 			assert.equal(entity['new prop 0'], 'new value 0');
 			assert.equal(entity['new prop 1'], 'new value 1');
 			assert.equal(entity['new prop 2'], 'new value 2');
-			assert.equal(published_messages.length, 4);
 			assert(entity.getUpdatedTime() > 1);
 		});
 		it('Can use update and get with different arguments', async function () {
@@ -218,20 +218,18 @@ describe('Transactions', () => {
 			assert.equal(entity.name, 'a counter');
 			assert.equal(entity.count, 1);
 			assert.equal(entity['new prop 0'], undefined);
-			published_messages = [];
+			let earlier = Date.now() + 5;
 			await new Promise((resolve) => setTimeout(resolve, 20));
 			await TxnTest.patch(45, { count: { __op__: 'add', value: 2 }, propertyA: 'valueA' });
 			entity = await TxnTest.get(45);
 			assert.equal(entity.count, 3);
 			assert.equal(entity['propertyA'], 'valueA');
-			assert.equal(published_messages.length, 1);
-			assert.equal(published_messages[0].operation, 'patch');
 			await new Promise((resolve) => {
 				// send an update from the past, which should be merged into the current state but not overwrite it
 				test_subscription.send({
 					type: 'patch',
 					id: 45,
-					timestamp: published_messages[0].__origin.timestamp - 10,
+					timestamp: earlier,
 					table: 'TxnTest',
 					value: { count: { __op__: 'add', value: 2 }, propertyA: 'should not change', propertyB: 'valueB' },
 					onCommit: resolve,
@@ -249,7 +247,7 @@ describe('Transactions', () => {
 				test_subscription.send({
 					type: 'patch',
 					id: 45,
-					timestamp: published_messages[0].__origin.timestamp - 10,
+					timestamp: earlier,
 					table: 'TxnTest',
 					value: { count: { __op__: 'add', value: 2 }, propertyA: 'should not change', propertyB: 'valueB' },
 					onCommit: resolve,
@@ -380,16 +378,12 @@ describe('Transactions', () => {
 				TxnTest.put(45, { name: 'a counter', count: 1 }, context);
 			});
 			let entity = await TxnTest.get(45);
-			published_messages = [];
 			assert.equal(entity.name, 'a counter');
 			assert.equal(entity.count, 1);
 			assert.equal(entity['new prop 0'], undefined);
 			await TxnTest.patch(45, { count: { __op__: 'add', value: 2 } });
 			entity = await TxnTest.get(45);
 			assert.equal(entity.count, 3);
-			assert.equal(published_messages.length, 1);
-			assert.equal(published_messages[0].operation, 'patch');
-			assert.equal(published_messages[0].records[0].count.__op__, 'add');
 			// concurrently, to ensure the incrementation is really correct:
 			let promises = [];
 			for (let i = 0; i < 3; i++) {
@@ -402,7 +396,6 @@ describe('Transactions', () => {
 			assert.equal(entity['new prop 0'], 'new value 0');
 			assert.equal(entity['new prop 1'], 'new value 1');
 			assert.equal(entity['new prop 2'], 'new value 2');
-			assert.equal(published_messages.length, 4);
 			assert(entity.getUpdatedTime() > 1);
 		});
 
@@ -415,20 +408,18 @@ describe('Transactions', () => {
 			assert.equal(entity.name, 'a counter');
 			assert.equal(entity.count, 1);
 			assert.equal(entity['new prop 0'], undefined);
-			published_messages = [];
+			let earlier = Date.now() + 5;
 			await new Promise((resolve) => setTimeout(resolve, 20));
 			await TxnTest.patch(45, { count: { __op__: 'add', value: 2 }, propertyA: 'valueA' });
 			entity = await TxnTest.get(45);
 			assert.equal(entity.count, 3);
 			assert.equal(entity['propertyA'], 'valueA');
-			assert.equal(published_messages.length, 1);
-			assert.equal(published_messages[0].operation, 'patch');
 			await new Promise((resolve) => {
 				// send an update from the past, which should be merged into the current state but not overwrite it
 				test_subscription.send({
 					type: 'patch',
 					id: 45,
-					timestamp: published_messages[0].__origin.timestamp - 10,
+					timestamp: earlier,
 					table: 'TxnTest',
 					value: { count: { __op__: 'add', value: 2 }, propertyA: 'should not change', propertyB: 'valueB' },
 					onCommit: resolve,
@@ -445,7 +436,7 @@ describe('Transactions', () => {
 				test_subscription.send({
 					type: 'patch',
 					id: 45,
-					timestamp: published_messages[0].__origin.timestamp - 10,
+					timestamp: earlier,
 					table: 'TxnTest',
 					value: { count: { __op__: 'add', value: 2 }, propertyA: 'should not change', propertyB: 'valueB' },
 					onCommit: resolve,

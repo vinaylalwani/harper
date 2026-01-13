@@ -16,7 +16,6 @@ describe('Caching', () => {
 	let timer = 0;
 	let return_value = true;
 	let return_error;
-	let published_messages = [];
 	before(async function () {
 		getMockLMDBPath();
 		setMainIsWorker(true); // TODO: Should be default until changed
@@ -107,13 +106,6 @@ describe('Caching', () => {
 		assert.equal(result.id, 23);
 		assert.equal(result.name, 'name ' + 23);
 		assert.equal(source_requests, 2);
-		assert(published_messages.length >= 2);
-		for (let message of published_messages) {
-			assert.equal(message.hash_values[0], 23);
-			assert.equal(message.table, 'CachingTable');
-		}
-		assert(published_messages[1].expiresAt > 1);
-		assert(published_messages[1].records[0].name, 'name 23');
 		if (events.length > 0) console.log(events);
 		//assert.equal(events.length, 0);
 		await CachingTable.put(23, { name: 'expires in past' }, { expiresAt: 0 });

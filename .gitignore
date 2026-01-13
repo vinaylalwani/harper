@@ -16,6 +16,10 @@ package-lock.json
 coverage
 *.lcov
 .nyc_output/
+/unitTests/envDir
+/unitTests/apiTests/envDir
+/unitTests/testApp/node_modules
+unitTests/server/fastifyRoutes/custom_functions
 
 # TypeScript
 *.tsbuildinfo
