@@ -1,0 +1,13 @@
+HDB_ROOT= /blah/someuser/blah
+SERVER_PORT = 9925
+CERTIFICATE = /blah/someuser/blah/keys/certificate.pem
+PRIVATE_KEY = /blah/someuser/blah/keys/privateKey.pem
+HTTPS_ON = FALSE
+CORS_ON=TRUE
+CORS_ACCESSLIST=
+LOG_LEVEL = trace
+LOGGER = 1
+LOG_PATH = /blah/someuser/blah/unitTests/testlog.log
+CLUSTERING=false
+NODE_NAME=node_name
+CLUSTERING_PORT=1111
