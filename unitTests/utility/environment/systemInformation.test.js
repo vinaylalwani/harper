@@ -240,7 +240,7 @@ const EXPECTED_PROPERTIES = {
 	network_latency: [], // these should NOT return anything unless enabled
 	network_interfaces: [],
 	network_stats: [],
-	harperdb_processes: ['core', 'clustering'],
+	harperdb_processes: ['core'],
 	harperdb_processes_core: [
 		'pid',
 		'parentPid',
