@@ -310,7 +310,7 @@ describe('Test permissionsTranslator module', function () {
 	afterEach(() => {
 		// Clear the rolePermsMap cache to ensure clean state between tests
 		const rolePermsMap = permissionsTranslator_rw.__get__('rolePermsMap');
-		Object.keys(rolePermsMap).forEach(key => delete rolePermsMap[key]);
+		Object.keys(rolePermsMap).forEach((key) => delete rolePermsMap[key]);
 		sandbox.resetHistory();
 	});
 	after(() => {
