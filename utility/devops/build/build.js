@@ -60,7 +60,9 @@ for (let entryModule of entryModules) {
 		'docs/**',
 		'logs/*',
 		'studio/**',
+		'index.js',
 		'index.d.ts',
+		'v1.js',
 		'v1.d.ts',
 		'v2.d.ts',
 	])) {
@@ -68,7 +70,6 @@ for (let entryModule of entryModules) {
 		fs.copySync(filename, target);
 	}
 })();
-fs.copySync('index.js', 'npm_pack/index.js');
 
 // eslint-disable-next-line sonarjs/no-os-command-from-path
 exec('npx tsc index.d.ts --outDir npm_pack --declaration --emitDeclarationOnly', (error, result) => {
