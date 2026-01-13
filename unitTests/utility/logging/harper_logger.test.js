@@ -14,6 +14,7 @@ const logger = require('#js/utility/logging/logger');
 const harperLoggerModule = require('#js/utility/logging/harper_logger');
 const { createLogger } = harperLoggerModule;
 const { getHttpOptions, handleApplication, logRequest, getRequestId } = require('#src/server/http');
+const { createTestSandbox, cleanupTestSandbox } = require('../../testUtils.js');
 
 const HARPER_LOGGER_MODULE = '#js/utility/logging/harper_logger';
 const LOG_DIR_TEST = 'testLogger';
@@ -724,6 +725,8 @@ describe('Test harper_logger module', () => {
 		describe('Test HTTP logger', () => {
 			let originalHttpOptions, originalHttpLogOptions, httpLogPath, httpLogger;
 			before(() => {
+				createTestSandbox();
+
 				originalHttpOptions = getHttpOptions();
 				httpLogger = harperLoggerModule.forComponent('http');
 				const { path: logPath, level } = httpLogger;
@@ -749,6 +752,9 @@ describe('Test harper_logger module', () => {
 					},
 				});
 			});
+
+			after(() => cleanupTestSandbox());
+
 			it('Test the correct output from HTTP logger on GET', async () => {
 				logRequest(
 					{
