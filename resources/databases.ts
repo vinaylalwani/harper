@@ -24,7 +24,7 @@ import { handleLocalTimeForGets } from './RecordEncoder.ts';
 import { deleteRootBlobPathsForDB } from './blob.ts';
 import { CUSTOM_INDEXES } from './indexes/customIndexes.ts';
 import * as OpenDBIObjectModule from '../utility/lmdb/OpenDBIObject.js';
-import { RocksDatabase, Store as RocksStore, type RocksDatabaseOptions } from '@harperdb/rocksdb-js';
+import { RocksDatabase, Store as RocksStore, type RocksDatabaseOptions } from '@harperfast/rocksdb-js';
 import { replayLogs } from './replayLogs.ts';
 import { totalmem } from 'node:os';
 import { RocksIndexStore } from './RocksIndexStore.ts';
@@ -172,16 +172,10 @@ function openRocksDatabase(path: string, options: RocksDatabaseOptions) {
 		db = new RocksIndexStore(db, options);
 	} else {
 		db.env = {};
-		db.getEntry = (id, options) => {
-			return {
-				value: db.getSync(id, options),
-			};
-		};
 	}
 	return db;
 }
 
-const databaseEnvs = new Map<string, RootDatabaseKind>();
 const lmdbDatabaseEnvs = new Map<string, LMDBRootDatabase>();
 const rocksdbDatabaseEnvs = new Map<string, RocksDatabaseEx>();
 
@@ -381,7 +375,6 @@ export function readMetaDb(
 			rootStore.needsDeletion = false;
 		} else {
 			rootStore = open(envInit);
-			databaseEnvs.set(path, rootStore);
 			lmdbDatabaseEnvs.set(path, rootStore);
 		}
 
@@ -395,12 +388,15 @@ export function readMetaDb(
 function readRocksMetaDb(path: string, defaultTable?: string, databaseName: string = DEFAULT_DATABASE_NAME) {
 	try {
 		logger.trace(`loading rocksdb database: ${path}`);
-		const rootStore = openRocksDatabase(path, { disableWAL: false });
-		databaseEnvs.set(path, rootStore);
-		rocksdbDatabaseEnvs.set(path, rootStore);
-		initStores(path, rootStore, databaseName, defaultTable);
-		replayLogs(rootStore, databases[databaseName]);
-
+		let rootStore = rocksdbDatabaseEnvs.get(path);
+		if (rootStore) {
+			initStores(path, rootStore, databaseName, defaultTable);
+		} else {
+			rootStore = openRocksDatabase(path, { disableWAL: false });
+			rocksdbDatabaseEnvs.set(path, rootStore);
+			initStores(path, rootStore, databaseName, defaultTable);
+			replayLogs(rootStore, databases[databaseName]);
+		}
 		return rootStore;
 	} catch (error) {
 		error.message += ` opening database ${path}`;
@@ -633,7 +629,6 @@ export function resetDatabases() {
 	for (const [path, store] of lmdbDatabaseEnvs) {
 		if (store.needsDeletion && !path.endsWith('system.mdb')) {
 			store.close();
-			databaseEnvs.delete(path);
 			lmdbDatabaseEnvs.delete(path);
 			const db = databases[store.databaseName];
 			for (const tableName in db) {
@@ -739,7 +734,6 @@ export function database({ database: databaseName, table: tableName }) {
 		if (!rootStore || rootStore.status === 'closed') {
 			const envInit = new OpenEnvironmentObject(path, false);
 			rootStore = openRocksDatabase(path, envInit);
-			databaseEnvs.set(path, rootStore);
 			rocksdbDatabaseEnvs.set(path, rootStore);
 		}
 	} else {
@@ -749,7 +743,6 @@ export function database({ database: databaseName, table: tableName }) {
 			// TODO: validate database name
 			const envInit = new OpenEnvironmentObject(path, false);
 			rootStore = open(envInit);
-			databaseEnvs.set(path, rootStore);
 			lmdbDatabaseEnvs.set(path, rootStore);
 		}
 	}
@@ -770,7 +763,6 @@ export async function dropDatabase(databaseName) {
 		const table = dbTables[tableName];
 		rootStore = table.primaryStore.rootStore;
 
-		databaseEnvs.delete(rootStore.path);
 		lmdbDatabaseEnvs.delete(rootStore.path);
 		rocksdbDatabaseEnvs.delete(rootStore.path);
 

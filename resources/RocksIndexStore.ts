@@ -1,4 +1,4 @@
-import { RocksDatabase, type IteratorOptions } from '@harperdb/rocksdb-js';
+import { RocksDatabase, type IteratorOptions } from '@harperfast/rocksdb-js';
 import { Id } from './ResourceInterface.ts';
 import { MAXIMUM_KEY } from 'ordered-binary';
 export class RocksIndexStore {
@@ -29,13 +29,23 @@ export class RocksIndexStore {
 		return this.#store.removeSync([indexedValue, primaryKey], null, options);
 	}
 
+	getValuesCount(indexedValue: any) {
+		return this.#store.getKeysCount({ start: indexedValue, end: [indexedValue, MAXIMUM_KEY] });
+	}
+
 	/**
 	 * Get all entries matching the range
 	 * @param options
 	 */
 	getRange(options: IteratorOptions): Iterable<any> {
-		const { end } = options;
-		const translatedOptions = { ...options, end: end ? [end, MAXIMUM_KEY] : end };
+		let { start, end, exclusiveStart, inclusiveEnd } = options;
+		if (exclusiveStart) {
+			start = [start, MAXIMUM_KEY];
+		}
+		if (inclusiveEnd && end !== undefined) {
+			end = [end, MAXIMUM_KEY];
+		}
+		const translatedOptions = { ...options, start, end };
 		return this.#store.getRange(translatedOptions).map(({ key }) => {
 			return { key: key[0], value: key[1] };
 		});

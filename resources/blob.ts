@@ -41,7 +41,7 @@ import { asyncSerialization, hasAsyncSerialization } from '../server/serverHelpe
 import { HAS_BLOBS, readAuditEntry } from './auditStore.ts';
 import { getHeapStatistics } from 'node:v8';
 import { setTimeout as delay, setImmediate as rest } from 'node:timers/promises';
-import { RocksDatabase } from '@harperdb/rocksdb-js';
+import { RocksDatabase } from '@harperfast/rocksdb-js';
 
 type StorageInfo = {
 	storageIndex: number;

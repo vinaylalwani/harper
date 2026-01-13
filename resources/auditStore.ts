@@ -9,7 +9,7 @@ import * as harperLogger from '../utility/logging/harper_logger.js';
 import { getRecordAtTime } from './crdt.ts';
 import { decodeFromDatabase, deleteBlobsInObject } from './blob.ts';
 import { onStorageReclamation } from '../server/storageReclamation.ts';
-import { RocksDatabase } from '@harperdb/rocksdb-js';
+import { RocksDatabase } from '@harperfast/rocksdb-js';
 import { RocksTransactionLogStore } from './RocksTransactionLogStore.ts';
 
 /**

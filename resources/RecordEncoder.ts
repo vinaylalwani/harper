@@ -19,7 +19,7 @@ import * as harperLogger from '../utility/logging/harper_logger.js';
 import './blob.ts';
 import { blobsWereEncoded, decodeFromDatabase, deleteBlobsInObject, encodeBlobsWithFilePath } from './blob.ts';
 import { recordAction } from './analytics/write.ts';
-import { RocksDatabase, Transaction as RocksTransaction } from '@harperdb/rocksdb-js';
+import { RocksDatabase, Transaction as RocksTransaction } from '@harperfast/rocksdb-js';
 export type Entry = {
 	key: any;
 	value: any;
@@ -280,7 +280,13 @@ export function handleLocalTimeForGets(store, rootStore) {
 	store.getEntry = function (id, options) {
 		store.readCount++;
 		lastMetadata = null;
-		const entry = storeGetEntry.call(this, id, options);
+		let entry: Entry;
+		if (isRocksDB) {
+			let value = store.getSync(id, options);
+			entry = value && ({ value } as Entry);
+		} else {
+			entry = storeGetEntry.call(this, id, options);
+		}
 		// if we have decoded with metadata, we want to pull it out and assign to this entry
 		if (entry) {
 			if (lastMetadata) {

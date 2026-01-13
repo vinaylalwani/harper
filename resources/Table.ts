@@ -60,7 +60,7 @@ import { onStorageReclamation } from '../server/storageReclamation.ts';
 import { RequestTarget } from './RequestTarget.ts';
 import harperLogger from '../utility/logging/harper_logger.js';
 import { throttle } from '../server/throttle.ts';
-import { RocksDatabase } from '@harperdb/rocksdb-js';
+import { RocksDatabase } from '@harperfast/rocksdb-js';
 import { LMDBTransaction } from './LMDBTransaction';
 
 const { sortBy } = lodash;
@@ -3321,6 +3321,9 @@ export function makeTable(options) {
 		}
 		static cleanup() {
 			deleteCallbackHandle?.remove();
+		}
+		static _readTxnForContext(context) {
+			return txnForContext(context).getReadTxn();
 		}
 	}
 	const throttledCallToSource = throttle(

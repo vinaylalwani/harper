@@ -17,7 +17,7 @@ setTimeout(() => {
 	// let everything load before we actually load and start the profiler
 	import('./profile.ts');
 }, 1000);
-import { RocksDatabase } from '@harperdb/rocksdb-js';
+import { RocksDatabase } from '@harperfast/rocksdb-js';
 
 const log = forComponent('analytics').conditional;
 

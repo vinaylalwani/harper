@@ -1,4 +1,4 @@
-import { RocksDatabase, Transaction as RocksTransaction } from '@harperdb/rocksdb-js';
+import { RocksDatabase, Transaction as RocksTransaction } from '@harperfast/rocksdb-js';
 import { Resource } from './Resource.ts';
 import type { Context } from './ResourceInterface.ts';
 import * as logger from '../utility/logging/harper_logger.js';

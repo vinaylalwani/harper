@@ -1,4 +1,4 @@
-import { type TransactionLog, RocksDatabase, shutdown, type TransactionEntry } from '@harperdb/rocksdb-js';
+import { type TransactionLog, RocksDatabase, shutdown, type TransactionEntry } from '@harperfast/rocksdb-js';
 import { ExtendedIterable } from '@harperfast/extended-iterable';
 import { Decoder, readAuditEntry, ENTRY_DATAVIEW, AuditRecord, createAuditEntry } from './auditStore.ts';
 import logger from '../utility/logging/harper_logger.js';

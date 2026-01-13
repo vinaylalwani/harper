@@ -7,7 +7,7 @@ import type { Context, Id } from './ResourceInterface.ts';
 import * as envMngr from '../utility/environment/environmentManager.js';
 import { CONFIG_PARAMS } from '../utility/hdbTerms.ts';
 import { convertToMS } from '../utility/common_utils.js';
-import { RocksDatabase, Transaction as RocksTransaction, type Store as RocksStore } from '@harperdb/rocksdb-js';
+import { RocksDatabase, Transaction as RocksTransaction, type Store as RocksStore } from '@harperfast/rocksdb-js';
 import type { RootDatabaseKind } from './databases.ts';
 import type { Entry } from './RecordEncoder.ts';
 

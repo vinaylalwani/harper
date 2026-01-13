@@ -54,6 +54,7 @@ describe('Querying through Resource API', () => {
 				},
 			],
 		});
+		QueryTable.primaryStore.clearSync();
 		QueryTable.setComputedAttribute('computed', (instance) => instance.name + ' computed');
 		const children_of_self_attribute = {
 			name: 'childrenOfSelf',
@@ -99,6 +100,7 @@ describe('Querying through Resource API', () => {
 				},
 			],
 		});
+		RelatedTable.primaryStore.clearSync();
 		children_of_self_attribute.elements.definition.tableClass = RelatedTable;
 		parent_of_self_attribute.definition.tableClass = RelatedTable;
 		ManyToMany = table({
@@ -114,6 +116,7 @@ describe('Querying through Resource API', () => {
 				},
 			],
 		});
+		ManyToMany.primaryStore.clearSync();
 		relationship_attribute.definition.tableClass = RelatedTable;
 		many_to_many_attribute.elements.definition.tableClass = ManyToMany;
 
@@ -150,7 +153,7 @@ describe('Querying through Resource API', () => {
 		await last;
 		// rewrite one of them to ensure the prototype doesn't get messed up
 		const id12 = await QueryTable.get('id-12');
-		await QueryTable.put(id12.toJSON());
+		await QueryTable.put(id12);
 	});
 	// This test should be working. My local reproduction works fine with the code changes. I'm sure this has to do with how I created the tables and records in the `before()` maybe?
 	it('should properly evaluate an `and` operation', async function () {
