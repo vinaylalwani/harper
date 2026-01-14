@@ -3,6 +3,7 @@ import { ResourceV2 as ResourceImport } from './resources/ResourceV2.ts';
 export type {
 	Query,
 	Context,
+	SourceContext,
 	SubscriptionRequest,
 	RequestTargetOrId,
 } from './resources/ResourceInterface.ts';

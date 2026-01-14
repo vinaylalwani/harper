@@ -1,6 +1,12 @@
 export { Resource } from './resources/Resource.ts';
 import { Resource as ResourceImport } from './resources/Resource.ts';
-export type { Query, Context, SubscriptionRequest, RequestTargetOrId } from './resources/ResourceInterface.ts';
+export type {
+	Query,
+	Context,
+	SourceContext,
+	SubscriptionRequest,
+	RequestTargetOrId,
+} from './resources/ResourceInterface.ts';
 export { ResourceInterface } from './resources/ResourceInterface.ts';
 export type { User } from './security/user.ts';
 export type { RecordObject } from './resources/RecordEncoder.ts';
