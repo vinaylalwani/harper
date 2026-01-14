@@ -51,19 +51,25 @@ for (let entryModule of entryModules) {
 		'utility/install/ascii_logo.txt',
 		'utility/install/harperdb-config.yaml',
 		'utility/install/README.md',
+		'config-app.schema.json',
+		'config-root.schema.json',
+		'schema.graphql',
 		'config/yaml/*',
 		'dependencies/**',
 		'README.md',
 		'docs/**',
 		'logs/*',
 		'studio/**',
+		'index.js',
 		'index.d.ts',
+		'v1.js',
+		'v1.d.ts',
+		'v2.d.ts',
 	])) {
 		let target = path.join('npm_pack', filename);
 		fs.copySync(filename, target);
 	}
 })();
-fs.copySync('index.js', 'npm_pack/index.js');
 
 // eslint-disable-next-line sonarjs/no-os-command-from-path
 exec('npx tsc index.d.ts --outDir npm_pack --declaration --emitDeclarationOnly', (error, result) => {
