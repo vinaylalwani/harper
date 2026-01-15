@@ -354,8 +354,10 @@ function startupLog(portResolutions) {
 	const padding = 20;
 	const pad = (param) => param.padEnd(padding);
 	let logMsg = '\n';
-	if (env.get(CONFIG_PARAMS.REPLICATION_HOSTNAME))
-		logMsg += `${pad('Hostname:')}${env.get(CONFIG_PARAMS.REPLICATION_HOSTNAME)}\n`;
+
+	const replicationHostname = env.get(CONFIG_PARAMS.REPLICATION_HOSTNAME);
+	if (replicationHostname)
+		logMsg += `${pad('Hostname:')}${replicationHostname}\n`;
 
 	if (env.get(CONFIG_PARAMS.REPLICATION_URL))
 		logMsg += `${pad('Replication Url:')}${env.get(CONFIG_PARAMS.REPLICATION_URL)}\n`;
@@ -397,6 +399,25 @@ function startupLog(portResolutions) {
 			: 'disabled'
 	}`;
 	logMsg += `, unix socket: ${env.get(CONFIG_PARAMS.OPERATIONSAPI_NETWORK_DOMAINSOCKET)}\n`;
+	if (replicationHostname && env.get(CONFIG_PARAMS.OPERATIONSAPI_NETWORK_PORT)) {
+		logMsg +=
+			pad('') +
+			'http://' +
+			replicationHostname +
+			':' +
+			env.get(CONFIG_PARAMS.OPERATIONSAPI_NETWORK_PORT) +
+			'/\n';
+	}
+	if (replicationHostname && env.get(CONFIG_PARAMS.OPERATIONSAPI_NETWORK_SECUREPORT)) {
+		logMsg +=
+			'\n' +
+			pad('') +
+			'https://' +
+			replicationHostname +
+			':' +
+			env.get(CONFIG_PARAMS.OPERATIONSAPI_NETWORK_SECUREPORT) +
+			'/\n';
+	}
 
 	// MQTT Log
 	logMsg += pad('MQTT:');
@@ -434,19 +455,24 @@ function startupLog(portResolutions) {
 	// portResolutions is a Map of port to protocol name and component name built in threadServer.js
 	// we iterate through the map to build a log for REST and for any components that are using custom ports
 	let comps = {};
+	let restHostnames = [];
 	let restLog = `${pad('REST:')}`;
 	for (const [key, values] of portResolutions) {
 		for (const value of values) {
 			const name = value.name;
-			if (name === 'rest') {
-				restLog += `${value.protocol_name}: ${key}, `;
+			const pair = `${value.protocol_name}: ${key}, `;
+			if (!restLog.includes(pair) && name === 'rest') {
+				restLog += pair;
+				if (replicationHostname && (value.protocol_name === 'HTTP' || value.protocol_name === 'HTTPS')) {
+					restHostnames.push(`${value.protocol_name.toLowerCase()}://${replicationHostname}:${key}/`);
+				}
 			}
 
 			if (components.includes(name)) {
 				if (comps[name]) {
-					comps[name] += `${value.protocol_name}: ${key}, `;
+					comps[name] += pair;
 				} else {
-					comps[name] = `${value.protocol_name}: ${key}, `;
+					comps[name] = pair;
 				}
 			}
 		}
@@ -456,6 +482,9 @@ function startupLog(portResolutions) {
 	if (restLog.length > padding + 1) {
 		restLog = restLog.slice(0, -2);
 		logMsg += `${restLog}\n`;
+		for (const restHostname of restHostnames) {
+			logMsg += pad('') + restHostname + '\n';
+		}
 	}
 
 	let appPortsLog = env.get(CONFIG_PARAMS.HTTP_PORT) ? `HTTP: ${env.get(CONFIG_PARAMS.HTTP_PORT)}, ` : '';
