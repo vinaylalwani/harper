@@ -3466,14 +3466,7 @@ export function makeTable(options) {
 			// if the transaction was closed, which can happen if we are iterating
 			// through query results and the iterator ends (abruptly)
 			if (options.transaction?.isDone) return withEntry(null, id);
-			let entry;
-			if (primaryStore instanceof RocksDatabase) {
-				entry = {
-					value: primaryStore.getSync(id, options),
-				};
-			} else {
-				entry = primaryStore.getEntry(id, options);
-			}
+			let entry = primaryStore.getEntry(id, options);
 
 			// skip recording reads for most system tables except hdb_analytics
 			// we want to track analytics reads in licensing, etc.

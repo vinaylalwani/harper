@@ -33,6 +33,10 @@ export class RocksIndexStore {
 		return this.#store.getKeysCount({ start: indexedValue, end: [indexedValue, MAXIMUM_KEY] });
 	}
 
+	getKeysCount() {
+		return this.#store.getKeysCount();
+	}
+
 	/**
 	 * Get all entries matching the range
 	 * @param options
@@ -47,7 +51,7 @@ export class RocksIndexStore {
 		}
 		const translatedOptions = { ...options, start, end };
 		return this.#store.getRange(translatedOptions).map(({ key }) => {
-			return { key: key[0], value: key[1] };
+			return { key: key[0], value: key.length > 2 ? key.slice(1) : key[1] };
 		});
 	}
 }
