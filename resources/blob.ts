@@ -1215,10 +1215,10 @@ export async function cleanupOrphans(database: any, databaseName?: string) {
 		}
 		logger.warn?.('Checking for references to potential orphaned blobs in the audit log');
 		// search the audit store for references
-		for (const { value } of auditStore.getRange({ start: 1, snapshot: false, lazy: true })) {
+		for (const auditRecord of auditStore.getRange({ start: 1, snapshot: false, lazy: true })) {
 			try {
-				const auditRecord = readAuditEntry(value);
 				const primaryStore = auditStore.tableStores[auditRecord.tableId];
+				if (!primaryStore) continue;
 				const entry = primaryStore?.getEntry(auditRecord.recordId);
 				if (!entry || entry.version !== auditRecord.version || !entry.value) {
 					checkObjectForReferences(auditRecord.getValue(primaryStore));

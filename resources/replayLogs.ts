@@ -27,6 +27,7 @@ export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void>
 				auditRecord;
 			try {
 				const Table = tableById.get(tableId);
+				if (!Table) continue;
 				const context: Context = { nodeId, alreadyLogged: true, version, expiresAt, user: { name: username } };
 				const { primaryStore, auditStore } = Table;
 				const tableInstance = Table.getResource(null, context, {});
