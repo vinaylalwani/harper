@@ -405,14 +405,15 @@ async function deployComponent(req) {
 	// an error we can immediately detect and report
 	const pseudoResources = new Resources();
 	pseudoResources.isWorker = true;
-	const componentLoader = require('./componentLoader.ts');
 
-	let lastError;
-	componentLoader.setErrorReporter((error) => (lastError = error));
-	await componentLoader.loadComponent(application.dirPath, pseudoResources);
+	if (!process.env.HARPER_SAFE_MODE) {
+		const componentLoader = require('./componentLoader.ts');
+		let lastError;
+		componentLoader.setErrorReporter((error) => (lastError = error));
+		await componentLoader.loadComponent(application.dirPath, pseudoResources);
 
-	if (lastError) throw lastError;
-
+		if (lastError) throw lastError;
+	}
 	const rollingRestart = req.restart === 'rolling';
 	// if doing a rolling restart set restart to false so that other nodes don't also restart.
 	req.restart = rollingRestart ? false : req.restart;

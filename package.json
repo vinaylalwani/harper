@@ -75,6 +75,11 @@
 			"onFail": "error"
 		}
 	},
+	"exports": {
+		".": "./index.js",
+		"./v1": "./index.js",
+		"./v2": "./index.js"
+	},
 	"devDependencies": {
 		"@harperdb/code-guidelines": "^0.0.6",
 		"@types/gunzip-maybe": "^1.4.3",
