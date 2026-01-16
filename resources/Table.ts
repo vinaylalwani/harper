@@ -3150,7 +3150,7 @@ export function makeTable(options) {
 											? Promise.all(results)
 											: results;
 								}
-								const value = definition.tableClass.primaryStore[returnEntry ? 'getEntry' : 'get'](ids, {
+								const value = definition.tableClass.primaryStore[returnEntry ? 'getEntry' : 'getSync'](ids, {
 									transaction: txnForContext(context).getReadTxn(),
 								});
 								// for now, we shouldn't be getting promises until rocksdb

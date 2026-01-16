@@ -5,6 +5,7 @@ const { parseQuery } = require('#src/resources/search');
 const { table } = require('#src/resources/databases');
 const { transaction } = require('#src/resources/transaction');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
+const { RocksDatabase } = require('@harperfast/rocksdb-js');
 let x = 532532;
 function random(max) {
 	x = (x * 16843009 + 3014898611) >>> 0;
@@ -1662,6 +1663,7 @@ describe('Querying through Resource API', () => {
 		assert.equal(results.length, 2);
 	});
 	it('Too many read transactions should fail, but work afterwards', async function () {
+		if (QueryTable.primaryStore instanceof RocksDatabase) return; // not valid for Rocks
 		this.timeout(10000);
 		let resolvers = [];
 		await assert.rejects(async () => {

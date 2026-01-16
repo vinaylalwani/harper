@@ -364,7 +364,7 @@ export function searchByIndex(
 						let recordMatcher: any;
 						if (typeof key === 'string' && key.length > MAX_SEARCH_KEY_LENGTH) {
 							// if it is an overflow string, need to get the actual value from the database
-							recordMatcher = Table.primaryStore.get(value);
+							recordMatcher = Table.primaryStore.getSync(value);
 						} else recordMatcher = { [attribute_name]: key };
 						if (this.isSync) return filter(recordMatcher) ? value : SKIP;
 						// for filter operations, we intentionally yield the event turn so that scanning queries
@@ -442,7 +442,7 @@ function joinTo(rightIterable, attribute, store, isManyToMany, joined: Map<any, 
 						//let i = 0;
 						// get all the ids of the related records
 						for (const entry of rightIterable) {
-							const record = entry.value ?? store.get(entry.key ?? entry);
+							const record = entry.value ?? store.getSync(entry.key ?? entry);
 							const leftKey = record?.[rightProperty];
 							if (leftKey == null) continue;
 							if (joined.filters?.some((filter) => !filter(record))) continue;
@@ -522,7 +522,7 @@ function joinFrom(rightIterable, attribute, store, joined: Map<any, any[]>, sear
 						for (const id of rightIterable) {
 							if (joined.filters) {
 								// if additional filters are defined, we need to check them
-								const record = store.get(id);
+								const record = store.getSync(id);
 								if (joined.filters.some((filter) => !filter(record))) continue;
 							}
 							ids.add(id);
@@ -791,7 +791,7 @@ export function filterByType(searchCondition, Table, context, filtered, isPrimar
 					let matchingIds: Iterable<Id>;
 					if (recordFilter.to) {
 						// the values could be an array of keys, so we flatten the mapping
-						matchingIds = searchResults.flatMap((id) => Table.primaryStore.get(id)[recordFilter.to]);
+						matchingIds = searchResults.flatMap((id) => Table.primaryStore.getSync(id)[recordFilter.to]);
 					} else {
 						matchingIds = searchResults.map(flattenKey);
 					}
