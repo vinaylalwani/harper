@@ -34,6 +34,7 @@ const readLogSchema = Joi.object({
 	limit: Joi.number().min(1),
 	start: Joi.number().min(0),
 	log_name: Joi.custom(validateReadLogPath),
+	filter: Joi.string(),
 });
 
 function validateDatetime(value, helpers) {
