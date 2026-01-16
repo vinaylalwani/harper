@@ -631,6 +631,91 @@ describe('Test readLog module', () => {
 			expect(result.length).to.equal(7);
 			expect(result).to.eql(expected_logs);
 		});
+
+		it('Test if filter is defined, only matching logs are returned', async () => {
+			const test_request = {
+				operation: 'read_log',
+				filter: 'fatal',
+				log_name: LOG_NAME_TEST,
+			};
+
+			const result = await read_log(test_request);
+
+			expect(result.length).to.equal(5);
+			result.forEach((log) => {
+				expect(log.level).to.equal('fatal');
+				expect(log.message).to.include('fatal');
+			});
+		});
+
+		it('Test if filter is defined with no matches, empty array returned', async () => {
+			const test_request = {
+				operation: 'read_log',
+				filter: 'nonexistent_string_12345',
+				log_name: LOG_NAME_TEST,
+			};
+
+			const result = await read_log(test_request);
+
+			expect(result).to.be.empty;
+		});
+
+		it('Test if filter and level are defined, correct results are returned', async () => {
+			const test_request = {
+				operation: 'read_log',
+				filter: 'error',
+				level: 'error',
+				log_name: LOG_NAME_TEST,
+			};
+
+			const result = await read_log(test_request);
+
+			expect(result.length).to.equal(5);
+			result.forEach((log) => {
+				expect(log.level).to.equal('error');
+				expect(log.message).to.include('error');
+			});
+		});
+
+		it('Test if filter, level, and date range are defined, correct results are returned', async () => {
+			const test_request = {
+				operation: 'read_log',
+				filter: 'warn',
+				level: 'warn',
+				from: '2023-03-02T21:52:11.688Z',
+				until: '2023-03-02T21:52:13.688Z',
+				log_name: LOG_NAME_TEST,
+			};
+
+			const expected_logs = [
+				{
+					timestamp: '2023-03-02T21:52:11.688Z',
+					thread: 'main/0',
+					level: 'warn',
+					tags: [],
+					message: 'Howdy doody, they call me a warn log. I am used for unit testing.',
+				},
+				{
+					timestamp: '2023-03-02T21:52:12.688Z',
+					thread: 'main/0',
+					level: 'warn',
+					tags: [],
+					message: 'Howdy doody, they call me a warn log. I am used for unit testing.',
+				},
+				{
+					timestamp: '2023-03-02T21:52:13.688Z',
+					thread: 'main/0',
+					level: 'warn',
+					tags: [],
+					message: 'Howdy doody, they call me a warn log. I am used for unit testing.',
+				},
+			];
+
+			const result = await read_log(test_request);
+
+			expect(result.length).to.equal(3);
+			expect(result).to.eql(expected_logs);
+		});
 	});
 
 	describe('Test pushLineToResult function', () => {
