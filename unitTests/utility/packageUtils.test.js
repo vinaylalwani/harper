@@ -2,6 +2,7 @@ const { describe, it } = require('mocha');
 
 const assert = require('node:assert/strict');
 const { join } = require('node:path');
+const { readFileSync } = require('node:fs');
 
 const packageUtils = require('#js/utility/packageUtils');
 
@@ -10,7 +11,8 @@ const packageUtils = require('#js/utility/packageUtils');
 describe('packageUtils', () => {
 	it('should export the HarperDB package.json as packageJson', () => {
 		assert.equal(typeof packageUtils.packageJson, 'object');
-		assert.deepEqual(packageUtils.packageJson, require('#src/package.json'));
+		const expectedPackageJson = JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf8'));
+		assert.deepEqual(packageUtils.packageJson, expectedPackageJson);
 	});
 
 	it('should export the HarperDB package root as PACKAGE_ROOT', () => {
