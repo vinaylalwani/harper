@@ -64,10 +64,9 @@ describe('test mount_hdb module', () => {
 		expect(mk_dirp_sync_stub.getCall(0).args[0]).to.equal(`mount${SEP}test${SEP}hdb`);
 		expect(mk_dirp_sync_stub.getCall(1).args[0]).to.equal(`mount${SEP}test${SEP}hdb${SEP}backup`);
 		expect(mk_dirp_sync_stub.getCall(2).args[0]).to.equal(`mount${SEP}test${SEP}hdb${SEP}keys`);
-		expect(mk_dirp_sync_stub.getCall(3).args[0]).to.equal(`mount${SEP}test${SEP}hdb${SEP}keys${SEP}.license`);
-		expect(mk_dirp_sync_stub.getCall(4).args[0]).to.equal(`mount${SEP}test${SEP}hdb${SEP}log`);
-		expect(mk_dirp_sync_stub.getCall(5).args[0]).to.equal(`mount${SEP}test${SEP}hdb${SEP}database`);
-		expect(mk_dirp_sync_stub.getCall(6).args[0]).to.equal(`mount${SEP}test${SEP}hdb${SEP}components`);
+		expect(mk_dirp_sync_stub.getCall(3).args[0]).to.equal(`mount${SEP}test${SEP}hdb${SEP}log`);
+		expect(mk_dirp_sync_stub.getCall(4).args[0]).to.equal(`mount${SEP}test${SEP}hdb${SEP}database`);
+		expect(mk_dirp_sync_stub.getCall(5).args[0]).to.equal(`mount${SEP}test${SEP}hdb${SEP}components`);
 	});
 
 	it('Test createLMDBTables happy path', async () => {

@@ -539,7 +539,7 @@ describe('Test operation_authorization', function () {
 			let temp_delete = new alasql.yy.Delete(ast_test);
 			let req_json = getRequestJson(TEST_JSON);
 			let expected_error = test_utils.generateHDBError(
-				"The 'system' database, tables and records are used internally by HarperDB and cannot be updated or removed.",
+				"The 'system' database, tables and records are used internally by Harper and cannot be updated or removed.",
 				403
 			);
 			test_utils.assertErrorSync(
@@ -824,7 +824,7 @@ describe('Test operation_authorization', function () {
 			req_json.operation = 'drop_schema';
 			req_json.schema = 'system';
 			let expected_error = test_utils.generateHDBError(
-				"The 'system' database, tables and records are used internally by HarperDB and cannot be updated or removed.",
+				"The 'system' database, tables and records are used internally by Harper and cannot be updated or removed.",
 				403
 			);
 			test_utils.assertErrorSync(op_auth_rewire.verifyPerms, [req_json, 'dropSchema'], expected_error);
@@ -836,7 +836,7 @@ describe('Test operation_authorization', function () {
 			req_json.schema = 'system';
 			req_json.table = 'hdb_user';
 			let expected_error = test_utils.generateHDBError(
-				"The 'system' database, tables and records are used internally by HarperDB and cannot be updated or removed.",
+				"The 'system' database, tables and records are used internally by Harper and cannot be updated or removed.",
 				403
 			);
 			test_utils.assertErrorSync(op_auth_rewire.verifyPerms, [req_json, 'dropTable'], expected_error);
@@ -849,7 +849,7 @@ describe('Test operation_authorization', function () {
 			req_json.table = 'hdb_user';
 			req_json.attribute = 'username';
 			let expected_error = test_utils.generateHDBError(
-				"The 'system' database, tables and records are used internally by HarperDB and cannot be updated or removed.",
+				"The 'system' database, tables and records are used internally by Harper and cannot be updated or removed.",
 				403
 			);
 			test_utils.assertErrorSync(op_auth_rewire.verifyPerms, [req_json, 'dropAttribute'], expected_error);
