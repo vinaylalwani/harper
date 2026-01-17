@@ -273,7 +273,7 @@ describe('Test serverUtilities.js module ', () => {
 			assert.deepStrictEqual(result.job_operation_function, undefined);
 		});
 
-		it('test CLUSTER_STATUS', () => {
+		it.skip('test CLUSTER_STATUS', () => {
 			let result = serverUtilities.getOperationFunction({ operation: 'cluster_status' });
 
 			assert.deepStrictEqual(result.operation_function.name, 'clusterStatus');

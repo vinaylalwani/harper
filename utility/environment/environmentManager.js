@@ -172,7 +172,7 @@ function initTestEnvironment(testConfigObj = {}) {
 		setProperty(hdbTerms.HDB_SETTINGS_NAMES.CUSTOM_FUNCTIONS_ENABLED_KEY, true);
 		setProperty(
 			hdbTerms.HDB_SETTINGS_NAMES.CUSTOM_FUNCTIONS_DIRECTORY_KEY,
-			path.resolve(__dirname, '../../unitTests/server/fastifyRoutes/custom_functions')
+			path.resolve(__dirname, '../../../unitTests/server/fastifyRoutes/custom_functions')
 		);
 		setProperty(
 			hdbTerms.HDB_SETTINGS_NAMES.LOCAL_STUDIO_ON,

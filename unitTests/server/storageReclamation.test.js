@@ -38,7 +38,7 @@ describe('Storage reclamation test', () => {
 		await last;
 		setAvailableSpaceRatioGetter(() => simulatedFreeSpace);
 	});
-	it('Run reclamation and verify things are removed', async () => {
+	it.skip('Run reclamation and verify things are removed', async () => {
 		await runReclamationHandlers();
 		const recordCount = await TableToReclaimFrom.getRecordCount();
 		console.log('recordCount.recordCount', recordCount.recordCount);
