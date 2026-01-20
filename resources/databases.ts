@@ -522,12 +522,12 @@ function initStores(
 		} else {
 			tableId = primaryAttribute.tableId;
 			if (tableId) {
-				if (tableId >= (dbisStore.get(NEXT_TABLE_ID) || 0)) {
+				if (tableId >= (dbisStore.getSync(NEXT_TABLE_ID) || 0)) {
 					dbisStore.putSync(NEXT_TABLE_ID, tableId + 1);
 					logger.info(`Updating next table id (it was out of sync) to ${tableId + 1} for ${tableName}`);
 				}
 			} else {
-				primaryAttribute.tableId = tableId = dbisStore.get(NEXT_TABLE_ID);
+				primaryAttribute.tableId = tableId = dbisStore.getSync(NEXT_TABLE_ID);
 				if (!tableId) tableId = 1;
 				logger.debug(`Table {tableName} missing an id, assigning {tableId}`);
 				dbisStore.putSync(NEXT_TABLE_ID, tableId + 1);
@@ -915,7 +915,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 		}
 
 		startTxn(); // get an exclusive lock on the database so we can verify that we are the only thread creating the table (and assigning the table id)
-		if (attributesDbi.get(dbiName)) {
+		if (attributesDbi.getSync(dbiName)) {
 			// table was created while we were setting up
 			if (txnCommit) txnCommit();
 			resetDatabases();
@@ -930,7 +930,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 		}
 		primaryStore = handleLocalTimeForGets(primaryStore, rootStore);
 		rootStore.databaseName = databaseName;
-		primaryStore.tableId = attributesDbi.get(NEXT_TABLE_ID);
+		primaryStore.tableId = attributesDbi.getSync(NEXT_TABLE_ID);
 		logger.trace(`Assigning new table id ${primaryStore.tableId} for ${tableName}`);
 		if (!primaryStore.tableId) primaryStore.tableId = 1;
 		attributesDbi.put(NEXT_TABLE_ID, primaryStore.tableId + 1);
@@ -1012,9 +1012,9 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 			}
 			let dbiKey = tableName + '/' + (attribute.name || '');
 			Object.defineProperty(attribute, 'key', { value: dbiKey, configurable: true });
-			let attributeDescriptor = attributesDbi.get(dbiKey);
+			let attributeDescriptor = attributesDbi.getSync(dbiKey);
 			if (attribute.isPrimaryKey) {
-				attributeDescriptor = attributeDescriptor || attributesDbi.get((dbiKey = tableName + '/')) || {};
+				attributeDescriptor = attributeDescriptor || attributesDbi.getSync((dbiKey = tableName + '/')) || {};
 				// primary key can't change indexing, but settings can change
 				if (
 					(audit !== undefined && audit !== Table.audit) ||
@@ -1062,7 +1062,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 				) {
 					hasChanges = true;
 					startTxn();
-					attributeDescriptor = attributesDbi.get(dbiKey);
+					attributeDescriptor = attributesDbi.getSync(dbiKey);
 					if (
 						changed ||
 						(attributeDescriptor.indexingPID && attributeDescriptor.indexingPID !== process.pid) ||
