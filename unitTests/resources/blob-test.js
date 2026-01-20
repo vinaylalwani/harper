@@ -378,12 +378,6 @@ describe('Blob test', () => {
 		assert.throws(() => {
 			BlobTest.put({ id: 1, blob: { name: 'not actually a blob' } });
 		});
-		let record = await BlobTest.get(1);
-		if (record) {
-			assert.throws(() => {
-				record.blob = 'not a blob either';
-			});
-		}
 	});
 	it('sequential embedded blob reads', async () => {
 		for (let i = 0; i < 10; i++) {

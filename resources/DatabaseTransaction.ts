@@ -47,8 +47,8 @@ export type TransactionWrite = {
 	store: RootDatabaseKind;
 	invalidated?: boolean;
 	entry?: Partial<Entry>;
-	before?: () => void;
-	beforeIntermediate?: () => void;
+	before?: () => void | Promise<void>;
+	beforeIntermediate?: () => void | Promise<void>;
 	commit?: (txnTime: number, existingEntry: Entry, retries: number) => void;
 	validate?: (txnTime: number) => void;
 };
@@ -56,6 +56,7 @@ export type TransactionWrite = {
 export class DatabaseTransaction implements Transaction {
 	#context: Context;
 	writes: TransactionWrite[] = []; // the set of writes to commit if the conditions are met
+	completions: Promise<void>[] = []; // the set of outstanding async operations to complete
 	db: RootDatabaseKind;
 	transaction: RocksTransaction;
 	readTxn: ReadTransaction;
@@ -146,6 +147,11 @@ export class DatabaseTransaction implements Transaction {
 		let txnTime = this.timestamp;
 		if (!txnTime) txnTime = this.timestamp = this.transaction.getTimestamp();
 		// immediately execute in this transaction
+		operation.validate?.(txnTime);
+		let result: Promise<void> = operation.before?.() as Promise<void>;
+		if (result?.then) this.completions.push(result);
+		result = operation.beforeIntermediate?.() as Promise<void>;
+		if (result?.then) this.completions.push(result);
 		operation.commit(txnTime, operation.entry, 0, this.transaction);
 		// record the write as well in case we need to redo the transaction if it fails
 		this.writes.push(operation);
@@ -160,94 +166,96 @@ export class DatabaseTransaction implements Transaction {
 			txnTime = this.timestamp = (options.timestamp || this.transaction?.getTimestamp()) ?? getNextMonotonicTime();
 		}
 		if (!options.timestamp) options.timestamp = txnTime;
-		let commitResolution: MaybePromise<void>;
-		if (--this.readTxnsUsed > 0) {
-			// we still have outstanding iterators using the transaction, we can't just commit/abort it, we will still
-			// need to use it
-			commitResolution =
-				this.writes.length > 0
-					? this.transaction?.commit({ renewAfterCommit: true /* Try to use RocksDB's CommitAndTryCreateSnapshot */ })
-					: // don't abort, we still have outstanding reads to complete
-						null;
-		} else {
-			// no more reads need to be performed, just commit/abort based if there are any writes
-			trackedTxns.delete(this);
-			if (this.transaction) {
-				commitResolution = this.writes.length > 0 ? this.transaction?.commit() : this.transaction?.abort();
-				// we are done with this rocksdb transaction, so release it, and if we reuse this Harper transaction,
-				// we need a new transaction
-				this.transaction = null;
-			}
-		}
-
-		if (commitResolution) {
-			if (!outstandingCommit) {
-				outstandingCommit = commitResolution;
-				outstandingCommitStart = performance.now();
-				outstandingCommit.then(() => {
-					outstandingCommit = null;
-				});
-			}
-			const completions = [];
-			return commitResolution.then(
-				() => {
-					if (this.next) {
-						completions.push(this.next.commit(options));
-					}
-					if (options?.flush) {
-						completions.push(this.writes[0].store.flushed);
-					}
-					if (this.replicatedConfirmation) {
-						// if we want to wait for replication confirmation, we need to track the transaction times
-						// and when replication notifications come in, we count the number of confirms until we reach the desired number
-						const databaseName = this.writes[0].store.rootStore.databaseName;
-						const lastWrite = this.writes[this.writes.length - 1];
-						if (confirmReplication && lastWrite) {
-							completions.push(
-								confirmReplication(
-									databaseName,
-									lastWrite.store.getEntry(lastWrite.key).version,
-									this.replicatedConfirmation
-								)
-							);
-						}
-					}
-					// now reset transactions tracking; this transaction be reused and committed again
-					this.writes = [];
-					if (this.#context?.resourceCache) this.#context.resourceCache = null;
-					this.next = null;
-					this.timestamp = 0; // reset the timestamp as well
-					return Promise.all(completions).then(() => {
-						return {
-							txnTime,
-						};
-					});
-				},
-				(error) => {
-					if (error.code === 'ERR_BUSY') {
-						// if the transaction failed due to concurrent changes, we need to retry. First record this as an increased risk of contention/retry
-						// for future transactions
-						if (options) options.retries = (options.retries ?? 0) + 1;
-						else options = { retries: 1 };
-						return this.commit(options); // try again
-					} else throw error;
+		return when(this.completions.length > 0 ? Promise.all(this.completions) : null, () => {
+			let commitResolution: MaybePromise<void>;
+			if (--this.readTxnsUsed > 0) {
+				// we still have outstanding iterators using the transaction, we can't just commit/abort it, we will still
+				// need to use it
+				commitResolution =
+					this.writes.length > 0
+						? this.transaction?.commit({ renewAfterCommit: true /* Try to use RocksDB's CommitAndTryCreateSnapshot */ })
+						: // don't abort, we still have outstanding reads to complete
+							null;
+			} else {
+				// no more reads need to be performed, just commit/abort based if there are any writes
+				trackedTxns.delete(this);
+				if (this.transaction) {
+					commitResolution = this.writes.length > 0 ? this.transaction?.commit() : this.transaction?.abort();
+					// we are done with this rocksdb transaction, so release it, and if we reuse this Harper transaction,
+					// we need a new transaction
+					this.transaction = null;
 				}
-			);
-		}
-		const txnResolution: CommitResolution = {
-			txnTime,
-		};
-		if (this.next) {
-			// now run any other transactions
-			const nextResolution = this.next?.commit(options);
-			if (nextResolution?.then)
-				return nextResolution?.then((nextResolution) => ({
-					txnTime,
-					next: nextResolution,
-				}));
-			txnResolution.next = nextResolution;
-		}
-		return txnResolution;
+			}
+
+			if (commitResolution) {
+				if (!outstandingCommit) {
+					outstandingCommit = commitResolution;
+					outstandingCommitStart = performance.now();
+					outstandingCommit.then(() => {
+						outstandingCommit = null;
+					});
+				}
+				const completions = [];
+				return commitResolution.then(
+					() => {
+						if (this.next) {
+							completions.push(this.next.commit(options));
+						}
+						if (options?.flush) {
+							completions.push(this.writes[0].store.flushed);
+						}
+						if (this.replicatedConfirmation) {
+							// if we want to wait for replication confirmation, we need to track the transaction times
+							// and when replication notifications come in, we count the number of confirms until we reach the desired number
+							const databaseName = this.writes[0].store.rootStore.databaseName;
+							const lastWrite = this.writes[this.writes.length - 1];
+							if (confirmReplication && lastWrite) {
+								completions.push(
+									confirmReplication(
+										databaseName,
+										lastWrite.store.getEntry(lastWrite.key).version,
+										this.replicatedConfirmation
+									)
+								);
+							}
+						}
+						// now reset transactions tracking; this transaction be reused and committed again
+						this.writes = [];
+						if (this.#context?.resourceCache) this.#context.resourceCache = null;
+						this.next = null;
+						this.timestamp = 0; // reset the timestamp as well
+						return Promise.all(completions).then(() => {
+							return {
+								txnTime,
+							};
+						});
+					},
+					(error) => {
+						if (error.code === 'ERR_BUSY') {
+							// if the transaction failed due to concurrent changes, we need to retry. First record this as an increased risk of contention/retry
+							// for future transactions
+							if (options) options.retries = (options.retries ?? 0) + 1;
+							else options = { retries: 1 };
+							return this.commit(options); // try again
+						} else throw error;
+					}
+				);
+			}
+			const txnResolution: CommitResolution = {
+				txnTime,
+			};
+			if (this.next) {
+				// now run any other transactions
+				const nextResolution = this.next?.commit(options);
+				if (nextResolution?.then)
+					return nextResolution?.then((nextResolution) => ({
+						txnTime,
+						next: nextResolution,
+					}));
+				txnResolution.next = nextResolution;
+			}
+			return txnResolution;
+		});
 	}
 	abort(): void {
 		while (this.readTxnsUsed > 0) this.doneReadTxn(); // release the read snapshot when we abort, we assume we don't need it
@@ -321,4 +329,9 @@ export function setTxnExpiration(ms) {
 	txnExpiration = ms;
 	startMonitoringTxns();
 	return trackedTxns;
+}
+// wait for a promise or plain object to resolve
+function when<T, R>(value: T | Promise<T>, callback: (value: T) => R, reject?: (error: any) => R): R | Promise<R> {
+	if ((value as Promise<T>)?.then) return (value as Promise<T>).then(callback, reject);
+	return callback(value as T);
 }
