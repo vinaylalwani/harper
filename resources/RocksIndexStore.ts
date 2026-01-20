@@ -42,11 +42,11 @@ export class RocksIndexStore {
 	 * @param options
 	 */
 	getRange(options: IteratorOptions): Iterable<any> {
-		let { start, end, exclusiveStart, inclusiveEnd } = options;
-		if (exclusiveStart) {
+		let { start, end, exclusiveStart, inclusiveEnd, reverse } = options;
+		if ((reverse ? !exclusiveStart : exclusiveStart) && start !== undefined) {
 			start = [start, MAXIMUM_KEY];
 		}
-		if (inclusiveEnd && end !== undefined) {
+		if ((reverse ? !inclusiveEnd : inclusiveEnd) && end !== undefined) {
 			end = [end, MAXIMUM_KEY];
 		}
 		const translatedOptions = { ...options, start, end };
