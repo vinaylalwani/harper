@@ -35,8 +35,8 @@
 		"createBlob": "readonly",
 		"lockdown": "readonly",
 		"threads": "readonly",
-		"headersTest": "readonly",
-		"Resource": "readonly"
+		"Resource": "readonly",
+		"headersTest": "readonly"
 	},
 	"ignorePatterns": ["unitTests/security/jsLoader/fixtures"]
 }

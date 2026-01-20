@@ -14,7 +14,7 @@ let loadedComponents = new Map();
  */
 async function loadRootComponents(isWorkerThread = false) {
 	try {
-		if (isMainThread) await installApplications();
+		if (isMainThread && !process.env.HARPER_SAFE_MODE) await installApplications();
 	} catch (error) {
 		console.error(error);
 	}
@@ -26,8 +26,10 @@ async function loadRootComponents(isWorkerThread = false) {
 	await loadCertificates();
 	// the Harper root component
 	await loadComponent(dirname(configUtils.getConfigFilePath()), resources, 'hdb', true, loadedComponents);
-	// once the global plugins are loaded, we now load all the CF and run applications (and their components)
-	await loadComponentDirectories(loadedComponents, resources);
+	if (!process.env.HARPER_SAFE_MODE) {
+		// once the global plugins are loaded, we now load all the CF and run applications (and their components)
+		await loadComponentDirectories(loadedComponents, resources);
+	}
 	let allReady = [];
 	for (let [serverModule] of loadedComponents) {
 		if (serverModule.ready) allReady.push(serverModule.ready());
