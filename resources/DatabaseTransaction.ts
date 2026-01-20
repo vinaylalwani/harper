@@ -172,7 +172,12 @@ export class DatabaseTransaction implements Transaction {
 		} else {
 			// no more reads need to be performed, just commit/abort based if there are any writes
 			trackedTxns.delete(this);
-			commitResolution = this.writes.length > 0 ? this.transaction?.commit() : this.transaction?.abort();
+			if (this.transaction) {
+				commitResolution = this.writes.length > 0 ? this.transaction?.commit() : this.transaction?.abort();
+				// we are done with this rocksdb transaction, so release it, and if we reuse this Harper transaction,
+				// we need a new transaction
+				this.transaction = null;
+			}
 		}
 
 		if (commitResolution) {

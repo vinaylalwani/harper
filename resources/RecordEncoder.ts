@@ -450,8 +450,6 @@ export function recordUpdater(store, tableId, auditStore) {
 		if (expiresAt >= 0) assignMetadata |= HAS_EXPIRATION;
 		metadataInNextEncoding = assignMetadata;
 		expiresAtNextEncoding = expiresAt;
-		if (existingEntry?.version === newVersion && audit === false)
-			throw new Error('Must retain local time if version is not changed');
 		const putOptions: {
 			version: number;
 			instructedWrite?: boolean;
