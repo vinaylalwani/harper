@@ -5,7 +5,7 @@ test_utils.preTestPrep();
 const path = require('path');
 
 const LMDB_TEST_FOLDER_NAME = 'system';
-const BASE_PATH = test_utils.getMockLMDBPath();
+const BASE_PATH = test_utils.setupTestDBPath();
 const BASE_TEST_PATH = path.join(BASE_PATH, LMDB_TEST_FOLDER_NAME);
 
 const rewire = require('rewire');
@@ -92,7 +92,7 @@ describe('test lmdbCreateTable module', () => {
 		global.lmdb_map = undefined;
 		global.hdb_schema = { system: systemSchema };
 		date_stub = sandbox.stub(Date, 'now').returns(TIMESTAMP);
-		await fs.remove(test_utils.getMockLMDBPath());
+		await fs.remove(test_utils.setupTestDBPath());
 		await fs.mkdirp(BASE_TEST_PATH);
 		env.setProperty(hdb_terms.CONFIG_PARAMS.DATABASES, {
 			prod: {

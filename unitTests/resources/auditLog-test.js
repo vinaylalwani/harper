@@ -1,6 +1,6 @@
 require('../test_utils');
 const assert = require('assert');
-const { getMockLMDBPath } = require('../test_utils');
+const { setupTestDBPath } = require('../test_utils');
 const { table } = require('#src/resources/databases');
 const { setAuditRetention } = require('#src/resources/auditStore');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
@@ -13,7 +13,7 @@ describe('Audit log', () => {
 	let return_error;
 
 	before(async function () {
-		getMockLMDBPath();
+		setupTestDBPath();
 		setMainIsWorker(true); // TODO: Should be default until changed
 		AuditedTable = table({
 			table: 'AuditedTable',

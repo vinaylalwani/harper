@@ -1,7 +1,7 @@
 require('../test_utils');
 const assert = require('assert');
 const { Worker } = require('worker_threads');
-const { getMockLMDBPath } = require('../test_utils');
+const { setupTestDBPath } = require('../test_utils');
 const { table } = require('#src/resources/databases');
 const { Resource } = require('#src/resources/Resource');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
@@ -10,7 +10,7 @@ const { transaction } = require('#src/resources/transaction');
 describe('Create records', () => {
 	let CreateTest, test_thread;
 	before(async function () {
-		getMockLMDBPath();
+		setupTestDBPath();
 		setMainIsWorker(true);
 		CreateTest = table({
 			table: 'CreateTest',

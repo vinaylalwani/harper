@@ -25,7 +25,7 @@ async function tearDownMockDB(envs = undefined, partial_teardown = false) {
 	} catch (err) {}
 }
 
-function getMockLMDBPath() {
+function setupTestDBPath() {
 	const lmdbPath = path.join(UNIT_TEST_DIR, ENV_DIR_NAME, process.pid.toString());
 	// TODO: Setting the "root" path some more; should clean this up!
 	env.setProperty(terms.HDB_SETTINGS_NAMES.HDB_ROOT_KEY, lmdbPath);
@@ -40,7 +40,7 @@ function getMockLMDBPath() {
 function createTestSandbox() {
 	// TODO: Seems like we're setting the "root" path over and over again
 	// We should clean this up and make it so you only have to set it once
-	const lmdbPath = getMockLMDBPath(); // we set it in here
+	const lmdbPath = setupTestDBPath(); // we set it in here
 	process.env.ROOTPATH = lmdbPath; // setting it again
 	setHdbBasePath(lmdbPath); // also setting the root path
 	const storagePath = path.join(lmdbPath, 'database');
@@ -76,7 +76,7 @@ function cleanupTestSandbox() {
 }
 
 module.exports = {
-	getMockLMDBPath,
+	setupTestDBPath,
 	createTestSandbox,
 	cleanupTestSandbox,
 };

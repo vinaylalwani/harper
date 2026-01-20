@@ -5,7 +5,7 @@ test_utils.preTestPrep();
 const path = require('path');
 const SYSTEM_FOLDER_NAME = 'system';
 const SCHEMA_NAME = 'schema';
-const BASE_PATH = test_utils.getMockLMDBPath();
+const BASE_PATH = test_utils.setupTestDBPath();
 const BASE_SCHEMA_PATH = path.join(BASE_PATH, SCHEMA_NAME);
 const SYSTEM_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, SYSTEM_FOLDER_NAME);
 const TRANSACTIONS_NAME = 'transactions';
@@ -156,7 +156,7 @@ describe('Test lmdbUpsertRecords module', () => {
 			};
 
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(test_utils.setupTestDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 
 			hdb_schema_env = await environment_utility.createEnvironment(SYSTEM_SCHEMA_PATH, systemSchema.hdb_schema.name);
@@ -221,7 +221,7 @@ describe('Test lmdbUpsertRecords module', () => {
 
 			global.lmdb_map = undefined;
 			delete global.hdb_schema;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(test_utils.setupTestDBPath());
 		});
 
 		it('Test upsert w/ update on 1 existing row', async () => {

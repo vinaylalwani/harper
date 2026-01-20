@@ -1,4 +1,4 @@
-import { getMockLMDBPath } from '../test_utils.js';
+import { setupTestDBPath } from '../test_utils.js';
 import { fileURLToPath } from 'url';
 import { setProperty } from '#js/utility/environment/environmentManager';
 import hdbTerms from '#src/utility/hdbTerms';
@@ -60,7 +60,7 @@ export async function setupTestApp() {
 
 	// exit if it is already setup or we are running in the browser
 	if (created_records || typeof process === 'undefined') return created_records;
-	let path = getMockLMDBPath();
+	let path = setupTestDBPath();
 	setProperty(hdbTerms.CONFIG_PARAMS.OPERATIONSAPI_NETWORK_DOMAINSOCKET, join(path, 'operations-server'));
 	setProperty(hdbTerms.CONFIG_PARAMS.HTTP_SECUREPORT, null);
 	setProperty(hdbTerms.CONFIG_PARAMS.HTTP_PORT, 9926);

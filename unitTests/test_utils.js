@@ -104,7 +104,7 @@ function preTestPrep(test_config_obj) {
 
 function makeTheDir(path_value) {
 	if (!fs.existsSync(path_value)) {
-		fs.mkdirSync(path_value);
+		fs.mkdirSync(path_value, { recursive: true });
 	}
 }
 
@@ -151,17 +151,22 @@ function getMockTestPath() {
  * Returns the path to the test root path that will be used for testing
  * @returns String representing the path value to the mock lmdb system directory
  */
-function getMockLMDBPath() {
-	let lmdb_path = path.join(UNIT_TEST_DIR, ENV_DIR_NAME, process.pid.toString());
-	env.setProperty(terms.HDB_SETTINGS_NAMES.HDB_ROOT_KEY, lmdb_path);
-	env.setProperty(terms.CONFIG_PARAMS.DATABASES, { data: { path: lmdb_path }, dev: { path: lmdb_path } });
+function setupTestDBPath() {
+	let dbPath = path.join(UNIT_TEST_DIR, ENV_DIR_NAME, process.pid.toString());
+	makeTheDir(dbPath);
+	env.setProperty(terms.HDB_SETTINGS_NAMES.HDB_ROOT_KEY, dbPath);
+	env.setProperty(terms.CONFIG_PARAMS.DATABASES, {
+		data: { path: dbPath },
+		dev: { path: dbPath },
+		test: { path: dbPath },
+	});
 	resetDatabases();
 	if (isMainThread) {
 		process.on('exit', function () {
 			tearDownMockDB();
 		});
 	}
-	return lmdb_path;
+	return dbPath;
 }
 
 /**
@@ -682,7 +687,7 @@ module.exports = {
 	setGlobalSchema,
 	makeTheDir,
 	getMockTestPath,
-	getMockLMDBPath,
+	setupTestDBPath,
 	sortAsc,
 	sortDesc,
 	sortAttrKeyMap,

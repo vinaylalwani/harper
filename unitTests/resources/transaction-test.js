@@ -1,6 +1,6 @@
 require('../test_utils');
 const assert = require('assert');
-const { getMockLMDBPath } = require('../test_utils');
+const { setupTestDBPath } = require('../test_utils');
 const { table } = require('#src/resources/databases');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
 const { transaction } = require('#src/resources/transaction');
@@ -11,7 +11,7 @@ describe('Transactions', () => {
 	let test_subscription;
 
 	before(async function () {
-		getMockLMDBPath();
+		setupTestDBPath();
 		setMainIsWorker(true);
 		TxnTest = table({
 			table: 'TxnTest',

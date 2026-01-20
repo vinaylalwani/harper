@@ -1,6 +1,6 @@
 require('../test_utils');
 const assert = require('assert');
-const { getMockLMDBPath } = require('../test_utils');
+const { setupTestDBPath } = require('../test_utils');
 const { parseQuery } = require('#src/resources/search');
 const { table } = require('#src/resources/databases');
 const { transaction } = require('#src/resources/transaction');
@@ -20,7 +20,7 @@ describe('Querying through Resource API', () => {
 		long_str += 'testing';
 	}
 	before(async function () {
-		getMockLMDBPath();
+		setupTestDBPath();
 		setMainIsWorker(true); // TODO: Should be default until changed
 		let relationship_attribute = {
 			name: 'related',
@@ -55,7 +55,6 @@ describe('Querying through Resource API', () => {
 				},
 			],
 		});
-		QueryTable.primaryStore.clearSync();
 		QueryTable.setComputedAttribute('computed', (instance) => instance.name + ' computed');
 		const children_of_self_attribute = {
 			name: 'childrenOfSelf',
@@ -101,7 +100,6 @@ describe('Querying through Resource API', () => {
 				},
 			],
 		});
-		RelatedTable.primaryStore.clearSync();
 		children_of_self_attribute.elements.definition.tableClass = RelatedTable;
 		parent_of_self_attribute.definition.tableClass = RelatedTable;
 		ManyToMany = table({
@@ -117,7 +115,6 @@ describe('Querying through Resource API', () => {
 				},
 			],
 		});
-		ManyToMany.primaryStore.clearSync();
 		relationship_attribute.definition.tableClass = RelatedTable;
 		many_to_many_attribute.elements.definition.tableClass = ManyToMany;
 

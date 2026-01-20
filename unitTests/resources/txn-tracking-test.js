@@ -1,6 +1,6 @@
 require('../test_utils');
 const assert = require('assert');
-const { getMockLMDBPath } = require('../test_utils');
+const { setupTestDBPath } = require('../test_utils');
 const { setTxnExpiration } = require('#src/resources/DatabaseTransaction');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
 const { table } = require('#src/resources/databases');
@@ -9,7 +9,7 @@ describe('Txn Expiration', () => {
 	let SlowResource,
 		performedDBInteractions = false;
 	before(async function () {
-		getMockLMDBPath();
+		setupTestDBPath();
 		setMainIsWorker(true); // TODO: Should be default until changed
 		let BasicTable = table({
 			table: 'BasicTable',

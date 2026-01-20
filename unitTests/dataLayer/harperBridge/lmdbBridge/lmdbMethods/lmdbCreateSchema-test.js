@@ -6,7 +6,7 @@ const path = require('path');
 
 const LMDB_TEST_FOLDER_NAME = 'system';
 const SCHEMA_NAME = 'schema';
-const BASE_PATH = test_utils.getMockLMDBPath();
+const BASE_PATH = test_utils.setupTestDBPath();
 const BASE_SCHEMA_PATH = path.join(BASE_PATH);
 const BASE_TEST_PATH = path.join(BASE_SCHEMA_PATH, LMDB_TEST_FOLDER_NAME);
 const TEST_ENVIRONMENT_NAME = 'hdb_schema';
@@ -36,7 +36,7 @@ describe('test lmdbCreateSchema module', () => {
 		global.hdb_schema = { system: systemSchema };
 		date_stub = sandbox.stub(Date, 'now').returns(TIMESTAMP);
 		global.lmdb_map = undefined;
-		await fs.remove(test_utils.getMockLMDBPath());
+		await fs.remove(test_utils.setupTestDBPath());
 		await fs.mkdirp(BASE_TEST_PATH);
 
 		env = await environment_utility.createEnvironment(BASE_TEST_PATH, TEST_ENVIRONMENT_NAME);
@@ -49,7 +49,7 @@ describe('test lmdbCreateSchema module', () => {
 		delete global.hdb_schema;
 
 		global.lmdb_map = undefined;
-		await fs.remove(test_utils.getMockLMDBPath());
+		await fs.remove(test_utils.setupTestDBPath());
 	});
 
 	it('Test that a new schema is added to the system datastore', async () => {

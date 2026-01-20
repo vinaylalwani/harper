@@ -6,7 +6,7 @@ const path = require('path');
 const { HDB_ERROR_MSGS, HTTP_STATUS_CODES } = require('#js/utility/errors/commonErrors');
 
 const SYSTEM_FOLDER_NAME = 'system';
-const BASE_PATH = test_utils.getMockLMDBPath();
+const BASE_PATH = test_utils.setupTestDBPath();
 const SYSTEM_SCHEMA_PATH = path.join(BASE_PATH, SYSTEM_FOLDER_NAME);
 const DEV_SCHEMA_PATH = path.join(BASE_PATH, 'dev');
 
@@ -85,7 +85,7 @@ describe('test validateDropSchema module', () => {
 	let date_stub;
 
 	before(async () => {
-		await fs.remove(test_utils.getMockLMDBPath());
+		await fs.remove(test_utils.setupTestDBPath());
 		date_stub = sandbox.stub(Date, 'now').returns(TIMESTAMP);
 	});
 
@@ -100,7 +100,7 @@ describe('test validateDropSchema module', () => {
 		before(async function () {
 			this.timeout(20000);
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(test_utils.setupTestDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 			await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -187,7 +187,7 @@ describe('test validateDropSchema module', () => {
 			await hdb_table_env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(test_utils.setupTestDBPath());
 		});
 
 		it('test validate invalid schema', async () => {

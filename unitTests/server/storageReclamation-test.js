@@ -1,6 +1,6 @@
 require('../test_utils');
 const assert = require('assert');
-const { getMockLMDBPath } = require('../test_utils');
+const { setupTestDBPath } = require('../test_utils');
 const { table } = require('#src/resources/databases');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
 const { runReclamationHandlers, setAvailableSpaceRatioGetter } = require('#src/server/storageReclamation');
@@ -11,7 +11,7 @@ describe('Storage reclamation test', () => {
 	let simulatedFreeSpace = 0.2;
 	before(async function () {
 		setMainIsWorker(true);
-		getMockLMDBPath();
+		setupTestDBPath();
 		TableToReclaimFrom = table({
 			table: 'TableToReclaimFrom',
 			database: 'test',

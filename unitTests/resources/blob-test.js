@@ -1,6 +1,6 @@
 require('../test_utils');
 const assert = require('assert');
-const { getMockLMDBPath } = require('../test_utils');
+const { setupTestDBPath } = require('../test_utils');
 const { table, getDatabases } = require('#src/resources/databases');
 const { Readable, PassThrough } = require('node:stream');
 const { setAuditRetention } = require('#src/resources/auditStore');
@@ -21,7 +21,7 @@ const { transaction } = require('#src/resources/transaction');
 describe('Blob test', () => {
 	let BlobTest;
 	before(async function () {
-		getMockLMDBPath();
+		setupTestDBPath();
 		setMainIsWorker(true);
 		BlobTest = table({
 			table: 'BlobTest',

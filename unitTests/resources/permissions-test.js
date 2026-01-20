@@ -1,13 +1,13 @@
 require('../test_utils');
 const assert = require('assert');
-const { getMockLMDBPath } = require('../test_utils');
+const { setupTestDBPath } = require('../test_utils');
 const { table } = require('#src/resources/databases');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
 // might want to enable an iteration with NATS being assigned as a source
 describe('Permissions through Resource API', () => {
 	let TestTable, restricted_user, authorized_role, attribute_authorized_role;
 	before(async function () {
-		getMockLMDBPath();
+		setupTestDBPath();
 		setMainIsWorker(true); // TODO: Should be default until changed
 		let RelatedTable = table({
 			table: 'RelatedTestTable',

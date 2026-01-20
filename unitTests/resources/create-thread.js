@@ -1,11 +1,11 @@
 require('../test_utils');
 const { parentPort } = require('worker_threads');
-const { getMockLMDBPath } = require('../test_utils');
+const { setupTestDBPath } = require('../test_utils');
 const { table } = require('#src/resources/databases');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
 // might want to enable an iteration with NATS being assigned as a source
 
-getMockLMDBPath();
+setupTestDBPath();
 setMainIsWorker(true);
 let CreateTest = table({
 	table: 'CreateTest',

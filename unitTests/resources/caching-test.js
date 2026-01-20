@@ -1,6 +1,6 @@
 require('../test_utils');
 const assert = require('assert');
-const { getMockLMDBPath } = require('../test_utils');
+const { setupTestDBPath } = require('../test_utils');
 const { table } = require('#src/resources/databases');
 const { Resource } = require('#src/resources/Resource');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
@@ -17,7 +17,7 @@ describe('Caching', () => {
 	let return_value = true;
 	let return_error;
 	before(async function () {
-		getMockLMDBPath();
+		setupTestDBPath();
 		setMainIsWorker(true); // TODO: Should be default until changed
 		CachingTable = table({
 			table: 'CachingTable',

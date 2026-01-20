@@ -1,11 +1,11 @@
-const { getMockLMDBPath } = require('../test_utils');
+const { setupTestDBPath } = require('../test_utils');
 const { loadGQLSchema } = require('#src/resources/graphql');
 const assert = require('assert');
 const test_data = require('../testData');
 const { transaction } = require('#src/resources/transaction');
 describe('Update Schema', () => {
 	before(async function () {
-		getMockLMDBPath();
+		setupTestDBPath();
 		await loadGQLSchema(`
 		type SchemaChanges @table {
 			id: Int @primaryKey

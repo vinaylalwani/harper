@@ -6,7 +6,7 @@ const path = require('path');
 
 const SYSTEM_FOLDER_NAME = 'system';
 const SCHEMA_NAME = 'schema';
-const BASE_PATH = test_utils.getMockLMDBPath();
+const BASE_PATH = test_utils.setupTestDBPath();
 const BASE_SCHEMA_PATH = path.join(BASE_PATH, SCHEMA_NAME);
 const SYSTEM_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, SYSTEM_FOLDER_NAME);
 const DEV_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, 'dev');
@@ -56,7 +56,7 @@ describe('test lmdbSearchByConditions module', () => {
 		before(async function () {
 			this.timeout(10000);
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(test_utils.setupTestDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 			await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -95,7 +95,7 @@ describe('test lmdbSearchByConditions module', () => {
 			await env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(test_utils.setupTestDBPath());
 		});
 
 		it('test validation', async () => {
