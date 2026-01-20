@@ -28,6 +28,7 @@ import { RocksDatabase, Store as RocksStore, type RocksDatabaseOptions } from '@
 import { replayLogs } from './replayLogs.ts';
 import { totalmem } from 'node:os';
 import { RocksIndexStore } from './RocksIndexStore.ts';
+import type { Id } from './ResourceInterface.ts';
 
 function OpenDBIObject(dupSort, isPrimary) {
 	// what is going on with esbuild, it suddenly is randomly flip-flopping the module record for OpenDBIObject, sometimes return the correct exports object and sometimes returning the exports as the `default`.
@@ -83,6 +84,7 @@ interface LMDBRootDatabase extends RootDatabase {
 interface RocksDatabaseEx extends RocksDatabase {
 	customIndex?: any;
 	env: Record<string, any>;
+	attemptLock(key: Id, version: number, onUnlocked?: () => void): boolean;
 	isLegacy?: boolean;
 	isIndexing?: boolean;
 	indexNulls?: boolean;
@@ -172,6 +174,10 @@ function openRocksDatabase(path: string, options: RocksDatabaseOptions) {
 		db = new RocksIndexStore(db, options);
 	} else {
 		db.env = {};
+		// normalize attemptLock
+		db.attemptLock = function (key: Id, version: number, onUnlock: () => void): boolean {
+			return this.tryLock(key, onUnlock);
+		}; // alias this, as rocksdb uses a different spelling, we don't want to have to branch on every usage
 	}
 	return db;
 }

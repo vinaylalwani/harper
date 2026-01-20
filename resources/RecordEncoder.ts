@@ -478,14 +478,12 @@ export function recordUpdater(store, tableId, auditStore) {
 			// we use resolveRecord outside of transaction, so must explicitly make it conditional
 			if (resolveRecord) putOptions.ifVersion = ifVersion = existingEntry?.version ?? null;
 			if (existingEntry && existingEntry.value && type !== 'message' && existingEntry.metadataFlags & HAS_BLOBS) {
-				if (!existingEntry.localTime || !auditStore.getBinaryFast(existingEntry.localTime)) {
-					// if it used to have blobs, and it doesn't exist in the audit store, we need to delete the old blobs
-					deleteBlobsInObject(existingEntry.value);
-				}
+				// delete the old blobs
+				deleteBlobsInObject(existingEntry.value);
 			}
 			let result: Promise<void>;
 			if (record !== undefined) {
-				result = encodeBlobsWithFilePath(() => store.put(id, record, putOptions), id, store.rootStore);
+				result = encodeBlobsWithFilePath(() => store.putSync(id, record, putOptions), id, store.rootStore);
 				if (blobsWereEncoded) {
 					extendedType |= HAS_BLOBS;
 				}
@@ -508,7 +506,7 @@ export function recordUpdater(store, tableId, auditStore) {
 					const replacingEntry = auditStore.get(replacingId);
 					if (replacingEntry) {
 						const previousVersion = readAuditEntry(replacingEntry).previousVersion;
-						result = auditStore.put(
+						result = auditStore.putSync(
 							replacingId,
 							{
 								version: newVersion,
@@ -530,7 +528,7 @@ export function recordUpdater(store, tableId, auditStore) {
 						return result;
 					}
 				}
-				result = auditStore.put(
+				result = auditStore.putSync(
 					record === undefined ? NEW_TIMESTAMP_PLACEHOLDER : LAST_TIMESTAMP_PLACEHOLDER,
 					{
 						version: newVersion,

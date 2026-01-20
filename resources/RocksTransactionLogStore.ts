@@ -57,9 +57,7 @@ export class RocksTransactionLogStore {
 		if (typeof suggestedKey === 'symbol') {
 			this.rootStore.putSync(suggestedKey, value, options);
 		} else {
-			const nodeId = options.nodeId;
-			const log = nodeId ? (this.nodeLogs?.[nodeId] ?? this.loadLogs()[nodeId]) : this.log;
-			log.addEntry(value, options.transaction.id);
+			this.put(suggestedKey, value, options);
 		}
 	}
 	get(key: any) {
