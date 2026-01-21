@@ -147,7 +147,7 @@ export class DatabaseTransaction implements Transaction {
 		let txnTime = this.timestamp;
 		if (!txnTime) txnTime = this.timestamp = this.transaction.getTimestamp();
 		// immediately execute in this transaction
-		operation.validate?.(txnTime);
+		if (operation.validate?.(txnTime) === false) return;
 		let result: Promise<void> = operation.before?.() as Promise<void>;
 		if (result?.then) this.completions.push(result);
 		result = operation.beforeIntermediate?.() as Promise<void>;

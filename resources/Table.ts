@@ -719,7 +719,7 @@ export function makeTable(options) {
 					// we update the end of the allocation range after verifying we don't have any conflicting ids in front of us
 					idIncrementer.maxSafeId = nextId + (type === 'Int' ? 0x3ff : 0x3fffff);
 					let idAfter = (type === 'Int' ? Math.pow(2, 31) : Math.pow(2, 49)) - 1;
-					const readTxn = inTxn ? undefined : primaryStore.useReadTransaction();
+					const readTxn = inTxn ? undefined : primaryStore.useReadTransaction?.();
 					// get the latest id after the read transaction to make sure we aren't reading any new ids that we assigned from this node
 					const newestId = Number(idIncrementer[0]);
 					for (const key of primaryStore.getKeys({
@@ -1614,7 +1614,8 @@ export function makeTable(options) {
 							// TODO: else freeze after we have applied the changes
 						}
 					} else {
-						transaction.removeWrite(write);
+						transaction.removeWrite?.(write);
+						return false;
 					}
 				},
 				before: writeToSources(applyToSources),
@@ -3293,19 +3294,18 @@ export function makeTable(options) {
 			await completion;
 		}
 		static async *getHistory(startTime = 0, endTime = Infinity) {
-			for (const { key, value: auditEntry } of auditStore.getRange({
+			for (const auditRecord of auditStore.getRange({
 				start: startTime || 1, // if startTime is 0, we actually want to shift to 1 because 0 is encoded as all zeros with audit store's special encoder, and will include symbols
 				end: endTime,
 			})) {
 				await rest(); // yield to other async operations
-				const auditRecord = readAuditEntry(auditEntry);
 				if (auditRecord.tableId !== tableId) continue;
 				yield {
 					id: auditRecord.recordId,
-					localTime: key,
+					localTime: auditRecord.version,
 					version: auditRecord.version,
 					type: auditRecord.type,
-					value: auditRecord.getValue(primaryStore, true, key),
+					value: auditRecord.getValue(primaryStore, true, auditRecord.version),
 					user: auditRecord.user,
 					operation: auditRecord.originatingOperation,
 				};
@@ -4362,7 +4362,7 @@ function stringify(value) {
 function hasOtherProcesses(store) {
 	const pid = process.pid;
 	return store.env
-		.readerList()
+		.readerList?.()
 		.slice(1)
 		.some((line) => {
 			// if the pid from the reader list is different than ours, must be another process accessing the database

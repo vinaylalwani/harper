@@ -159,6 +159,7 @@ function setupTestDBPath() {
 		data: { path: dbPath },
 		dev: { path: dbPath },
 		test: { path: dbPath },
+		test2: { path: dbPath },
 	});
 	resetDatabases();
 	if (isMainThread) {

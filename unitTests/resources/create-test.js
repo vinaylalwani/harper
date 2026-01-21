@@ -28,7 +28,7 @@ describe('Create records', () => {
 		let results = [];
 		results.push(await CreateTest.create({ str: 'hello' }));
 		results.push(await CreateTest.create({ str: 'hello' }));
-		assert.equal(results[0].getId() + 1, results[1].getId());
+		assert.equal(results[0].id + 1, results[1].id);
 	});
 	it('It increments along with other thread', async function () {
 		let id_before = CreateTest.getNewId();

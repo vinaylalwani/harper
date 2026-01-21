@@ -303,6 +303,22 @@ export function getDatabases(): Databases {
 				for (const databaseEntry of readdirSync(databasePath, { withFileTypes: true })) {
 					if (databaseEntry.isFile() && extname(databaseEntry.name).toLowerCase() === '.mdb') {
 						readMetaDb(join(databasePath, databaseEntry.name), basename(databaseEntry.name, '.mdb'), dbName);
+					} else {
+						try {
+							const dbPath = join(databasePath, databaseEntry.name);
+							const files = readdirSync(dbPath, { withFileTypes: true });
+							if (
+								files.find((file) => file.name === 'CURRENT')?.isFile() &&
+								files.some((file) => file.name.startsWith('MANIFEST-'))
+							) {
+								readRocksMetaDb(dbPath, null, dbName);
+								continue;
+							}
+						} catch (err) {
+							if (!('code' in err && (err.code === 'ENOENT' || err.code === 'ENOTDIR'))) {
+								throw err;
+							}
+						}
 					}
 				}
 			}

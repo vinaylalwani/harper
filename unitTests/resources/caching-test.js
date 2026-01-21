@@ -146,7 +146,7 @@ describe('Caching', () => {
 		assert.equal(result.name, 'name ' + 23);
 		source_requests = 0;
 		events = [];
-		result.invalidate();
+		CachingTable.invalidate(23);
 		await new Promise((resolve) => setTimeout(resolve, 20));
 		result = await CachingTable.get(23);
 		assert.equal(result.wasLoadedFromSource(), true);
