@@ -30,6 +30,7 @@ exports.setCertTable = setCertTable;
 exports.loadCertificates = loadCertificates;
 exports.reviewSelfSignedCert = reviewSelfSignedCert;
 exports.createTLSSelector = createTLSSelector;
+exports.listCertificates = listCertificates;
 exports.generateCertsKeys = generateCertsKeys;
 exports.getReplicationCert = getReplicationCert;
 exports.getReplicationCertAuth = getReplicationCertAuth;

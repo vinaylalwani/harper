@@ -10,7 +10,6 @@ const permissionsTranslator_rw = rewire('#js/security/permissionsTranslator');
 const { TEST_NON_SU_ROLE, TEST_SCHEMA_DOG_BREED, TEST_TWO_SCHEMAS } = require('../test_data');
 const terms = require('#src/utility/hdbTerms');
 const { TEST_ROLE_PERMS_ERROR, HTTP_STATUS_CODES, TEST_DEFAULT_ERROR_RESP } = require('../commonTestErrors');
-const { describe } = require('node:test');
 
 const TEST_SCHEMA = 'dev';
 const TEST_PERMS_ENUM = {
@@ -88,7 +87,6 @@ const isSystemTimestampAttr = (attr_name) => {
 
 const validateAttrPerms = (final_perms, initial_perms, hash_key = 'id') => {
 	let is_valid = true;
-	console.log(final_perms, initial_perms);
 	if (!initial_perms || initial_perms.attribute_permissions.length === 0) {
 		if (final_perms.length !== 0) {
 			return false;
@@ -312,7 +310,10 @@ describe('Test permissionsTranslator module', function () {
 		const rolePermsMap = permissionsTranslator_rw.__get__('rolePermsMap');
 		Object.keys(rolePermsMap).forEach((key) => delete rolePermsMap[key]);
 		sandbox.resetHistory();
+		translateRolePerms_spy.resetHistory();
+		createStructureUserPermissions_spy.resetHistory();
 	});
+
 	after(() => {
 		global.hdb_schema = null;
 		translateRolePerms_rw();

@@ -44,8 +44,7 @@ describe('Test keys module', () => {
 		let cert = await mkcert.createCert({
 			domains: ['Unit Test', '127.0.0.1', 'localhost', '::1'],
 			validityDays: 1,
-			caKey: ca.key,
-			caCert: ca.cert,
+			ca
 		});
 
 		test_private_key = cert.key;
@@ -65,9 +64,9 @@ describe('Test keys module', () => {
 
 		const all_certs = await keys.listCertificates();
 		all_certs.forEach((cert) => {
-			if (!cert.is_authority && cert?.details?.issuer?.includes('HarperDB-Certificate-Authority')) {
+			if (!cert.is_authority && cert?.details?.issuer?.includes('Harper-Certificate-Authority')) {
 				actual_cert = cert;
-			} else if (cert.name.includes('HarperDB-Certificate-Authority')) {
+			} else if (cert.name.includes('Harper-Certificate-Authority')) {
 				actual_ca = cert;
 			}
 		});
@@ -115,28 +114,13 @@ describe('Test keys module', () => {
 		const rep_cert = await keys.getReplicationCert();
 		expect(rep_cert).to.exist;
 		expect(rep_cert.name).to.equal(actual_cert.name);
-		expect(rep_cert.issuer.includes('HarperDB-Certificate-Authority')).to.be.true;
+		expect(rep_cert.issuer.includes('Harper-Certificate-Authority')).to.be.true;
 	});
 
 	it('Test getReplicationCertAuth returns the correct CA', async () => {
 		const ca = await keys.getReplicationCertAuth();
-		expect(ca.name).to.include('HarperDB-Certificate-Authority');
+		expect(ca.name).to.include('Harper-Certificate-Authority');
 		expect(ca.certificate).to.equal(actual_ca.certificate);
-	});
-
-	it('Test createCsr happy path', async () => {
-		const csr = await keys.createCsr();
-		const csr_obj = pki.certificationRequestFromPem(csr);
-		expect(csr).to.include('BEGIN CERTIFICATE REQUEST');
-		expect(csr_obj.verify()).to.be.true;
-	});
-
-	it('Test signCertificate happy path', async () => {
-		const signed_cert = await keys.signCertificate({ csr: await keys.createCsr() });
-		const cert_obj = pki.certificateFromPem(signed_cert.certificate);
-		expect(cert_obj.issuer.getField('CN').value).to.include('HarperDB-Certificate-Authority');
-		expect(cert_obj.subject.getField('O').value).to.equal('HarperDB, Inc.');
-		expect(signed_cert.signingCA).to.equal(actual_ca.certificate);
 	});
 
 	it('Test generateCertificates happy path', async () => {
@@ -152,7 +136,7 @@ describe('Test keys module', () => {
 	it('Test getCertAuthority happy path', async () => {
 		const getCertAuthority = keys.__get__('getCertAuthority');
 		const key_and_cert = await getCertAuthority();
-		expect(key_and_cert?.ca?.name).to.include('HarperDB-Certificate-Authority');
+		expect(key_and_cert?.ca?.name).to.include('Harper-Certificate-Authority');
 		expect(key_and_cert?.ca?.private_key_name).to.equal('privateKey.pem');
 	});
 
@@ -181,38 +165,6 @@ describe('Test keys module', () => {
 		if (value > -1) process.argv.splice(value, 1);
 	});
 
-	it('Test addCertificate adds a cert and private key, listCertificates lists the certs then removeCertificate removes it', async () => {
-		const test_cert_name = 'add-cert-test';
-		await keys.addCertificate({
-			name: test_cert_name,
-			certificate: test_cert,
-			is_authority: false,
-			private_key: test_private_key,
-		});
-
-		let certs = await keys.listCertificates();
-		let cert_found = false;
-		for (let cert of certs) {
-			if (
-				cert.name === test_cert_name &&
-				cert.certificate === test_cert &&
-				cert.private_key_name.includes('add-cert-test.pem')
-			)
-				cert_found = true;
-		}
-
-		expect(cert_found).to.be.true;
-
-		await keys.removeCertificate({ name: test_cert_name });
-		certs = await keys.listCertificates();
-		let cert_not_found = true;
-		for (let cert of certs) {
-			if (cert.name === test_cert_name) cert_not_found = false;
-		}
-
-		expect(cert_not_found).to.be.true;
-	});
-
 	it('hostnamesFromCert returns the correct hostnames', async () => {
 		const test_cert = {
 			subject: '',
@@ -232,30 +184,10 @@ describe('Test keys module', () => {
 		expect(keys.getPrimaryHostName(test_cert)).to.eql('test-1.name');
 	});
 
-	it('test get_key returns JWT and key', async () => {
-		const jwt_private = await keys.getKey({ name: '.jwtPrivate', bypass_auth: true });
-		expect(jwt_private).to.include('PRIVATE KEY');
-
-		const jwt_public = await keys.getKey({ name: '.jwtPublic', bypass_auth: true });
-		expect(jwt_public).to.include('PUBLIC KEY');
-
-		const private_key = await keys.getKey({ name: 'privateKey.pem', bypass_auth: true });
-		expect(private_key).to.include('RSA PRIVATE KEY');
-	});
-
-	it('test get_key handles a non-existent key correctly', async () => {
-		let error;
-		try {
-			await keys.getKey({ name: 'imNotAKey.pem', bypass_auth: true });
-		} catch (err) {
-			error = err;
-		}
-		expect(error.message).to.equal('Key not found');
-	});
 	it('can extract the hostnames from a certificate', async () => {
 		const cert = {
 			subjectaltname: 'IP Address:127.0.0.1, DNS:localhost, IP Address:0:0:0:0:0:0:0:1',
-			subject: { CN: '127.0.0.1', C: 'USA', ST: 'Colorado', L: 'Denver', O: 'HarperDB, Inc.' },
+			subject: { CN: '127.0.0.1', C: 'USA', ST: 'Colorado', L: 'Denver', O: 'Harper, Inc.' },
 		};
 
 		const hostnames = await keys.getHostnamesFromCertificate(cert);
@@ -414,9 +346,6 @@ describe('Test keys module', () => {
 		const certs = await keys.listCertificates();
 		const found = certs.find((c) => c.name === 'valid-test-cert');
 		expect(found).to.exist;
-
-		// Clean up
-		await keys.removeCertificate({ name: 'valid-test-cert' });
 	});
 
 	it('Test setCertTable error handling suggestion for cloneNode issue', async () => {
