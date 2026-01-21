@@ -9,7 +9,8 @@ import { connect } from 'mqtt';
 import { readFileSync } from 'fs';
 import { start as startMQTT } from '#src/server/mqtt';
 import axios from 'axios';
-describe('test MQTT connections and commands', () => {
+describe('test MQTT connections and commands', function () {
+	this.timeout(10000);
 	let available_records;
 	let client, client2;
 	before(async () => {

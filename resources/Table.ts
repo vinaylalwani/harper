@@ -2637,14 +2637,18 @@ export function makeTable(options) {
 					}
 				} else {
 					if (count && !startTime) startTime = 0;
-					let localTime = this.#entry?.localTime;
-					if (localTime === PENDING_LOCAL_TIME) {
+					let entry = this.#entry;
+					let localTime = entry?.localTime;
+					if (!entry) {
+						entry = primaryStore.getEntry(thisId);
+						localTime = entry?.localTime;
+					} else if (localTime === PENDING_LOCAL_TIME) {
 						// we can't use the pending commit because it doesn't have the local audit time yet,
 						// so try to retrieve the previous/committed record
 						primaryStore.cache?.delete(thisId);
-						this.#entry = primaryStore.getEntry(thisId);
+						entry = primaryStore.getEntry(thisId);
 						logger.trace?.('re-retrieved record', localTime, this.#entry?.localTime);
-						localTime = this.#entry?.localTime;
+						localTime = entry?.localTime;
 					}
 					logger.trace?.('Subscription from', startTime, 'from', thisId, localTime);
 					if (startTime < localTime) {
@@ -2654,7 +2658,7 @@ export function makeTable(options) {
 						do {
 							//TODO: Would like to do this asynchronously, but we will need to run catch after this to ensure we didn't miss anything
 							//await auditStore.prefetch([key]); // do it asynchronously for better fairness/concurrency and avoid page faults
-							const auditEntry = auditStore.get(nextTime);
+							const auditEntry = auditStore.getSync(nextTime);
 							if (auditEntry) {
 								request.omitCurrent = true; // we are sending the current version from history, so don't double send
 								const auditRecord = readAuditEntry(auditEntry);
@@ -2675,13 +2679,11 @@ export function makeTable(options) {
 						}
 						subscription.startTime = localTime; // make sure we don't re-broadcast the current version that we already sent
 					}
-					if (!request.omitCurrent && this.doesExist()) {
+					if (!request.omitCurrent && entry?.value) {
 						// if retain and it exists, send the current value first
 						send({
 							id: thisId,
-							localTime,
-							value: this.#record,
-							version: this.#version,
+							...entry,
 							type: 'put',
 						});
 					}
