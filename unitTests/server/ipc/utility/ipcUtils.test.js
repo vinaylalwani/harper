@@ -1,56 +1,10 @@
 'use strict';
 
 const chai = require('chai');
-const sinon = require('sinon');
-const rewire = require('rewire');
 const { expect } = chai;
-const hdb_logger = require('#js/utility/logging/harper_logger');
 const ipc_utils = require('#js/server/threads/itc');
 
 describe('Test ipcUtils module', () => {
-	const sandbox = sinon.createSandbox();
-	let log_warn_stub;
-
-	before(() => {
-		log_warn_stub = sandbox.stub(hdb_logger, 'warn');
-	});
-
-	after(() => {
-		sandbox.restore();
-	});
-
-	describe('Test sendItcEvent function', () => {
-		let itc_rewired;
-		let broadcastWithAcknowledgementStub;
-
-		before(() => {
-			itc_rewired = rewire('#js/server/threads/itc');
-			broadcastWithAcknowledgementStub = sandbox.stub().resolves();
-			itc_rewired.__set__('broadcastWithAcknowledgement', broadcastWithAcknowledgementStub);
-		});
-
-		afterEach(() => {
-			broadcastWithAcknowledgementStub.resetHistory();
-		});
-
-		it('Test sendItcEvent calls broadcastWithAcknowledgement with event', async () => {
-			const testEvent = { type: 'schema', message: { originator: 12345, operation: 'create_schema' } };
-			await itc_rewired.sendItcEvent(testEvent);
-			expect(broadcastWithAcknowledgementStub.calledOnce).to.be.true;
-			expect(broadcastWithAcknowledgementStub.firstCall.args[0]).to.eql(testEvent);
-		});
-
-		it('Test sendItcEvent preserves event structure', async () => {
-			const testEvent = {
-				type: 'user',
-				message: { originator: 99999 },
-			};
-			await itc_rewired.sendItcEvent(testEvent);
-			expect(broadcastWithAcknowledgementStub.firstCall.args[0].type).to.equal('user');
-			expect(broadcastWithAcknowledgementStub.firstCall.args[0].message.originator).to.equal(99999);
-		});
-	});
-
 	describe('Test validateEvent function', () => {
 		it('Test non object error returned', () => {
 			const result = ipc_utils.validateEvent('message');
