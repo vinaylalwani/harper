@@ -50,6 +50,7 @@
 		"test:unit:security": "mocha 'unitTests/security/**/*.js' --config unitTests/.mocharc.json --enable-source-maps",
 		"test:unit:dataLayer": "mocha 'unitTests/dataLayer/**/*.js' --config unitTests/.mocharc.json --enable-source-maps",
 		"test:unit:utility": "mocha 'unitTests/utility/**/*.js' --exclude 'unitTests/utility/logging/**/*' --config unitTests/.mocharc.json --enable-source-maps",
+		"test:unit:server": "mocha 'unitTests/server/**/*.js' --config unitTests/.mocharc.json --enable-source-maps",
 		"test:unit:config": "mocha 'unitTests/config/**/*.js' --config unitTests/.mocharc.json --enable-source-maps",
 		"test:unit:typestrip": "env NODE_OPTIONS='--conditions=typestrip' npm run test:unit",
 		"test:unit:typestrip:all": "npm run test:unit:typestrip unitTests"

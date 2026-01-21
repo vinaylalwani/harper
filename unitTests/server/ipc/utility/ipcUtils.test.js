@@ -2,6 +2,7 @@
 
 const chai = require('chai');
 const sinon = require('sinon');
+const rewire = require('rewire');
 const { expect } = chai;
 const hdb_logger = require('#js/utility/logging/harper_logger');
 const ipc_utils = require('#js/server/threads/itc');
@@ -18,21 +19,35 @@ describe('Test ipcUtils module', () => {
 		sandbox.restore();
 	});
 
-	// what is this testing for? this test is the only place this global exists
-	describe.skip('Test sendIpcEvent function', () => {
-		it('Test emitToServer is called happy path', () => {
-			const emit_to_server_stub = sandbox.stub().callsFake(() => {});
-			global.hdb_ipc = { emitToServer: emit_to_server_stub };
-			ipc_utils.sendItcEvent({ type: 'restart', message: 1234 });
-			expect(emit_to_server_stub.args[0][0]).to.eql({ type: 'restart', message: 1234 });
-			delete global.hdb_ipc;
+	describe('Test sendItcEvent function', () => {
+		let itc_rewired;
+		let broadcastWithAcknowledgementStub;
+
+		before(() => {
+			itc_rewired = rewire('#js/server/threads/itc');
+			broadcastWithAcknowledgementStub = sandbox.stub().resolves();
+			itc_rewired.__set__('broadcastWithAcknowledgement', broadcastWithAcknowledgementStub);
 		});
 
-		it('Test error is logged if global IPC client does not exist', () => {
-			ipc_utils.sendItcEvent({ type: 'restart', message: 1234 });
-			expect(log_warn_stub.args[0][0]).to.equal('Tried to send event:');
-			expect(log_warn_stub.args[0][1]).to.eql({ type: 'restart', message: 1234 });
-			expect(log_warn_stub.args[0][2]).to.equal('to HDB IPC client but it does not exist');
+		afterEach(() => {
+			broadcastWithAcknowledgementStub.resetHistory();
+		});
+
+		it('Test sendItcEvent calls broadcastWithAcknowledgement with event', async () => {
+			const testEvent = { type: 'schema', message: { originator: 12345, operation: 'create_schema' } };
+			await itc_rewired.sendItcEvent(testEvent);
+			expect(broadcastWithAcknowledgementStub.calledOnce).to.be.true;
+			expect(broadcastWithAcknowledgementStub.firstCall.args[0]).to.eql(testEvent);
+		});
+
+		it('Test sendItcEvent preserves event structure', async () => {
+			const testEvent = {
+				type: 'user',
+				message: { originator: 99999 },
+			};
+			await itc_rewired.sendItcEvent(testEvent);
+			expect(broadcastWithAcknowledgementStub.firstCall.args[0].type).to.equal('user');
+			expect(broadcastWithAcknowledgementStub.firstCall.args[0].message.originator).to.equal(99999);
 		});
 	});
 
