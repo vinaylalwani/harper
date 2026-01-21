@@ -3341,6 +3341,9 @@ export function makeTable(options) {
 			} while (count < 1000 && nextLocalTime);
 			return history.reverse();
 		}
+		static clear() {
+			return primaryStore.clear();
+		}
 		static cleanup() {
 			deleteCallbackHandle?.remove();
 		}
