@@ -3,6 +3,8 @@
 	"ui": "bdd",
 	"extension": ["js", "mjs"],
 	"recursive": true,
+	"exclude": ["unitTests/security/jsLoader/fixtures/**"],
 	"enable-source-maps": true,
+	"node-option": ["expose-internals"],
 	"exit": true
 }
