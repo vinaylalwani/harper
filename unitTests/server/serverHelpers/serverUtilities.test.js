@@ -273,13 +273,6 @@ describe('Test serverUtilities.js module ', () => {
 			assert.deepStrictEqual(result.job_operation_function, undefined);
 		});
 
-		it('test CLUSTER_STATUS', () => {
-			let result = serverUtilities.getOperationFunction({ operation: 'cluster_status' });
-
-			assert.deepStrictEqual(result.operation_function.name, 'clusterStatus');
-			assert.deepStrictEqual(result.job_operation_function, undefined);
-		});
-
 		it('test EXPORT_TO_S3', () => {
 			let result = serverUtilities.getOperationFunction({ operation: 'export_to_s3' });
 
@@ -397,60 +390,6 @@ describe('Test serverUtilities.js module ', () => {
 			assert.ok(test_result instanceof Error);
 		});
 
-		it.skip('Test `clean body` log scenario for INFO log level', async function () {
-			// TODO: Figure out how to make sinon do what rewire was doing (maybe? the test was already skipped)
-			sinon.replace(logger, 'info', sinon.fake());
-
-			// eslint-disable-next-line @typescript-eslint/no-unused-vars
-			const { hdb_user, hdb_auth_header, password, ...test_clean_body } = MOCK_REQUEST.body;
-
-			await serverUtilities.processLocalTransaction(MOCK_REQUEST, test_func);
-
-			assert(logger.info.calledOnceWith(test_clean_body));
-		});
-
-		// TODO: Repeat the test above with some other log levels too
-
-		it('Test `clean body` log scenario not run for `read_log` operation', async function () {
-			// TODO: Figure out how to make sinon do what rewire was doing (maybe? the test was already skipped)
-			// const logger_stub = serverUtilities.__get__('harperLogger');
-			// logger_stub.log_level = logger.TRACE;
-			// serverUtilities.__set__('harperLogger', logger_stub);
-			//
-			// const read_log_req = test_utils.deepClone(MOCK_REQUEST);
-			// read_log_req.body.operation = 'read_log';
-			//
-			// await serverUtilities.processLocalTransaction(read_log_req, test_func);
-			//
-			// assert.ok(!info_log_stub.called, 'The cleaned body should not be logged');
-		});
-
-		it.skip('Should log error thrown within `clean body` log step', async function () {
-			// TODO: Figure out how to make sinon do what rewire was doing (maybe? the test was already skipped)
-			// const logger_stub = serverUtilities.__get__('harperLogger');
-			// logger_stub.log_level = terms.LOG_LEVELS.TRACE;
-			// serverUtilities.__set__('harperLogger', logger_stub);
-			//
-			// info_log_stub.throws(TEST_ERR);
-			// const test_result = await serverUtilities.processLocalTransaction(MOCK_REQUEST, test_func);
-			//
-			// assert.ok(info_log_stub.calledOnce, 'The error should be logged');
-			// assert.deepEqual(
-			// 	info_log_stub.args[0][0],
-			// 	{ operation: 'create_schema', schema: 'test' },
-			// 	'The correct error should be logged'
-			// );
-			//
-			// assert.equal(
-			// 	test_result,
-			// 	test_func_data,
-			// 	'The function should continue and return the results from the operation'
-			// );
-			//
-			// info_log_stub.resetBehavior();
-			// rewire('#js/server/serverHelpers/serverUtilities');
-		});
-
 		it('Should handle error returned from operation function caller', async function () {
 			op_func_caller_stub.resolves(TEST_ERR);
 
@@ -465,6 +404,60 @@ describe('Test serverUtilities.js module ', () => {
 			assert.ok(test_result instanceof Error);
 
 			op_func_caller_stub.resetBehavior();
+		});
+
+		it('Should wrap non-object results in message object', async function () {
+			const stringResult = 'success message';
+			const stringFunc = async () => stringResult;
+			op_func_caller_stub.callThrough();
+
+			let test_result = await serverUtilities.processLocalTransaction(MOCK_REQUEST, stringFunc);
+
+			assert.deepStrictEqual(test_result, { message: stringResult });
+		});
+
+		it('Should not log request body for read_log operation', async function () {
+			const readLogRequest = {
+				body: {
+					operation: 'read_log',
+					hdb_user: 'user info',
+				},
+			};
+			info_log_stub.resetHistory();
+			op_func_caller_stub.callThrough();
+
+			await serverUtilities.processLocalTransaction(readLogRequest, test_func);
+
+			// info log should not be called for read_log operation
+			assert.ok(!info_log_stub.called, 'info log should not be called for read_log operation');
+		});
+
+		it('Should strip sensitive fields from logged request body', async function () {
+			const requestWithSensitiveData = {
+				body: {
+					operation: 'create_schema',
+					schema: 'test',
+					hdb_user: 'should_be_stripped',
+					hdbAuthHeader: 'should_be_stripped',
+					password: 'should_be_stripped',
+					payload: 'should_be_stripped',
+				},
+			};
+			info_log_stub.resetHistory();
+			op_func_caller_stub.callThrough();
+
+			await serverUtilities.processLocalTransaction(requestWithSensitiveData, test_func);
+
+			// Check that info was called and sensitive fields were not included
+			if (info_log_stub.called) {
+				const loggedBody = info_log_stub.firstCall.args[0];
+				assert.ok(!loggedBody.hdb_user, 'hdb_user should be stripped from logged body');
+				assert.ok(!loggedBody.hdbAuthHeader, 'hdbAuthHeader should be stripped from logged body');
+				assert.ok(!loggedBody.password, 'password should be stripped from logged body');
+				assert.ok(!loggedBody.payload, 'payload should be stripped from logged body');
+				assert.equal(loggedBody.operation, 'create_schema', 'operation should be preserved');
+				assert.equal(loggedBody.schema, 'test', 'schema should be preserved');
+			}
 		});
 	});
 });

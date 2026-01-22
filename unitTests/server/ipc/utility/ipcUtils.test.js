@@ -1,41 +1,10 @@
 'use strict';
 
 const chai = require('chai');
-const sinon = require('sinon');
 const { expect } = chai;
-const hdb_logger = require('#js/utility/logging/harper_logger');
 const ipc_utils = require('#js/server/threads/itc');
 
 describe('Test ipcUtils module', () => {
-	const sandbox = sinon.createSandbox();
-	let log_warn_stub;
-
-	before(() => {
-		log_warn_stub = sandbox.stub(hdb_logger, 'warn');
-	});
-
-	after(() => {
-		sandbox.restore();
-	});
-
-	// what is this testing for? this test is the only place this global exists
-	describe.skip('Test sendIpcEvent function', () => {
-		it('Test emitToServer is called happy path', () => {
-			const emit_to_server_stub = sandbox.stub().callsFake(() => {});
-			global.hdb_ipc = { emitToServer: emit_to_server_stub };
-			ipc_utils.sendItcEvent({ type: 'restart', message: 1234 });
-			expect(emit_to_server_stub.args[0][0]).to.eql({ type: 'restart', message: 1234 });
-			delete global.hdb_ipc;
-		});
-
-		it('Test error is logged if global IPC client does not exist', () => {
-			ipc_utils.sendItcEvent({ type: 'restart', message: 1234 });
-			expect(log_warn_stub.args[0][0]).to.equal('Tried to send event:');
-			expect(log_warn_stub.args[0][1]).to.eql({ type: 'restart', message: 1234 });
-			expect(log_warn_stub.args[0][2]).to.equal('to HDB IPC client but it does not exist');
-		});
-	});
-
 	describe('Test validateEvent function', () => {
 		it('Test non object error returned', () => {
 			const result = ipc_utils.validateEvent('message');
