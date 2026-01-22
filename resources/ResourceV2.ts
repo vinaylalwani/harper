@@ -1,5 +1,7 @@
 import { _assignPackageExport } from '../globals.js';
+import { IterableEventQueue } from './IterableEventQueue.js';
 import type { RecordObject } from './RecordEncoder.js';
+import { RequestTarget } from './RequestTarget.js';
 import { Resource } from './Resource.ts';
 import { RequestTargetOrId } from './ResourceInterface.ts';
 
@@ -57,6 +59,8 @@ export class ResourceV2<Record extends object = any> extends Resource<Record> {
 	delete?(target: RequestTargetOrId): boolean | Promise<boolean>;
 	invalidate?(target: RequestTargetOrId): void | Promise<void>;
 
+	// @ts-expect-error We swapped the order of target and record.
+	connect?(incomingMessages: IterableEventQueue<Record>, target: RequestTarget): AsyncIterable<Record>;
 	publish?(target: RequestTargetOrId, record: Record): void;
 }
 
