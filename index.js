@@ -10,6 +10,7 @@ const { globals } = require('./server/threads/threadServer.js');
 exports.Config = undefined;
 exports.ConfigValue = undefined;
 exports.Context = undefined;
+exports.SourceContext = undefined;
 exports.FileAndURLPathConfig = undefined;
 exports.FilesOption = undefined;
 exports.FilesOptionObject = undefined;
