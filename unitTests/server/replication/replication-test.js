@@ -29,7 +29,7 @@ describe('Replication', () => {
 	let database_config;
 	function addWorkerNode(index) {
 		const child_process = fork(
-			__filename.replace(/\-test.js/, '-thread.js'),
+			__filename.replace(/-test.js/, '-thread.js'),
 			[index, database_config.data.path + '/test-replication-' + index],
 			{}
 		);

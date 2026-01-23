@@ -214,9 +214,9 @@ function listenOnPorts() {
 					// if there is a colon, we assume it is a host:port pair, and then strip brackets as that is a common way to
 					// specify an IPv6 address
 					listen_on = {
-						fd: createReuseportFd(+port.slice(lastColon + 1).replace(/[\[\]]/g, ''), port.slice(0, lastColon)),
+						fd: createReuseportFd(+port.slice(lastColon + 1).replace(/[[\]]/g, ''), port.slice(0, lastColon)),
 					};
-				else listen_on = { host: +port.slice(lastColon + 1).replace(/[\[\]]/g, ''), port: port.slice(0, lastColon) };
+				else listen_on = { host: +port.slice(lastColon + 1).replace(/[[\]]/g, ''), port: port.slice(0, lastColon) };
 			else if (createReuseportFd) listen_on = { fd: createReuseportFd(+port, '::') };
 			else listen_on = { port };
 		} catch (error) {

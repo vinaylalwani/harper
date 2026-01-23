@@ -596,7 +596,7 @@ function getHostFromListeningPort(key) {
 function getPortFromListeningPort(key) {
 	const port = env.get(key);
 	const lastColon = port?.lastIndexOf?.(':');
-	if (lastColon > 0) return +port.slice(lastColon + 1).replace(/[\[\]]/g, '');
+	if (lastColon > 0) return +port.slice(lastColon + 1).replace(/[[\]]/g, '');
 	return +port;
 }
 export function getThisNodeId(auditStore: any) {

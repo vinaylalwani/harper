@@ -75,7 +75,7 @@ function start(procConfig, noKill = false) {
 	};
 	function extractMessages(log) {
 		const CLUSTERING_LOG_LEVEL = envMangr.get(hdbTerms.CONFIG_PARAMS.CLUSTERING_LOGLEVEL);
-		let NATS_PARSER = /\[\d+][^\[]+\[(\w+)]/g;
+		let NATS_PARSER = /\[\d+][^[]+\[(\w+)]/g;
 		let logStart,
 			lastPosition = 0,
 			lastLevel;

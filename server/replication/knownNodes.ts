@@ -233,7 +233,7 @@ export function* iterateRoutes(options: { routes: (Route | any)[] }) {
 				port =
 					securePort || env.get(CONFIG_PARAMS.REPLICATION_PORT) || env.get(CONFIG_PARAMS.OPERATIONSAPI_NETWORK_PORT);
 			const lastColon = port?.lastIndexOf?.(':');
-			if (lastColon > 0) port = +port.slice(lastColon + 1).replace(/[\[\]]/g, '');
+			if (lastColon > 0) port = +port.slice(lastColon + 1).replace(/[[\]]/g, '');
 
 			url = (securePort ? 'wss://' : 'ws://') + host + ':' + port; // now construct the full url
 		}

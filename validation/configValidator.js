@@ -63,7 +63,7 @@ function configValidator(configJson, skipFsValidation = false) {
 	const enabledConstraints = boolean.optional();
 	const threadsConstraints = number.min(0).max(1000).empty(null).default(setDefaultThreads);
 	const rootConstraints = string
-		.pattern(/^[\\\/]$|([\\\/a-zA-Z_0-9\:-]+)+$/, 'directory path')
+		.pattern(/^[\\/]$|([\\/a-zA-Z_0-9:-]+)+$/, 'directory path')
 		.empty(null)
 		.default(setDefaultRoot);
 	const pemFileConstraints = string.optional().empty(null);
@@ -207,7 +207,7 @@ function configValidator(configJson, skipFsValidation = false) {
 			}).optional(),
 			tls: Joi.alternatives([Joi.array().items(tlsConstraints), tlsConstraints]),
 		}).required(),
-		rootPath: string.pattern(/^[\\\/]$|([\\\/a-zA-Z_0-9\:-]+)+$/, 'directory path').required(),
+		rootPath: string.pattern(/^[\\/]$|([\\/a-zA-Z_0-9:-]+)+$/, 'directory path').required(),
 		mqtt: Joi.object({
 			network: Joi.object({
 				port: portConstraints,
@@ -309,7 +309,7 @@ function validatePemFile(value, helpers) {
 }
 
 function validatePath(value, helpers) {
-	Joi.assert(value, string.pattern(/^[\\\/]$|([\\\/a-zA-Z_0-9\:-]+)+$/, 'directory path'));
+	Joi.assert(value, string.pattern(/^[\\/]$|([\\/a-zA-Z_0-9:-]+)+$/, 'directory path'));
 
 	const doesExistMsg = doesPathExist(value);
 	if (doesExistMsg) {

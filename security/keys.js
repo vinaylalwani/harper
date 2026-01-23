@@ -1159,7 +1159,7 @@ async function addCertificate(req) {
  * @returns {*}
  */
 function sanitizeName(cn) {
-	return cn.replace(/[^a-z0-9\.]/gi, '-');
+	return cn.replace(/[^a-z0-9.]/gi, '-');
 }
 
 /**
