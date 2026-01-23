@@ -348,7 +348,7 @@ describe('test createTokens', () => {
 		assert.notDeepStrictEqual(result.operation_token, undefined);
 		assert.notDeepStrictEqual(result.refresh_token, undefined);
 
-		let expected_payload_attributes = ['username', 'super_user', 'cluster_user'];
+		let expected_payload_attributes = ['username', 'super_user'];
 		expected_payload_attributes.forEach((attr) => {
 			assert.deepStrictEqual(refresh_payload.hasOwnProperty(attr), true);
 			assert.deepStrictEqual(operation_payload.hasOwnProperty(attr), true);
@@ -825,7 +825,7 @@ describe('test refreshOperationToken function', () => {
 		assert.deepStrictEqual(validate_user_spy.threw(), false);
 
 		let operation_payload = jwt.decode(token.operation_token);
-		let expected_payload_attributes = ['username', 'super_user', 'cluster_user'];
+		let expected_payload_attributes = ['username', 'super_user'];
 		expected_payload_attributes.forEach((attr) => {
 			assert.deepStrictEqual(operation_payload.hasOwnProperty(attr), true);
 		});
