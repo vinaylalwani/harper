@@ -412,7 +412,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 		return new IterableEventQueue();
 	}
 
-	connect(target: RequestTarget, incomingMessages: IterableEventQueue): AsyncIterable<any> {
+	connect(target: RequestTarget, incomingMessages: IterableEventQueue<Record>): AsyncIterable<Record> {
 		// convert subscription to an (async) iterator
 		const query = this.constructor.loadAsInstance === false ? target : incomingMessages;
 		if (query?.subscribe !== false) {

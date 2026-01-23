@@ -49,6 +49,7 @@ export class RequestTarget extends URLSearchParams {
 	declare previousResidency?: string[];
 
 	declare checkPermission?: UserRoleDatabasePermissions | boolean;
+	declare subscribe?: boolean;
 
 	declare allowFullScan?: boolean;
 	declare allowConditionsOnDynamicAttributes?: boolean;

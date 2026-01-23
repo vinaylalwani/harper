@@ -16,6 +16,7 @@ exports.FilesOption = undefined;
 exports.FilesOptionObject = undefined;
 exports.Query = undefined;
 exports.RecordObject = undefined;
+exports.IterableEventQueue = undefined;
 exports.RequestTarget = undefined;
 exports.RequestTargetOrId = undefined;
 exports.Resource = undefined;
