@@ -270,6 +270,25 @@ function startupLog(portResolutions) {
 			: 'disabled'
 	}`;
 	logMsg += `, unix socket: ${env.get(CONFIG_PARAMS.OPERATIONSAPI_NETWORK_DOMAINSOCKET)}\n`;
+	if (env.get(CONFIG_PARAMS.OPERATIONSAPI_NETWORK_PORT)) {
+		logMsg +=
+			pad('') +
+			'http://' +
+			env.get(CONFIG_PARAMS.NODE_HOSTNAME) +
+			':' +
+			env.get(CONFIG_PARAMS.OPERATIONSAPI_NETWORK_PORT) +
+			'/\n';
+	}
+	if (env.get(CONFIG_PARAMS.OPERATIONSAPI_NETWORK_SECUREPORT)) {
+		logMsg +=
+			'\n' +
+			pad('') +
+			'https://' +
+			env.get(CONFIG_PARAMS.NODE_HOSTNAME) +
+			':' +
+			env.get(CONFIG_PARAMS.OPERATIONSAPI_NETWORK_SECUREPORT) +
+			'/\n';
+	}
 
 	// MQTT Log
 	logMsg += pad('MQTT:');
@@ -311,19 +330,24 @@ function startupLog(portResolutions) {
 	// portResolutions is a Map of port to protocol name and component name built in threadServer.js
 	// we iterate through the map to build a log for REST and for any components that are using custom ports
 	let comps = {};
+	let restHostnames = [];
 	let restLog = `${pad('REST:')}`;
 	for (const [key, values] of portResolutions) {
 		for (const value of values) {
 			const name = value.name;
-			if (name === 'rest') {
-				restLog += `${value.protocol_name}: ${key}, `;
+			const pair = `${value.protocol_name}: ${key}, `;
+			if (!restLog.includes(pair) && name === 'rest') {
+				restLog += pair;
+				if (value.protocol_name === 'HTTP' || value.protocol_name === 'HTTPS') {
+					restHostnames.push(`${value.protocol_name.toLowerCase()}://${env.get(CONFIG_PARAMS.NODE_HOSTNAME)}:${key}/`);
+				}
 			}
 
 			if (components.includes(name)) {
 				if (comps[name]) {
-					comps[name] += `${value.protocol_name}: ${key}, `;
+					comps[name] += pair;
 				} else {
-					comps[name] = `${value.protocol_name}: ${key}, `;
+					comps[name] = pair;
 				}
 			}
 		}
@@ -333,6 +357,9 @@ function startupLog(portResolutions) {
 	if (restLog.length > padding + 1) {
 		restLog = restLog.slice(0, -2);
 		logMsg += `${restLog}\n`;
+		for (const restHostname of restHostnames) {
+			logMsg += pad('') + restHostname + '\n';
+		}
 	}
 
 	let appPortsLog = env.get(CONFIG_PARAMS.HTTP_PORT) ? `HTTP: ${env.get(CONFIG_PARAMS.HTTP_PORT)}, ` : '';
