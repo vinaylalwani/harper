@@ -74,18 +74,36 @@ function logRotator({ logger, maxSize, interval, retention, enabled, path: rotat
 	setIntervalId = setInterval(async () => {
 		if (maxBytes) {
 			let fileStats;
-			fileStats = await fsProm.stat(logger.path);
+			try {
+				fileStats = await fsProm.stat(logger.path);
+			} catch (err) {
+				// If the log file doesn't exist, skip rotation check
+				if (err.code === 'ENOENT') return;
+				throw err;
+			}
 
 			if (fileStats.size >= maxBytes) {
-				lastRotatedLogPath = await moveLogFile(logger.path, rotatedLogDir);
+				try {
+					lastRotatedLogPath = await moveLogFile(logger.path, rotatedLogDir);
+				} catch (err) {
+					// If the log file doesn't exist, skip rotation
+					if (err.code === 'ENOENT') return;
+					throw err;
+				}
 			}
 		}
 
 		if (maxInterval) {
 			const minSinceLastRotate = Date.now() - lastRotationTime;
 			if (minSinceLastRotate >= maxInterval) {
-				lastRotatedLogPath = await moveLogFile(logger.path, rotatedLogDir);
-				lastRotationTime = Date.now();
+				try {
+					lastRotatedLogPath = await moveLogFile(logger.path, rotatedLogDir);
+					lastRotationTime = Date.now();
+				} catch (err) {
+					// If the log file doesn't exist, skip rotation
+					if (err.code === 'ENOENT') return;
+					throw err;
+				}
 			}
 		}
 		if (retention || reclamationPriority) {

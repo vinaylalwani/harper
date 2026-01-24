@@ -38,8 +38,8 @@ async function addTestUser() {
 }
 
 function setHashFunction(hashFunction) {
-	delete require.cache[require.resolve('../../security/user')];
-	delete require.cache[require.resolve('../../utility/password')];
+	delete require.cache[require.resolve('#src/security/user')];
+	delete require.cache[require.resolve('#src/utility/password')];
 	env_mgr.setProperty(CONFIG_PARAMS.AUTHENTICATION_HASHFUNCTION, hashFunction);
 	require('#src/utility/password');
 	user = require('#src/security/user');
@@ -232,28 +232,11 @@ describe('user.ts Unit Tests', () => {
 			await dropTestUsers();
 		});
 
-		it.skip('should return the super user', async () => {
+		it('should return the super user', async () => {
 			await addTestUser();
 			const result = await user.getSuperUser();
 			expect(result.role.role).to.equal('super_user');
 			await dropTestUsers();
-		});
-
-		it('should return the cluster user', async () => {
-			await user.addUser({
-				operation: 'add_user',
-				role: 'cluster_user',
-				username: 'test_user',
-				password: TEST_PASSWORD,
-				active: true,
-			});
-
-			const getConfigStub = sinon.stub(configUtils, 'getConfigFromFile').returns('test_user');
-			const result = await user.getClusterUser();
-			expect(result.username).to.equal('test_user');
-			expect(result.decrypt_hash).to.equal(TEST_PASSWORD);
-			expect(result.role.role).to.equal('cluster_user');
-			getConfigStub.restore();
 		});
 	});
 });

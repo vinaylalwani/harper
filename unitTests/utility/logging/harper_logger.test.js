@@ -1,6 +1,5 @@
 'use strict';
 
-// Note - something in test_utils is calling that logger so it shouldn't be used in this file.
 const sinon = require('sinon');
 const chai = require('chai');
 const expect = chai.expect;
@@ -10,7 +9,6 @@ const rewire = require('rewire');
 const hook_std = require('intercept-stdout');
 const os = require('os');
 const YAML = require('yaml');
-const logger = require('#js/utility/logging/logger');
 const harperLoggerModule = require('#js/utility/logging/harper_logger');
 const { createLogger } = harperLoggerModule;
 const { getHttpOptions, handleApplication, logRequest, getRequestId } = require('#src/server/http');
@@ -156,7 +154,7 @@ describe('Test harper_logger module', () => {
 				error = err;
 			}
 
-			expect(error).to.be.instanceof(Error);
+			expect(error, `error should be Error but it is ${JSON.stringify(error)}`).to.be.instanceof(Error);
 			expect(error_stub.firstCall.args[0]).to.equal('Error initializing log settings');
 			expect(error_stub.secondCall.args[0]).to.equal(test_error);
 
@@ -722,16 +720,20 @@ describe('Test harper_logger module', () => {
 			});
 		});
 		describe('Test HTTP logger', () => {
-			let originalHttpOptions, originalHttpLogOptions, httpLogPath, httpLogger;
+			let originalHttpOptions, originalHttpLogOptions, httpLogPath, httpLogger, getRequestIdStub;
 			before(() => {
 				originalHttpOptions = getHttpOptions();
 				httpLogger = harperLoggerModule.forComponent('http');
-				const { path: logPath, level } = httpLogger;
-				originalHttpLogOptions = { path: logPath, level };
+				const { path: logPath, level, rotation } = httpLogger;
+				originalHttpLogOptions = { path: logPath, level, rotation };
 
 				httpLogPath = path.join(TEST_LOG_DIR, 'http.log');
 				httpLogger.path = httpLogPath;
 				httpLogger.level = 1;
+
+				// Stub getRequestId to avoid dependencies on databases.system
+				let requestIdCounter = 1;
+				getRequestIdStub = sandbox.stub().callsFake(() => requestIdCounter++);
 
 				handleApplication({
 					options: {
@@ -749,6 +751,7 @@ describe('Test harper_logger module', () => {
 					},
 				});
 			});
+
 			it('Test the correct output from HTTP logger on GET', async () => {
 				logRequest(
 					{
@@ -759,7 +762,7 @@ describe('Test harper_logger module', () => {
 						headers: { 'content-type': 'application/json' },
 					},
 					200,
-					getRequestId(),
+					getRequestIdStub(),
 					3.71
 				);
 
@@ -783,7 +786,7 @@ describe('Test harper_logger module', () => {
 						headers: { 'content-type': 'application/json' },
 					},
 					201,
-					getRequestId(),
+					getRequestIdStub(),
 					5.13
 				);
 
@@ -805,9 +808,12 @@ describe('Test harper_logger module', () => {
 						on() {},
 					},
 				});
+				// Disable rotation before restoring path to clean up the rotator interval
+				httpLogger.rotation = { enabled: false };
 				fs.unlink(httpLogger.path);
 				httpLogger.path = originalHttpLogOptions.path;
 				httpLogger.level = originalHttpLogOptions.level;
+				httpLogger.rotation = originalHttpLogOptions.rotation;
 			});
 		});
 	});
@@ -816,8 +822,8 @@ describe('Test harper_logger module', () => {
 		let originalHttpOptions, originalHttpLogOptions, httpLogPath, httpLogger;
 		before(() => {
 			this.externalLogger = harperLoggerModule.forComponent('external');
-			const { path: logPath, level } = this.externalLogger;
-			this.originalExternalOptions = { path: logPath, level };
+			const { path: logPath, level, rotation } = this.externalLogger;
+			this.originalExternalOptions = { path: logPath, level, rotation };
 
 			this.externalLogPath = path.join(TEST_LOG_DIR, 'external.log');
 			this.externalLogger.path = this.externalLogPath;
@@ -833,9 +839,12 @@ describe('Test harper_logger module', () => {
 			expect(log).to.include('Test of the global logger');
 		});
 		after(() => {
+			// Disable rotation before restoring path to clean up the rotator interval
+			this.externalLogger.rotation = { enabled: false };
 			fs.unlink(this.externalLogger.path);
 			this.externalLogger.path = this.originalExternalOptions.path;
 			this.externalLogger.level = this.originalExternalOptions.level;
+			this.externalLogger.rotation = this.originalExternalOptions.rotation;
 		});
 	});
 	it('Test suppressLogging function', () => {

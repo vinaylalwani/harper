@@ -252,24 +252,6 @@ describe('Test jobs.js', () => {
 			})
 		);
 
-		it.skip(
-			// this stub is not functioning reliably, and the first search id collision will
-			// probably occur after the sun has enveloped the earth.
-			'test calling addJob with 2 search id collisions, expect false.',
-			test_util.mochaAsyncWrapper(async function () {
-				insert_stub = sandbox.stub().returns(INSERT_RESULT);
-				search_stub = sandbox.stub().onFirstCall().returns({ id: '12345' }).onSecondCall().returns({ id: '67890' });
-				jobs.__set__('pSearchByValue', search_stub);
-				jobs.__set__('pInsert', insert_stub);
-				let test_job = {};
-				test_job.operation = hdb_term.JOB_TYPE_ENUM.csv_file_load;
-				test_job.hdb_user = 'test user';
-
-				let add_result = await addJob(test_job);
-				assert.equal(add_result.success, false, 'Expected false result');
-			})
-		);
-
 		it(
 			'test calling addJob with null job.',
 			test_util.mochaAsyncWrapper(async function () {

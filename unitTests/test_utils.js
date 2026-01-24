@@ -87,6 +87,10 @@ function preTestPrep(test_config_obj) {
 		env.initTestEnvironment(test_config_obj);
 	});
 	process.on('unhandledRejection', (reason) => {
+		// Ignore @datadog/pprof errors - the module has no native build for Electron test environment
+		if (reason?.message?.includes('No native build was found for runtime=electron')) {
+			return;
+		}
 		console.log('unhandled rejection:', reason);
 		unhandledRejectionExitCode = 1;
 		throw reason;
