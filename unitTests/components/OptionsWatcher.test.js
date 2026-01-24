@@ -9,6 +9,7 @@ const { writeFile, rm } = require('node:fs/promises');
 const { stringify } = require('yaml');
 const { spy } = require('sinon');
 const { DEFAULT_CONFIG } = require('#src/components/DEFAULT_CONFIG');
+const { cloneDeep } = require('lodash');
 
 /**
  * This function asserts that an event is emitted.
@@ -142,7 +143,7 @@ describe('OptionsWatcher', () => {
 
 	it('should correctly return the initial configuration', async () => {
 		const { fixture, options } = await setup();
-		const expected = structuredClone(OPTIONS);
+		const expected = cloneDeep(OPTIONS);
 		assert.equal(options.get(['nil']), expected.nil, 'should return a top-level null value');
 		assert.equal(options.get(['str']), expected.str, 'should return a top-level string value');
 		assert.equal(options.get(['bool']), expected.bool, 'should return a top-level boolean value');
@@ -180,7 +181,7 @@ describe('OptionsWatcher', () => {
 
 		const { fixture, configFilePath, options } = await setup();
 
-		const expected = structuredClone(OPTIONS);
+		const expected = cloneDeep(OPTIONS);
 
 		await assertEvent(
 			options,
@@ -238,7 +239,7 @@ describe('OptionsWatcher', () => {
 			this.fixture = fixture;
 			this.configFilePath = configFilePath;
 			this.options = options;
-			this.expected = structuredClone(OPTIONS);
+			this.expected = cloneDeep(OPTIONS);
 		});
 
 		afterEach(async () => {
