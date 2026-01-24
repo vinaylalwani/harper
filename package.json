@@ -94,7 +94,7 @@
 	},
 	"exports": {
 		".": "./index.js",
-		"./v1": "./index.js",
+		"./v1": "./v1.js",
 		"./v2": "./index.js"
 	},
 	"devDependencies": {
