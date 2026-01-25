@@ -61,7 +61,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
 			const result = resource.get?.(query);
 			// for the new API we always apply select in the instance method
-			if (!resource.constructor.loadAsInstance) return result;
+			if (resource.constructor.loadAsInstance === false) return result;
 			if (result?.then) return result.then(handleSelect);
 			return handleSelect(result);
 			function handleSelect(result) {
@@ -106,7 +106,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 				return Promise.all(results);
 			}
 			return resource.put
-				? !resource.constructor.loadAsInstance
+				? resource.constructor.loadAsInstance === false
 					? resource.put(query, data)
 					: resource.put(data, query)
 				: missingMethod(resource, 'put');
@@ -118,7 +118,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
 			// TODO: Allow array like put?
 			return resource.patch
-				? !resource.constructor.loadAsInstance
+				? resource.constructor.loadAsInstance === false
 					? resource.patch(query, data)
 					: resource.patch(data, query)
 				: missingMethod(resource, 'patch');
@@ -151,7 +151,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	static create(record: any, context: Context): Promise<Id>;
 	static create(idPrefix: any, record: any, context?: Context): Promise<Id> {
 		let id: Id;
-		if (!this.loadAsInstance) {
+		if (this.loadAsInstance === false) {
 			if (typeof idPrefix === 'object' && idPrefix && !context) {
 				// two argument form (record, context), shift the arguments
 				context = record;
@@ -186,7 +186,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 			const results = resource.create ? await resource.create(id, record) : missingMethod(resource, 'create');
 			context.newLocation = id ?? results?.[this.primaryKey];
 			context.createdResource = true;
-			return !this.loadAsInstance ? results : resource;
+			return this.loadAsInstance === false ? results : resource;
 		});
 	}
 	static invalidate = transactional(
@@ -199,7 +199,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	static post = transactional(
 		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
 			if (resource.#id != null) resource.update?.(); // save any changes made during post
-			return !resource.constructor.loadAsInstance ? resource.post(query, data) : resource.post(data, query);
+			return resource.constructor.loadAsInstance === false ? resource.post(query, data) : resource.post(data, query);
 		},
 		{ hasContent: true, type: 'create', method: 'post' }
 	);
@@ -214,7 +214,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	static connect = transactional(
 		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
 			return resource.connect
-				? !resource.constructor.loadAsInstance
+				? resource.constructor.loadAsInstance === false
 					? resource.connect(query, data)
 					: resource.connect(data, query)
 				: missingMethod(resource, 'connect');
@@ -233,7 +233,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 		function (resource: Resource, query: Map, request: Context, data: any) {
 			if (resource.#id != null) resource.update?.(); // save any changes made during publish
 			return resource.publish
-				? !resource.constructor.loadAsInstance
+				? resource.constructor.loadAsInstance === false
 					? resource.publish(query, data)
 					: resource.publish(data, query)
 				: missingMethod(resource, 'publish');
@@ -257,7 +257,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	static query = transactional(
 		function (resource: Resource, query: Map, request: Context, data: any) {
 			return resource.search
-				? !resource.constructor.loadAsInstance
+				? resource.constructor.loadAsInstance === false
 					? resource.search(query, data)
 					: resource.search(data, query)
 				: missingMethod(resource, 'search');
@@ -268,7 +268,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	static copy = transactional(
 		function (resource: Resource, query: Map, request: Context, data: any) {
 			return resource.copy
-				? !resource.constructor.loadAsInstance
+				? resource.constructor.loadAsInstance === false
 					? resource.copy(query, data)
 					: resource.copy(data, query)
 				: missingMethod(resource, 'copy');
@@ -279,7 +279,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	static move = transactional(
 		function (resource: Resource, query: Map, request: Context, data: any) {
 			return resource.move
-				? !resource.constructor.loadAsInstance
+				? resource.constructor.loadAsInstance === false
 					? resource.move(query, data)
 					: resource.move(data, query)
 				: missingMethod(resource, 'move');
@@ -291,7 +291,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 		target: RequestTargetOrId,
 		newRecord: Partial<Record & RecordObject>
 	): Promise<Record & Partial<RecordObject>> {
-		if (!this.constructor.loadAsInstance) {
+		if (this.constructor.loadAsInstance === false) {
 			if (target.isCollection && this.create) {
 				newRecord = await this.create(target, newRecord);
 				return newRecord?.[this.constructor.primaryKey];
@@ -380,7 +380,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 
 	connect(target: RequestTarget, incomingMessages: IterableEventQueue): AsyncIterable<any> {
 		// convert subscription to an (async) iterator
-		const query = this.constructor.loadAsInstance ? incomingMessages : target;
+		const query = this.constructor.loadAsInstance === false ? target : incomingMessages;
 		if (query?.subscribe !== false) {
 			// subscribing is the default action, but can be turned off
 			return this.subscribe?.(query);
@@ -656,7 +656,7 @@ function transactional(
 		} else resourceOptions = options;
 		const loadAsInstance = this.loadAsInstance;
 		let runAction = authorizeActionOnResource;
-		if (loadAsInstance ? this.explicitContext === false : !this.explicitContext) {
+		if (loadAsInstance === false ? !this.explicitContext : this.explicitContext === false) {
 			// if we are using the newer resource API, we default to doing ALS context tracking, which is also
 			// necessary for accessing relationship properties on the direct frozen records
 			runAction = (resource) => contextStorage.run(context, () => authorizeActionOnResource(resource));
@@ -685,7 +685,7 @@ function transactional(
 			if (context.authorize) {
 				// authorization has been requested, but only do it for this entry call
 				context.authorize = false;
-				if (loadAsInstance) {
+				if (loadAsInstance !== false) {
 					// do permission checks, with legacy allow methods
 					const allowed =
 						options.type === 'read'
