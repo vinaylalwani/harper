@@ -275,9 +275,9 @@ describe('Transactions', () => {
 				}
 			}
 			await WithCountOnGet.delete(67);
-			let instance = await WithCountOnGet.get(67);
+			let instance = await transaction(() => WithCountOnGet.get(67));
 			assert.equal(instance.count, 1);
-			instance = await WithCountOnGet.get(67);
+			instance = await transaction(() => WithCountOnGet.get(67));
 			assert.equal(instance.count, 2);
 		});
 		it('Can run txn with commit after get(undefined)', async function () {

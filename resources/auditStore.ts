@@ -203,14 +203,10 @@ export function openAuditStore(rootStore) {
 	return auditStore;
 }
 
-export function removeAuditEntry(auditStore: any, key: number, value: any): Promise<void> {
-	const type = readAction(value);
-	let auditRecord;
-
-	if ((type & 15) === DELETE) {
+export function removeAuditEntry(auditStore: any, key: number, auditRecord: AuditRecord): Promise<void> {
+	if (auditRecord.type === 'delete') {
 		// if this is a delete, we remove the delete entry from the primary table
 		// at the same time so the audit table the primary table are in sync, assuming the entry matches this audit record version
-		auditRecord = auditRecord || readAuditEntry(value);
 		const tableId = auditRecord.tableId;
 		const primaryStore = auditStore.tableStores[auditRecord.tableId];
 		if (primaryStore?.getEntry(auditRecord.recordId)?.version === auditRecord.version)

@@ -225,10 +225,7 @@ export function listenToCommits(primaryStore, auditStore) {
 				}
 			};
 			// try to get lock or wait for it
-			const lockAcquired =
-				store instanceof RocksDatabase
-					? store.tryLock('thread-local-writes', acquiredLock)
-					: store.attemptLock('thread-local-writes', acquiredLock);
+			const lockAcquired = store.tryLock('thread-local-writes', acquiredLock);
 			if (lockAcquired) {
 				acquiredLock();
 			}

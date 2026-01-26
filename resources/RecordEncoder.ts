@@ -283,7 +283,7 @@ export function handleLocalTimeForGets(store, rootStore) {
 		let entry: Entry;
 		if (isRocksDB) {
 			let value = store.getSync(id, options);
-			entry = value && ({ value } as Entry);
+			entry = value === undefined ? undefined : ({ value } as Entry);
 		} else {
 			entry = storeGetEntry.call(this, id, options);
 		}

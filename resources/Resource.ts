@@ -14,13 +14,10 @@ import { DatabaseTransaction, type Transaction } from './DatabaseTransaction.ts'
 import { IterableEventQueue } from './IterableEventQueue.ts';
 import { _assignPackageExport } from '../globals.js';
 import { ClientError, AccessViolation } from '../utility/errors/hdbError.js';
-import { transaction } from './transaction.ts';
+import { transaction, contextStorage } from './transaction.ts';
 import { parseQuery } from './search.ts';
-import { AsyncLocalStorage } from 'async_hooks';
 import { RequestTarget } from './RequestTarget.ts';
 import logger from '../utility/logging/logger.js';
-
-export const contextStorage = new AsyncLocalStorage<Context>();
 
 const EXTENSION_TYPES = {
 	json: 'application/json',
@@ -82,6 +79,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 			// allows context to reset/remove transaction after completion so it can be used in immediate mode:
 			letItLinger: true,
 			ensureLoaded: true, // load from source by default
+			hasContent: false,
 			async: true, // use async by default
 			method: 'get',
 		}
@@ -208,7 +206,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
 			return resource.update(query, data);
 		},
-		{ hasContent: false, type: 'update', method: 'update' }
+		{ type: 'update', method: 'update' }
 	);
 
 	static connect = transactional(
@@ -556,9 +554,14 @@ function transactional(
 				// (id, data, context), this a method that doesn't normally have a body/data, but with the three arguments, we have explicit data
 				data = dataOrContext;
 				context = context.getContext?.() || context;
-			} else {
-				// (id, context), preferred form used for methods without a body
+			} else if (hasContent === false) {
+				// (id, context), preferred form used for methods that are explicitly without a body
 				context = dataOrContext.getContext?.() || dataOrContext;
+			} else if (dataOrContext.transaction || dataOrContext.getContext) {
+				// or if it looks like a context
+				context = dataOrContext.getContext?.() || dataOrContext;
+			} else {
+				data = dataOrContext;
 			}
 		} else if (idOrQuery && typeof idOrQuery === 'object' && !Array.isArray(idOrQuery)) {
 			// (request) a structured id/query, which we will use as the context
@@ -656,7 +659,7 @@ function transactional(
 		} else resourceOptions = options;
 		const loadAsInstance = this.loadAsInstance;
 		let runAction = authorizeActionOnResource;
-		if (loadAsInstance === false ? !this.explicitContext : this.explicitContext === false) {
+		if (!this.explicitContext) {
 			// if we are using the newer resource API, we default to doing ALS context tracking, which is also
 			// necessary for accessing relationship properties on the direct frozen records
 			runAction = (resource) => contextStorage.run(context, () => authorizeActionOnResource(resource));
@@ -682,9 +685,18 @@ function transactional(
 			);
 		}
 		function authorizeActionOnResource(resource: ResourceInterface) {
+			let checkPermission = false;
 			if (query.checkPermission) {
+				checkPermission = true;
 				// authorization has been requested, but only do it for this entry call
 				query.checkPermission = false;
+			}
+			if (context.authorize) {
+				checkPermission = true;
+				// authorization has been requested, but only do it for this entry call
+				context.authorize = false;
+			}
+			if (checkPermission) {
 				if (loadAsInstance !== false) {
 					// do permission checks, with allow methods
 					const allowed =

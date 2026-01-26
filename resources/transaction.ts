@@ -1,9 +1,11 @@
 import type { Context } from './ResourceInterface.ts';
 import { _assignPackageExport } from '../globals.js';
 import { DatabaseTransaction, type Transaction, TRANSACTION_STATE } from './DatabaseTransaction.ts';
+import { AsyncLocalStorage } from 'async_hooks';
 
 export function transaction<T>(context: Context, callback: (transaction: Transaction) => T): T;
 export function transaction<T>(callback: (transaction: Transaction) => T): T;
+export const contextStorage = new AsyncLocalStorage<Context>();
 
 /**
  * Start and run a new transaction. This can be called with a request to hold the transaction, or a new request object will be created
@@ -16,13 +18,15 @@ export function transaction<T>(
 	callback?: (transaction: Transaction) => T
 ): T {
 	let context: Context;
+	let asyncStorageContext;
 	if (typeof ctx === 'function') {
 		// optional first argument, handle case of no request
 		callback = ctx;
-		context = {};
+		asyncStorageContext = contextStorage.getStore();
+		context = asyncStorageContext ?? {};
 	} else {
 		// request argument included, but null or undefined, so maybe create a new one
-		context = ctx || {};
+		context = ctx ?? (asyncStorageContext = contextStorage.getStore()) ?? {};
 	}
 
 	if (typeof callback !== 'function') {
@@ -42,7 +46,10 @@ export function transaction<T>(
 	if (!context.resourceCache) context.resourceCache = [];
 	let result;
 	try {
-		result = callback(transaction);
+		result =
+			context.isExplicit || asyncStorageContext
+				? callback(transaction)
+				: contextStorage.run(context, () => callback(transaction));
 		if (result?.then) {
 			return result.then(onComplete, onError);
 		}

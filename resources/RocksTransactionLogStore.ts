@@ -210,4 +210,10 @@ export class RocksTransactionLogStore {
 	on(eventName: string, listener: any) {
 		return this.rootStore.on(eventName, listener);
 	}
+	tryLock(key: any, onUnlocked?: () => void): boolean {
+		return this.rootStore.tryLock(key, onUnlocked);
+	}
+	unlock(key: any): void {
+		this.rootStore.unlock(key);
+	}
 }

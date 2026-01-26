@@ -171,10 +171,6 @@ export class DatabaseTransaction implements Transaction {
 	 */
 	commit(options: CommitOptions = {}): MaybePromise<CommitResolution> {
 		let txnTime = this.timestamp;
-		if (!txnTime) {
-			txnTime = this.timestamp = (options.timestamp || this.transaction?.getTimestamp()) ?? getNextMonotonicTime();
-		}
-		if (!options.timestamp) options.timestamp = txnTime;
 		let retries = options.retries ?? 0;
 		for (let i = 0; i < this.writes.length; i++) {
 			let operation = this.writes[i];
@@ -238,6 +234,7 @@ export class DatabaseTransaction implements Transaction {
 						this.writes = [];
 						if (this.#context?.resourceCache) this.#context.resourceCache = null;
 						this.next = null;
+						let txnTime = this.timestamp;
 						this.timestamp = 0; // reset the timestamp as well
 						return Promise.all(completions).then(() => {
 							return {
@@ -257,14 +254,14 @@ export class DatabaseTransaction implements Transaction {
 				);
 			}
 			const txnResolution: CommitResolution = {
-				txnTime,
+				txnTime: this.timestamp,
 			};
 			if (this.next) {
 				// now run any other transactions
 				const nextResolution = this.next?.commit(options);
 				if (nextResolution?.then)
 					return nextResolution?.then((nextResolution) => ({
-						txnTime,
+						txnTime: this.timestamp,
 						next: nextResolution,
 					}));
 				txnResolution.next = nextResolution;

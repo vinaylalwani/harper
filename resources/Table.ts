@@ -21,7 +21,7 @@ import type {
 } from './ResourceInterface.ts';
 import type { User } from '../security/user.ts';
 import lmdbProcessRows from '../dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbProcessRows.js';
-import { Resource, contextStorage, transformForSelect, when } from './Resource.ts';
+import { Resource, transformForSelect, when } from './Resource.ts';
 import { DatabaseTransaction, ImmediateTransaction } from './DatabaseTransaction.ts';
 import * as envMngr from '../utility/environment/environmentManager.js';
 import { addSubscription } from './transactionBroadcast.ts';
@@ -39,7 +39,7 @@ import {
 } from './search.ts';
 import logger from '../utility/logging/logger.js';
 import { Addition, assignTrackedAccessors, updateAndFreeze, hasChanges, GenericTrackedObject } from './tracked.ts';
-import { transaction } from './transaction.ts';
+import { transaction, contextStorage } from './transaction.ts';
 import { MAXIMUM_KEY, writeKey, compareKeys } from 'ordered-binary';
 import { getWorkerIndex, getWorkerCount } from '../server/threads/manageThreads.js';
 import { HAS_BLOBS, readAuditEntry, removeAuditEntry } from './auditStore.ts';
@@ -972,7 +972,6 @@ export function makeTable(options) {
 				await dbisDb.committed;
 			} else {
 				// legacy table per database
-				console.log('legacy dropTable');
 				await primaryStore.close();
 				fs.unlinkSync(primaryStore.env.path);
 			}
@@ -1596,7 +1595,7 @@ export function makeTable(options) {
 			const transaction = txnForContext(context);
 
 			checkValidId(id);
-			const entry = this.#entry ?? primaryStore.getEntry(id);
+			const entry = this.#entry ?? primaryStore.getEntry(id, { transaction: transaction.getReadTxn() });
 			const writeToSources = (sources) => {
 				return fullUpdate
 					? sources.put // full update is a put, so we can use the put method if available
@@ -1724,7 +1723,6 @@ export function makeTable(options) {
 										auditRecordToStore = recordUpdate; // use the original update for the audit record
 									} else if (auditRecord.type === 'put' || auditRecord.type === 'delete') {
 										// There is newer full record update, so this incremental update is completely superseded
-										// TODO: We should still store the audit record for historical purposes
 										return writeCommit(false);
 									}
 								}
@@ -2602,19 +2600,18 @@ export function makeTable(options) {
 						if (count)
 							throw new ClientError('startTime and previousCount can not be combined for a table level subscription');
 						// start time specified, get the audit history for this time range
-						for (const { key, value: auditEntry } of auditStore.getRange({
+						for (const auditRecord of auditStore.getRange({
 							start: startTime,
 							exclusiveStart: true,
 							snapshot: false, // no need for a snapshot, audits don't change
 						})) {
-							const auditRecord = readAuditEntry(auditEntry);
 							if (auditRecord.tableId !== tableId) continue;
 							const id = auditRecord.recordId;
 							if (thisId == null || isDescendantId(thisId, id)) {
-								const value = auditRecord.getValue(primaryStore, getFullRecord, key);
+								const value = auditRecord.getValue(primaryStore, getFullRecord, auditRecord.localTime);
 								send({
 									id,
-									localTime: key,
+									localTime: auditRecord.localTime,
 									value,
 									version: auditRecord.version,
 									type: auditRecord.type,
@@ -2632,14 +2629,19 @@ export function makeTable(options) {
 					} else if (count) {
 						const history = [];
 						// we are collecting the history in reverse order to get the right count, then reversing to send
-						for (const { key, value: auditEntry } of auditStore.getRange({ start: 'z', end: false, reverse: true })) {
+						for (const auditRecord of auditStore.getRange({ start: 'z', end: false, reverse: true })) {
 							try {
-								const auditRecord = readAuditEntry(auditEntry);
 								if (auditRecord.tableId !== tableId) continue;
 								const id = auditRecord.recordId;
 								if (thisId == null || isDescendantId(thisId, id)) {
-									const value = auditRecord.getValue(primaryStore, getFullRecord, key);
-									history.push({ id, localTime: key, value, version: auditRecord.version, type: auditRecord.type });
+									const value = auditRecord.getValue(primaryStore, getFullRecord, auditRecord.localTime);
+									history.push({
+										id,
+										localTime: auditRecord.localTime,
+										value,
+										version: auditRecord.version,
+										type: auditRecord.type,
+									});
 									if (--count <= 0) break;
 								}
 							} catch (error) {
@@ -2690,10 +2692,9 @@ export function makeTable(options) {
 						do {
 							//TODO: Would like to do this asynchronously, but we will need to run catch after this to ensure we didn't miss anything
 							//await auditStore.prefetch([key]); // do it asynchronously for better fairness/concurrency and avoid page faults
-							const auditEntry = auditStore.getSync(nextTime);
-							if (auditEntry) {
+							const auditRecord = auditStore.getSync(nextTime);
+							if (auditRecord) {
 								request.omitCurrent = true; // we are sending the current version from history, so don't double send
-								const auditRecord = readAuditEntry(auditEntry);
 								const value = auditRecord.getValue(primaryStore, getFullRecord, nextTime);
 								if (getFullRecord) auditRecord.type = 'put';
 								history.push({
@@ -2726,6 +2727,10 @@ export function makeTable(options) {
 				}
 				pendingRealTimeQueue = null;
 			})();
+			result.catch((error) => {
+				harperLogger.error?.('Error in real-time subscription:', error);
+				subscription.send(error);
+			});
 			function send(event: any) {
 				if (databaseName !== 'system') {
 					recordAction(event.size ?? 1, 'db-message', tableName, null);
@@ -3306,13 +3311,13 @@ export function makeTable(options) {
 		}
 		static async deleteHistory(endTime = 0, cleanupDeletedRecords = false) {
 			let completion: Promise<void>;
-			for (const { key, value: auditEntry } of auditStore.getRange({
+			for (const auditRecord of auditStore.getRange({
 				start: 0,
 				end: endTime,
 			})) {
 				await rest(); // yield to other async operations
-				if (readAuditEntry(auditEntry).tableId !== tableId) continue;
-				completion = removeAuditEntry(auditStore, key, auditEntry);
+				if (auditRecord.tableId !== tableId) continue;
+				completion = removeAuditEntry(auditStore, auditRecord.localTime, auditRecord);
 			}
 			if (cleanupDeletedRecords) {
 				// this is separate procedure we can do if the records are not being cleaned up by the audit log. This shouldn't
@@ -3357,9 +3362,8 @@ export function makeTable(options) {
 				await rest(); // yield to other async operations
 				//TODO: Would like to do this asynchronously, but we will need to run catch after this to ensure we didn't miss anything
 				//await auditStore.prefetch([key]); // do it asynchronously for better fairness/concurrency and avoid page faults
-				const auditEntry = auditStore.get(nextLocalTime);
-				if (auditEntry) {
-					const auditRecord = readAuditEntry(auditEntry);
+				const auditRecord = auditStore.get(nextLocalTime);
+				if (auditRecord) {
 					history.push({
 						id: auditRecord.recordId,
 						localTime: nextLocalTime,
