@@ -48,6 +48,10 @@ export class RequestTarget extends URLSearchParams {
 	declare originatingOperation?: string;
 	declare previousResidency?: string[];
 
+	// Action tracking
+	declare loadedFromSource?: boolean;
+	declare createdNewId?: string;
+
 	declare checkPermission?: UserRoleDatabasePermissions | boolean;
 
 	declare allowFullScan?: boolean;

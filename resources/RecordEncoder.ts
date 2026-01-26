@@ -500,12 +500,12 @@ export function recordUpdater(store, tableId, auditStore) {
 					extendedType |= HAS_STRUCTURE_UPDATE;
 					store.encoder.structureUpdate = null;
 				}
-				const structureVersion = store.encoder.structures.length + store.encoder.typedStructs.length;
+				const structureVersion = store.encoder.structures.length + (store.encoder.typedStructs?.length ?? 0);
 				if (resolveRecord && existingEntry?.localTime) {
 					const replacingId = existingEntry?.localTime;
 					const replacingEntry = auditStore.get(replacingId);
 					if (replacingEntry) {
-						const previousVersion = readAuditEntry(replacingEntry).previousVersion;
+						const previousVersion = replacingEntry.previousVersion;
 						result = auditStore.putSync(
 							replacingId,
 							{

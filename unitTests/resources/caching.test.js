@@ -5,6 +5,7 @@ const { table } = require('#src/resources/databases');
 const { Resource } = require('#src/resources/Resource');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
 const { transaction } = require('#src/resources/transaction');
+const { RequestTarget } = require('#src/resources/RequestTarget');
 describe('Caching', () => {
 	let CachingTable,
 		IndexedCachingTable,
@@ -96,22 +97,24 @@ describe('Caching', () => {
 		assert.equal(result.name, 'name ' + 23);
 		assert.equal(source_requests, 1);
 		await new Promise((resolve) => setTimeout(resolve, 5));
-		result = await CachingTable.get(23);
-		assert.equal(result.wasLoadedFromSource(), false);
+		let target23 = new RequestTarget();
+		target23.id = 23;
+		result = await CachingTable.get(target23);
+		assert.equal(Boolean(target23.loadedFromSource), false);
 		assert.equal(result.id, 23);
 		assert.equal(source_requests, 1);
 		// let it expire
 		await new Promise((resolve) => setTimeout(resolve, 10));
-		result = await CachingTable.get(23);
+		result = await CachingTable.get(target23);
 		assert.equal(result.id, 23);
 		assert.equal(result.name, 'name ' + 23);
 		assert.equal(source_requests, 2);
 		if (events.length > 0) console.log(events);
 		//assert.equal(events.length, 0);
 		await CachingTable.put(23, { name: 'expires in past' }, { expiresAt: 0 });
-		result = await CachingTable.get(23);
+		result = await CachingTable.get(target23);
 		assert.equal(source_requests, 3);
-		assert.equal(result.wasLoadedFromSource(), true);
+		assert.equal(target23.loadedFromSource, true);
 	});
 
 	it('Cache stampede is handled', async function () {
