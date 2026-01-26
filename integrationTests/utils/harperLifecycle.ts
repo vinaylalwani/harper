@@ -27,11 +27,11 @@ export interface StartHarperOptions {
 	/**
 	 * Additional configuration options to pass to the Harper CLI.
 	 */
-	config: any;
+	config?: any;
 	/**
 	 * Environment variables to set when running Harper.
 	 */
-	env: any;
+	env?: any;
 	/**
 	 * Version of Harper to install and use for this test suite.
 	 */

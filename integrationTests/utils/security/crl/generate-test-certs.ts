@@ -1,45 +1,44 @@
-#!/usr/bin/env node
-
 /**
  * Generate test certificates for CRL integration testing
- * This script generates a complete test CA and certificates for CRL testing
+ * This module generates a complete test CA and certificates for CRL testing
  * Similar to the OCSP test certificate generation but with CRL distribution points
  */
 
-const fs = require('node:fs');
-const path = require('node:path');
-const { execSync } = require('node:child_process');
+import fs from 'node:fs';
+import path from 'node:path';
+import { execSync } from 'node:child_process';
 
-const OUTPUT_DIR = path.join(__dirname, 'generated');
-const CRL_PORT = process.env.CRL_PORT || 8889;
-const CRL_HOST = process.env.CRL_HOST || 'localhost';
+/**
+ * Generate CRL test certificates
+ *
+ * @param outputDir - Directory where certificates will be generated
+ * @param crlHost - Hostname for CRL distribution point URL
+ * @param crlPort - Port for CRL distribution point URL
+ */
+export function generateCrlCertificates(outputDir: string, crlHost: string, crlPort: number): void {
+	console.log('Generating CRL test certificates...');
 
-function generateTestCA() {
+	// Generate test CA
 	console.log('Generating test CA for CRL testing...');
 
-	const caKeyPath = path.join(OUTPUT_DIR, 'harper-ca.key');
-	const caCertPath = path.join(OUTPUT_DIR, 'harper-ca.crt');
+	const caKeyPath = path.join(outputDir, 'harper-ca.key');
+	const caCertPath = path.join(outputDir, 'harper-ca.crt');
 
-	// Generate CA key
 	execSync(`openssl genpkey -algorithm ED25519 -out ${caKeyPath}`);
-
-	// Generate CA certificate
 	execSync(
 		`openssl req -new -x509 -key ${caKeyPath} -out ${caCertPath} -days 365 -subj "/CN=Harper Test CA/O=Harper CRL Test"`
 	);
 
 	console.log('Test CA generated successfully');
-	return { caKeyPath, caCertPath };
-}
 
-function generateClientCerts(caKeyPath, caCertPath) {
+	// Generate client certificates
 	console.log('\nGenerating client certificates...');
 
 	// Generate valid client certificate
-	const validKeyPath = path.join(OUTPUT_DIR, 'client-valid.key');
-	const validCsrPath = path.join(OUTPUT_DIR, 'client-valid.csr');
-	const validCertPath = path.join(OUTPUT_DIR, 'client-valid.crt');
-	const validChainPath = path.join(OUTPUT_DIR, 'client-valid-chain.crt');
+	const validKeyPath = path.join(outputDir, 'client-valid.key');
+	const validCsrPath = path.join(outputDir, 'client-valid.csr');
+	const validCertPath = path.join(outputDir, 'client-valid.crt');
+	const validChainPath = path.join(outputDir, 'client-valid-chain.crt');
 
 	execSync(`openssl genpkey -algorithm ED25519 -out ${validKeyPath}`);
 	execSync(`openssl req -new -key ${validKeyPath} -out ${validCsrPath} -subj "/CN=Valid CRL Client/O=Harper CRL Test"`);
@@ -49,9 +48,9 @@ function generateClientCerts(caKeyPath, caCertPath) {
 basicConstraints = CA:FALSE
 keyUsage = digitalSignature, keyEncipherment
 extendedKeyUsage = clientAuth
-crlDistributionPoints = URI:http://${CRL_HOST}:${CRL_PORT}/test.crl`;
+crlDistributionPoints = URI:http://${crlHost}:${crlPort}/test.crl`;
 
-	const validExtFile = path.join(OUTPUT_DIR, 'client-valid.ext');
+	const validExtFile = path.join(outputDir, 'client-valid.ext');
 	fs.writeFileSync(validExtFile, validExtensions);
 
 	execSync(
@@ -64,10 +63,10 @@ crlDistributionPoints = URI:http://${CRL_HOST}:${CRL_PORT}/test.crl`;
 	fs.writeFileSync(validChainPath, validCertContent + caCertContent);
 
 	// Generate revoked client certificate
-	const revokedKeyPath = path.join(OUTPUT_DIR, 'client-revoked.key');
-	const revokedCsrPath = path.join(OUTPUT_DIR, 'client-revoked.csr');
-	const revokedCertPath = path.join(OUTPUT_DIR, 'client-revoked.crt');
-	const revokedChainPath = path.join(OUTPUT_DIR, 'client-revoked-chain.crt');
+	const revokedKeyPath = path.join(outputDir, 'client-revoked.key');
+	const revokedCsrPath = path.join(outputDir, 'client-revoked.csr');
+	const revokedCertPath = path.join(outputDir, 'client-revoked.crt');
+	const revokedChainPath = path.join(outputDir, 'client-revoked-chain.crt');
 
 	execSync(`openssl genpkey -algorithm ED25519 -out ${revokedKeyPath}`);
 	execSync(
@@ -79,9 +78,9 @@ crlDistributionPoints = URI:http://${CRL_HOST}:${CRL_PORT}/test.crl`;
 basicConstraints = CA:FALSE
 keyUsage = digitalSignature, keyEncipherment
 extendedKeyUsage = clientAuth
-crlDistributionPoints = URI:http://${CRL_HOST}:${CRL_PORT}/test.crl`;
+crlDistributionPoints = URI:http://${crlHost}:${crlPort}/test.crl`;
 
-	const revokedExtFile = path.join(OUTPUT_DIR, 'client-revoked.ext');
+	const revokedExtFile = path.join(outputDir, 'client-revoked.ext');
 	fs.writeFileSync(revokedExtFile, revokedExtensions);
 
 	execSync(
@@ -94,19 +93,13 @@ crlDistributionPoints = URI:http://${CRL_HOST}:${CRL_PORT}/test.crl`;
 
 	console.log('Client certificates generated successfully');
 
-	return {
-		valid: { keyPath: validKeyPath, certPath: validCertPath, chainPath: validChainPath },
-		revoked: { keyPath: revokedKeyPath, certPath: revokedCertPath, chainPath: revokedChainPath },
-	};
-}
-
-function generateCRL(caKeyPath, caCertPath, validCertPath, revokedCertPath) {
+	// Generate CRL
 	console.log('\nGenerating CRL...');
 
 	// Create index.txt file for CRL generation
-	const indexPath = path.join(OUTPUT_DIR, 'index.txt');
-	const serialPath = path.join(OUTPUT_DIR, 'crlnumber');
-	const crlPath = path.join(OUTPUT_DIR, 'test.crl');
+	const indexPath = path.join(outputDir, 'index.txt');
+	const serialPath = path.join(outputDir, 'crlnumber');
+	const crlPath = path.join(outputDir, 'test.crl');
 
 	// Initialize files
 	fs.writeFileSync(serialPath, '01\n');
@@ -140,60 +133,28 @@ function generateCRL(caKeyPath, caCertPath, validCertPath, revokedCertPath) {
 default_ca = test_ca
 
 [test_ca]
-dir = ${OUTPUT_DIR}
+dir = ${outputDir}
 database = ${indexPath}
 crlnumber = ${serialPath}
 certificate = ${caCertPath}
 private_key = ${caKeyPath}
 default_md = sha256
 default_crl_days = 30
-crl = ${OUTPUT_DIR}/test.crl
+crl = ${outputDir}/test.crl
 `;
 
-	const configPath = path.join(OUTPUT_DIR, 'openssl.conf');
+	const configPath = path.join(outputDir, 'openssl.conf');
 	fs.writeFileSync(configPath, configContent);
 
 	// Generate CRL
 	execSync(`openssl ca -config ${configPath} -gencrl -out ${crlPath}`);
 
 	console.log('CRL generated successfully');
-	return crlPath;
+	console.log('\n✅ All CRL test certificates generated successfully!');
+	console.log('Generated files:');
+	console.log('  - harper-ca.crt (Test CA certificate)');
+	console.log('  - harper-ca.key (Test CA private key)');
+	console.log('  - client-valid-chain.crt (Valid client certificate chain)');
+	console.log('  - client-revoked-chain.crt (Revoked client certificate chain)');
+	console.log('  - test.crl (Certificate Revocation List)');
 }
-
-function generateCRLCerts() {
-	// Create output directory
-	if (!fs.existsSync(OUTPUT_DIR)) {
-		fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-	}
-
-	try {
-		console.log('Generating CRL test certificates...');
-
-		// Generate test CA
-		const { caKeyPath, caCertPath } = generateTestCA();
-
-		// Generate client certificates
-		const clientCerts = generateClientCerts(caKeyPath, caCertPath);
-
-		// Generate CRL with both valid and revoked certificates
-		generateCRL(caKeyPath, caCertPath, clientCerts.valid.certPath, clientCerts.revoked.certPath);
-
-		console.log('\n✅ All CRL test certificates generated successfully!');
-		console.log('Generated files:');
-		console.log('  - harper-ca.crt (Test CA certificate)');
-		console.log('  - harper-ca.key (Test CA private key)');
-		console.log('  - client-valid-chain.crt (Valid client certificate chain)');
-		console.log('  - client-revoked-chain.crt (Revoked client certificate chain)');
-		console.log('  - test.crl (Certificate Revocation List)');
-	} catch (error) {
-		console.error('Error generating CRL certificates:', error);
-		process.exit(1);
-	}
-}
-
-// Run if called directly
-if (require.main === module) {
-	generateCRLCerts();
-}
-
-module.exports = { generateCRLCerts };
