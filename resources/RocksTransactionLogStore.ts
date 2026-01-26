@@ -66,8 +66,8 @@ export class RocksTransactionLogStore {
 	getSync(key: any) {
 		if (typeof key === 'number') {
 			// this a request for a transaction log entry by a timestamp
-			for (const entry of this.getRange({ start: key, end: key })) {
-				return entry.value;
+			for (const entry of this.getRange({ start: key, exactStart: true })) {
+				return entry;
 			}
 		} else {
 			// Harper puts some metadata in the database, we will just put this in the root store instead
@@ -93,6 +93,7 @@ export class RocksTransactionLogStore {
 	 */
 	getRange(options: {
 		start?: number;
+		exactStart?: boolean;
 		end?: number;
 		log?: string;
 		onlyKeys?: boolean;

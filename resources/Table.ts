@@ -807,7 +807,7 @@ export function makeTable(options) {
 					};
 					idBefore = 0;
 					// now find the next id before the last key
-					for (const key of primaryStore.getKeys({ start: lastKey, limit: 1, reverse: true })) {
+					for (const key of primaryStore.getKeys({ start: lastKey, end: true, limit: 1, reverse: true })) {
 						idBefore = key;
 					}
 					idAfter = maxId;
@@ -1226,7 +1226,7 @@ export function makeTable(options) {
 					if (ownData) updates = Object.assign(ownData, updates);
 					this.#changes = updates;
 				} else {
-					// standard path, where we retrieve the references record and return an Updatable, initialized with any
+					// standard path, where we retrieve the references record and return an instance, initialized with any
 					// updates that were passed into this method
 					let allowed = true;
 					if (target == undefined) throw new TypeError('Can not put a record without a target');
@@ -1238,8 +1238,12 @@ export function makeTable(options) {
 						if (!allowed) {
 							throw new AccessViolation(context.user);
 						}
-
-						return when(primaryStore.get(requestTargetToId(target)), (record) => {
+						let loading: Promise<any>;
+						if (!this.#entry && this.constructor.loadAsInstance === false) {
+							// load the record if it hasn't been done yet
+							loading = this._loadRecord(id, context, { ensureLoaded: true, async: true }) as Promise<any>;
+						}
+						return when(loading, () => {
 							this._writeUpdate(id, this.#changes, false);
 							return this;
 						});
@@ -1695,9 +1699,8 @@ export function makeTable(options) {
 
 							const succeedingUpdates = []; // record the "future" updates, as we need to apply the updates in reverse order
 							while (localTime > txnTime || (auditedVersion >= txnTime && localTime > 0)) {
-								const auditEntry = auditStore.get(localTime);
-								if (!auditEntry) break;
-								const auditRecord = readAuditEntry(auditEntry);
+								const auditRecord = auditStore.get(localTime);
+								if (!auditRecord) break;
 								auditedVersion = auditRecord.version;
 								if (auditedVersion >= txnTime) {
 									if (auditedVersion === txnTime) {
@@ -3806,11 +3809,10 @@ export function makeTable(options) {
 				// existing entry to the node name of the update
 				const nodeNameToId = server.replication?.exportIdMapping(auditStore);
 				const localTime = existingEntry.localTime;
-				const auditEntry = localTime && auditStore.get(localTime);
-				if (auditEntry) {
+				const auditRecord = localTime && auditStore.get(localTime);
+				if (auditRecord) {
 					// existing node id comes from the audit log
 					let updatedNodeName, existingNodeName;
-					const auditRecord = readAuditEntry(auditEntry);
 					for (const node_name in nodeNameToId) {
 						if (nodeNameToId[node_name] === nodeId) updatedNodeName = node_name;
 						if (nodeNameToId[node_name] === auditRecord.nodeId) existingNodeName = node_name;

@@ -66,7 +66,7 @@ export class DatabaseTransaction implements Transaction {
 	readTxnsUsed: number;
 	timeout: number;
 	validated = 0;
-	_timestamp = 0;
+	timestamp = 0;
 	declare next: DatabaseTransaction;
 	declare stale: boolean;
 	declare startedFrom?: {
@@ -78,14 +78,6 @@ export class DatabaseTransaction implements Transaction {
 	open = TRANSACTION_STATE.OPEN;
 	replicatedConfirmation: number;
 
-	get timestamp() {
-		return this._timestamp;
-	}
-
-	set timestamp(value: number) {
-		this._timestamp = value;
-	}
-
 	getReadTxn(): ReadTransaction {
 		this.readTxnRefCount = (this.readTxnRefCount || 0) + 1;
 		this.timeout = txnExpiration; // reset the timeout
@@ -96,6 +88,9 @@ export class DatabaseTransaction implements Transaction {
 		if (this.open !== TRANSACTION_STATE.OPEN) return; // can not start a new read transaction as there is no future commit that will take place, just have to allow the read to latest database state
 
 		this.transaction = new RocksTransaction(this.db.store);
+		if (this.timestamp) {
+			this.transaction.setTimestamp(this.timestamp);
+		}
 
 		this.readTxnsUsed = 1;
 		if (DEBUG_LONG_TXNS) {
@@ -143,22 +138,30 @@ export class DatabaseTransaction implements Transaction {
 		if (this.open === TRANSACTION_STATE.CLOSED) {
 			throw new Error('Can not use a transaction that is no longer open');
 		}
-		if (!this.transaction) {
-			this.transaction = new RocksTransaction(this.db.store as RocksStore);
-		}
 		this.writes.push(operation);
 		return operation;
 	}
 
-	save(operation: TransactionWrite) {
+	save(operation: TransactionWrite, isRetry = false) {
 		let txnTime = this.timestamp;
+		if (!this.transaction) {
+			this.transaction = new RocksTransaction(this.db.store as RocksStore);
+			if (txnTime) {
+				this.transaction.setTimestamp(txnTime);
+			}
+		}
 		if (!txnTime) txnTime = this.timestamp = this.transaction.getTimestamp();
-		// immediately execute in this transaction
-		if (operation.validate?.(txnTime) === false) return;
-		let result: Promise<void> = operation.before?.() as Promise<void>;
-		if (result?.then) this.completions.push(result);
-		result = operation.beforeIntermediate?.() as Promise<void>;
-		if (result?.then) this.completions.push(result);
+		if (isRetry) {
+			operation.entry = operation.store.getEntry(operation.key, { transaction: this.transaction });
+		} else {
+			if (operation.saved) return;
+			// immediately execute in this transaction
+			if (operation.validate?.(txnTime) === false) return;
+			let result: Promise<void> = operation.before?.() as Promise<void>;
+			if (result?.then) this.completions.push(result);
+			result = operation.beforeIntermediate?.() as Promise<void>;
+			if (result?.then) this.completions.push(result);
+		}
 		operation.commit(txnTime, operation.entry, 0, this.transaction);
 		operation.saved = true;
 	}
@@ -175,9 +178,7 @@ export class DatabaseTransaction implements Transaction {
 		let retries = options.retries ?? 0;
 		for (let i = 0; i < this.writes.length; i++) {
 			let operation = this.writes[i];
-			if (retries === 0 && operation.saved) continue;
-			if (i >= this.validated) this.save(operation);
-			else operation.commit(txnTime, operation.entry, 0, this.transaction);
+			this.save(operation, i < this.validated);
 		}
 		this.validated = this.writes.length;
 		return when(this.completions.length > 0 ? Promise.all(this.completions) : null, () => {
