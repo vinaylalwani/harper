@@ -686,7 +686,7 @@ function transactional(
 				// authorization has been requested, but only do it for this entry call
 				context.authorize = false;
 				if (loadAsInstance !== false) {
-					// do permission checks, with legacy allow methods
+					// do permission checks, with allow methods
 					const allowed =
 						options.type === 'read'
 							? resource.allowRead(context.user, query, context)
@@ -702,8 +702,16 @@ function transactional(
 							if (!allowed) {
 								throw new AccessViolation(context.user);
 							}
-							if (typeof data?.then === 'function') return data.then((data) => action(resource, query, context, data));
-							return action(resource, query, context, data);
+							when(
+								loadAsInstance !== true && resource._loadRecord
+									? resource._loadRecord(id, context, resourceOptions)
+									: resource,
+								(resource) => {
+									return when(data, (data) => {
+										return action(resource, query, context, data);
+									});
+								}
+							);
 						});
 					}
 					if (!allowed) {
@@ -711,8 +719,16 @@ function transactional(
 					}
 				}
 			}
-			if (typeof data?.then === 'function') return data.then((data) => action(resource, query, context, data));
-			return action(resource, query, context, data);
+			return when(
+				loadAsInstance === undefined && resource._loadRecord
+					? resource._loadRecord(id, context, resourceOptions)
+					: resource,
+				(resource) => {
+					return when(data, (data) => {
+						return action(resource, query, context, data);
+					});
+				}
+			);
 		}
 	}
 }
@@ -819,4 +835,9 @@ export function transformForSelect(select, resource) {
 			} else return property;
 		};
 	}
+}
+// wait for a promise or plain object to resolve
+export function when<T, R>(value: T | Promise<T>, callback: (value: T) => R, reject?: (error: any) => void): R {
+	if (value?.then) return value.then(callback, reject);
+	return callback(value as T);
 }

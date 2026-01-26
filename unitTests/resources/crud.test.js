@@ -101,6 +101,9 @@ describe('CRUD operations with the Resource API', () => {
 		}
 		await last;
 	});
+	describe('CRUD operations with no loadAsInstance', () => {
+		registerTests();
+	});
 	describe('CRUD operations with loadAsInstance = false', () => {
 		before(async function () {
 			CRUDTable.loadAsInstance = false;
@@ -163,16 +166,18 @@ describe('CRUD operations with the Resource API', () => {
 			assert(analyticRecorded.mean > 20, 'db-read bytes count were recorded in analytics');
 		});
 		it('gets', async function () {
-			if (CRUDTable.loadAsInstance === false) {
-				const context = {};
-				let record = await CRUDTable.get('one', context);
+			const context = {};
+			let record = await CRUDTable.get('one', context);
+			if (!CRUDTable.loadAsInstance) {
 				assert(Object.isFrozen(record));
 				assert(Object.isFrozen(record.nestedData));
 				assert(Object.isFrozen(record.related));
-				const jsonCopy = JSON.parse(JSON.stringify(record));
-				assert(Object.keys(jsonCopy).includes('computed')); // verify that this computed attribute was marked as enumerable
-				assert.equal(record.name, 'One');
-				for await (let record of CRUDTable.search([])) {
+			}
+			const jsonCopy = JSON.parse(JSON.stringify(record));
+			assert(Object.keys(jsonCopy).includes('computed')); // verify that this computed attribute was marked as enumerable
+			assert.equal(record.name, 'One');
+			for await (let record of CRUDTable.search([])) {
+				if (!CRUDTable.loadAsInstance) {
 					assert(Object.isFrozen(record));
 					assert(Object.isFrozen(record.nestedData));
 					assert(Object.isFrozen(record.related));

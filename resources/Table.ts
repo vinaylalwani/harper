@@ -21,7 +21,7 @@ import type {
 } from './ResourceInterface.ts';
 import type { User } from '../security/user.ts';
 import lmdbProcessRows from '../dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbProcessRows.js';
-import { Resource, contextStorage, transformForSelect } from './Resource.ts';
+import { Resource, contextStorage, transformForSelect, when } from './Resource.ts';
 import { DatabaseTransaction, ImmediateTransaction } from './DatabaseTransaction.ts';
 import * as envMngr from '../utility/environment/environmentManager.js';
 import { addSubscription } from './transactionBroadcast.ts';
@@ -216,7 +216,7 @@ export function makeTable(options) {
 		#changes: any; // the changes to the record that have been made (should not be modified directly)
 		#version?: number; // version of the record
 		#entry?: Entry; // the entry from the database
-		#saveMode?: number; // indicates that the record is currently being saved
+		#savingOperation?: any; // operation for the record is currently being saved
 		#loadedFromSource?: boolean; // indicates that the record was loaded from the source
 
 		declare getProperty: (name: string) => any;
@@ -601,54 +601,62 @@ export function makeTable(options) {
 		): Promise<TableResource<Record>> | TableResource<Record> {
 			const resource: TableResource = super.getResource(id, request, resourceOptions) as any;
 			if (this.loadAsInstance === false) request._freezeRecords = true;
-			if (id != null && this.loadAsInstance !== false) {
-				checkValidId(id);
-				try {
-					if (resource.getRecord?.()) return resource; // already loaded, don't reload, current version may have modifications
-					if (typeof id === 'object' && id && !Array.isArray(id)) {
-						throw new Error(`Invalid id ${JSON.stringify(id)}`);
-					}
-					const sync = !resourceOptions?.async || primaryStore.cache?.get?.(id);
-					const txn = txnForContext(request);
-					const readTxn = txn.getReadTxn();
-					if (readTxn?.isDone) {
-						throw new Error('You can not read from a transaction that has already been committed/aborted');
-					}
-					return loadLocalRecord(
-						id,
-						request,
-						{ transaction: readTxn, ensureLoaded: resourceOptions?.ensureLoaded },
-						sync,
-						(entry) => {
-							if (entry) {
-								TableResource._updateResource(resource, entry);
-							} else resource.#record = null;
-							if (request.onlyIfCached) {
-								// don't go into the loading from source condition, but HTTP spec says to
-								// return 504 (rather than 404) if there is no content and the cache-control header
-								// dictates not to go to source
-								if (!resource.doesExist()) throw new ServerError('Entry is not cached', 504);
-							} else if (resourceOptions?.ensureLoaded) {
-								const loadingFromSource = ensureLoadedFromSource(id, entry, request, resource);
-								if (loadingFromSource) {
-									txn?.disregardReadTxn(); // this could take some time, so don't keep the transaction open if possible
-									resource.#loadedFromSource = true;
-									request.loadedFromSource = true;
-									return when(loadingFromSource, (entry) => {
-										TableResource._updateResource(resource, entry);
-										return resource;
-									});
-								}
-							}
-							return resource;
-						}
-					);
-				} catch (error) {
-					if (error.message.includes('Unable to serialize object')) error.message += ': ' + JSON.stringify(id);
-					throw error;
-				}
+			if (id != null && this.loadAsInstance) {
+				return resource._loadRecord(id, request, resourceOptions);
 			}
 			return resource;
+		}
+		_loadRecord<Record extends object = any>(
+			id: Id,
+			request: Context,
+			resourceOptions?: any
+		): Promise<TableResource<Record>> | TableResource<Record> {
+			if (id == null) return this;
+			checkValidId(id);
+			try {
+				if (this.getRecord?.()) return this; // already loaded, don't reload, current version may have modifications
+				if (typeof id === 'object' && id && !Array.isArray(id)) {
+					throw new Error(`Invalid id ${JSON.stringify(id)}`);
+				}
+				const sync = !resourceOptions?.async || primaryStore.cache?.get?.(id);
+				const txn = txnForContext(request);
+				const readTxn = txn.getReadTxn();
+				if (readTxn?.isDone) {
+					throw new Error('You can not read from a transaction that has already been committed/aborted');
+				}
+				return loadLocalRecord(
+					id,
+					request,
+					{ transaction: readTxn, ensureLoaded: resourceOptions?.ensureLoaded },
+					sync,
+					(entry) => {
+						if (entry) {
+							TableResource._updateResource(this, entry);
+						} else this.#record = null;
+						if (request.onlyIfCached) {
+							// don't go into the loading from source condition, but HTTP spec says to
+							// return 504 (rather than 404) if there is no content and the cache-control header
+							// dictates not to go to source
+							if (!this.doesExist()) throw new ServerError('Entry is not cached', 504);
+						} else if (resourceOptions?.ensureLoaded) {
+							const loadingFromSource = ensureLoadedFromSource(id, entry, request, this);
+							if (loadingFromSource) {
+								txn?.disregardReadTxn(); // this could take some time, so don't keep the transaction open if possible
+								this.#loadedFromSource = true;
+								request.loadedFromSource = true;
+								return when(loadingFromSource, (entry) => {
+									TableResource._updateResource(this, entry);
+									return this;
+								});
+							}
+						}
+						return this;
+					}
+				);
+			} catch (error) {
+				if (error.message.includes('Unable to serialize object')) error.message += ': ' + JSON.stringify(id);
+				throw error;
+			}
 		}
 		static _updateResource(resource, entry) {
 			resource.#entry = entry;
@@ -1055,6 +1063,10 @@ export function makeTable(options) {
 				);
 			}
 			if (target?.property) return this.getProperty(target.property);
+			if (!constructor.getReturnMutable) {
+				// if we are not explicitly using loadAsInstance, return the frozen record
+				return this.#record;
+			}
 			if (this.doesExist() || target?.ensureLoaded === false || this.getContext()?.returnNonexistent) {
 				return this;
 			}
@@ -1228,10 +1240,8 @@ export function makeTable(options) {
 						}
 
 						return when(primaryStore.get(requestTargetToId(target)), (record) => {
-							const updatable = new Updatable(record);
-							updatable._setChanges(updates);
-							this._writeUpdate(id, updatable.getChanges(), false);
-							return updatable;
+							this._writeUpdate(id, this.#changes, false);
+							return this;
 						});
 					});
 				}
@@ -1240,11 +1250,24 @@ export function makeTable(options) {
 			return this;
 		}
 
+		/**
+		 * Save any changes into this instance to the current transaction
+		 */
+		save() {
+			if (this.#savingOperation) {
+				const transaction = txnForContext(this.getContext());
+				if (transaction.save) {
+					transaction.save(this.#savingOperation);
+					this.#savingOperation = null;
+				}
+			}
+		}
+
 		addTo(property, value) {
 			if (typeof value === 'number' || typeof value === 'bigint') {
-				if (this.#saveMode === SAVING_FULL_UPDATE) this.set(property, (+this.getProperty(property) || 0) + value);
+				if (this.#savingOperation?.fullUpdate) this.set(property, (+this.getProperty(property) || 0) + value);
 				else {
-					if (!this.#saveMode) this.update();
+					if (!this.#savingOperation) this.update();
 					this.set(property, new Addition(value));
 				}
 			} else {
@@ -1478,6 +1501,7 @@ export function makeTable(options) {
 			if (record === undefined || record instanceof URLSearchParams) {
 				// legacy argument position, shift the arguments and go through the update method for back-compat
 				this.update(target, true);
+				this.save();
 			} else {
 				let allowed = true;
 				if (target == undefined) throw new TypeError('Can not put a record without a target');
@@ -1495,10 +1519,12 @@ export function makeTable(options) {
 						for (const element of record) {
 							const id = element[primaryKey];
 							this._writeUpdate(id, element, true);
+							this.save();
 						}
 					} else {
 						const id = requestTargetToId(target);
 						this._writeUpdate(id, record, true);
+						this.save();
 					}
 				});
 			}
@@ -1550,9 +1576,11 @@ export function makeTable(options) {
 			if (recordUpdate === undefined || recordUpdate instanceof URLSearchParams) {
 				// legacy argument position, shift the arguments and go through the update method for back-compat
 				this.update(target, false);
+				this.save();
 			} else {
 				// standard path, ensure there is no return object
 				const result = this.update(target, recordUpdate);
+				this.save();
 				if (result?.then) return result.then(() => undefined); // wait for the update, but return undefined
 			}
 		}
@@ -1565,7 +1593,6 @@ export function makeTable(options) {
 
 			checkValidId(id);
 			const entry = this.#entry ?? primaryStore.getEntry(id);
-			this.#saveMode = fullUpdate ? SAVING_FULL_UPDATE : SAVING_CRDT_UPDATE; // mark that this resource is being saved so doesExist return true
 			const writeToSources = (sources) => {
 				return fullUpdate
 					? sources.put // full update is a put, so we can use the put method if available
@@ -1583,6 +1610,7 @@ export function makeTable(options) {
 				store: primaryStore,
 				entry,
 				nodeName: context?.nodeName,
+				fullUpdate,
 				validate: (txnTime) => {
 					if (!recordUpdate) recordUpdate = this.#changes;
 					if (fullUpdate || (recordUpdate && hasChanges(this.#changes === recordUpdate ? this : recordUpdate))) {
@@ -1634,7 +1662,7 @@ export function makeTable(options) {
 					const existingRecord = existingEntry?.value;
 					let incrementalUpdateToApply: boolean;
 
-					this.#saveMode = 0;
+					this.#savingOperation = null;
 					let omitLocalRecord = false;
 					// we use optimistic locking to only commit if the existing record state still holds true.
 					// this is superior to using an async transaction since it doesn't require JS execution
@@ -1826,7 +1854,8 @@ export function makeTable(options) {
 					}
 				},
 			};
-			transaction.addWrite(write);
+			this.#savingOperation = write;
+			return transaction.addWrite(write);
 		}
 
 		async delete(target: RequestTargetOrId): Promise<boolean> {
@@ -2713,7 +2742,7 @@ export function makeTable(options) {
 			return workerIndex === 0 || options?.crossThreads === false;
 		}
 		doesExist() {
-			return Boolean(this.#record || this.#saveMode);
+			return Boolean(this.#record || this.#savingOperation);
 		}
 
 		/**
@@ -4347,11 +4376,6 @@ function isDescendantId(ancestorId, descendantId): boolean {
 // wait for an event turn (via a promise)
 const rest = () => new Promise(setImmediate);
 
-// wait for a promise or plain object to resolve
-function when<T, R>(value: T | Promise<T>, callback: (value: T) => R, reject?: (error: any) => void): R {
-	if (value?.then) return value.then(callback, reject);
-	return callback(value as T);
-}
 // for filtering
 function exists(value) {
 	return value != null;

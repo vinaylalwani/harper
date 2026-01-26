@@ -51,6 +51,8 @@ export type TransactionWrite = {
 	beforeIntermediate?: () => void | Promise<void>;
 	commit?: (txnTime: number, existingEntry: Entry, retries: number) => void;
 	validate?: (txnTime: number) => void;
+	fullUpdate?: boolean;
+	saved?: boolean;
 };
 
 export class DatabaseTransaction implements Transaction {
@@ -144,6 +146,11 @@ export class DatabaseTransaction implements Transaction {
 		if (!this.transaction) {
 			this.transaction = new RocksTransaction(this.db.store as RocksStore);
 		}
+		this.writes.push(operation);
+		return operation;
+	}
+
+	save(operation: TransactionWrite) {
 		let txnTime = this.timestamp;
 		if (!txnTime) txnTime = this.timestamp = this.transaction.getTimestamp();
 		// immediately execute in this transaction
@@ -153,8 +160,7 @@ export class DatabaseTransaction implements Transaction {
 		result = operation.beforeIntermediate?.() as Promise<void>;
 		if (result?.then) this.completions.push(result);
 		operation.commit(txnTime, operation.entry, 0, this.transaction);
-		// record the write as well in case we need to redo the transaction if it fails
-		this.writes.push(operation);
+		operation.saved = true;
 	}
 
 	/**
@@ -166,6 +172,14 @@ export class DatabaseTransaction implements Transaction {
 			txnTime = this.timestamp = (options.timestamp || this.transaction?.getTimestamp()) ?? getNextMonotonicTime();
 		}
 		if (!options.timestamp) options.timestamp = txnTime;
+		let retries = options.retries ?? 0;
+		for (let i = 0; i < this.writes.length; i++) {
+			let operation = this.writes[i];
+			if (retries === 0 && operation.saved) continue;
+			if (i >= this.validated) this.save(operation);
+			else operation.commit(txnTime, operation.entry, 0, this.transaction);
+		}
+		this.validated = this.writes.length;
 		return when(this.completions.length > 0 ? Promise.all(this.completions) : null, () => {
 			let commitResolution: MaybePromise<void>;
 			if (--this.readTxnsUsed > 0) {
