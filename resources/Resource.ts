@@ -682,9 +682,9 @@ function transactional(
 			);
 		}
 		function authorizeActionOnResource(resource: ResourceInterface) {
-			if (context.authorize) {
+			if (query.checkPermission) {
 				// authorization has been requested, but only do it for this entry call
-				context.authorize = false;
+				query.checkPermission = false;
 				if (loadAsInstance !== false) {
 					// do permission checks, with allow methods
 					const allowed =

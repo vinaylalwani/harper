@@ -262,12 +262,16 @@ describe('Transactions', () => {
 		});
 		it('Can update new object and addTo consecutively replication updates', async function () {
 			class WithCountOnGet extends TxnTest {
-				get() {
-					if (!this.doesExist()) {
-						this.update({ name: 'another counter' });
+				static async get(target) {
+					let record = await super.get(target);
+					let updatable;
+					if (record) {
+						updatable = await this.update(target);
+					} else {
+						updatable = await this.update(target, { name: 'another counter' });
 					}
-					this.addTo('count', 1);
-					return super.get();
+					updatable.addTo('count', 1);
+					return updatable;
 				}
 			}
 			await WithCountOnGet.delete(67);
@@ -345,7 +349,7 @@ describe('Transactions', () => {
 						counter.addTo('count', 3);
 						counter.subtractFrom('countInt', 2);
 						counter.addTo('countBigInt', 5);
-						counter['new prop ' + i] = 'new value ' + i;
+						counter.set('new prop ' + i, 'new value ' + i);
 					})
 				);
 			}
