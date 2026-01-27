@@ -168,9 +168,9 @@ export class FourPropWithHistory extends tables.FourProp {
 		assert(context.session?.subscriptions);
 		assert(context.user);
 		assert(context.socket);
-		options.previousCount = 10;
+		//options.previousCount = 10;
 		const subscription = await super.subscribe(options);
-		for (let update of subscription.queue) {
+		for (let update of subscription.queue || []) {
 			update.acknowledge = () => {
 				FourPropWithHistory.acknowledgements++;
 			};

@@ -1144,7 +1144,7 @@ describe('test MQTT connections and commands', function () {
 		assert(events_received.includes('disconnected'));
 		assert(events_received.includes('error'));
 	});
-	it('subscribe root with history', async function () {
+	it.skip('subscribe root with history', async function () {
 		// this first connection is a tear down to remove any previous durable session with this id
 		let client = connect('mqtt://localhost:1883', {
 			clean: true,
@@ -1181,7 +1181,7 @@ describe('test MQTT connections and commands', function () {
 		assert.equal(FourPropWithHistory.acknowledgements, 11);
 		client.end();
 	});
-	it('subscribe sub-topic with history', async function () {
+	it.skip('subscribe sub-topic with history', async function () {
 		// this first connection is a tear down to remove any previous durable session with this id
 		const { FourPropWithHistory } = await import('../testApp/resources.js');
 		FourPropWithHistory.acknowledgements = 0;

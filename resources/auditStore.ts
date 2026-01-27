@@ -79,6 +79,7 @@ export const transactionKeyEncoder = {
 	},
 };
 export const AUDIT_STORE_OPTIONS = {
+	needsStableBuffer: true,
 	encoder: {
 		encode: (auditRecord: AuditRecord) =>
 			auditRecord && (auditRecord instanceof Uint8Array ? auditRecord : createAuditEntry(auditRecord)),

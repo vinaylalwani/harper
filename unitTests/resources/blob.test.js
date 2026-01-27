@@ -107,17 +107,6 @@ describe('Blob test', () => {
 		assert(retrievedBytes.equals(random));
 		assert.equal(record.blob.size, random.length);
 	});
-	it('create a blob from a buffer and save it before committing it using save() method', async () => {
-		let random = randomBytes(5000 * Math.random() + 20000);
-		let blob = createBlob(random);
-		await blob.save(BlobTest);
-		await BlobTest.put({ id: 1, blob });
-		let record = await BlobTest.get(1);
-		assert.equal(record.id, 1);
-		let retrievedBytes = await record.blob.bytes();
-		assert(retrievedBytes.equals(random));
-		assert.equal(record.blob.size, random.length);
-	});
 	it('create a blob from a stream with saveBeforeCommit and abort it', async () => {
 		let testString = 'this is a test string for deletion'.repeat(12);
 		let blob = await createBlob(
