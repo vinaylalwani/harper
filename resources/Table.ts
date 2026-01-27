@@ -2542,9 +2542,10 @@ export function makeTable(options) {
 			if (!request) request = {};
 			const getFullRecord = !request.rawEvents;
 			let pendingRealTimeQueue = []; // while we are servicing a loop for older messages, we have to queue up real-time messages and deliver them in order
+			const thisId = requestTargetToId(request) ?? null; // treat undefined and null as the root
 			const subscription = addSubscription(
 				TableResource,
-				this.getId() ?? null, // treat undefined and null as the root
+				thisId,
 				function (id: Id, auditRecord: any, localTime: number, beginTxn: boolean) {
 					try {
 						let value = auditRecord.getValue?.(primaryStore, getFullRecord);
@@ -2584,16 +2585,16 @@ export function makeTable(options) {
 				request
 			);
 			const result = (async () => {
-				if (this.isCollection) {
+				const isCollection = request.isCollection ?? thisId == null;
+				if (isCollection) {
 					subscription.includeDescendants = true;
 					if (request.onlyChildren) subscription.onlyChildren = true;
 				}
 				if (request.supportsTransactions) subscription.supportsTransactions = true;
-				const thisId = this.getId();
 				let count = request.previousCount;
 				if (count > 1000) count = 1000; // don't allow too many, we have to hold these in memory
 				let startTime = request.startTime;
-				if (this.isCollection) {
+				if (isCollection) {
 					// a collection should retrieve all descendant ids
 					if (startTime) {
 						if (count)
@@ -3839,7 +3840,7 @@ export function makeTable(options) {
 		let whenResolved, timer;
 		// We start by locking the record so that there is only one resolution happening at once;
 		// if there is already a resolution in process, we want to use the results of that resolution
-		// attemptLock() will return true if we got the lock, and the callback won't be called.
+		// tryLock() will return true if we got the lock, and the callback won't be called.
 		// If another thread has the lock it returns false and then the callback is called once
 		// the other thread releases the lock.
 		const callback = () => {
@@ -3852,16 +3853,13 @@ export function makeTable(options) {
 				whenResolved(getFromSource(id, primaryStore.getEntry(id), context));
 			else whenResolved(entry);
 		};
-		const lockAcquired =
-			primaryStore instanceof RocksDatabase
-				? primaryStore.tryLock(id, callback)
-				: primaryStore.attemptLock(id, existingVersion, callback);
+		const lockAcquired = primaryStore.tryLock(id, callback);
 
 		if (!lockAcquired) {
 			return new Promise((resolve) => {
 				whenResolved = resolve;
 				timer = setTimeout(() => {
-					primaryStore.unlock(id, existingVersion);
+					primaryStore.unlock(id);
 				}, LOCK_TIMEOUT);
 			});
 		}
@@ -4059,10 +4057,10 @@ export function makeTable(options) {
 					});
 				}),
 				() => {
-					primaryStore.unlock(id, existingVersion);
+					primaryStore.unlock(id);
 				},
 				(error) => {
-					primaryStore.unlock(id, existingVersion);
+					primaryStore.unlock(id);
 					if (resolved) logger.error?.('Error committing cache update', error);
 					// else the error was already propagated as part of the promise that we returned
 				}

@@ -69,13 +69,14 @@ export class RequestTarget extends URLSearchParams {
 			super();
 			path = target;
 		}
-		this.pathname = path ?? '';
+		this.pathname = path;
 		this.#target = target;
 	}
 	toString() {
 		if (this.#target) return this.#target;
-		if (this.size > 0) return this.pathname + '?' + super.toString();
-		else return this.pathname;
+		const path = this.pathname ?? this.id?.toString() ?? '';
+		if (this.size > 0) return path + '?' + super.toString();
+		else return path;
 	}
 	get url() {
 		// for back-compat?

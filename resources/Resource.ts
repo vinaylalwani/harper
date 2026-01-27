@@ -460,7 +460,7 @@ export function snakeCase(camelCase: string) {
 let idWasCollection;
 function pathToId(path, Resource) {
 	idWasCollection = false;
-	if (path === '') return null;
+	if (path === '') return undefined;
 	path = path.slice(1);
 	if (Resource.splitSegments) {
 		if (path.indexOf('/') === -1) {
@@ -574,7 +574,7 @@ function transactional(
 				// it is a query
 				query = idOrQuery;
 				id = idOrQuery instanceof URLSearchParams ? idOrQuery.toString() : idOrQuery.url; // get the request target (check .url for back-compat), and try to parse
-				if (idOrQuery.conditions) {
+				if (idOrQuery.id !== undefined) {
 					// it is already parsed, nothing more to do other than assign the id
 					id = idOrQuery.id;
 				} else if (typeof id === 'string') {
@@ -596,12 +596,12 @@ function transactional(
 								if (query) query = Object.assign(parsedId.query, query);
 								else query = parsedId.query;
 							}
-							isCollection = parsedId.isCollection;
+							isCollection = query.isCollection ?? parsedId.isCollection;
 							id = parsedId.id;
 						} else {
 							id = parsedId;
 						}
-						if (id) query.id = id;
+						if (id !== undefined) query.id = id;
 					}
 				} else if (idOrQuery[Symbol.iterator]) {
 					// get the id part from an iterable query
@@ -625,8 +625,8 @@ function transactional(
 					}
 				}
 				if (id === undefined) {
-					id = idOrQuery.id ?? null;
-					if (id == null) isCollection = true;
+					id = idOrQuery.id;
+					if (id === null) isCollection = true;
 				}
 			} else {
 				id = idOrQuery;

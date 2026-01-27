@@ -245,11 +245,11 @@ class SubscriptionsSession {
 
 		const resourcePath = entry.path;
 		const resource = entry.Resource;
-		const subscription = await transaction(request, async () => {
-			const context = this.createContext();
-			context.topic = topic;
-			context.retainHandling = retainHandling;
-			context.isCollection = request.isCollection;
+		const context = this.createContext();
+		context.topic = topic;
+		context.retainHandling = retainHandling;
+		context.isCollection = request.isCollection;
+		const subscription = await transaction(context, async () => {
 			const subscription = await resource.subscribe(request, context);
 			if (!subscription) {
 				return; // if no subscription, nothing to return
