@@ -41,6 +41,7 @@ describe('Audit log', () => {
 		}
 		assert.equal(results.length, 4);
 		assert.equal(events.length, 4);
+		if (AuditedTable.auditStore.reusableIterable) return; // rocksdb doesn't have any audit log cleanup from JS
 		setAuditRetention(0.001, 1);
 		AuditedTable.auditStore.scheduleAuditCleanup(1);
 		await AuditedTable.put(3, { name: 'three' });
@@ -77,3 +78,4 @@ describe('Audit log', () => {
 		assert.deepEqual(history[0].value.id, key);
 	});
 });
+require('./crud.test.js');

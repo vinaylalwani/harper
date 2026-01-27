@@ -18,7 +18,7 @@ const allSameThreadSubscriptions = Object.create(null); // using it as a map tha
  * @param options
  */
 export function addSubscription(table, key, listener?: (key) => any, startTime: number, options) {
-	const path = table.primaryStore.env ? table.primaryStore.env.path : table.primaryStore.path;
+	const path = table.primaryStore.path ?? table.primaryStore.env.path;
 	const tableId = table.primaryStore.tableId;
 	// set up the subscriptions map. We want to just use a single map (per table) for efficient delegation
 	// (rather than having every subscriber filter every transaction)

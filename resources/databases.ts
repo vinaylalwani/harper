@@ -258,7 +258,8 @@ export function getDatabases(): Databases {
 					const files = readdirSync(dbPath, { withFileTypes: true });
 					if (
 						files.find((file) => file.name === 'CURRENT')?.isFile() &&
-						files.some((file) => file.name.startsWith('MANIFEST-'))
+						files.some((file) => file.name.startsWith('MANIFEST-')) &&
+						!schemaConfigs[dbName]?.path
 					) {
 						readRocksMetaDb(dbPath, null, dbName);
 						continue;

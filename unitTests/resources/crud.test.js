@@ -239,12 +239,11 @@ describe('CRUD operations with the Resource API', () => {
 			let retrieved = await CRUDTable.get(createdId);
 			assert.equal(retrieved.name, 'constructed via post with auto-id');
 		});
-		it('create with instance', async function () {
+		it('create in transaction', async function () {
 			let context = {};
 			let created;
-			await transaction(context, () => {
-				let crud = CRUDTable.getResource(null, context);
-				created = crud.create({ relatedId: 1, name: 'constructed with auto-id' });
+			await transaction(context, async () => {
+				created = await CRUDTable.create({ relatedId: 1, name: 'constructed with auto-id' });
 			});
 			let retrieved = await CRUDTable.get(created.id);
 			assert.equal(retrieved.name, 'constructed with auto-id');
