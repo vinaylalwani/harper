@@ -139,16 +139,19 @@ describe('Blob test', () => {
 		await delay(20); // wait for the file to be deleted
 		assert(!existsSync(filePath));
 	});
-	it('create a blob from a buffer and call save() but then abort', async () => {
+	it('create a blob from a buffer and call save() but then fail validation', async () => {
 		let blob;
-		try {
-			await transaction({}, async () => {
-				let random = randomBytes(5000 * Math.random() + 20000);
-				blob = createBlob(random);
-				blob.save(BlobTest);
-				throw new Error('test error'); // abort the transaction
-			});
-		} catch (error) {}
+		class BlobTestFailsValidation extends BlobTest {
+			validate() {
+				throw new Error('test error'); // simulate when too much queue errors are thrown
+			}
+		}
+		assert.throws(() => {
+			let random = randomBytes(5000 * Math.random() + 20000);
+			blob = createBlob(random);
+			blob.save();
+			BlobTestFailsValidation.put({ id: 1, blob });
+		});
 		assert(blob);
 		assert(!isSaving(blob)); // ensure that it is not saving or saved
 	});
