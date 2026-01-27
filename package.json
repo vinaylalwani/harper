@@ -36,7 +36,7 @@
 	"exports": {
 		".": "./index.js",
 		"./v1": "./v1.js",
-		"./v2": "./index.js"
+		"./v2": "./v2.js"
 	},
 	"homepage": "https://www.harperdb.io/",
 	"bugs": "support@harperdb.io",
