@@ -568,9 +568,6 @@ function transactional(
 			} else {
 				data = dataOrContext;
 			}
-		} else if (idOrQuery && typeof idOrQuery === 'object' && !Array.isArray(idOrQuery)) {
-			// (request) a structured id/query, which we will use as the context
-			context = idOrQuery as Context;
 		}
 		if (id === undefined) {
 			if (typeof idOrQuery === 'object' && idOrQuery) {

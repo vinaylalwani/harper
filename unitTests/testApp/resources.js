@@ -82,7 +82,8 @@ class SubObject extends tables.SubObject {
 		this.addedProperty = true;
 		return super.get(query);
 	}
-	post(target, data) {
+	static async post(target, data) {
+		data = await data;
 		let object = this.update(target);
 		object.subObject.subProperty = data.subPropertyValue;
 		object.subArray.push(data.subArrayItem);

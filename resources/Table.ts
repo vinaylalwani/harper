@@ -1887,10 +1887,12 @@ export function makeTable(options) {
 			const context = this.getContext();
 			const transaction = txnForContext(context);
 			checkValidId(id);
+			const entry = this.#entry ?? primaryStore.getEntry(id, { transaction: transaction.getReadTxn() });
+
 			transaction.addWrite({
 				key: id,
 				store: primaryStore,
-				entry: this.#entry,
+				entry,
 				nodeName: context?.nodeName,
 				before: applyToSources.delete?.bind(this, context, id),
 				beforeIntermediate: applyToSourcesIntermediate.delete?.bind(this, context, id),
