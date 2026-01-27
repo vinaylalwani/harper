@@ -457,7 +457,7 @@ export function recordUpdater(store, tableId, auditStore) {
 		} = {
 			version: newVersion,
 			instructedWrite: timestampNextEncoding > 0,
-			transaction: options.transaction,
+			transaction: options?.transaction,
 		};
 		let ifVersion;
 		let extendedType = 0;

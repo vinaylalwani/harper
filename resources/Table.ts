@@ -4115,7 +4115,8 @@ export function makeTable(options) {
 							(lastEvictionCompletion = lastEvictionCompletion.then(async () => {
 								// schedule the next run for when the next cleanup interval should occur (or now if it is in the past)
 								startNextTimer(Math.max(nextScheduled + cleanupInterval, Date.now()));
-								if (primaryStore.rootStore.status !== 'open') {
+								const rootStore = primaryStore.rootStore;
+								if (rootStore.isOpen ? !rootStore.isOpen() : rootStore.status !== 'open') {
 									clearTimeout(cleanupTimer);
 									return;
 								}

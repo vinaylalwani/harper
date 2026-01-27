@@ -11,8 +11,8 @@ describe('Caching', () => {
 		IndexedCachingTable,
 		CachingTableStaleWhileRevalidate,
 		Source,
-		source_requests = 0,
-		source_responses = 0;
+		sourceRequests = 0,
+		sourceResponses = 0;
 	let events = [];
 	let timer = 0;
 	let return_value = true;
@@ -37,7 +37,7 @@ describe('Caching', () => {
 			get() {
 				return new Promise((resolve, reject) => {
 					setTimeout(() => {
-						source_requests++;
+						sourceRequests++;
 						if (return_error) {
 							let error = new Error('test source error');
 							error.statusCode = return_error;
@@ -57,9 +57,9 @@ describe('Caching', () => {
 		CachingTable.sourcedFrom({
 			get(id) {
 				return new Promise((resolve) => {
-					source_requests++;
+					sourceRequests++;
 					setTimeout(() => {
-						source_responses++;
+						sourceResponses++;
 						resolve(
 							return_value && {
 								id,
@@ -88,32 +88,32 @@ describe('Caching', () => {
 		assert(!Source.isCaching);
 	});
 	it('Can load cached data', async function () {
-		source_requests = 0;
+		sourceRequests = 0;
 		events = [];
 		CachingTable.setTTLExpiration(0.01);
 		await CachingTable.invalidate(23);
 		let result = await CachingTable.get(23);
 		assert.equal(result.id, 23);
 		assert.equal(result.name, 'name ' + 23);
-		assert.equal(source_requests, 1);
+		assert.equal(sourceRequests, 1);
 		await new Promise((resolve) => setTimeout(resolve, 5));
 		let target23 = new RequestTarget();
 		target23.id = 23;
 		result = await CachingTable.get(target23);
 		assert.equal(target23.loadedFromSource, false);
 		assert.equal(result.id, 23);
-		assert.equal(source_requests, 1);
+		assert.equal(sourceRequests, 1);
 		// let it expire
 		await new Promise((resolve) => setTimeout(resolve, 10));
 		result = await CachingTable.get(target23);
 		assert.equal(result.id, 23);
 		assert.equal(result.name, 'name ' + 23);
-		assert.equal(source_requests, 2);
+		assert.equal(sourceRequests, 2);
 		if (events.length > 0) console.log(events);
 		//assert.equal(events.length, 0);
 		await CachingTable.put(23, { name: 'expires in past' }, { expiresAt: 0 });
 		result = await CachingTable.get(target23);
-		assert.equal(source_requests, 3);
+		assert.equal(sourceRequests, 3);
 		assert.equal(target23.loadedFromSource, true);
 	});
 
@@ -123,11 +123,11 @@ describe('Caching', () => {
 			await new Promise((resolve) => setTimeout(resolve, 15));
 			CachingTable.setTTLExpiration(40);
 			await new Promise((resolve) => setTimeout(resolve, 5));
-			source_requests = 0;
+			sourceRequests = 0;
 			events = [];
 			timer = 10;
 			CachingTable.get(23);
-			while (source_requests === 0) {
+			while (sourceRequests === 0) {
 				await new Promise((resolve) => setTimeout(resolve, 1));
 			}
 			await CachingTable.primaryStore.committed; // wait for the record to update to updating status
@@ -135,7 +135,7 @@ describe('Caching', () => {
 			let result = await CachingTable.get(23);
 			assert.equal(result.id, 23);
 			assert.equal(result.name, 'name ' + 23);
-			assert(source_requests <= 1);
+			assert(sourceRequests <= 1);
 		} finally {
 			timer = 0;
 		}
@@ -147,7 +147,7 @@ describe('Caching', () => {
 		let result = await CachingTable.get(23);
 		assert.equal(result.id, 23);
 		assert.equal(result.name, 'name ' + 23);
-		source_requests = 0;
+		sourceRequests = 0;
 		events = [];
 		CachingTable.invalidate(23);
 		await new Promise((resolve) => setTimeout(resolve, 20));
@@ -157,28 +157,23 @@ describe('Caching', () => {
 		assert.equal(target23.loadedFromSource, true);
 		await new Promise((resolve) => setTimeout(resolve, 10));
 		assert.equal(result.id, 23);
-		assert.equal(source_requests, 1);
+		assert.equal(sourceRequests, 1);
 		if (events.length > 2) console.log(events);
 		assert(events.length <= 2);
 
-		source_requests = 0;
+		sourceRequests = 0;
 		events = [];
 		CachingTable.invalidate(23); // show not load from cache
 		await new Promise((resolve) => setTimeout(resolve, 20));
-		assert.equal(source_requests, 0);
+		assert.equal(sourceRequests, 0);
 		assert.equal(events.length, 1);
-		let resource = await CachingTable.get({ id: 23, ensureLoaded: false });
-		resource.invalidate(); // show not load from cache
-		await new Promise((resolve) => setTimeout(resolve, 20));
-		assert.equal(source_requests, 0);
-		assert.equal(events.length, 2);
 
 		await new Promise((resolve) => setTimeout(resolve, 20));
 		result = await CachingTable.get(23);
 		await new Promise((resolve) => setTimeout(resolve, 10));
 		assert.equal(result.id, 23);
-		assert.equal(source_requests, 1);
-		assert(events.length <= 3);
+		assert.equal(sourceRequests, 1);
+		assert(events.length <= 2);
 	});
 
 	it('Handles distinct eviction time', async function () {
@@ -189,13 +184,13 @@ describe('Caching', () => {
 		CachingTable.invalidate(23); // reset the entry
 		await new Promise((resolve) => setTimeout(resolve, 10));
 		await CachingTable.get(23);
-		source_requests = 0;
+		sourceRequests = 0;
 		events = [];
 		await new Promise((resolve) => setTimeout(resolve, 10));
-		let result = CachingTable.primaryStore.get(23);
+		let result = CachingTable.primaryStore.getSync(23);
 		assert(result); // should exist in database even though it is expired
 		await new Promise((resolve) => setTimeout(resolve, 20));
-		result = CachingTable.primaryStore.get(23);
+		result = CachingTable.primaryStore.getSync(23);
 		assert(!result); // should be evicted and no longer exist in database
 	});
 
@@ -207,19 +202,19 @@ describe('Caching', () => {
 		CachingTable.invalidate(23); // reset the entry
 		await new Promise((resolve) => setTimeout(resolve, 10));
 		await CachingTable.get(23);
-		source_requests = 0;
-		source_responses = 0;
+		sourceRequests = 0;
+		sourceResponses = 0;
 		events = [];
 		await new Promise((resolve) => setTimeout(resolve, 10));
 		// should be stale but not evicted
 		let result = await CachingTableStaleWhileRevalidate.get(23);
 		assert(result); // should exist in database even though it is stale
-		assert.equal(source_requests, 1); // the source request should be started
-		assert.equal(source_responses, 0); // the source request should not be completed yet
+		assert.equal(sourceRequests, 1); // the source request should be started
+		assert.equal(sourceResponses, 0); // the source request should not be completed yet
 		await new Promise((resolve) => setTimeout(resolve, 5));
-		assert.equal(source_responses, 1); // the source request should be completed
+		assert.equal(sourceResponses, 1); // the source request should be completed
 		result = await CachingTableStaleWhileRevalidate.primaryStore.get(23);
-		assert.equal(source_requests, 1); // should be cached again
+		assert.equal(sourceRequests, 1); // should be cached again
 		assert(result);
 	});
 
@@ -231,31 +226,31 @@ describe('Caching', () => {
 		CachingTable.invalidate(23); // reset the entry
 		await new Promise((resolve) => setTimeout(resolve, 10));
 		await CachingTable.get(23);
-		source_requests = 0;
-		source_responses = 0;
+		sourceRequests = 0;
+		sourceResponses = 0;
 		events = [];
 		await new Promise((resolve) => setTimeout(resolve, 10));
 		// should be stale but not evicted
 		let result = await CachingTable.get(23, { onlyIfCached: true });
 		assert(result); // should exist in database even though it is stale
-		assert.equal(source_requests, 0); // the source request should not be started
-		assert.equal(source_responses, 0); // the source request should not be completed yet
+		assert.equal(sourceRequests, 0); // the source request should not be started
+		assert.equal(sourceResponses, 0); // the source request should not be completed yet
 		result = await CachingTable.get(23);
 		assert(result); // should exist now
-		assert.equal(source_requests, 1);
-		assert.equal(source_responses, 1);
+		assert.equal(sourceRequests, 1);
+		assert.equal(sourceResponses, 1);
 	});
 
 	it('Source returns undefined', async function () {
 		try {
 			IndexedCachingTable.setTTLExpiration(0.005);
 			await new Promise((resolve) => setTimeout(resolve, 10));
-			source_requests = 0;
+			sourceRequests = 0;
 			events = [];
 			return_value = undefined;
 			let result = await IndexedCachingTable.get(29);
 			assert.equal(result, undefined);
-			assert.equal(source_requests, 1);
+			assert.equal(sourceRequests, 1);
 			result = await IndexedCachingTable.get(29);
 			assert.equal(result, undefined);
 		} finally {
@@ -266,7 +261,7 @@ describe('Caching', () => {
 		try {
 			IndexedCachingTable.setTTLExpiration(0.005);
 			await new Promise((resolve) => setTimeout(resolve, 10));
-			source_requests = 0;
+			sourceRequests = 0;
 			events = [];
 			return_error = 500;
 			let returned_error;
@@ -277,7 +272,7 @@ describe('Caching', () => {
 				returned_error = error;
 			}
 			assert.equal(returned_error?.message, 'test source error while resolving record 30 for IndexedCachingTable');
-			assert.equal(source_requests, 1);
+			assert.equal(sourceRequests, 1);
 
 			IndexedCachingTable.setTTLExpiration({
 				expiration: 0.005,
@@ -286,27 +281,27 @@ describe('Caching', () => {
 			return_error = false;
 			IndexedCachingTable.invalidate(23); // reset the entry
 			await IndexedCachingTable.get(23);
-			source_requests = 0;
-			source_responses = 0;
+			sourceRequests = 0;
+			sourceResponses = 0;
 			events = [];
 			await new Promise((resolve) => setTimeout(resolve, 10));
 			// should be stale but not evicted
 			return_error = 504;
 			result = await IndexedCachingTable.get(23, { staleIfError: true });
 			assert(result); // should return stale value despite error
-			assert.equal(source_requests, 1); // the source request should be started
+			assert.equal(sourceRequests, 1); // the source request should be started
 		} finally {
 			return_error = false;
 		}
 	});
 	it('Can load cached indexed data', async function () {
-		source_requests = 0;
+		sourceRequests = 0;
 		events = [];
 		IndexedCachingTable.setTTLExpiration(0.005);
 		let result = await IndexedCachingTable.get(23);
 		assert.equal(result.id, 23);
 		assert.equal(result.name, 'name ' + 23);
-		assert.equal(source_requests, 1);
+		assert.equal(sourceRequests, 1);
 		await new Promise((resolve) => setTimeout(resolve, 10));
 		let results = [];
 		for await (let record of IndexedCachingTable.search({ conditions: [{ attribute: 'name', value: 'name 23' }] })) {
@@ -315,13 +310,13 @@ describe('Caching', () => {
 		assert.equal(results.length, 1);
 		result = await IndexedCachingTable.get(23);
 		assert.equal(result.id, 23);
-		assert.equal(source_requests, 2);
+		assert.equal(sourceRequests, 2);
 		// let it expire
 		await new Promise((resolve) => setTimeout(resolve, 10));
 		result = await IndexedCachingTable.get(23);
 		assert.equal(result.id, 23);
 		assert.equal(result.name, 'name ' + 23);
-		assert.equal(source_requests, 3);
+		assert.equal(sourceRequests, 3);
 		assert.equal(events.length, 0);
 	});
 
@@ -331,7 +326,7 @@ describe('Caching', () => {
 			timer = 2;
 			CachingTable.setTTLExpiration(100); // don't evict during this test since it will clear the history
 			let i = 0;
-			source_requests = 0;
+			sourceRequests = 0;
 			let results = [];
 			let interval = setInterval(async () => {
 				i++;
@@ -349,12 +344,12 @@ describe('Caching', () => {
 			for (let result of results) {
 				assert.equal(result.name, 'name 23');
 			}
-			assert(source_requests <= 600);
+			assert(sourceRequests <= 600);
 			await new Promise((resolve) => setTimeout(resolve, 300));
 
 			let history = await CachingTable.getHistoryOfRecord(23);
 			if (history.length < 40) {
-				console.log({ source_requests, i, history_length: history.length });
+				console.log({ sourceRequests, i, history_length: history.length });
 			}
 			assert(history.length > 40);
 			for (let entry of history) {

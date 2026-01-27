@@ -106,7 +106,7 @@ class Subscription extends IterableEventQueue {
 		return { name: 'subscription' };
 	}
 }
-const ACTIONS_OF_INTEREST = ['put', 'patch', 'delete', 'message'];
+const ACTIONS_OF_INTEREST = ['put', 'patch', 'delete', 'message', 'invalidate'];
 function notifyFromTransactionData(subscriptions) {
 	if (!subscriptions) return; // if no subscriptions to this env path, don't need to read anything
 	const auditStore = subscriptions.auditStore;
