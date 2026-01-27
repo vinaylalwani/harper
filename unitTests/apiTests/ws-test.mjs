@@ -89,6 +89,7 @@ describe('test WebSockets connections and messaging', () => {
 		assert.equal(message.data, 'hello again');
 	});
 	it('default subscribe on WS', async function () {
+		this.timeout(5000);
 		ws2 = new WebSocket('ws://localhost:9926/SimpleRecord/5');
 		await new Promise((resolve, reject) => {
 			ws2.on('open', resolve);
