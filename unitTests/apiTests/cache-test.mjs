@@ -29,6 +29,7 @@ describe('test REST calls with cache table', () => {
 		let response = await axios('http://localhost:9926/FourProp/3');
 		let data = response.data;
 		data.name = 'name change';
+		delete data.nameTitle; // don't send a computed property
 		response = await axios.put('http://localhost:9926/FourProp/3', data);
 		assert.equal(response.status, 204);
 		response = await axios('http://localhost:9926/SimpleCache/3');
