@@ -95,7 +95,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 				for (const element of data) {
 					const resourceClass = resource.constructor;
 					const id = element[resourceClass.primaryKey];
-					const elementResource = resourceClass.getResource(id, request, {
+					const elementResource = resourceClass.getResource(query, request, {
 						async: true,
 					});
 					if (elementResource.then) results.push(elementResource.then((resource) => resource.put(element, request)));
@@ -352,8 +352,13 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	 * @param options
 	 * @returns
 	 */
-	static getResource(id: Id, request: Context | SourceContext, options?: any): Resource | Promise<Resource> {
+	static getResource(
+		target: RequestTarget,
+		request: Context | SourceContext,
+		options?: any
+	): Resource | Promise<Resource> {
 		let resource;
+		const id = target.id;
 		let context = request.getContext?.();
 		let isCollection;
 		if (typeof request.isCollection === 'boolean' && request.hasOwnProperty('isCollection'))
@@ -666,7 +671,7 @@ function transactional(
 		}
 		if (context?.transaction) {
 			// we are already in a transaction, proceed
-			const resource = this.getResource(id, context, resourceOptions);
+			const resource = this.getResource(query, context, resourceOptions);
 			return resource.then ? resource.then(runAction) : runAction(resource);
 		} else {
 			// start a transaction
@@ -678,7 +683,7 @@ function transactional(
 						resourceName: this.name,
 						method: options.method,
 					};
-					const resource = this.getResource(id, context, resourceOptions);
+					const resource = this.getResource(query, context, resourceOptions);
 					return resource.then ? resource.then(runAction) : runAction(resource);
 				}
 				// resourceOptions // this is unused
@@ -716,7 +721,7 @@ function transactional(
 							}
 							when(
 								loadAsInstance !== true && resource._loadRecord
-									? resource._loadRecord(id, context, resourceOptions)
+									? resource._loadRecord(query, context, resourceOptions)
 									: resource,
 								(resource) => {
 									return when(data, (data) => {
@@ -733,7 +738,7 @@ function transactional(
 			}
 			return when(
 				loadAsInstance === undefined && resource._loadRecord
-					? resource._loadRecord(id, context, resourceOptions)
+					? resource._loadRecord(query, context, resourceOptions)
 					: resource,
 				(resource) => {
 					return when(data, (data) => {

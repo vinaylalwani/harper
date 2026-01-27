@@ -100,7 +100,7 @@ describe('Caching', () => {
 		let target23 = new RequestTarget();
 		target23.id = 23;
 		result = await CachingTable.get(target23);
-		assert.equal(Boolean(target23.loadedFromSource), false);
+		assert.equal(target23.loadedFromSource, false);
 		assert.equal(result.id, 23);
 		assert.equal(source_requests, 1);
 		// let it expire
@@ -151,8 +151,10 @@ describe('Caching', () => {
 		events = [];
 		CachingTable.invalidate(23);
 		await new Promise((resolve) => setTimeout(resolve, 20));
-		result = await CachingTable.get(23);
-		assert.equal(result.wasLoadedFromSource(), true);
+		let target23 = new RequestTarget();
+		target23.id = 23;
+		result = await CachingTable.get(target23);
+		assert.equal(target23.loadedFromSource, true);
 		await new Promise((resolve) => setTimeout(resolve, 10));
 		assert.equal(result.id, 23);
 		assert.equal(source_requests, 1);

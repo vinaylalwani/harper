@@ -217,7 +217,6 @@ export function makeTable(options) {
 		#version?: number; // version of the record
 		#entry?: Entry; // the entry from the database
 		#savingOperation?: any; // operation for the record is currently being saved
-		#loadedFromSource?: boolean; // indicates that the record was loaded from the source
 
 		declare getProperty: (name: string) => any;
 		static name = tableName; // for display/debugging purposes
@@ -595,22 +594,23 @@ export function makeTable(options) {
 		 * @returns
 		 */
 		static getResource<Record extends object = any>(
-			id: Id,
+			target: RequestTarget,
 			request: Context,
 			resourceOptions?: any
 		): Promise<TableResource<Record>> | TableResource<Record> {
-			const resource: TableResource = super.getResource(id, request, resourceOptions) as any;
+			const resource: TableResource = super.getResource(target, request, resourceOptions) as any;
 			if (this.loadAsInstance === false) request._freezeRecords = true;
-			if (id != null && this.loadAsInstance) {
-				return resource._loadRecord(id, request, resourceOptions);
+			if (this.loadAsInstance) {
+				return resource._loadRecord(target, request, resourceOptions);
 			}
 			return resource;
 		}
 		_loadRecord<Record extends object = any>(
-			id: Id,
+			target: RequestTarget,
 			request: Context,
 			resourceOptions?: any
 		): Promise<TableResource<Record>> | TableResource<Record> {
+			const id = target && typeof target === 'object' ? target.id : target;
 			if (id == null) return this;
 			checkValidId(id);
 			try {
@@ -642,13 +642,12 @@ export function makeTable(options) {
 							const loadingFromSource = ensureLoadedFromSource(id, entry, request, this);
 							if (loadingFromSource) {
 								txn?.disregardReadTxn(); // this could take some time, so don't keep the transaction open if possible
-								this.#loadedFromSource = true;
-								request.loadedFromSource = true;
+								target.loadedFromSource = true;
 								return when(loadingFromSource, (entry) => {
 									TableResource._updateResource(this, entry);
 									return this;
 								});
-							}
+							} else if (hasSourceGet) target.loadedFromSource = false; // mark it as cached
 						}
 						return this;
 					}
@@ -671,8 +670,6 @@ export function makeTable(options) {
 		ensureLoaded() {
 			const loadedFromSource = ensureLoadedFromSource(this.getId(), this.#entry, this.getContext());
 			if (loadedFromSource) {
-				this.#loadedFromSource = true;
-				this.getContext().loadedFromSource = true;
 				return when(loadedFromSource, (entry) => {
 					this.#entry = entry;
 					this.#record = entry.value;
@@ -1044,7 +1041,7 @@ export function makeTable(options) {
 								const loadingFromSource = ensureLoadedFromSource(id, entry, context);
 								if (loadingFromSource) {
 									txn?.disregardReadTxn(); // this could take some time, so don't keep the transaction open if possible
-									context.loadedFromSource = true;
+									target.loadedFromSource = true;
 									return loadingFromSource.then((entry) => entry?.value);
 								}
 							}
@@ -1240,7 +1237,7 @@ export function makeTable(options) {
 						let loading: Promise<any>;
 						if (!this.#entry && this.constructor.loadAsInstance === false) {
 							// load the record if it hasn't been done yet
-							loading = this._loadRecord(id, context, { ensureLoaded: true, async: true }) as Promise<any>;
+							loading = this._loadRecord(target, context, { ensureLoaded: true, async: true }) as Promise<any>;
 						}
 						return when(loading, () => {
 							this._writeUpdate(id, this.#changes, false);
@@ -3005,9 +3002,6 @@ export function makeTable(options) {
 		}
 		getUpdatedTime() {
 			return this.#version;
-		}
-		wasLoadedFromSource(): boolean | void {
-			return hasSourceGet ? Boolean(this.#loadedFromSource) : undefined;
 		}
 		static async addAttributes(attributesToAdd) {
 			const new_attributes = attributes.slice(0);

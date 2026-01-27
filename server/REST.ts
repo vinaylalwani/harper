@@ -199,7 +199,7 @@ async function http(request: Context & Request, nextHandler) {
 			headers,
 			body: undefined,
 		};
-		const loadedFromSource = request.loadedFromSource ?? responseData?.wasLoadedFromSource?.();
+		const loadedFromSource = resourceRequest.loadedFromSource;
 		if (loadedFromSource !== undefined) {
 			// this appears to be a caching table with a source
 			responseObject.wasCacheMiss = loadedFromSource; // indicate if it was a missed cache
