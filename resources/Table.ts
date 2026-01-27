@@ -4115,9 +4115,9 @@ export function makeTable(options) {
 				? async () => {
 						// if we are calling the sources first and waiting for blobs, do those in order
 						await callSources();
-						await blobCompletion;
+						await blobCompletion();
 					}
-				: () => blobCompletion;
+				: () => blobCompletion();
 		}
 		return before;
 	}
