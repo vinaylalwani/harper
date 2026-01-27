@@ -489,7 +489,7 @@ export function recordUpdater(store, tableId, auditStore) {
 				}
 			}
 			if (audit) {
-				const username = options?.user?.username ?? options?.user;
+				const username = typeof options?.user === 'string' ? options.user : options?.user?.username;
 				if (auditRecord) {
 					encodeBlobsWithFilePath(() => store.encoder.encode(auditRecord), id, store.rootStore);
 					if (blobsWereEncoded) {
