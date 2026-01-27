@@ -236,16 +236,20 @@ export interface Metric {
 	[key: string]: any;
 }
 
-function storeMetric(table: Table, metric: Metric) {
-	const hostname = server.hostname;
+function getHostNodeId(hostname: string) {
 	let nodeId = nodeIds.get(hostname);
 	if (nodeId) {
 		log.trace?.('storeMetric cached nodeId:', nodeId);
-	} else {
-		nodeId = stableNodeId(hostname);
-		log.trace?.('storeMetric new nodeId:', nodeId);
-		nodeIds.set(hostname, nodeId);
+		return nodeId;
 	}
+	nodeId = stableNodeId(hostname);
+	log.trace?.('storeMetric new nodeId:', nodeId);
+	nodeIds.set(hostname, nodeId);
+	return nodeId;
+}
+
+function storeMetric(table: Table, metric: Metric) {
+	const nodeId = getHostNodeId(server.hostname);
 	const metricValue = {
 		id: [getNextMonotonicTime(), nodeId],
 		...metric,
@@ -382,13 +386,14 @@ async function aggregation(fromPeriod, toPeriod = 60000) {
 		});
 	});
 	let lastForPeriod;
-	// find the last entry for this period
+	const localNodeId = getHostNodeId(server.hostname);
+	// find the last entry for this period for the local node only
 	for (const entry of analyticsTable.primaryStore.getRange({
 		start: Infinity,
 		end: false,
 		reverse: true,
 	})) {
-		if (!entry.value?.time) continue;
+		if (!entry.value?.time || entry.value?.id[1] !== localNodeId) continue;
 		lastForPeriod = entry.value.time;
 		break;
 	}

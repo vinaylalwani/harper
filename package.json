@@ -78,7 +78,7 @@
 		"lint:required": "oxlint --quiet .",
 		"cluster:ip:local": "pushd utility/dev && docker compose -f docker-compose.ip.yml --project-directory ../.. build && docker compose -f docker-compose.ip.yml --project-directory ../.. up; popd",
 		"cluster:ip:latest": "pushd utility/dev && docker compose -f docker-compose.ip.yml --project-directory ../.. pull && docker compose -f docker-compose.ip.yml --project-directory ../.. up; popd",
-		"cluster:delete": "pushd utility/dev && docker compose -f docker-compose.ip.yml --project-directory ../.. down --remove-orphans; popd",
+		"cluster:delete": "pushd utility/dev && docker compose -f docker-compose.ip.yml --project-directory ../.. down --remove-orphans; docker compose -f docker-compose.hostname.yml --project-directory ../.. down --remove-orphans; popd",
 		"cluster:hostname:local": "pushd utility/dev && docker compose -f docker-compose.hostname.yml --project-directory ../.. build && docker compose -f docker-compose.hostname.yml --project-directory ../.. up; popd",
 		"cluster:hostname:latest": "pushd utility/dev && docker compose -f docker-compose.hostname.yml --project-directory ../.. pull && docker compose -f docker-compose.hostname.yml --project-directory ../.. up; popd"
 	},
@@ -124,7 +124,7 @@
 		"json2csv": "5.0.7",
 		"jsonata": "1.8.7",
 		"jsonwebtoken": "9.0.3",
-		"lmdb": "3.5.0",
+		"lmdb": "3.5.1",
 		"lodash": "4.17.21",
 		"mathjs": "11.12.0",
 		"micromatch": "^4.0.8",
