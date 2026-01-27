@@ -84,7 +84,6 @@ interface LMDBRootDatabase extends RootDatabase {
 interface RocksDatabaseEx extends RocksDatabase {
 	customIndex?: any;
 	env: Record<string, any>;
-	attemptLock(key: Id, version: number, onUnlocked?: () => void): boolean;
 	isLegacy?: boolean;
 	isIndexing?: boolean;
 	indexNulls?: boolean;
@@ -174,10 +173,6 @@ function openRocksDatabase(path: string, options: RocksDatabaseOptions) {
 		db = new RocksIndexStore(db, options);
 	} else {
 		db.env = {};
-		// normalize attemptLock
-		db.attemptLock = function (key: Id, version: number, onUnlock: () => void): boolean {
-			return this.tryLock(key, onUnlock);
-		}; // alias this, as rocksdb uses a different spelling, we don't want to have to branch on every usage
 	}
 	return db;
 }

@@ -199,13 +199,10 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 							store.unlock(lockKey, 0);
 							return resolve(readContents());
 						};
-						const lockAcquired =
-							store instanceof RocksDatabase
-								? store.tryLock(lockKey, callback)
-								: store.attemptLock(lockKey, 0, callback);
+						const lockAcquired = store.tryLock(lockKey, callback);
 						if (lockAcquired) {
 							writeFinished = true;
-							store.unlock(lockKey, 0);
+							store.unlock(lockKey);
 							return resolve(readContents());
 						}
 					});
@@ -423,10 +420,10 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 			if (isBeingWritten === undefined) {
 				const store = storageInfo.store;
 				const lockKey = storageInfo.fileId + ':blob';
-				isBeingWritten = !store.attemptLock(lockKey, 0, () => {
+				isBeingWritten = !store.tryLock(lockKey, () => {
 					isBeingWritten = false;
 				});
-				if (!isBeingWritten) store.unlock(lockKey, 0);
+				if (!isBeingWritten) store.unlock(lockKey);
 			}
 			return isBeingWritten;
 		}
@@ -455,16 +452,6 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 			throw new Error('Can not slice a streaming blob that is not backed by a file');
 		}
 		return slicedBlob;
-	}
-	save(): Promise<void> {
-		if (!warnedSaveDeprecation) {
-			warnedSaveDeprecation = true;
-			logger.warn?.(
-				`save() method on Blob is deprecated, use the 'saveBeforeCommit' flag on the Blob constructor instead`
-			);
-		}
-		this.saveBeforeCommit = true;
-		return Promise.resolve();
 	}
 	get written() {
 		return storageInfoForBlob.get(this)?.saving ?? Promise.resolve();
@@ -552,7 +539,7 @@ function writeBlobWithStream(blob: Blob, stream: NodeJS.ReadableStream, storageI
 	storageInfo.saving = new Promise((resolve, reject) => {
 		// pipe the stream to the file
 		const lockKey = fileId + ':blob';
-		if (!store.attemptLock(lockKey, 0)) {
+		if (!store.tryLock(lockKey)) {
 			throw new Error(`Unable to get lock for blob file ${fileId}`);
 		}
 		const writeStream = createWriteStream(filePath, { autoClose: false, flags: 'w' });
