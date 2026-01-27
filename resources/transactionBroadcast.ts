@@ -206,11 +206,11 @@ export function listenToCommits(primaryStore, auditStore) {
 					notifyFromTransactionData(subscriptions);
 				} finally {
 					store.threadLocalWrites[0] = subscriptions.lastTxnTime; // update shared buffer
-					store.unlock('thread-local-writes'); // and release the lock
+					store.unlock('thread-local-writes', 0); // and release the lock
 				}
 			};
 			// try to get lock or wait for it
-			if (!store.attemptLock('thread-local-writes', acquiredLock)) return;
+			if (!store.attemptLock('thread-local-writes', 0, acquiredLock)) return;
 			acquiredLock();
 		});
 	}
