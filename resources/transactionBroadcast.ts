@@ -201,10 +201,10 @@ function notifyFromTransactionData(subscriptions) {
  */
 export function listenToCommits(primaryStore, auditStore) {
 	const store = auditStore || primaryStore;
+	const path = primaryStore.path ?? primaryStore.env.path;
 	const lmdbEnv = store.env;
 	if (!lmdbEnv.hasAfterCommitListener) {
 		lmdbEnv.hasAfterCommitListener = true;
-		const path = lmdbEnv.path;
 		store.on('aftercommit', ({ next, last, txnId }) => {
 			const subscriptions = allSameThreadSubscriptions[path]; // there is a different set of subscribers for same-thread subscriptions
 			if (!subscriptions) return;
