@@ -54,4 +54,7 @@ export class RocksIndexStore {
 			return { key: key[0], value: key.length > 2 ? key.slice(1) : key[1] };
 		});
 	}
+	drop() {
+		return this.#store.drop();
+	}
 }
