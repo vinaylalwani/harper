@@ -11,8 +11,9 @@ const YAML = require('yaml');
 const hdbTerms = require('#src/utility/hdbTerms');
 const logger = require('#js/utility/logging/harper_logger');
 const common_utils = require('#js/utility/common_utils');
-const test_utils = require('../test_utils');
-const hdb_terms = require('#src/utility/hdbTerms');
+const test_utils = require('../testUtils.js');
+const { handleHDBError } = require('#js/utility/errors/hdbError');
+const { HTTP_STATUS_CODES } = require('#js/utility/errors/commonErrors');
 
 const DIRNAME = __dirname;
 const HDB_ROOT = path.join(DIRNAME, 'yaml');
@@ -871,7 +872,14 @@ describe('Test configUtils module', () => {
 			test_utils.assertErrorSync(
 				config_utils_rw.updateConfigValue,
 				['FAKE_TIMEZONE', 'test_timezone', undefined, false, false],
-				new Error('Unable to update config, unrecognized config parameter: FAKE_TIMEZONE')
+				handleHDBError(
+					new Error(),
+					'Unable to update config, unrecognized config parameter: FAKE_TIMEZONE',
+					HTTP_STATUS_CODES.BAD_REQUEST,
+					undefined,
+					undefined,
+					true
+				)
 			);
 
 			expect(init_config_spy.callCount).to.equal(1);
@@ -899,48 +907,48 @@ describe('Test configUtils module', () => {
 		const cast_config_value_rw = config_utils_rw.__get__('castConfigValue');
 
 		it('Test number value returns number', () => {
-			const result = cast_config_value_rw(hdb_terms.CONFIG_PARAMS.LOGGING_ROTATION_COMPRESS, 15.33);
+			const result = cast_config_value_rw(hdbTerms.CONFIG_PARAMS.LOGGING_ROTATION_COMPRESS, 15.33);
 			expect(result).to.equal(15.33);
 
-			const result_2 = cast_config_value_rw(hdb_terms.CONFIG_PARAMS.LOCALSTUDIO_ENABLED, '0.777');
+			const result_2 = cast_config_value_rw(hdbTerms.CONFIG_PARAMS.LOCALSTUDIO_ENABLED, '0.777');
 			expect(result_2).to.equal(0.777);
 
-			const result_3 = cast_config_value_rw(hdb_terms.CONFIG_PARAMS.LOCALSTUDIO_ENABLED, '-44.6');
+			const result_3 = cast_config_value_rw(hdbTerms.CONFIG_PARAMS.LOCALSTUDIO_ENABLED, '-44.6');
 			expect(result_3).to.equal(-44.6);
 		});
 
 		it('Test if value is boolean, boolean is returned', () => {
-			const result = cast_config_value_rw(hdb_terms.CONFIG_PARAMS.LOGGING_ROTATION_COMPRESS, true);
+			const result = cast_config_value_rw(hdbTerms.CONFIG_PARAMS.LOGGING_ROTATION_COMPRESS, true);
 			expect(result).to.equal(true);
 
-			const result_2 = cast_config_value_rw(hdb_terms.CONFIG_PARAMS.LOGGING_ROTATION_COMPRESS, false);
+			const result_2 = cast_config_value_rw(hdbTerms.CONFIG_PARAMS.LOGGING_ROTATION_COMPRESS, false);
 			expect(result_2).to.equal(false);
 		});
 
 		it('Test if value is true/false string, boolean is returned', () => {
-			const result = cast_config_value_rw(hdb_terms.CONFIG_PARAMS.LOCALSTUDIO_ENABLED, 'true');
+			const result = cast_config_value_rw(hdbTerms.CONFIG_PARAMS.LOCALSTUDIO_ENABLED, 'true');
 			expect(result).to.equal(true);
 
-			const result_2 = cast_config_value_rw(hdb_terms.CONFIG_PARAMS.LOCALSTUDIO_ENABLED, 'false');
+			const result_2 = cast_config_value_rw(hdbTerms.CONFIG_PARAMS.LOCALSTUDIO_ENABLED, 'false');
 			expect(result_2).to.equal(false);
 		});
 
 		it('Test if value is undefined or undefined as string, null is returned', () => {
-			const result = cast_config_value_rw(hdb_terms.CONFIG_PARAMS.LOGGING_LEVEL, 'undefined');
+			const result = cast_config_value_rw(hdbTerms.CONFIG_PARAMS.LOGGING_LEVEL, 'undefined');
 			expect(result).to.equal(null);
 
-			const result_2 = cast_config_value_rw(hdb_terms.CONFIG_PARAMS.LOGGING_LEVEL, undefined);
+			const result_2 = cast_config_value_rw(hdbTerms.CONFIG_PARAMS.LOGGING_LEVEL, undefined);
 			expect(result_2).to.equal(null);
 		});
 
 		it('Test if value is an object, string, or array, the same data type is returned', () => {
-			const result = cast_config_value_rw(hdb_terms.CONFIG_PARAMS.LOGGING_LEVEL, { bleep: 'bloop' });
+			const result = cast_config_value_rw(hdbTerms.CONFIG_PARAMS.LOGGING_LEVEL, { bleep: 'bloop' });
 			expect(result).to.eql({ bleep: 'bloop' });
 
-			const result_2 = cast_config_value_rw(hdb_terms.CONFIG_PARAMS.LOCALSTUDIO_ENABLED, [true, false, 25]);
+			const result_2 = cast_config_value_rw(hdbTerms.CONFIG_PARAMS.LOCALSTUDIO_ENABLED, [true, false, 25]);
 			expect(result_2).to.eql([true, false, 25]);
 
-			const result_3 = cast_config_value_rw(hdb_terms.CONFIG_PARAMS.LOCALSTUDIO_ENABLED, 'cool string');
+			const result_3 = cast_config_value_rw(hdbTerms.CONFIG_PARAMS.LOCALSTUDIO_ENABLED, 'cool string');
 			expect(result_3).to.equal('cool string');
 		});
 	});
