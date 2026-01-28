@@ -143,7 +143,7 @@ function createConfigFile(args, skipFsValidation = false) {
 			HTTP_STATUS_CODES.BAD_REQUEST,
 			undefined,
 			undefined,
-			true,
+			true
 		);
 	}
 	fs.writeFileSync(configFilePath, String(configDoc));
@@ -256,7 +256,7 @@ function initConfig(force = false) {
 				throw handleHDBError(
 					new Error(),
 					`Harper properties file at path ${bootPropsFilePath} does not exist`,
-					HTTP_STATUS_CODES.BAD_REQUEST,
+					HTTP_STATUS_CODES.BAD_REQUEST
 				);
 			}
 		}
@@ -288,7 +288,7 @@ function initConfig(force = false) {
 				throw handleHDBError(
 					new Error(),
 					`Error reading Harper config file at ${configFilePath}`,
-					HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR,
+					HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR
 				);
 			}
 		}
@@ -363,7 +363,7 @@ function checkForUpdatedConfig(configDoc, configFilePath) {
 			throw handleHDBError(
 				new Error(),
 				`Error parsing harperdb-config.yaml ${configDoc.errors}`,
-				HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR,
+				HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR
 			);
 		}
 		fs.writeFileSync(configFilePath, String(configDoc));
@@ -390,7 +390,7 @@ function validateConfig(configDoc, skipFsValidation = false) {
 			HTTP_STATUS_CODES.BAD_REQUEST,
 			undefined,
 			undefined,
-			true,
+			true
 		);
 	}
 
@@ -406,7 +406,7 @@ function validateConfig(configDoc, skipFsValidation = false) {
 			HTTP_STATUS_CODES.BAD_REQUEST,
 			undefined,
 			undefined,
-			true,
+			true
 		);
 	}
 
@@ -418,7 +418,7 @@ function validateConfig(configDoc, skipFsValidation = false) {
 			HTTP_STATUS_CODES.BAD_REQUEST,
 			undefined,
 			undefined,
-			true,
+			true
 		);
 	}
 
@@ -513,7 +513,7 @@ function updateConfigValue(
 					HTTP_STATUS_CODES.BAD_REQUEST,
 					undefined,
 					undefined,
-					true,
+					true
 				);
 			}
 		}
@@ -600,7 +600,7 @@ function updateConfigValue(
 		throw handleHDBError(
 			new Error(),
 			`Error parsing harperdb-config.yaml ${configDoc.errors}`,
-			HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR,
+			HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR
 		);
 	}
 	fs.writeFileSync(configFileLocation, String(configDoc));
@@ -762,7 +762,7 @@ function readConfigFile() {
 			throw handleHDBError(
 				new Error(),
 				`Harper properties file at path ${bootPropsFilePath} does not exist`,
-				HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR,
+				HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR
 			);
 		}
 	}
@@ -829,7 +829,7 @@ function applyRuntimeEnvVarConfig(configDoc, configFilePath, options = {}) {
 			throw handleHDBError(
 				new Error(),
 				`Error parsing harperdb-config.yaml: ${mergedDoc.errors}`,
-				HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR,
+				HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR
 			);
 		}
 
@@ -850,7 +850,7 @@ function applyRuntimeEnvVarConfig(configDoc, configFilePath, options = {}) {
 			throw handleHDBError(
 				new Error(),
 				`Error parsing harperdb-config.yaml: ${configDoc.errors}`,
-				HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR,
+				HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR
 			);
 		}
 		fs.writeFileSync(configFilePath, String(configDoc));
@@ -911,7 +911,7 @@ async function addConfig(topLevelElement, values) {
 		throw handleHDBError(
 			new Error(),
 			`Error parsing harperdb-config.yaml ${configDoc.errors}`,
-			HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR,
+			HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR
 		);
 	}
 	await fs.writeFile(getConfigFilePath(), String(configDoc));

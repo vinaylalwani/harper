@@ -875,8 +875,8 @@ describe('Test configUtils module', () => {
 					HTTP_STATUS_CODES.BAD_REQUEST,
 					undefined,
 					undefined,
-					true,
-				),
+					true
+				)
 			);
 
 			expect(init_config_spy.callCount).to.equal(1);
