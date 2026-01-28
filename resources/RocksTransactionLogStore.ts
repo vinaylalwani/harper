@@ -2,10 +2,14 @@ import { type TransactionLog, RocksDatabase, shutdown, type TransactionEntry } f
 import { ExtendedIterable } from '@harperfast/extended-iterable';
 import { Decoder, readAuditEntry, ENTRY_DATAVIEW, AuditRecord, createAuditEntry } from './auditStore.ts';
 import logger from '../utility/logging/harper_logger.js';
-if (!process.env.HARPER_NO_FLUSH_ON_EXIT) {
+import { isMainThread } from 'node:worker_threads';
+
+if (!process.env.HARPER_NO_FLUSH_ON_EXIT && isMainThread) {
 	// we want to be able to test log replay
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-	process.on('exit', shutdown);
+	process.on('exit', () => {
+		shutdown();
+	});
 }
 
 const HAS_32_BIT_FLAG = 0x80000000; // for future use if we need a bigger section for flags
