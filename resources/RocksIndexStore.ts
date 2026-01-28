@@ -22,11 +22,15 @@ export class RocksIndexStore {
 	}
 
 	remove(indexedValue: any, primaryKey: Id, options: any) {
-		return this.#store.removeSync([indexedValue, primaryKey], null, options);
+		return this.#store.removeSync([indexedValue, primaryKey], options);
 	}
 
 	removeSync(indexedValue: any, primaryKey: Id, options: any) {
-		return this.#store.removeSync([indexedValue, primaryKey], null, options);
+		return this.#store.removeSync([indexedValue, primaryKey], options);
+	}
+
+	getKeys(options: any): Iterable<any> {
+		return this.#store.getKeys(options);
 	}
 
 	getValuesCount(indexedValue: any) {
