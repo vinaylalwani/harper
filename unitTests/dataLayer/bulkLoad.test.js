@@ -175,10 +175,6 @@ describe('Test bulkLoad.js', () => {
 		throw err;
 	};
 
-	before(() => {
-		env.setProperty(hdb_terms.CONFIG_PARAMS.CLUSTERING_ENABLED, false);
-	});
-
 	describe('Test csvDataLoad', function () {
 		let sandbox = sinon.createSandbox();
 
