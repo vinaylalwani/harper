@@ -19,7 +19,7 @@ const { handleHDBError } = require('#js/utility/errors/hdbError');
 const environment_utility = require('#js/utility/lmdb/environmentUtility');
 const pm2_utils = require('#js/utility/processManagement/processManagement');
 const lmdb_create_schema = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbCreateSchema');
-const { createTable, createRecords } = require('#js/dataLayer/harperBridge/harperBridge');
+const harperBridge = require('#js/dataLayer/harperBridge/harperBridge');
 const config_utils = require('#js/config/configUtils');
 const user = require('#src/security/user');
 const { isMainThread } = require('worker_threads');
@@ -255,7 +255,7 @@ async function createMockDB(hash_attribute, schema, table, test_data) {
 		);
 
 		const insert_records_obj = new InsertRecordsObj(schema, table, test_data);
-		await createRecords(insert_records_obj);
+		await harperBridge.createRecords(insert_records_obj);
 
 		return env_array;
 	} catch (err) {

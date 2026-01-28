@@ -52,7 +52,7 @@ function getDirFilePaths(dir_path) {
 }
 
 function getFormattedIntegrationTestCsvData() {
-	const csv_dir = path.join(process.cwd(), '../test/data/integrationTestsCsvs');
+	const csv_dir = path.join(__dirname, '../integrationTests/apiTests/data');
 	const csv_paths = getDirFilePaths(csv_dir);
 	const parsed_data = parseCsvFilesToObjArr(csv_paths).filter((obj) => obj.name !== 'InvalidAttributes');
 
