@@ -12,6 +12,8 @@ const logger = require('#js/utility/logging/harper_logger');
 const common_utils = require('#js/utility/common_utils');
 const test_utils = require('../testUtils.js');
 const hdbTerms = require('#src/utility/hdbTerms');
+const { handleHDBError } = require('#js/utility/errors/hdbError');
+const { HTTP_STATUS_CODES } = require('#js/utility/errors/commonErrors');
 
 const DIRNAME = __dirname;
 const HDB_ROOT = path.join(DIRNAME, 'yaml');
@@ -867,7 +869,14 @@ describe('Test configUtils module', () => {
 			test_utils.assertErrorSync(
 				config_utils_rw.updateConfigValue,
 				['FAKE_TIMEZONE', 'test_timezone', undefined, false, false],
-				new Error('Unable to update config, unrecognized config parameter: FAKE_TIMEZONE')
+				handleHDBError(
+					new Error(),
+					'Unable to update config, unrecognized config parameter: FAKE_TIMEZONE',
+					HTTP_STATUS_CODES.BAD_REQUEST,
+					undefined,
+					undefined,
+					true,
+				),
 			);
 
 			expect(init_config_spy.callCount).to.equal(1);
