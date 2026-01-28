@@ -144,15 +144,7 @@ export class ResourceBridge extends LMDBBridge {
 			const deleteRecord = (key, record, version): Promise<void> => {
 				record = { ...record };
 				delete record[property];
-				return Table.primaryStore
-					.ifVersion(key, version, () => Table.primaryStore.put(key, record, version))
-					.then((success) => {
-						if (!success) {
-							// try again with the latest record
-							const { value: record, version } = Table.primaryStore.getEntry(key);
-							return deleteRecord(key, record, version);
-						}
-					});
+				return Table.primaryStore.put(key, record, version);
 			};
 			for (const { key, value: record, version } of Table.primaryStore.getRange({ start: true, versions: true })) {
 				resolution = deleteRecord(key, record, version);

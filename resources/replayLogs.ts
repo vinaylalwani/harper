@@ -5,6 +5,7 @@ import * as logger from '../utility/logging/harper_logger.js';
 import { DatabaseTransaction } from './DatabaseTransaction.ts';
 import { RocksTransactionLogStore } from './RocksTransactionLogStore.ts';
 import { isMainThread } from 'node:worker_threads';
+import { RequestTarget } from './RequestTarget.ts';
 
 export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void> {
 	if (!isMainThread) return; // ideally we don't do it like this, but for now this is predictable
@@ -30,7 +31,9 @@ export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void>
 				if (!Table) continue;
 				const context: Context = { nodeId, alreadyLogged: true, version, expiresAt, user: { name: username } };
 				const { primaryStore, auditStore } = Table;
-				const tableInstance = Table.getResource(null, context, {});
+				const target = new RequestTarget();
+				target.id = null;
+				const tableInstance = Table.getResource(target, context, {});
 				// TODO: If this throws an error due to being unable to access structures, we need to iterate through
 				// other transaction logs to get the latest structure. Ultimately we may have to skip records
 				console.error('replaying', Table.name, recordId);
