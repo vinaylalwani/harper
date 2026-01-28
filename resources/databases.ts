@@ -774,7 +774,7 @@ export function database({ database: databaseName, table: tableName }) {
  * @param databaseName
  */
 export async function dropDatabase(databaseName) {
-	if (!databases[databaseName]) throw new Error('Schema does not exist');
+	if (!databases[databaseName]) throw new Error('Database does not exist');
 	const dbTables = databases[databaseName];
 	let rootStore;
 	for (const tableName in dbTables) {
@@ -783,15 +783,14 @@ export async function dropDatabase(databaseName) {
 
 		lmdbDatabaseEnvs.delete(rootStore.path);
 		rocksdbDatabaseEnvs.delete(rootStore.path);
-
-		if (rootStore.status === 'open') {
+		if (rootStore.isOpen?.() ?? rootStore.status === 'open') {
 			await rootStore.close();
 			await fs.remove(rootStore.path);
 		}
 	}
 	if (!rootStore) {
 		rootStore = database({ database: databaseName, table: null });
-		if (rootStore.status === 'open') {
+		if (rootStore.isOpen?.() ?? rootStore.status === 'open') {
 			await rootStore.close();
 			await fs.remove(rootStore.path);
 		}
