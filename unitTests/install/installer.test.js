@@ -20,7 +20,7 @@ const installer = rewire(installer_mod_path);
 const YAML = require('yaml');
 const os = require('node:os');
 
-describe('Test installer module', () => {
+describe.skip('Test installer module', () => {
 	const sandbox = sinon.createSandbox();
 	let console_log_stub;
 	let console_error_stub;

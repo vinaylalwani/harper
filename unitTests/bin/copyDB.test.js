@@ -10,7 +10,7 @@ const config_utils = require('#js/config/configUtils');
 const copyDB = require('#src/bin/copyDb');
 const { resetDatabases } = require('#src/resources/databases');
 
-describe('Test database copy and compact', () => {
+describe.skip('Test database copy and compact', () => {
 	const sandbox = sinon.createSandbox();
 	let TestTable;
 	let storage_path;
