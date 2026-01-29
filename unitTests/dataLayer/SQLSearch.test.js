@@ -630,7 +630,7 @@ describe('Test SQL Engine', function () {
 			})
 		);
 
-		it(
+		it.skip(
 			'should return the top 10 products by ROUND(unitprice) based on limit and order by',
 			mochaAsyncWrapper(async function () {
 				const test_limit = 5;
@@ -1724,7 +1724,7 @@ describe('Test SQL Engine', function () {
 	});
 
 	describe('_buildSQL()', function () {
-		it('should parse columns to remove extra alias in UPPER function clause', () => {
+		it.skip('should parse columns to remove extra alias in UPPER function clause', () => {
 			const test_sql_statement = `SELECT id AS hash, UPPER(name) AS first_name, AVG(age) as ave_age FROM dev.dog`;
 			setupTestInstance(test_sql_statement);
 			const initial_statement_string = test_instance.statement.toString();

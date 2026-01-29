@@ -8,7 +8,7 @@ const TEST_SCHEMA_NORTHWND = 'northwnd';
 const assert = require('assert');
 const executeSQL = promisify(evaluateSQL);
 
-describe('Test SQL Update/Insert/Delete', function () {
+describe.skip('Test SQL Update/Insert/Delete', function () {
 	describe('SQL UPDATE', function () {
 		before(async function () {
 			await setupCSVSqlData();

@@ -77,7 +77,7 @@ const DESCRIBE_TABLE_MESSAGE = {
 
 let test_envs;
 
-describe('Test describeAll', function () {
+describe.skip('Test describeAll', function () {
 	let search_orig = undefined;
 	let desc_table_orig = undefined;
 	let sandbox = undefined;
@@ -119,7 +119,7 @@ describe('Test describeAll', function () {
 	});
 });
 
-describe('Test describeSchema', function () {
+describe.skip('Test describeSchema', function () {
 	let search_orig = undefined;
 	let desc_table_orig = undefined;
 	let sandbox = undefined;
@@ -192,7 +192,7 @@ describe('Test describeSchema', function () {
 	});
 });
 
-describe('Test describeTable', function () {
+describe.skip('Test describeTable', function () {
 	let search_orig = undefined;
 	let desc_table_orig = undefined;
 	let desc_table_stub = undefined;

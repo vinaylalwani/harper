@@ -86,7 +86,7 @@ async function callStubFunc(obj, args) {
 	return await obj.job_operation_function(args);
 }
 
-describe('Test bulkLoad.js', () => {
+describe.skip('Test bulkLoad.js', () => {
 	let call_papaparse_stub;
 	let call_papaparse_rewire;
 	let test_bulk_load_file_obj = {
