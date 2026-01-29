@@ -8,10 +8,10 @@ const path = require('path');
 const fs = require('fs-extra');
 const config_utils_rw = rewire('#js/config/configUtils');
 const YAML = require('yaml');
-const hdbTerms = require('#src/utility/hdbTerms');
 const logger = require('#js/utility/logging/harper_logger');
 const common_utils = require('#js/utility/common_utils');
 const test_utils = require('../testUtils.js');
+const hdbTerms = require('#src/utility/hdbTerms');
 const { handleHDBError } = require('#js/utility/errors/hdbError');
 const { HTTP_STATUS_CODES } = require('#js/utility/errors/commonErrors');
 
@@ -510,7 +510,6 @@ describe('Test configUtils module', () => {
 	});
 
 	describe('Test initConfig function', () => {
-		let flat_config_obj_rw;
 		let validate_config_rw;
 		let properties_reader_rw;
 		let logger_trace_stub;
@@ -545,7 +544,7 @@ describe('Test configUtils module', () => {
 		it('Test in-memory obj undefined, function reads config doc and adds values to object', () => {
 			config_utils_rw.createConfigFile(TEST_ARGS_2);
 
-			flat_config_obj_rw = config_utils_rw.__set__('flatConfigObj', undefined);
+			config_utils_rw.__set__('flatConfigObj', undefined);
 			get_props_file_path_stub.returns(CONFIG_FILE_PATH);
 			access_sync_stub.returns(true);
 			properties_reader_stub.returns({
@@ -576,7 +575,7 @@ describe('Test configUtils module', () => {
 		it('Test in-memory obj undefined, config file path undefined and error is caught', () => {
 			config_utils_rw.createConfigFile(TEST_ARGS_2);
 
-			flat_config_obj_rw = config_utils_rw.__set__('flatConfigObj', undefined);
+			config_utils_rw.__set__('flatConfigObj', undefined);
 			get_props_file_path_stub.returns(CONFIG_FILE_PATH);
 			access_sync_stub.returns(true);
 			properties_reader_stub.returns({
@@ -621,13 +620,11 @@ describe('Test configUtils module', () => {
 				error = err;
 			}
 
-			expect(error.message).to.equal(
+			expect(error.message, `Error was: ${error}`).to.equal(
 				'Harper config file validation error: operationsApi.root config parameter is undefined'
 			);
 			expect(config_validator_stub.calledOnce).to.be.true;
 			expect(config_validator_stub.firstCall.args[0]).to.eql(test_config_json);
-
-			fs.unlinkSync(CONFIG_FILE_PATH);
 		});
 
 		it('Test necessary parameters are setIn by validator', () => {
@@ -853,7 +850,7 @@ describe('Test configUtils module', () => {
 			fs.unlinkSync(CONFIG_FILE_PATH);
 		});
 
-		it.skip('Test that if there is no in-memory obj, initConfig is hit PLUS it handles error with bad param', () => {
+		it('Test that if there is no in-memory obj, initConfig is hit PLUS it handles error with bad param', () => {
 			config_utils_rw.__set__('flatConfigObj', undefined);
 			const init_config_spy = sandbox.spy();
 			config_utils_rw.__set__('initConfig', init_config_spy);
@@ -885,7 +882,7 @@ describe('Test configUtils module', () => {
 			expect(init_config_spy.callCount).to.equal(1);
 		});
 
-		it.skip('Test config not updated if values are the same', () => {
+		it('Test config not updated if values are the same', () => {
 			config_utils_rw.__set__('flatConfigObj', {
 				http_cors: false,
 				logging_stdstreams: false,

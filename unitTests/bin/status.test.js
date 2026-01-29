@@ -14,7 +14,6 @@ const status = rewire('#js/bin/status');
 describe('Test status module', () => {
 	const sandbox = sinon.createSandbox();
 	let console_log_stub;
-	let read_file_stub;
 	let get_hdb_process_info_stub;
 
 	const fake_hdb_process_info = {
@@ -31,7 +30,7 @@ describe('Test status module', () => {
 	before(() => {
 		console_log_stub = sandbox.stub(console, 'log');
 		env_mgr.setProperty(hdb_terms.CONFIG_PARAMS.ROOTPATH, 'unit-test');
-		read_file_stub = sandbox.stub(fs, 'readFile').resolves('62076');
+		sandbox.stub(fs, 'readFile').resolves('62076');
 		get_hdb_process_info_stub = sandbox.stub(sys_info, 'getHDBProcessInfo').resolves(fake_hdb_process_info);
 		sandbox.stub(installation, 'isHdbInstalled').returns(true);
 	});
