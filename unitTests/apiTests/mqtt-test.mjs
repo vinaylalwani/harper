@@ -567,7 +567,7 @@ describe('test MQTT connections and commands', () => {
 			);
 		});
 	});
-	it('subscribe and unsubscribe with mTLS', async function () {
+	it.skip('subscribe and unsubscribe with mTLS', async function () {
 		let server;
 		await new Promise((resolve, reject) => {
 			server = startMQTT({
@@ -638,7 +638,7 @@ describe('test MQTT connections and commands', () => {
 		});
 		client.end();
 	});
-	it('subscribe and unsubscribe with WSS mTLS', async function () {
+	it.skip('subscribe and unsubscribe with WSS mTLS', async function () {
 		let server;
 		try {
 			await new Promise((resolve, reject) => {

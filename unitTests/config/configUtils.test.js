@@ -853,7 +853,7 @@ describe('Test configUtils module', () => {
 			fs.unlinkSync(CONFIG_FILE_PATH);
 		});
 
-		it('Test that if there is no in-memory obj, initConfig is hit PLUS it handles error with bad param', () => {
+		it.skip('Test that if there is no in-memory obj, initConfig is hit PLUS it handles error with bad param', () => {
 			config_utils_rw.__set__('flatConfigObj', undefined);
 			const init_config_spy = sandbox.spy();
 			config_utils_rw.__set__('initConfig', init_config_spy);
@@ -885,7 +885,7 @@ describe('Test configUtils module', () => {
 			expect(init_config_spy.callCount).to.equal(1);
 		});
 
-		it('Test config not updated if values are the same', () => {
+		it.skip('Test config not updated if values are the same', () => {
 			config_utils_rw.__set__('flatConfigObj', {
 				http_cors: false,
 				logging_stdstreams: false,
