@@ -44,7 +44,7 @@ describe('Test keys module', () => {
 		let cert = await mkcert.createCert({
 			domains: ['Unit Test', '127.0.0.1', 'localhost', '::1'],
 			validityDays: 1,
-			ca
+			ca,
 		});
 
 		test_private_key = cert.key;

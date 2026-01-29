@@ -82,7 +82,7 @@ describe('Test readLog module', () => {
 						return TEST_LOG_DIR;
 					}
 					return env_mangr.get(key);
-				}
+				},
 			};
 			envMangr_rw = read_log.__set__('envMangr', mockEnvMangr);
 			validator_rw = read_log.__set__('validator', validator_stub);

@@ -410,7 +410,10 @@ describe('test systemInformation module', () => {
 		});
 
 		EXPECTED_PROPERTIES.harperdb_processes.forEach((property) => {
-			assert(results.hasOwnProperty(property), `expected property "${property}" not found in ${JSON.stringify(results)}`);
+			assert(
+				results.hasOwnProperty(property),
+				`expected property "${property}" not found in ${JSON.stringify(results)}`
+			);
 		});
 	});
 
@@ -430,12 +433,24 @@ describe('test systemInformation module', () => {
 		let results = await rw_system_information.systemInformation(op);
 
 		assert(results.time !== undefined, `results.time should be defined but it is ${JSON.stringify(results.time)}`);
-		assert(results.memory !== undefined, `results.memory should be defined but it is ${JSON.stringify(results.memory)}`);
-		assert(results.system === undefined, `results.system should be undefined but it is ${JSON.stringify(results.system)}`);
+		assert(
+			results.memory !== undefined,
+			`results.memory should be defined but it is ${JSON.stringify(results.memory)}`
+		);
+		assert(
+			results.system === undefined,
+			`results.system should be undefined but it is ${JSON.stringify(results.system)}`
+		);
 		assert(results.cpu === undefined, `results.cpu should be undefined but it is ${JSON.stringify(results.cpu)}`);
 		assert(results.disk === undefined, `results.disk should be undefined but it is ${JSON.stringify(results.disk)}`);
-		assert(results.network === undefined, `results.network should be undefined but it is ${JSON.stringify(results.network)}`);
-		assert(results.harperdb_processes === undefined, `results.harperdb_processes should be undefined but it is ${JSON.stringify(results.harperdb_processes)}`);
+		assert(
+			results.network === undefined,
+			`results.network should be undefined but it is ${JSON.stringify(results.network)}`
+		);
+		assert(
+			results.harperdb_processes === undefined,
+			`results.harperdb_processes should be undefined but it is ${JSON.stringify(results.harperdb_processes)}`
+		);
 	});
 
 	it('test systemInformation function fetch all of the attributes', async () => {

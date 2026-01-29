@@ -57,8 +57,6 @@ describe('Test status module', () => {
 
 		await status();
 		process_exit_stub.restore();
-		expect(console_log_stub.args[0][0]).to.eql(
-			'harperdb:\n  status: stopped\n'
-		);
+		expect(console_log_stub.args[0][0]).to.eql('harperdb:\n  status: stopped\n');
 	});
 });
