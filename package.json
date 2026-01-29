@@ -39,21 +39,38 @@
 		"format:write": "prettier --write .",
 		"test:integration:api-tests": "node --test integrationTests/apiTests/tests/testSuite.mjs",
 		"test:integration": "node integrationTests/utils/scripts/run.ts",
-		"test:unit": "mocha --config unitTests/.mocharc.json",
-		"test:unit:all": "npm run test:unit unitTests",
+		"test:unit": "mocha",
+		"test:unit:main": "mocha 'unitTests/**/*test.*js' --exclude 'unitTests/apiTests/**/*' --exclude 'unitTests/dataLayer/harperBridge/**/*' --exclude 'unitTests/resources/**/*'",
+		"test:unit:all": "npm run test:unit:main && npm run test:unit:apitests && npm run test:unit:resources",
+		"test:unit:components": "mocha 'unitTests/components/**/*.js'",
+		"test:unit:resources": "mocha 'unitTests/resources/**/*.js'",
+		"test:unit:bin": "mocha 'unitTests/bin/**/*.js'",
+		"test:unit:apitests": "node ./dist/bin/harper.js stop && mocha 'unitTests/apiTests/**/*-test.mjs'",
+		"test:unit:logging": "mocha 'unitTests/utility/logging/*.js'",
+		"test:unit:security": "mocha 'unitTests/security/**/*.js'",
+		"test:unit:dataLayer": "mocha 'unitTests/dataLayer/**/*.js' --exclude 'unitTests/dataLayer/harperBridge/**/*'",
+		"test:unit:utility": "mocha 'unitTests/utility/**/*.js' --exclude 'unitTests/utility/logging/**/*'",
+		"test:unit:server": "mocha 'unitTests/server/**/*.js'",
+		"test:unit:config": "mocha 'unitTests/config/**/*.js'",
 		"test:unit:typestrip": "env NODE_OPTIONS='--conditions=typestrip' npm run test:unit",
 		"test:unit:typestrip:all": "npm run test:unit:typestrip unitTests"
 	},
 	"imports": {
 		"#src/*": {
-			"import": "./*.ts",
+			"import": {
+				"typestrip": "./*.ts",
+				"default": "./dist/*.js"
+			},
 			"require": {
 				"typestrip": "./*.ts",
 				"default": "./dist/*.js"
 			}
 		},
 		"#js/*": {
-			"import": "./*.js",
+			"import": {
+				"typestrip": "./*.js",
+				"default": "./dist/*.js"
+			},
 			"require": {
 				"typestrip": "./*.js",
 				"default": "./dist/*.js"
@@ -90,19 +107,27 @@
 		"@typescript-eslint/parser": "^8.48.1",
 		"axios": "^1.12.2",
 		"chai": "^6.2.0",
+		"chai-as-promised": "^8.0.2",
+		"chai-integer": "^0.1.0",
 		"fast-glob": "^3.3.3",
 		"fs-extra": "^11.3.2",
+		"eventsource": "^3.0.5",
 		"globals": "^16.5.0",
+		"intercept-stdout": "0.1.2",
+		"mkcert": "^3.2.0",
 		"mocha": "^11.7.4",
+		"mqtt": "~4.3.8",
 		"oxlint": "^1.31.0",
 		"prettier": "~3.7.3",
 		"rewire": "^9.0.1",
 		"sinon": "^21.0.0",
+		"sinon-chai": "^4.0.1",
 		"supertest": "^7.1.4",
 		"tsx": "^4.20.6",
-		"typescript": "^5.7.3",
+		"typescript": "^5.8.2",
 		"typescript-eslint": "^8.45.0",
-		"undici": "^7.16.0"
+		"undici": "^7.16.0",
+		"why-is-node-still-running": "^1.0.0"
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "3.964.0",

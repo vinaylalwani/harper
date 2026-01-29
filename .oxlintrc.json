@@ -38,5 +38,5 @@
 		"Resource": "readonly",
 		"headersTest": "readonly"
 	},
-	"ignorePatterns": []
+	"ignorePatterns": ["unitTests/security/jsLoader/fixtures"]
 }
