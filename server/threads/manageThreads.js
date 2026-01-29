@@ -556,7 +556,7 @@ if (isMainThread) {
 				queuedRestart = setTimeout(async () => {
 					if (beforeRestart) await beforeRestart();
 					await restartWorkers();
-					console.log('Reloaded HarperDB components, changed files:', Array.from(changedFiles));
+					console.log('Reloaded Harper components, changed files:', Array.from(changedFiles));
 					changedFiles.clear();
 				}, 100);
 			});

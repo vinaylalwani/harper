@@ -61,6 +61,7 @@ async function readLog(request) {
 	const order = request.order === undefined ? undefined : request.order;
 	const start = request.start === undefined ? 0 : request.start;
 	const max = start + limit;
+	const filter = request.filter;
 	let fileStart = 0;
 	if (order === 'desc' && !from && !to) {
 		fileStart = Math.max(fs.statSync(readLogPath).size - (max + 5) * ESTIMATED_AVERAGE_ENTRY_SIZE, 0);
@@ -74,6 +75,7 @@ async function readLog(request) {
 	let result = [];
 	let remaining = '';
 	let pendingLogEntry;
+	let processedCount = 0;
 	readLogInputStream.on('data', (logData) => {
 		let reader = /(?:^|\n)(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:[\d.]+Z) \[(.+?)]: /g;
 		logData = remaining + logData;
@@ -110,6 +112,28 @@ async function readLog(request) {
 	});
 	readLogInputStream.resume();
 	function onLogMessage(line) {
+		if (filter !== undefined) {
+			let found = false;
+			if (
+				['timestamp', 'thread', 'level', 'tags', 'message'].some((attr) => {
+					if (Array.isArray(line[attr])) {
+						return line[attr].some((val) => val.includes(filter));
+					}
+					return line[attr].includes(filter);
+				})
+			) {
+				found = true;
+			}
+			if (!found) return;
+		}
+
+		// Yield to event loop every 10 lines to heavily deprioritize this filtering relative to other operations
+		processedCount++;
+		if (processedCount % 10 === 0) {
+			readLogInputStream.pause();
+			setImmediate(() => readLogInputStream.resume());
+		}
+
 		let logDate;
 		let fromDate;
 		let toDate;

@@ -132,7 +132,7 @@ async function http(request: Context & Request, nextHandler) {
 					// websockets? and event-stream
 					return resource.connect(resourceRequest, null, request);
 				case 'TRACE':
-					return 'HarperDB is the terminating server';
+					return 'Harper is the terminating server';
 				case 'QUERY':
 					return resource.query(resourceRequest, request.data, request);
 				case 'COPY': // methods suggested from webdav RFC 4918
@@ -140,7 +140,7 @@ async function http(request: Context & Request, nextHandler) {
 				case 'MOVE':
 					return resource.move(resourceRequest, headersObject.destination, request);
 				case 'BREW': // RFC 2324
-					throw new ClientError("HarperDB is short and stout and can't brew coffee", 418);
+					throw new ClientError("Harper is short and stout and can't brew coffee", 418);
 				default:
 					throw new ServerError(`Method ${method} is not recognized`, 501);
 			}

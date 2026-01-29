@@ -10,12 +10,29 @@ const schemaDescribe = require('../../dataLayer/schemaDescribe.js');
 const { getThreadInfo } = require('../../server/threads/manageThreads.js');
 const env = require('./environmentManager.js');
 env.initSync();
-
-const SystemInformationObject = require('./SystemInformationObject.js');
 const { databases } = require('../../resources/databases.ts');
 
 //this will hold the system_information which is static to improve performance
 let systemInformationCache = undefined;
+
+class SystemInformationRequest {
+	constructor(attributes) {
+		this.operator = terms.OPERATIONS_ENUM.SYSTEM_INFORMATION;
+		this.attributes = attributes;
+	}
+}
+
+class SystemInformationResponse {
+	constructor(system, time, cpu, memory, disk, network, harperdbProcesses) {
+		this.system = system;
+		this.time = time;
+		this.cpu = cpu;
+		this.memory = memory;
+		this.disk = disk;
+		this.network = network;
+		this.harperdb_processes = harperdbProcesses;
+	}
+}
 
 module.exports = {
 	getHDBProcessInfo,
@@ -28,6 +45,7 @@ module.exports = {
 	systemInformation,
 	getTableSize,
 	getMetrics,
+	SystemInformationRequest,
 };
 
 /**
@@ -108,7 +126,7 @@ async function getHDBProcessInfo() {
 		} catch (err) {
 			if (err.code === terms.NODE_ERROR_CODES.ENOENT) {
 				log.warn(
-					`Unable to locate 'hdb.pid' file, try stopping and starting HarperDB. This could be because HarperDB is not running.`
+					`Unable to locate 'hdb.pid' file, try stopping and starting Harper. This could be because Harper is not running.`
 				);
 			} else {
 				throw err;
@@ -281,12 +299,12 @@ async function getMetrics() {
 
 /**
  *
- * @param {SystemInformationOperation} systemInfoOp
- * @returns {Promise<SystemInformationObject>}
+ * @param {SystemInformationRequest} systemInfoReq
+ * @returns {Promise<SystemInformationResponse>}
  */
-async function systemInformation(systemInfoOp) {
-	let response = new SystemInformationObject();
-	if (!Array.isArray(systemInfoOp.attributes) || systemInfoOp.attributes.length === 0) {
+async function systemInformation(systemInfoReq) {
+	let response = new SystemInformationResponse();
+	if (!Array.isArray(systemInfoReq.attributes) || systemInfoReq.attributes.length === 0) {
 		response.system = await getSystemInformation();
 		response.time = getTimeInfo();
 		response.cpu = await getCPUInfo();
@@ -300,8 +318,8 @@ async function systemInformation(systemInfoOp) {
 		return response;
 	}
 
-	for (let x = 0; x < systemInfoOp.attributes.length; x++) {
-		switch (systemInfoOp.attributes[x]) {
+	for (let attr of systemInfoReq.attributes) {
+		switch (attr) {
 			case 'system':
 				response.system = await getSystemInformation();
 				break;

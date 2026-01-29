@@ -6,7 +6,7 @@ const childProcess = require('child_process');
 const exec = util.promisify(childProcess.exec);
 const sysInfo = require('../utility/environment/systemInformation.js');
 
-const STOP_MSG = 'Stopping HarperDB.';
+const STOP_MSG = 'Stopping Harper.';
 
 module.exports = stop;
 

@@ -34,7 +34,9 @@
 		"tables": "readonly",
 		"createBlob": "readonly",
 		"lockdown": "readonly",
-		"threads": "readonly"
+		"threads": "readonly",
+		"Resource": "readonly",
+		"headersTest": "readonly"
 	},
-	"ignorePatterns": []
+	"ignorePatterns": ["unitTests/security/jsLoader/fixtures"]
 }

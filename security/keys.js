@@ -30,6 +30,7 @@ exports.setCertTable = setCertTable;
 exports.loadCertificates = loadCertificates;
 exports.reviewSelfSignedCert = reviewSelfSignedCert;
 exports.createTLSSelector = createTLSSelector;
+exports.listCertificates = listCertificates;
 exports.generateCertsKeys = generateCertsKeys;
 exports.getReplicationCert = getReplicationCert;
 exports.getReplicationCertAuth = getReplicationCertAuth;
@@ -185,7 +186,7 @@ function loadCertificates() {
 							path,
 							(certificate) => {
 								if (CERTIFICATE_VALUES.cert === certificate) {
-									// this is the compromised HarperDB certificate authority, and we do not even want to bother to
+									// this is the compromised Harper certificate authority, and we do not even want to bother to
 									// load it or tempted to use it anywhere
 									return;
 								}
@@ -206,7 +207,7 @@ function loadCertificates() {
 									return;
 								}
 
-								// Check if cert issued by compromised HarperDB certificate authority, if it is, do not load it
+								// Check if cert issued by compromised Harper certificate authority, if it is, do not load it
 								if (x509Cert.checkIssued(new X509Certificate(CERTIFICATE_VALUES.cert))) return;
 
 								// If a record already exists for cert check to see who is newer, cert record or cert file.
@@ -480,7 +481,7 @@ async function generateCertAuthority(private_key, publicKey, writeKey = true) {
 	const subject = [
 		{
 			name: 'commonName',
-			value: `HarperDB-Certificate-Authority-${envManager.get(CONFIG_PARAMS.NODE_HOSTNAME) ?? uuidv4().split('-')[0]}`,
+			value: `Harper-Certificate-Authority-${envManager.get(CONFIG_PARAMS.NODE_HOSTNAME) ?? uuidv4().split('-')[0]}`,
 		},
 		...CERT_ATTRIBUTES,
 	];

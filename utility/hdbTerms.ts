@@ -5,22 +5,22 @@
  * All variables should use a JSDoc comment to explain what it is, and any objects should be marked as `as const` for better type checking.
  */
 
-/** HarperDB Root Config File */
+/** Harper Root Config File */
 export const HDB_CONFIG_FILE = 'harperdb-config.yaml';
-/** HarperDB Default Config File */
+/** Harper Default Config File */
 export const HDB_DEFAULT_CONFIG_FILE = 'defaultConfig.yaml';
-/** HarperDB Root Directory Name */
+/** Harper Root Directory Name */
 export const HDB_ROOT_DIR_NAME = 'hdb';
-/** HarperDB Component Config File */
+/** Harper Component Config File */
 export const HDB_COMPONENT_CONFIG_FILE = 'config.yaml';
 
-/** Name of the HarperDB Process Script */
+/** Name of the Harper Process Script */
 export const HDB_PROC_NAME = 'harper.js';
-/** Name of the HarperDB Restart Script */
+/** Name of the Harper Restart Script */
 export const HDB_RESTART_SCRIPT = 'restartHdb.js';
 
-/** HarperDB Process Descriptor */
-const HDB_PROC_DESCRIPTOR = 'HarperDB';
+/** Harper Process Descriptor */
+const HDB_PROC_DESCRIPTOR = 'Harper';
 /** Custom Function Process Descriptor */
 const CUSTOM_FUNCTION_PROC_DESCRIPTOR = 'Custom Functions';
 
@@ -44,7 +44,7 @@ export const PROCESS_DESCRIPTORS = {
 /**
  * Process Services Map
  *
- * These are the services that the HarperDB process provides.
+ * These are the services that the Harper process provides.
  * This object is used primarily in the restart workflow to determine which services to restart.
  */
 export const HDB_PROCESS_SERVICES = {
@@ -55,7 +55,7 @@ export const HDB_PROCESS_SERVICES = {
 	'http': 'http',
 } as const;
 
-/** HarperDB Process Identifier File Name */
+/** Harper Process Identifier File Name */
 export const HDB_PID_FILE = 'hdb.pid';
 /** Default database name */
 export const DEFAULT_DATABASE_NAME = 'data';
@@ -111,19 +111,19 @@ export const ESCAPED_FORWARD_SLASH_REGEX = /U\+002F/g;
 /** Name of the System schema */
 export const SYSTEM_SCHEMA_NAME = 'system';
 
-/** HarperDB Home directory */
+/** Harper Home directory */
 export const HDB_HOME_DIR_NAME = '.harperdb';
 
 /** License Key directory */
 export const LICENSE_KEY_DIR_NAME = 'keys';
 
-/** HarperDB Boot Properties file name */
+/** Harper Boot Properties file name */
 export const BOOT_PROPS_FILE_NAME = 'hdb_boot_properties.file';
 
 /** Restart timeout (milliseconds) */
 export const RESTART_TIMEOUT_MS = 60000;
 
-/** HarperDB File Permissions Mode */
+/** Harper File Permissions Mode */
 export const HDB_FILE_PERMISSIONS = 0o700;
 
 /** Database directory */
@@ -414,7 +414,7 @@ export const LEGACY_CONFIG_PARAMS = {
 } as const;
 
 /**
- * All configuration parameters for HarperDB
+ * All configuration parameters for Harper
  *
  * If a param is added to config it must also be added here.
  */

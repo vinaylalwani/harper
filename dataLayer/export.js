@@ -333,10 +333,11 @@ function exportCoreValidation(exportObject) {
 	}
 
 	if (VALID_SEARCH_OPERATIONS.indexOf(searchOperation) < 0) {
-		return `searchOperation.operation must be one of the following values: ${VALID_SEARCH_OPERATIONS.join(', ')}`;
+		return `search_operation.operation must be one of the following values: ${VALID_SEARCH_OPERATIONS.join(', ')}`;
 	}
 }
 
+let pSql;
 /**
  * determines which search operation to perform and executes it.
  * @param exportObject
@@ -362,8 +363,11 @@ async function getRecords(exportObject) {
 			operation = search.searchByConditions;
 			break;
 		case 'sql': {
-			const sql = require('../sqlTranslator/index.js');
-			operation = promisify(sql.evaluateSQL);
+			if (!pSql) {
+				const sql = require('../sqlTranslator/index.js');
+				pSql = promisify(sql.evaluateSQL);
+			}
+			operation = pSql;
 			break;
 		}
 		default:

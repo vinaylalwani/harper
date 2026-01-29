@@ -6,7 +6,7 @@ import type { Id } from '../../resources/ResourceInterface.ts';
 
 const logger = loggerWithTag('HNSW');
 /**
- * Implementation of a vector index for HarperDB, using hierarchical navigable small world graphs.
+ * Implementation of a vector index for Harper, using hierarchical navigable small world graphs.
  */
 const ENTRY_POINT = Symbol.for('entryPoint');
 const KEY_PREFIX = Symbol.for('key');

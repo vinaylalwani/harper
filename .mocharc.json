@@ -1,0 +1,10 @@
+{
+	"timeout": 0,
+	"ui": "bdd",
+	"extension": ["js", "mjs"],
+	"recursive": true,
+	"enable-source-maps": true,
+	"exclude": ["unitTests/security/jsLoader/fixtures/**"],
+	"node-option": ["expose-internals", "enable-source-maps"],
+	"exit": true
+}

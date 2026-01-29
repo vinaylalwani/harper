@@ -1,4 +1,4 @@
-import { UserRoleDatabasePermissions, UserRolePermissionTable } from '../security/user.types.js';
+import type { UserRoleDatabasePermissions } from '../security/user.ts';
 import type { Conditions, DirectCondition, Id, Select, Sort } from './ResourceInterface.ts';
 import { _assignPackageExport } from '../globals.js';
 import { Resource } from './Resource.ts';

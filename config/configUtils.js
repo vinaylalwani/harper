@@ -23,7 +23,7 @@ const EMPTY_GET_VALUE = 'Empty parameter sent to getConfigValue';
 const DEFAULT_CONFIG_FILE_PATH = path.join(__dirname, '../../static', hdbTerms.HDB_DEFAULT_CONFIG_FILE);
 
 const CONFIGURE_SUCCESS_RESPONSE =
-	'Configuration successfully set. You must restart HarperDB for new config settings to take effect.';
+	'Configuration successfully set. You must restart Harper for new config settings to take effect.';
 
 const DEPRECATED_CONFIG = {
 	logging_rotation_retain: 'logging.rotation.retain',
@@ -71,7 +71,7 @@ function resolvePath(relativePath) {
 }
 
 /**
- * Builds the HarperDB config file using user inputs and default values from defaultConfig.yaml
+ * Builds the Harper config file using user inputs and default values from defaultConfig.yaml
  * @param args - any args that the user provided.
  */
 function createConfigFile(args, skipFsValidation = false) {
@@ -136,7 +136,16 @@ function createConfigFile(args, skipFsValidation = false) {
 	const hdbRoot = configDoc.getIn(['rootPath']);
 	const configFilePath = path.join(hdbRoot, hdbTerms.HDB_CONFIG_FILE);
 	fs.createFileSync(configFilePath);
-	if (configDoc.errors?.length > 0) throw new Error(`Error parsing harperdb-config.yaml ${configDoc.errors}`);
+	if (configDoc.errors?.length > 0) {
+		throw handleHDBError(
+			new Error(),
+			`Error parsing harperdb-config.yaml ${configDoc.errors}`,
+			HTTP_STATUS_CODES.BAD_REQUEST,
+			undefined,
+			undefined,
+			true
+		);
+	}
 	fs.writeFileSync(configFilePath, String(configDoc));
 	logger.trace(`Config file written to ${configFilePath}`);
 }
@@ -232,7 +241,7 @@ function getConfigFilePath(bootPropsFilePath = hdbUtils.getPropsFilePath()) {
 
 /**
  * If in memory config obj is undefined or init is being forced,
- * read and parses the HarperDB config file and add to config object.
+ * read and parses the Harper config file and add to config object.
  * @param force
  */
 function initConfig(force = false) {
@@ -244,7 +253,11 @@ function initConfig(force = false) {
 				fs.accessSync(bootPropsFilePath, fs.constants.F_OK | fs.constants.R_OK);
 			} catch (err) {
 				logger.error(err);
-				throw new Error(`HarperDB properties file at path ${bootPropsFilePath} does not exist`);
+				throw handleHDBError(
+					new Error(),
+					`Harper properties file at path ${bootPropsFilePath} does not exist`,
+					HTTP_STATUS_CODES.BAD_REQUEST
+				);
 			}
 		}
 
@@ -267,12 +280,16 @@ function initConfig(force = false) {
 			configDoc = parseYamlDoc(configFilePath);
 		} catch (err) {
 			if (err.code === hdbTerms.NODE_ERROR_CODES.ENOENT) {
-				logger.trace(`HarperDB config file not found at ${configFilePath}. 
+				logger.trace(`Harper config file not found at ${configFilePath}. 
 				This can occur during early stages of install where the config file has not yet been created`);
 				return;
 			} else {
 				logger.error(err);
-				throw new Error(`Error reading HarperDB config file at ${configFilePath}`);
+				throw handleHDBError(
+					new Error(),
+					`Error reading Harper config file at ${configFilePath}`,
+					HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR
+				);
 			}
 		}
 
@@ -342,7 +359,13 @@ function checkForUpdatedConfig(configDoc, configFilePath) {
 
 	if (updateFile) {
 		logger.trace('Updating config file with missing config params');
-		if (configDoc.errors?.length > 0) throw new Error(`Error parsing harperdb-config.yaml ${configDoc.errors}`);
+		if (configDoc.errors?.length > 0) {
+			throw handleHDBError(
+				new Error(),
+				`Error parsing harperdb-config.yaml ${configDoc.errors}`,
+				HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR
+			);
+		}
 		fs.writeFileSync(configFilePath, String(configDoc));
 	}
 }
@@ -361,21 +384,42 @@ function validateConfig(configDoc, skipFsValidation = false) {
 	if (configJson?.http?.threads) configJson.threads = configJson?.http?.threads;
 
 	if (configJson.http?.port && configJson.http?.port === configJson.http?.securePort) {
-		throw HDB_ERROR_MSGS.CONFIG_VALIDATION('http.port and http.securePort cannot be the same value');
+		throw handleHDBError(
+			new Error(),
+			HDB_ERROR_MSGS.CONFIG_VALIDATION('http.port and http.securePort cannot be the same value'),
+			HTTP_STATUS_CODES.BAD_REQUEST,
+			undefined,
+			undefined,
+			true
+		);
 	}
 
 	if (
 		configJson.operationsApi?.network?.port &&
 		configJson.operationsApi?.network?.port === configJson.operationsApi?.network?.securePort
 	) {
-		throw HDB_ERROR_MSGS.CONFIG_VALIDATION(
-			'operationsApi.network.port and operationsApi.network.securePort cannot be the same value'
+		throw handleHDBError(
+			new Error(),
+			HDB_ERROR_MSGS.CONFIG_VALIDATION(
+				'operationsApi.network.port and operationsApi.network.securePort cannot be the same value'
+			),
+			HTTP_STATUS_CODES.BAD_REQUEST,
+			undefined,
+			undefined,
+			true
 		);
 	}
 
 	const validation = configValidator(configJson, skipFsValidation);
 	if (validation.error) {
-		throw HDB_ERROR_MSGS.CONFIG_VALIDATION(validation.error.message);
+		throw handleHDBError(
+			new Error(),
+			HDB_ERROR_MSGS.CONFIG_VALIDATION(validation.error.message),
+			HTTP_STATUS_CODES.BAD_REQUEST,
+			undefined,
+			undefined,
+			true
+		);
 	}
 
 	// These parameters can be set by the validator if they arent provided by user,
@@ -463,7 +507,14 @@ function updateConfigValue(
 		} else {
 			configParam = CONFIG_PARAM_MAP[param.toLowerCase()];
 			if (configParam === undefined) {
-				throw new Error(`Unable to update config, unrecognized config parameter: ${param}`);
+				throw handleHDBError(
+					new Error(),
+					`Unable to update config, unrecognized config parameter: ${param}`,
+					HTTP_STATUS_CODES.BAD_REQUEST,
+					undefined,
+					undefined,
+					true
+				);
 			}
 		}
 
@@ -545,7 +596,13 @@ function updateConfigValue(
 		backupConfigFile(oldConfigPath, hdbRoot);
 	}
 
-	if (configDoc.errors?.length > 0) throw new Error(`Error parsing harperdb-config.yaml ${configDoc.errors}`);
+	if (configDoc.errors?.length > 0) {
+		throw handleHDBError(
+			new Error(),
+			`Error parsing harperdb-config.yaml ${configDoc.errors}`,
+			HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR
+		);
+	}
 	fs.writeFileSync(configFileLocation, String(configDoc));
 	if (update_config_obj) {
 		flatConfigObj = flattenConfig(configDoc.toJSON());
@@ -569,7 +626,7 @@ function backupConfigFile(configPath, hdbRoot) {
 
 const PRESERVED_PROPERTIES = ['databases'];
 /**
- * Flattens the JSON version of HarperDB config with underscores separating each parent/child key.
+ * Flattens the JSON version of Harper config with underscores separating each parent/child key.
  * @param obj
  * @returns {null}
  */
@@ -702,7 +759,11 @@ function readConfigFile() {
 	} catch (err) {
 		if (!hdbUtils.noBootFile()) {
 			logger.error(err);
-			throw new Error(`HarperDB properties file at path ${bootPropsFilePath} does not exist`);
+			throw handleHDBError(
+				new Error(),
+				`Harper properties file at path ${bootPropsFilePath} does not exist`,
+				HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR
+			);
 		}
 	}
 
@@ -765,7 +826,11 @@ function applyRuntimeEnvVarConfig(configDoc, configFilePath, options = {}) {
 
 		// Check for YAML parsing errors
 		if (mergedDoc.errors?.length > 0) {
-			throw new Error(`Error parsing harperdb-config.yaml: ${mergedDoc.errors}`);
+			throw handleHDBError(
+				new Error(),
+				`Error parsing harperdb-config.yaml: ${mergedDoc.errors}`,
+				HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR
+			);
 		}
 
 		configDoc.contents = mergedDoc.contents;
@@ -782,7 +847,11 @@ function applyRuntimeEnvVarConfig(configDoc, configFilePath, options = {}) {
 	// Persist changes to file
 	try {
 		if (configDoc.errors?.length > 0) {
-			throw new Error(`Error parsing harperdb-config.yaml: ${configDoc.errors}`);
+			throw handleHDBError(
+				new Error(),
+				`Error parsing harperdb-config.yaml: ${configDoc.errors}`,
+				HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR
+			);
 		}
 		fs.writeFileSync(configFilePath, String(configDoc));
 		logger.debug('Config file updated with runtime env var values');
@@ -838,7 +907,13 @@ async function addConfig(topLevelElement, values) {
 	configDoc.hasIn([topLevelElement])
 		? configDoc.setIn([topLevelElement], values)
 		: configDoc.addIn([topLevelElement], values);
-	if (configDoc.errors?.length > 0) throw new Error(`Error parsing harperdb-config.yaml ${configDoc.errors}`);
+	if (configDoc.errors?.length > 0) {
+		throw handleHDBError(
+			new Error(),
+			`Error parsing harperdb-config.yaml ${configDoc.errors}`,
+			HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR
+		);
+	}
 	await fs.writeFile(getConfigFilePath(), String(configDoc));
 }
 
