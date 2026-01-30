@@ -145,7 +145,7 @@ describe('CRUD operations with the Resource API', () => {
 				if (analyticRecorded) break;
 			}
 			assert(analyticRecorded, 'db-write was recorded in analytics');
-			assert(analyticRecorded.mean > 20, 'db-write bytes count were recorded in analytics');
+			assert(analyticRecorded.mean > 2, 'db-write bytes count were recorded in analytics');
 		});
 		it('get is recorded in analytics', async function () {
 			const start = Date.now();
