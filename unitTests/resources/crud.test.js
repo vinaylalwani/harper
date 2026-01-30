@@ -257,6 +257,31 @@ describe('CRUD operations with the Resource API', () => {
 				else created = await CRUDTable.create('three', { relatedId: 1, name: 'Three' });
 			});
 		});
+		it('delete all and recreate', async function () {
+			await CRUDTable.put({
+				id: 'one',
+				name: 'One',
+				relatedId: 1,
+				sparse: null,
+			});
+			await CRUDTable.put({
+				id: 'two',
+				name: 'Two',
+				relatedId: 1,
+				sparse: null,
+			});
+			let target = new RequestTarget('/');
+			await CRUDTable.delete(target);
+			await CRUDTable.put({
+				id: 'one',
+				name: 'One',
+				relatedId: 2,
+				sparse: null,
+			});
+			for await (let entry of CRUDTable.search([{ attribute: 'relatedId', value: 1 }])) {
+				throw new Error('should not have found any related records with relatedId = 1');
+			}
+		});
 	}
 	after(() => {
 		analytics.setAnalyticsEnabled(false); // restore to normal unit test behavior

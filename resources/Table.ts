@@ -139,7 +139,7 @@ export function makeTable(options) {
 		splitSegments,
 		replicate,
 	} = options;
-	let { expirationMS: expirationMs, evictionMS: evictionMs, audit, trackDeletes: trackDeletes } = options;
+	let { expirationMS: expirationMs, evictionMS: evictionMs, audit, trackDeletes } = options;
 	evictionMs ??= 0;
 	let { attributes } = options;
 	if (!attributes) attributes = [];
@@ -1866,7 +1866,7 @@ export function makeTable(options) {
 						TableResource._updateResource(this, existingEntry);
 					}
 					if (precedesExistingVersion(txnTime, existingEntry, options?.nodeId) <= 0) return; // a newer record exists locally
-					updateIndices(this.getId(), existingRecord);
+					updateIndices(id, existingRecord);
 					logger.trace?.(`Deleting record with id: ${id}, txn timestamp: ${new Date(txnTime).toISOString()}`);
 					if (audit || trackDeletes) {
 						updateRecord(
