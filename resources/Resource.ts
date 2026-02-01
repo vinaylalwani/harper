@@ -658,7 +658,7 @@ function transactional(action, options) {
 							new Error('Invalid id')
 						);
 					}
-					isCollection = true;
+					query.isCollection = true;
 				}
 			}
 		}
