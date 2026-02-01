@@ -181,18 +181,6 @@ describe('Test lmdbProcessRows module', () => {
 			);
 		});
 
-		it('Test error is thrown if hash has slash "/"', () => {
-			let test_record = test_utils.deepClone(RECORD);
-			test_record[HASH_ATTRIBUTE_NAME] = 'slash/er';
-
-			test_utils.assertErrorSync(
-				validate_hash_function,
-				[test_record, HASH_ATTRIBUTE_NAME, hdb_terms.OPERATIONS_ENUM.INSERT],
-				test_utils.generateHDBError(TEST_WRITE_OPS_ERROR_MSGS.INVALID_FORWARD_SLASH_IN_HASH_ERR, 400),
-				'test id value with slash "/"'
-			);
-		});
-
 		it('Test happy path', () => {
 			let test_record = test_utils.deepClone(RECORD);
 

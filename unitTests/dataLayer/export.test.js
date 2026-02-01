@@ -204,7 +204,7 @@ describe('Test export.js', () => {
 			let test_path = './harperdb.js';
 			let is_path_valid = await confirmPath(test_path).catch((err) => {
 				assert.ok(err.message.length > 0, 'Expected Error message');
-				assert.ok(err.message.indexOf('is not a directory') >= 0, 'Expected Error message');
+				assert.ok(err.message.indexOf('not exist') >= 0, 'Expected Error message');
 			});
 			assert.equal(is_path_valid, undefined, 'Expected undefined result');
 		});
@@ -684,7 +684,8 @@ describe('Test export.js', () => {
 			};
 			const result = exportCoreValidation(export_obj);
 			expect(result).to.equal(
-				'search_operation.operation must be one of the following values: search_by_value, search_by_hash, sql'
+				'search_operation.operation must be one of the following values: search_by_value, search_by_hash, sql,' +
+					' search_by_conditions'
 			);
 		});
 	});

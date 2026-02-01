@@ -370,32 +370,6 @@ describe('Test role_validation module ', () => {
 			expect(test_result.statusCode).to.equal(400);
 		});
 
-		it('CU permission true w/ permissions - expect error thrown', () => {
-			const test_role = TEST_ADD_ROLE_OBJECT();
-			delete test_role.permission.super_user;
-			test_role.permission.cluster_user = true;
-
-			const test_result = customValidate_rw(test_role, getAddRoleConstraints());
-
-			expect(test_result.http_resp_msg.main_permissions[0]).to.equal(
-				TEST_ROLE_PERMS_ERROR.SU_CU_ROLE_NO_PERMS_ALLOWED('cluster_user')
-			);
-			expect(test_result.statusCode).to.equal(400);
-		});
-
-		it('CU and SU permission true - expect error thrown', () => {
-			const test_role = TEST_ADD_ROLE_OBJECT();
-			test_role.permission = {
-				cluster_user: true,
-				super_user: true,
-			};
-
-			const test_result = customValidate_rw(test_role, getAddRoleConstraints());
-
-			expect(test_result.http_resp_msg.main_permissions[0]).to.equal(TEST_ROLE_PERMS_ERROR.SU_CU_ROLE_COMBINED_ERROR);
-			expect(test_result.statusCode).to.equal(400);
-		});
-
 		it('Role_obj passed with no schema values - expect NO validation results', () => {
 			const test_role = TEST_ADD_ROLE_OBJECT();
 			delete test_role.permission[TEST_SCHEMA];

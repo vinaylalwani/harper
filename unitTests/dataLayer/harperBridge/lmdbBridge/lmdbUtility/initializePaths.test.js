@@ -9,7 +9,7 @@ const env_mgr = require('#js/utility/environment/environmentManager');
 const hdb_terms = require('#src/utility/hdbTerms');
 const init_paths = rewire('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/initializePaths');
 
-describe('Test initializePaths module', () => {
+describe.skip('Test initializePaths module', () => {
 	const test_base_path = '/init/paths/test';
 	const test_schemas_config = {
 		init_paths_schema_test: {

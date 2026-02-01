@@ -586,7 +586,7 @@ describe('test MQTT connections and commands', function () {
 		let cert, ca;
 		for await (const certificate of databases.system.hdb_certificate.search([])) {
 			if (certificate.is_authority) ca = certificate.certificate;
-			else cert = certificate.certificate;
+			else if (certificate.name === 'localhost') cert = certificate.certificate;
 		}
 		let client = connect('mqtts://localhost:8884', {
 			key: readFileSync(private_key_path),
@@ -658,7 +658,7 @@ describe('test MQTT connections and commands', function () {
 			let cert, ca;
 			for await (const certificate of databases.system.hdb_certificate.search([])) {
 				if (certificate.is_authority) ca = certificate.certificate;
-				else cert = certificate.certificate;
+				else if (certificate.name === 'localhost') cert = certificate.certificate;
 			}
 			let bad_client = connect('wss://localhost:8885', {
 				reconnectPeriod: 0,

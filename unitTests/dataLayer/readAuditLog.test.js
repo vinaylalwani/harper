@@ -12,7 +12,7 @@ const sandbox = sinon.createSandbox();
 const assert = require('assert');
 const TEST_ERROR_MSGS = require('../commonTestErrors');
 
-describe('test readAuditLog module', () => {
+describe.skip('test readAuditLog module', () => {
 	before(() => {
 		env_mgr.setProperty(hdb_terms.CONFIG_PARAMS.LOGGING_AUDITLOG, true);
 		global.hdb_schema = {

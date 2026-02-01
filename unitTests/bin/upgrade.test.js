@@ -1,8 +1,5 @@
 'use strict';
 
-const test_util = require('../test_utils');
-test_util.preTestPrep();
-
 const sinon = require('sinon');
 const chai = require('chai');
 const { expect } = chai;
@@ -37,11 +34,10 @@ describe('Test upgrade.js', () => {
 		error: log_error_stub,
 		info: log_info_stub,
 	};
-	let log_rw;
 
 	before(() => {
 		upgrade_rw = rewire('#js/bin/upgrade');
-		log_rw = upgrade_rw.__set__('hdbLogger', logger_fake);
+		upgrade_rw.__set__('hdbLogger', logger_fake);
 		consoleLog_stub = sandbox.stub(console, 'log').returns();
 		printToLogAndConsole_stub = sandbox.stub().returns();
 		upgrade_rw.__set__('printToLogAndConsole', printToLogAndConsole_stub);

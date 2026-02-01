@@ -1,4 +1,3 @@
-require('../test_utils');
 const fs = require('fs-extra');
 const assert = require('assert');
 const path = require('path');
@@ -15,17 +14,15 @@ describe('Test database copy and compact', () => {
 	let TestTable;
 	let storage_path;
 	let storage_before_test;
-	let root_before_test;
 	let stat_before_compact;
 	let console_error_spy;
-	let console_log_spy;
 	let update_config_stub;
 	let test_db_path;
 	let test_db_backup_path;
 
 	before(async function () {
 		console_error_spy = sandbox.spy(console, 'error');
-		console_log_spy = sandbox.spy(console, 'log');
+		sandbox.spy(console, 'log');
 		update_config_stub = sandbox.stub(config_utils, 'updateConfigValue');
 		storage_path = path.resolve(__dirname, '../envDir/copyTest');
 		storage_before_test = env_mgr.get('storage_path');
@@ -79,7 +76,6 @@ describe('Test database copy and compact', () => {
 		await fs.remove(storage_path);
 		await fs.remove(test_db_backup_path);
 		env_mgr.setProperty('storage_path', storage_before_test);
-		env_mgr.setProperty('rootPath', root_before_test);
 	});
 
 	it('Test copyDB copies and compacts a DB', async () => {
@@ -93,7 +89,8 @@ describe('Test database copy and compact', () => {
 			notIndexed: 'I am a non-indexed value',
 		});
 		const stat_after = await fs.stat(compacted_db);
-		assert(100 - (stat_after.size / stat_before_compact.size) * 100 < 10);
+		const compaction = 100 - (stat_after.size / stat_before_compact.size) * 100;
+		assert(compaction >= 85, `Compaction should be at least 85% but was ${compaction}%`);
 		assert(!(await TestTable.get(105)));
 		let matches = [];
 		for await (let entry of TestTable.search([{ name: 'about', value: 'about' }])) matches.push(entry);
@@ -105,10 +102,11 @@ describe('Test database copy and compact', () => {
 	it('Test compactOnStart compacts and overwrites DB', async () => {
 		await copyDB.compactOnStart();
 		const stat_after = await fs.stat(path.join(storage_path, 'copy-test.mdb'));
+		const compaction = 100 - (stat_after.size / stat_before_compact.size) * 100;
 		assert(update_config_stub.called, 'updateConfigValue should be called');
 		assert(!console_error_spy.called, 'console.error should not be called');
 		assert(
-			100 - (stat_after.size / stat_before_compact.size) * 100 < 10,
+			compaction >= 85,
 			'after size ' + stat_after.size + ' should be' + ' much less than before size ' + stat_before_compact.size
 		);
 	});

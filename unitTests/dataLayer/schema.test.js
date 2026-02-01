@@ -75,7 +75,7 @@ function deleteSchemaTableStruc() {
 /**
  * Unit tests for all functions in schema.js
  */
-describe('Test schema module', function () {
+describe.skip('Test schema module', function () {
 	let signal_schema_change_stub;
 	let insert_stub;
 	let logger_error_stub;

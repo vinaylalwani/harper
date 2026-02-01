@@ -275,7 +275,7 @@ async function tearDownMockDB(envs = undefined, partial_teardown = false) {
 		if (envs !== undefined) {
 			for (const Table of envs) {
 				try {
-					await Table.delete();
+					await Table.dropTable();
 					// eslint-disable-next-line no-empty
 				} catch (err) {}
 			}
