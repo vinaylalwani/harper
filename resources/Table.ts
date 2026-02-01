@@ -142,7 +142,7 @@ export function makeTable(options) {
 		splitSegments,
 		replicate,
 	} = options;
-	let { expirationMS: expirationMs, evictionMS: evictionMs, audit, trackDeletes: trackDeletes } = options;
+	let { expirationMS: expirationMs, evictionMS: evictionMs, audit, trackDeletes } = options;
 	evictionMs ??= 0;
 	let { attributes } = options;
 	if (!attributes) attributes = [];
@@ -990,7 +990,10 @@ export function makeTable(options) {
 		): TableResource<Record> | undefined | Record | AsyncIterable<Record> | Promise<Record | AsyncIterable<Record>> {
 			const constructor: Resource = this.constructor;
 			if (typeof target === 'string' && constructor.loadAsInstance !== false) return this.getProperty(target);
-			if (isSearchTarget(target)) return this.search(target);
+			if (isSearchTarget(target)) {
+				// go back to the static search method so it gets a chance to override
+				return constructor.search(target, this.getContext());
+			}
 			if (target && target.id === undefined && !target.toString()) {
 				const description = {
 					// basically a describe call
@@ -1011,7 +1014,7 @@ export function makeTable(options) {
 				}
 				return description;
 			}
-			if (target !== undefined && constructor.loadAsInstance === false) {
+			if (target !== undefined && !constructor.loadAsInstance) {
 				const context = this.getContext();
 				const txn = txnForContext(context);
 				const readTxn = txn.getReadTxn();
@@ -1053,6 +1056,9 @@ export function makeTable(options) {
 						if (select && record != null) {
 							const transform = transformForSelect(select, this.constructor);
 							return transform(record);
+						}
+						if (target?.property) {
+							return record[target?.property];
 						}
 						return record;
 					}

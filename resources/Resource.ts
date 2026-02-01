@@ -58,7 +58,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
 			const result = resource.get?.(query);
 			// for the new API we always apply select in the instance method
-			if (resource.constructor.loadAsInstance === false) return result;
+			if (!resource.constructor.loadAsInstance) return result;
 			if (result?.then) return result.then(handleSelect);
 			return handleSelect(result);
 			function handleSelect(result) {
