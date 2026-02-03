@@ -9,9 +9,10 @@ import { getNextAvailableLoopbackAddress, releaseLoopbackAddress } from './loopb
 
 // Constants
 const HTTP_PORT = 9926;
-export const OPERATIONS_API_PORT = 9925;
-export const DEFAULT_ADMIN_USERNAME = 'admin';
-export const DEFAULT_ADMIN_PASSWORD = 'Abc1234!';
+const HTTPS_PORT = 9927;
+const OPERATIONS_API_PORT = 9925;
+const DEFAULT_ADMIN_USERNAME = 'admin';
+const DEFAULT_ADMIN_PASSWORD = 'Abc1234!';
 const DEFAULT_STARTUP_TIMEOUT_MS = parseInt(process.env.HARPER_INTEGRATION_TEST_STARTUP_TIMEOUT_MS, 10) || 30000;
 const LOG_DIR = process.env.HARPER_INTEGRATION_TEST_LOG_DIR;
 
@@ -255,21 +256,28 @@ export async function startHarper(ctx: ContextWithHarper, options?: StartHarperO
 		});
 	}
 
+	const args = [
+		`--ROOTPATH=${dataRootDir}`,
+		'--DEFAULTS_MODE=dev',
+		`--HDB_ADMIN_USERNAME=${DEFAULT_ADMIN_USERNAME}`,
+		`--HDB_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD}`,
+		'--THREADS_COUNT=1',
+		'--THREADS_DEBUG=false',
+		`--NODE_HOSTNAME=${loopbackAddress}`,
+		`--HTTP_PORT=${loopbackAddress}:${HTTP_PORT}`,
+		`--OPERATIONSAPI_NETWORK_PORT=${loopbackAddress}:${OPERATIONS_API_PORT}`,
+		'--LOGGING_LEVEL=debug',
+		'--LOGGING_STDSTREAMS=false',
+		'--HARPER_SET_CONFIG=' + JSON.stringify(config),
+	];
+
+	// Bind secure port if HTTPS is needed (mTLS or other TLS config present)
+	if (options?.config?.http?.mtls !== undefined || options?.config?.tls !== undefined) {
+		args.push(`--HTTP_SECUREPORT=${loopbackAddress}:${HTTPS_PORT}`);
+	}
+
 	const harperProcess = await runHarperCommand({
-		args: [
-			`--ROOTPATH=${dataRootDir}`,
-			'--DEFAULTS_MODE=dev',
-			`--HDB_ADMIN_USERNAME=${DEFAULT_ADMIN_USERNAME}`,
-			`--HDB_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD}`,
-			'--THREADS_COUNT=1',
-			'--THREADS_DEBUG=false',
-			`--NODE_HOSTNAME=${loopbackAddress}`,
-			`--HTTP_PORT=${loopbackAddress}:${HTTP_PORT}`,
-			`--OPERATIONSAPI_NETWORK_PORT=${loopbackAddress}:${OPERATIONS_API_PORT}`,
-			'--LOGGING_LEVEL=debug',
-			'--LOGGING_STDSTREAMS=false',
-			'--HARPER_SET_CONFIG=' + JSON.stringify(config),
-		],
+		args,
 		env: options?.env || {},
 		completionMessage: 'successfully started',
 		logDir,

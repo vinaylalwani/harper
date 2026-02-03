@@ -113,6 +113,13 @@ export async function verifyCertificate(
 	}
 
 	// All methods tried or skipped - determine failure handling
+	// If both methods are explicitly disabled (not just unavailable), treat as disabled
+	if (config.crl.enabled === false && config.ocsp.enabled === false) {
+		logger.debug?.('Both CRL and OCSP disabled - verification disabled');
+		return { valid: true, status: 'disabled', method: 'disabled' };
+	}
+
+	// Methods are enabled but unavailable - apply failure mode
 	if (config.failureMode === 'fail-closed') {
 		return { valid: false, status: 'no-verification-available', method: 'disabled' };
 	}

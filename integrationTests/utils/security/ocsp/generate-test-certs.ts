@@ -53,8 +53,10 @@ authorityKeyIdentifier = keyid,issuer`;
 	);
 	console.log('OCSP responder certificate created');
 
-	// Create OCSP chain
-	execSync(`cat ${ocspCertPath} ${caCertPath} > ${outputDir}/ocsp-chain.crt`);
+	// Create OCSP chain (combine OCSP cert + CA cert for cross-platform compatibility)
+	// Use fs APIs instead of shell commands for Windows support
+	const ocspChain = fs.readFileSync(ocspCertPath, 'utf8') + fs.readFileSync(caCertPath, 'utf8');
+	fs.writeFileSync(path.join(outputDir, 'ocsp-chain.crt'), ocspChain);
 
 	// Generate client certificates
 	console.log('\nGenerating client certificates...');
@@ -81,8 +83,9 @@ authorityInfoAccess = OCSP;URI:http://${ocspHost}:${ocspPort},caIssuers;URI:http
 		`openssl x509 -req -in ${outputDir}/client-valid.csr -CA ${caCertPath} -CAkey ${caKeyPath} -CAcreateserial -out ${validCertPath} -days 365 -extensions v3_client -extfile ${outputDir}/client.ext`
 	);
 
-	// Create chain for valid cert
-	execSync(`cat ${validCertPath} ${caCertPath} > ${outputDir}/client-valid-chain.crt`);
+	// Create chain for valid cert (combine client cert + CA cert)
+	const validChain = fs.readFileSync(validCertPath, 'utf8') + fs.readFileSync(caCertPath, 'utf8');
+	fs.writeFileSync(path.join(outputDir, 'client-valid-chain.crt'), validChain);
 
 	// Revoked client certificate
 	const revokedKeyPath = path.join(outputDir, 'client-revoked.key');
@@ -96,8 +99,9 @@ authorityInfoAccess = OCSP;URI:http://${ocspHost}:${ocspPort},caIssuers;URI:http
 		`openssl x509 -req -in ${outputDir}/client-revoked.csr -CA ${caCertPath} -CAkey ${caKeyPath} -CAcreateserial -out ${revokedCertPath} -days 365 -extensions v3_client -extfile ${outputDir}/client.ext`
 	);
 
-	// Create chain for revoked cert
-	execSync(`cat ${revokedCertPath} ${caCertPath} > ${outputDir}/client-revoked-chain.crt`);
+	// Create chain for revoked cert (combine client cert + CA cert)
+	const revokedChain = fs.readFileSync(revokedCertPath, 'utf8') + fs.readFileSync(caCertPath, 'utf8');
+	fs.writeFileSync(path.join(outputDir, 'client-revoked-chain.crt'), revokedChain);
 
 	console.log('Client certificates created');
 

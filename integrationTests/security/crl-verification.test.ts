@@ -26,6 +26,8 @@ import {
 const CRL_PORT = 18889 + (Math.floor(Date.now() / 1000) % 1000);
 const HTTPS_PORT = 9927;
 
+// The last test stops the CRLserver to verify caching, so it must run after
+// all other tests that need the server
 suite('CRL Certificate Verification', (ctx: ContextWithHarper) => {
 	let crlServer: CrlServerContext | null = null;
 	let certsPath: string;
@@ -37,14 +39,12 @@ suite('CRL Certificate Verification', (ctx: ContextWithHarper) => {
 		// 2. Generate test certificates first (before Harper starts)
 		// We need a placeholder hostname for certificate generation
 		const placeholderHost = '127.0.0.1';
-		await generateCrlCertificates(certsPath, placeholderHost, CRL_PORT);
+		generateCrlCertificates(certsPath, placeholderHost, CRL_PORT);
 
 		// 3. Setup Harper with CA certificate configuration
 		await setupHarper(ctx, {
 			config: {
 				http: {
-					port: 9926,
-					securePort: HTTPS_PORT,
 					mtls: {
 						certificateVerification: {
 							failureMode: 'fail-closed',
@@ -52,6 +52,9 @@ suite('CRL Certificate Verification', (ctx: ContextWithHarper) => {
 								enabled: true,
 								timeout: 30000,
 								cacheTtl: 604800000, // 7 days
+							},
+							ocsp: {
+								enabled: false,
 							},
 						},
 					},
@@ -72,17 +75,19 @@ suite('CRL Certificate Verification', (ctx: ContextWithHarper) => {
 			await stopCrlServer(crlServer);
 		}
 
-		// 2. Cleanup certificates
-		await rm(certsPath, { recursive: true, force: true, maxRetries: 3 });
-
-		// 3. Teardown Harper
+		// 2. Teardown Harper (before removing certs in case Harper is using them)
 		await teardownHarper(ctx);
+
+		// 3. Cleanup certificates
+		await rm(certsPath, { recursive: true, force: true, maxRetries: 3 });
 	});
 
 	test('should accept valid certificate with CRL check', async () => {
 		return new Promise<void>((resolve, reject) => {
+			// Hit a known non-existent route - the test validates TLS handshake success,
+			// not route existence. Test Harper has no routes configured, so we expect 404.
 			const req = https.request(
-				`https://${ctx.harper.hostname}:${HTTPS_PORT}/`,
+				`https://${ctx.harper.hostname}:${HTTPS_PORT}/cert-test-nonexistent`,
 				{
 					cert: readFileSync(join(certsPath, 'client-valid-chain.crt')),
 					key: readFileSync(join(certsPath, 'client-valid.key')),
@@ -90,10 +95,8 @@ suite('CRL Certificate Verification', (ctx: ContextWithHarper) => {
 					rejectUnauthorized: false, // Harper uses self-signed server cert
 				},
 				(res) => {
-					ok(
-						res.statusCode === 200 || res.statusCode === 404,
-						`Valid certificate should be accepted. Got: ${res.statusCode}`
-					);
+					// TLS handshake succeeded - expect 404 since route doesn't exist
+					ok(res.statusCode === 404, `Expected 404 (TLS succeeded, route not found). Got: ${res.statusCode}`);
 					res.resume(); // Consume response data
 					res.on('end', () => resolve());
 				}
@@ -105,6 +108,7 @@ suite('CRL Certificate Verification', (ctx: ContextWithHarper) => {
 	});
 
 	test('should reject revoked certificate with CRL check', async () => {
+		// Test that revoked certificate is properly rejected
 		return new Promise<void>((resolve, reject) => {
 			const req = https.request(
 				`https://${ctx.harper.hostname}:${HTTPS_PORT}/`,
@@ -116,29 +120,20 @@ suite('CRL Certificate Verification', (ctx: ContextWithHarper) => {
 				},
 				(res) => {
 					res.resume();
-					// Harper can reject at either TLS level or application level (401)
-					// Both are valid - the certificate is rejected either way
-					if (res.statusCode === 401 || res.statusCode === 403) {
-						// Application-level rejection (certificate revoked)
-						res.on('end', () => resolve());
-					} else {
-						reject(new Error(`Expected connection to be rejected, but got status ${res.statusCode}`));
-					}
+					// Expect application-level rejection (certificate verification in Harper)
+					ok(res.statusCode === 401, `Expected 401 for revoked cert, got: ${res.statusCode}`);
+					res.on('end', () => resolve());
 				}
 			);
 
+			req.on('timeout', () => {
+				req.destroy();
+				reject(new Error('Request timeout - connection hung'));
+			});
+
 			req.on('error', (err: any) => {
-				// TLS-level rejection is also valid
-				ok(
-					err.code === 'ECONNRESET' ||
-						err.code === 'EPROTO' ||
-						err.code === 'ECONNREFUSED' ||
-						err.message?.includes('socket hang up') ||
-						err.message?.includes('certificate') ||
-						err.message?.includes('closed'),
-					`Expected connection error for revoked cert, got: ${err.code || err.message}`
-				);
-				resolve();
+				// TLS-level errors mean our cert verification code wasn't reached
+				reject(new Error(`Expected application-level rejection (401), got TLS error: ${err.code || err.message}`));
 			});
 
 			req.end();
@@ -149,7 +144,7 @@ suite('CRL Certificate Verification', (ctx: ContextWithHarper) => {
 		const makeRequest = () =>
 			new Promise<number>((resolve, reject) => {
 				const req = https.request(
-					`https://${ctx.harper.hostname}:${HTTPS_PORT}/`,
+					`https://${ctx.harper.hostname}:${HTTPS_PORT}/cert-test-nonexistent`,
 					{
 						cert: readFileSync(join(certsPath, 'client-valid-chain.crt')),
 						key: readFileSync(join(certsPath, 'client-valid.key')),
@@ -167,7 +162,7 @@ suite('CRL Certificate Verification', (ctx: ContextWithHarper) => {
 
 		// First request - populates cache
 		const status1 = await makeRequest();
-		ok(status1 === 200 || status1 === 404, 'First request should succeed');
+		ok(status1 === 404, 'First request should succeed with 404 (TLS succeeded, route not found)');
 
 		// Stop CRL server to prove caching works
 		if (crlServer) {
@@ -177,7 +172,7 @@ suite('CRL Certificate Verification', (ctx: ContextWithHarper) => {
 
 		// Second request - should succeed using cached CRL
 		const status2 = await makeRequest();
-		ok(status2 === 200 || status2 === 404, 'Second request should succeed with cache (CRL server stopped)');
+		ok(status2 === 404, 'Second request should succeed with cache (CRL server stopped)');
 	});
 });
 
@@ -186,19 +181,20 @@ suite('CRL Certificate Verification - Disabled', (ctx: ContextWithHarper) => {
 
 	before(async () => {
 		certsPath = await mkdtemp(join(tmpdir(), 'harper-crl-disabled-'));
-		await generateCrlCertificates(certsPath, '127.0.0.1', CRL_PORT);
+		generateCrlCertificates(certsPath, '127.0.0.1', CRL_PORT);
 
 		// Setup Harper with CRL disabled
 		await setupHarper(ctx, {
 			config: {
 				http: {
-					port: 9926,
-					securePort: HTTPS_PORT,
 					mtls: {
 						certificateVerification: {
 							failureMode: 'fail-closed',
 							crl: {
 								enabled: false, // Disable CRL
+							},
+							ocsp: {
+								enabled: false, // Disable OCSP (defaults to enabled, so must explicitly disable)
 							},
 						},
 					},
@@ -211,14 +207,14 @@ suite('CRL Certificate Verification - Disabled', (ctx: ContextWithHarper) => {
 	});
 
 	after(async () => {
-		await rm(certsPath, { recursive: true, force: true, maxRetries: 3 });
 		await teardownHarper(ctx);
+		await rm(certsPath, { recursive: true, force: true, maxRetries: 3 });
 	});
 
 	test('should accept certificate when CRL is disabled', async () => {
 		return new Promise<void>((resolve, reject) => {
 			const req = https.request(
-				`https://${ctx.harper.hostname}:${HTTPS_PORT}/`,
+				`https://${ctx.harper.hostname}:${HTTPS_PORT}/cert-test-nonexistent`,
 				{
 					cert: readFileSync(join(certsPath, 'client-valid-chain.crt')),
 					key: readFileSync(join(certsPath, 'client-valid.key')),
@@ -226,12 +222,9 @@ suite('CRL Certificate Verification - Disabled', (ctx: ContextWithHarper) => {
 					rejectUnauthorized: false,
 				},
 				(res) => {
-					// When CRL is disabled, certificate should still be validated via chain,
-					// but no CRL check occurs. Could get 401 if cert doesn't have a user.
-					ok(
-						res.statusCode === 200 || res.statusCode === 404 || res.statusCode === 401,
-						`Should accept when CRL disabled. Got: ${res.statusCode}`
-					);
+					// When CRL is disabled, TLS handshake succeeds (validates cert chain only)
+					// Expect 404 since route doesn't exist (but TLS succeeded)
+					ok(res.statusCode === 404, `Expected 404 (TLS succeeded, route not found). Got: ${res.statusCode}`);
 					res.resume();
 					res.on('end', () => resolve());
 				}
@@ -247,14 +240,12 @@ suite('CRL Certificate Verification - Fail-Open Mode', (ctx: ContextWithHarper) 
 
 	before(async () => {
 		certsPath = await mkdtemp(join(tmpdir(), 'harper-crl-failopen-'));
-		await generateCrlCertificates(certsPath, '127.0.0.1', CRL_PORT);
+		generateCrlCertificates(certsPath, '127.0.0.1', CRL_PORT);
 
 		// Setup Harper with fail-open mode and very short timeout
 		await setupHarper(ctx, {
 			config: {
 				http: {
-					port: 9926,
-					securePort: HTTPS_PORT,
 					mtls: {
 						certificateVerification: {
 							failureMode: 'fail-open', // Use fail-open mode
@@ -275,14 +266,14 @@ suite('CRL Certificate Verification - Fail-Open Mode', (ctx: ContextWithHarper) 
 	});
 
 	after(async () => {
-		await rm(certsPath, { recursive: true, force: true, maxRetries: 3 });
 		await teardownHarper(ctx);
+		await rm(certsPath, { recursive: true, force: true, maxRetries: 3 });
 	});
 
 	test('should allow connection in fail-open mode when CRL unavailable', async () => {
 		return new Promise<void>((resolve, reject) => {
 			const req = https.request(
-				`https://${ctx.harper.hostname}:${HTTPS_PORT}/`,
+				`https://${ctx.harper.hostname}:${HTTPS_PORT}/cert-test-nonexistent`,
 				{
 					cert: readFileSync(join(certsPath, 'client-valid-chain.crt')),
 					key: readFileSync(join(certsPath, 'client-valid.key')),
@@ -290,28 +281,13 @@ suite('CRL Certificate Verification - Fail-Open Mode', (ctx: ContextWithHarper) 
 					rejectUnauthorized: false,
 				},
 				(res) => {
-					// In fail-open mode, connection should be allowed even if CRL check fails
-					// Accept various status codes - the key is that TLS handshake succeeded
-					ok(
-						res.statusCode === 200 || res.statusCode === 404 || res.statusCode === 401,
-						`Should complete TLS handshake in fail-open mode. Got: ${res.statusCode}`
-					);
+					// In fail-open mode, TLS handshake succeeds even if CRL unavailable
+					ok(res.statusCode === 404, `Expected 404 (TLS succeeded, route not found). Got: ${res.statusCode}`);
 					res.resume();
 					res.on('end', () => resolve());
 				}
 			);
-			req.on('error', (err: any) => {
-				// In fail-open mode, even with CRL unavailable, the connection might fail
-				// for other reasons (e.g., no user exists). This is acceptable - the important
-				// thing is that it's not failing due to fail-closed CRL policy.
-				// Socket hang up during TLS could indicate Harper process crashed/restarted
-				if (err.message?.includes('socket hang up') || err.code === 'ECONNRESET') {
-					// This suggests something else failed, not CRL. Accept it.
-					resolve();
-				} else {
-					reject(new Error(`Unexpected error: ${err.message}`));
-				}
-			});
+			req.on('error', (err) => reject(new Error(`Request failed: ${err.message}`)));
 			req.end();
 		});
 	});
@@ -322,14 +298,12 @@ suite('CRL Certificate Verification - Fail-Closed with Timeout', (ctx: ContextWi
 
 	before(async () => {
 		certsPath = await mkdtemp(join(tmpdir(), 'harper-crl-timeout-'));
-		await generateCrlCertificates(certsPath, '127.0.0.1', CRL_PORT);
+		generateCrlCertificates(certsPath, '127.0.0.1', CRL_PORT);
 
 		// Setup Harper with fail-closed mode and very short timeout
 		await setupHarper(ctx, {
 			config: {
 				http: {
-					port: 9926,
-					securePort: HTTPS_PORT,
 					mtls: {
 						certificateVerification: {
 							failureMode: 'fail-closed', // Use fail-closed mode
@@ -350,8 +324,8 @@ suite('CRL Certificate Verification - Fail-Closed with Timeout', (ctx: ContextWi
 	});
 
 	after(async () => {
-		await rm(certsPath, { recursive: true, force: true, maxRetries: 3 });
 		await teardownHarper(ctx);
+		await rm(certsPath, { recursive: true, force: true, maxRetries: 3 });
 	});
 
 	test('should reject connection in fail-closed mode when CRL times out', async () => {

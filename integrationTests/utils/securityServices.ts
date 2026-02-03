@@ -25,6 +25,10 @@ export interface CrlServerContext {
 /**
  * Start an OpenSSL OCSP responder process
  *
+ * Note: While OpenSSL supports port 0 for auto-allocation, we can't use it here because
+ * the OCSP responder URL must be embedded in certificates before the responder starts.
+ * Tests should use dynamic port selection (e.g., base port + timestamp) to avoid conflicts.
+ *
  * @param port - Port number for the OCSP responder
  * @param certsPath - Path to directory containing certificates and index.txt
  * @returns Promise resolving to OcspResponderContext
@@ -66,14 +70,15 @@ export async function startOcspResponder(port: number, certsPath: string): Promi
 			});
 		}, 2000);
 
-		proc.stdout?.on('data', (data) => {
+		// stdio is piped, so stdout/stderr are always defined
+		proc.stdout.on('data', (data) => {
 			// Log OCSP responder output for debugging
 			if (process.env.DEBUG_OCSP) {
 				console.log('OCSP responder:', data.toString());
 			}
 		});
 
-		proc.stderr?.on('data', (data) => {
+		proc.stderr.on('data', (data) => {
 			// Log errors for debugging
 			if (process.env.DEBUG_OCSP) {
 				console.error('OCSP responder error:', data.toString());
@@ -87,7 +92,10 @@ export async function startOcspResponder(port: number, certsPath: string): Promi
 			}
 		});
 
-		proc.on('exit', (code) => {
+		// Use 'close' instead of 'exit' to ensure all stdio streams are fully flushed
+		// and closed before handling the error - this prevents race conditions where we
+		// might reject before all error output has been captured
+		proc.on('close', (code) => {
 			if (timeout) {
 				clearTimeout(timeout);
 				reject(new Error(`OCSP responder exited with code ${code} before starting`));
@@ -109,7 +117,7 @@ export async function stopOcspResponder(ctx: OcspResponderContext): Promise<void
 			resolve();
 		}, 5000);
 
-		ctx.process.on('exit', () => {
+		ctx.process.on('close', () => {
 			clearTimeout(timeout);
 			resolve();
 		});
@@ -120,6 +128,10 @@ export async function stopOcspResponder(ctx: OcspResponderContext): Promise<void
 
 /**
  * Start a Node.js HTTP server to serve CRL files
+ *
+ * Note: While the HTTP server supports port 0 for auto-allocation, we can't use it here because
+ * the CRL Distribution Point URL must be embedded in certificates before the server starts.
+ * Tests should use dynamic port selection (e.g., base port + timestamp) to avoid conflicts.
  *
  * @param port - Port number for the CRL server
  * @param certsPath - Path to directory containing test.crl
@@ -152,9 +164,14 @@ export async function startCrlServer(port: number, certsPath: string): Promise<C
 		server.on('error', reject);
 
 		server.listen(port, () => {
+			const address = server.address();
+			if (!address || typeof address === 'string') {
+				reject(new Error('Server did not bind to a network port'));
+				return;
+			}
 			resolve({
 				server,
-				port,
+				port: address.port,
 				certsPath,
 			});
 		});
