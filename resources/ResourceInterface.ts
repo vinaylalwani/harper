@@ -62,6 +62,13 @@ export interface ResourceInterface<Record extends object = any>
 export interface Context {
 	/**	 The user making the request */
 	user?: User;
+	/** Check the username and password against the core user table to verify user identity */
+	login: (username: string, password: string) => Promise<string>;
+	/** Describes the current cookie-based session if it is present and grants the capacity to delete it. authentication.enableSessions must be turned on in the harperdb-config.yaml  */
+	session?: {
+		id?: any;
+		delete: (id: any) => Promise<void>;
+	};
 	/**	 The database transaction object */
 	transaction?: DatabaseTransaction;
 	/**	 If the operation that will be performed with this context should check user authorization */
