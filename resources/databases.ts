@@ -29,6 +29,7 @@ import { replayLogs } from './replayLogs.ts';
 import { totalmem } from 'node:os';
 import { RocksIndexStore } from './RocksIndexStore.ts';
 import type { Id } from './ResourceInterface.ts';
+import { mkdirSync } from 'node:fs';
 
 function OpenDBIObject(dupSort, isPrimary) {
 	// what is going on with esbuild, it suddenly is randomly flip-flopping the module record for OpenDBIObject, sometimes return the correct exports object and sometimes returning the exports as the `default`.
@@ -168,6 +169,9 @@ function openRocksDatabase(path: string, options: RocksDatabaseOptions) {
 	options.disableWAL ??= true;
 	const availableMemory = process.constrainedMemory?.() || totalmem();
 	RocksDatabase.config({ blockCacheSize: availableMemory * 0.25 });
+	if (!existsSync(path)) {
+		mkdirSync(path, { recursive: true });
+	}
 	let db = RocksDatabase.open(path, options) as RocksRootDatabase;
 	if (options.dupSort) {
 		db = new RocksIndexStore(db, options);
