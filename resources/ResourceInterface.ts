@@ -67,6 +67,8 @@ export interface Context {
 	/** Describes the current cookie-based session if it is present and grants the capacity to delete it. authentication.enableSessions must be turned on in the harperdb-config.yaml  */
 	session?: {
 		id?: any;
+		user?: User;
+		update: (updatedSession: any) => unknown;
 		delete: (id: any) => Promise<void>;
 	};
 	/**	 The database transaction object */
