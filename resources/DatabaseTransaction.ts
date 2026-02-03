@@ -139,10 +139,14 @@ export class DatabaseTransaction implements Transaction {
 			throw new Error('Can not use a transaction that is no longer open');
 		}
 		this.writes.push(operation);
+		if (!operation.deferSave) {
+			// Setting saved to false means to defer saving
+			this.save(operation);
+		}
 		return operation;
 	}
 
-	save(operation: TransactionWrite, isRetry = false) {
+	save(operation: TransactionWrite, reloadEntry = false) {
 		let txnTime = this.timestamp;
 		if (!this.transaction) {
 			this.transaction = new RocksTransaction(this.db.store as RocksStore);
@@ -151,19 +155,17 @@ export class DatabaseTransaction implements Transaction {
 			}
 		}
 		if (!txnTime) txnTime = this.timestamp = this.transaction.getTimestamp();
-		if (isRetry) {
+		if (reloadEntry) {
 			operation.entry = operation.store.getEntry(operation.key, { transaction: this.transaction });
-		} else {
-			if (operation.saved) return;
-			// immediately execute in this transaction
-			if (operation.validate?.(txnTime) === false) return;
-			let result: Promise<void> = operation.before?.() as Promise<void>;
-			if (result?.then) this.completions.push(result);
-			result = operation.beforeIntermediate?.() as Promise<void>;
-			if (result?.then) this.completions.push(result);
 		}
-		operation.commit(txnTime, operation.entry, 0, this.transaction);
 		operation.saved = true;
+		// immediately execute in this transaction
+		if (operation.validate?.(txnTime) === false) return;
+		let result: Promise<void> = operation.before?.() as Promise<void>;
+		if (result?.then) this.completions.push(result);
+		result = operation.beforeIntermediate?.() as Promise<void>;
+		if (result?.then) this.completions.push(result);
+		operation.commit(txnTime, operation.entry, 0, this.transaction);
 	}
 
 	/**
@@ -174,6 +176,7 @@ export class DatabaseTransaction implements Transaction {
 		let retries = options.retries ?? 0;
 		for (let i = 0; i < this.writes.length; i++) {
 			let operation = this.writes[i];
+			if (retries === 0 && operation.saved) continue;
 			this.save(operation, i < this.validated);
 		}
 		this.validated = this.writes.length;
@@ -293,11 +296,23 @@ export interface Transaction {
 }
 
 export class ImmediateTransaction extends DatabaseTransaction {
-	addWrite(operation) {
-		super.addWrite(operation);
-		// immediately commit the write
-		return this.commit();
+	isCommitting = false;
+	constructor(db: RootDatabaseKind) {
+		super();
+		this.db = db;
 	}
+	save(transaction: ImmediateTransaction) {
+		if (this.isCommitting) {
+			// if we are in the commit, do the save and force a reload so we get a read within the transaction
+			super.save(transaction, true);
+		} else {
+			this.isCommitting = true;
+			return when(this.commit(), () => {
+				this.isCommitting = false;
+			});
+		}
+	}
+
 	get timestamp() {
 		return this._timestamp || (this._timestamp = getNextMonotonicTime());
 	}

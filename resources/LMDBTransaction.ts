@@ -35,17 +35,12 @@ type ReadTransaction = LMDBNativeTransaction & {
 export class LMDBTransaction extends DatabaseTransaction {
 	#context: Context;
 	writes: TransactionWrite[] = []; // the set of writes to commit if the conditions are met
-	db: RootDatabaseKind;
-	readTxn: ReadTransaction;
-	readTxnRefCount: number;
-	readTxnsUsed: number;
 	validated = 0;
 	_timestamp = 0;
 	declare next: DatabaseTransaction;
 	declare stale: boolean;
 	overloadChecked: boolean;
 	open = TRANSACTION_STATE.OPEN;
-	replicatedConfirmation: number;
 
 	getReadTxn(): ReadTransaction {
 		// used optimistically
@@ -305,9 +300,11 @@ export class LMDBTransaction extends DatabaseTransaction {
 }
 
 export class ImmediateTransaction extends LMDBTransaction {
-	addWrite(operation) {
-		super.addWrite(operation);
-		// immediately commit the write
+	constructor(db: RootDatabaseKind) {
+		super();
+		this.db = db;
+	}
+	save(transaction: ImmediateTransaction, isRetry = false) {
 		return this.commit();
 	}
 	get timestamp() {

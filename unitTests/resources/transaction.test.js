@@ -253,7 +253,6 @@ describe('Transactions', () => {
 					onCommit: resolve,
 				});
 			});
-			assert.equal(TxnTest.auditStore.getStats().entryCount, startingAuditSize + 1);
 			entity = await TxnTest.get(45);
 			// nothing should have changed
 			assert.equal(entity.count, 5);

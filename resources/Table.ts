@@ -62,7 +62,7 @@ import { RequestTarget } from './RequestTarget.ts';
 import harperLogger from '../utility/logging/harper_logger.js';
 import { throttle } from '../server/throttle.ts';
 import { RocksDatabase } from '@harperfast/rocksdb-js';
-import { LMDBTransaction } from './LMDBTransaction';
+import { LMDBTransaction, ImmediateTransaction as ImmediateLMDBTransaction } from './LMDBTransaction';
 
 const { sortBy } = lodash;
 const { validateAttribute } = lmdbProcessRows;
@@ -1246,6 +1246,7 @@ export function makeTable(options) {
 							loading = this._loadRecord(target, context, { ensureLoaded: true, async: true }) as Promise<any>;
 						}
 						return when(loading, () => {
+							this.#changes = updates;
 							this._writeUpdate(id, this.#changes, false);
 							return this;
 						});
@@ -1263,8 +1264,11 @@ export function makeTable(options) {
 			if (this.#savingOperation) {
 				const transaction = txnForContext(this.getContext());
 				if (transaction.save) {
-					transaction.save(this.#savingOperation);
-					this.#savingOperation = null;
+					try {
+						return transaction.save(this.#savingOperation);
+					} finally {
+						this.#savingOperation = null;
+					}
 				}
 			}
 		}
@@ -1507,7 +1511,7 @@ export function makeTable(options) {
 			if (record === undefined || record instanceof URLSearchParams) {
 				// legacy argument position, shift the arguments and go through the update method for back-compat
 				this.update(target, true);
-				this.save();
+				return this.save();
 			} else {
 				let allowed = true;
 				if (target == undefined) throw new TypeError('Can not put a record without a target');
@@ -1522,15 +1526,17 @@ export function makeTable(options) {
 					}
 					// standard path, handle arrays as multiple updates, and otherwise do a direct update
 					if (Array.isArray(record)) {
-						for (const element of record) {
-							const id = element[primaryKey];
-							this._writeUpdate(id, element, true);
-							this.save();
-						}
+						return Promise.all(
+							record.map((element) => {
+								const id = element[primaryKey];
+								this._writeUpdate(id, element, true);
+								return this.save();
+							})
+						);
 					} else {
 						const id = requestTargetToId(target);
 						this._writeUpdate(id, record, true);
-						this.save();
+						return this.save();
 					}
 				});
 			}
@@ -1582,12 +1588,12 @@ export function makeTable(options) {
 			if (recordUpdate === undefined || recordUpdate instanceof URLSearchParams) {
 				// legacy argument position, shift the arguments and go through the update method for back-compat
 				this.update(target, false);
-				this.save();
+				return this.save();
 			} else {
 				// standard path, ensure there is no return object
-				const result = this.update(target, recordUpdate);
-				this.save();
-				if (result?.then) return result.then(() => undefined); // wait for the update, but return undefined
+				return when(this.update(target, recordUpdate), () => {
+					return when(this.save(), () => undefined); // wait for the update and save, but return undefined
+				});
 			}
 		}
 		// perform the actual write operation; this may come from a user request to write (put, post, etc.), or
@@ -1617,6 +1623,7 @@ export function makeTable(options) {
 				entry,
 				nodeName: context?.nodeName,
 				fullUpdate,
+				deferSave: true,
 				validate: (txnTime) => {
 					if (!recordUpdate) recordUpdate = this.#changes;
 					if (fullUpdate || (recordUpdate && hasChanges(this.#changes === recordUpdate ? this : recordUpdate))) {
@@ -3714,6 +3721,7 @@ export function makeTable(options) {
 			if (!transaction.db && primaryStore instanceof RocksDatabase) {
 				// this is an uninitialized DatabaseTransaction, we can claim it
 				transaction.db = primaryStore;
+				if (context?.timestamp) transaction.timestamp = context.timestamp;
 				return transaction;
 			}
 			do {
@@ -3731,7 +3739,15 @@ export function makeTable(options) {
 				transaction = nextTxn;
 			} while (true);
 		} else {
-			return new ImmediateTransaction();
+			transaction =
+				primaryStore instanceof RocksDatabase
+					? new ImmediateTransaction(primaryStore)
+					: new ImmediateLMDBTransaction(primaryStore);
+			if (context) {
+				context.transaction = transaction;
+				if (context.timestamp) transaction.timestamp = context.timestamp;
+			}
+			return transaction;
 		}
 	}
 	function getAttributeValue(entry, attribute_name, context) {
