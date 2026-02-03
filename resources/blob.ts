@@ -1224,7 +1224,7 @@ export async function cleanupOrphans(database: any, databaseName?: string) {
 			try {
 				await unlinkPromised(path);
 			} catch (error) {
-				logger.warn?.('Error deleting file', error);
+				logger.debug?.('Error deleting file', error);
 			}
 		}
 		logger.warn?.('Finished deleting', pathsToCheck.size, 'orphaned blobs');
