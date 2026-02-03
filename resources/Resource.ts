@@ -661,8 +661,26 @@ function transactional(
 		} else resourceOptions = options;
 		const loadAsInstance = this.loadAsInstance;
 		let runAction = authorizeActionOnResource;
-		const resource = this.getResource(query, context, resourceOptions);
-		return resource.then ? resource.then(runAction) : runAction(resource);
+		if (context?.transaction) {
+			// we are already in a transaction, proceed
+			const resource = this.getResource(query, context, resourceOptions);
+			return resource.then ? resource.then(runAction) : runAction(resource);
+		} else {
+			// start a transaction
+			return transaction(
+				context,
+				() => {
+					// record what transaction we are starting from, so that if it times out, we can have an indication of the cause
+					context.transaction.startedFrom = {
+						resourceName: this.name,
+						method: options.method,
+					};
+					const resource = this.getResource(query, context, resourceOptions);
+					return resource.then ? resource.then(runAction) : runAction(resource);
+				}
+				// resourceOptions // this is unused
+			);
+		}
 		function authorizeActionOnResource(resource: ResourceInterface) {
 			let checkPermission = false;
 			if (query.checkPermission) {
