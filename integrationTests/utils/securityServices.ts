@@ -9,17 +9,21 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { createServer, type Server } from 'node:http';
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
+import type { OcspCertificates } from './security/ocsp/generate-test-certs.ts';
+import type { CrlCertificates } from './security/crl/generate-test-certs.ts';
 
 export interface OcspResponderContext {
 	process: ChildProcess;
 	port: number;
 	certsPath: string;
+	certs: OcspCertificates;
 }
 
 export interface CrlServerContext {
 	server: Server;
 	port: number;
 	certsPath: string;
+	certs: CrlCertificates;
 }
 
 /**
@@ -33,9 +37,14 @@ export interface CrlServerContext {
  *
  * @param certsPath - Path to directory containing certificates and index.txt
  * @param port - Port number for the OCSP responder (default: 0 for random selection)
+ * @param certs - Certificate paths
  * @returns Promise resolving to OcspResponderContext with actual port number
  */
-export async function startOcspResponder(certsPath: string, port: number = 0): Promise<OcspResponderContext> {
+export async function startOcspResponder(
+	certsPath: string,
+	port: number,
+	certs: OcspCertificates
+): Promise<OcspResponderContext> {
 	// Select predetermined random port to avoid timing conflict with cert generation
 	if (port === 0) {
 		port = 50000 + Math.floor(Math.random() * 10000);
@@ -73,6 +82,7 @@ export async function startOcspResponder(certsPath: string, port: number = 0): P
 				process: proc,
 				port,
 				certsPath,
+				certs,
 			});
 		}, 2000);
 
@@ -139,10 +149,15 @@ export async function stopOcspResponder(ctx: OcspResponderContext): Promise<void
  * Returns the actual port number so certificates can be generated with the correct URL.
  *
  * @param certsPath - Path to directory containing test.crl
- * @param port - Port number for the CRL server (default: 0 for auto-allocation)
+ * @param port - Port number for the CRL server
+ * @param certs - Certificate paths
  * @returns Promise resolving to CrlServerContext with actual port number
  */
-export async function startCrlServer(certsPath: string, port: number = 0): Promise<CrlServerContext> {
+export async function startCrlServer(
+	certsPath: string,
+	port: number,
+	certs: CrlCertificates
+): Promise<CrlServerContext> {
 	return new Promise((resolve, reject) => {
 		const server = createServer((req, res) => {
 			if (req.url === '/test.crl') {
@@ -178,6 +193,7 @@ export async function startCrlServer(certsPath: string, port: number = 0): Promi
 				server,
 				port: address.port,
 				certsPath,
+				certs,
 			});
 		});
 	});
@@ -194,10 +210,10 @@ export async function stopCrlServer(ctx: CrlServerContext): Promise<void> {
 	});
 }
 
-// Re-export certificate generation functions
-export { generateOcspCertificates } from './security/ocsp/generate-test-certs.ts';
+// Re-export certificate generation functions and types
+export { generateOcspCertificates, type OcspCertificates } from './security/ocsp/generate-test-certs.ts';
 
-export { generateCrlCertificates } from './security/crl/generate-test-certs.ts';
+export { generateCrlCertificates, type CrlCertificates } from './security/crl/generate-test-certs.ts';
 
 /**
  * Setup CRL server with automatic port allocation and retry on conflict
@@ -232,10 +248,10 @@ export async function setupCrlServerWithCerts(
 		try {
 			// Generate certificates with CRL URL containing this port
 			const { generateCrlCertificates } = await import('./security/crl/generate-test-certs.ts');
-			generateCrlCertificates(certsPath, hostname, port);
+			const certs = generateCrlCertificates(certsPath, hostname, port);
 
-			// Start CRL server on the same port
-			return await startCrlServer(certsPath, port);
+			// Start CRL server on the same port with certificates
+			return startCrlServer(certsPath, port, certs);
 		} catch (error: any) {
 			if (error.code === 'EADDRINUSE' && attempt < maxRetries - 1) {
 				// Port conflict - retry with new random port
@@ -281,10 +297,10 @@ export async function setupOcspResponderWithCerts(
 		try {
 			// Generate certificates with OCSP URL containing this port
 			const { generateOcspCertificates } = await import('./security/ocsp/generate-test-certs.ts');
-			generateOcspCertificates(certsPath, hostname, port);
+			const certs = generateOcspCertificates(certsPath, hostname, port);
 
-			// Start OCSP responder on the same port
-			return await startOcspResponder(certsPath, port);
+			// Start OCSP responder on the same port with certificates
+			return startOcspResponder(certsPath, port, certs);
 		} catch (error: any) {
 			if (attempt < maxRetries - 1) {
 				// Startup failed - retry with new random port

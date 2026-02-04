@@ -20,6 +20,7 @@ import {
 	setupOcspResponderWithCerts,
 	stopOcspResponder,
 	type OcspResponderContext,
+	type OcspCertificates,
 } from '../utils/securityServices.ts';
 
 const HTTPS_PORT = 9927;
@@ -28,11 +29,10 @@ const HTTPS_PORT = 9927;
 // run after all other tests that need the responder
 suite('OCSP Certificate Verification', (ctx: ContextWithHarper) => {
 	let ocspResponder: OcspResponderContext | null = null;
-	let certsPath: string;
 
 	before(async () => {
 		// 1. Create temp directory for certificates
-		certsPath = await mkdtemp(join(tmpdir(), 'harper-ocsp-test-'));
+		const certsPath = await mkdtemp(join(tmpdir(), 'harper-ocsp-test-'));
 
 		// 2. Setup OCSP responder (picks port, generates certs, starts responder with retry)
 		ocspResponder = await setupOcspResponderWithCerts(certsPath);
@@ -53,7 +53,7 @@ suite('OCSP Certificate Verification', (ctx: ContextWithHarper) => {
 					},
 				},
 				tls: {
-					certificateAuthority: join(certsPath, 'harper-ca.crt'),
+					certificateAuthority: ocspResponder.certs.ca,
 				},
 			},
 		});
@@ -68,8 +68,10 @@ suite('OCSP Certificate Verification', (ctx: ContextWithHarper) => {
 		// 2. Teardown Harper (before removing certs in case Harper is using them)
 		await teardownHarper(ctx);
 
-		// 3. Cleanup certificates
-		await rm(certsPath, { recursive: true, force: true, maxRetries: 3 });
+		// 3. Cleanup certificates (owned by OCSP responder context)
+		if (ocspResponder) {
+			await rm(ocspResponder.certsPath, { recursive: true, force: true, maxRetries: 3 });
+		}
 	});
 
 	test('should accept valid certificate with OCSP check', async () => {
@@ -79,9 +81,9 @@ suite('OCSP Certificate Verification', (ctx: ContextWithHarper) => {
 			const req = https.request(
 				`https://${ctx.harper.hostname}:${HTTPS_PORT}/cert-test-nonexistent`,
 				{
-					cert: readFileSync(join(certsPath, 'client-valid-chain.crt')),
-					key: readFileSync(join(certsPath, 'client-valid.key')),
-					ca: readFileSync(join(certsPath, 'harper-ca.crt')),
+					cert: readFileSync(ocspResponder!.certs.valid.cert),
+					key: readFileSync(ocspResponder!.certs.valid.key),
+					ca: readFileSync(ocspResponder!.certs.ca),
 					rejectUnauthorized: false, // Harper uses self-signed server cert
 				},
 				(res) => {
@@ -102,9 +104,9 @@ suite('OCSP Certificate Verification', (ctx: ContextWithHarper) => {
 			const req = https.request(
 				`https://${ctx.harper.hostname}:${HTTPS_PORT}/`,
 				{
-					cert: readFileSync(join(certsPath, 'client-revoked-chain.crt')),
-					key: readFileSync(join(certsPath, 'client-revoked.key')),
-					ca: readFileSync(join(certsPath, 'harper-ca.crt')),
+					cert: readFileSync(ocspResponder!.certs.revoked.cert),
+					key: readFileSync(ocspResponder!.certs.revoked.key),
+					ca: readFileSync(ocspResponder!.certs.ca),
 					rejectUnauthorized: false,
 				},
 				(res) => {
@@ -125,14 +127,19 @@ suite('OCSP Certificate Verification', (ctx: ContextWithHarper) => {
 	});
 
 	test('should cache OCSP responses', async () => {
+		// Read certificates once before stopping responder
+		const validCert = readFileSync(ocspResponder!.certs.valid.cert);
+		const validKey = readFileSync(ocspResponder!.certs.valid.key);
+		const ca = readFileSync(ocspResponder!.certs.ca);
+
 		const makeRequest = () =>
 			new Promise<number>((resolve, reject) => {
 				const req = https.request(
 					`https://${ctx.harper.hostname}:${HTTPS_PORT}/cert-test-nonexistent`,
 					{
-						cert: readFileSync(join(certsPath, 'client-valid-chain.crt')),
-						key: readFileSync(join(certsPath, 'client-valid.key')),
-						ca: readFileSync(join(certsPath, 'harper-ca.crt')),
+						cert: validCert,
+						key: validKey,
+						ca,
 						rejectUnauthorized: false,
 					},
 					(res) => {
@@ -163,11 +170,12 @@ suite('OCSP Certificate Verification', (ctx: ContextWithHarper) => {
 
 suite('OCSP Certificate Verification - Disabled', (ctx: ContextWithHarper) => {
 	let certsPath: string;
+	let certs: OcspCertificates;
 
 	before(async () => {
 		certsPath = await mkdtemp(join(tmpdir(), 'harper-ocsp-disabled-'));
 		// Use placeholder port since OCSP is disabled and won't be accessed
-		generateOcspCertificates(certsPath, '127.0.0.1', 58888);
+		certs = generateOcspCertificates(certsPath, '127.0.0.1', 58888);
 
 		// Setup Harper with OCSP disabled
 		await setupHarper(ctx, {
@@ -186,7 +194,7 @@ suite('OCSP Certificate Verification - Disabled', (ctx: ContextWithHarper) => {
 					},
 				},
 				tls: {
-					certificateAuthority: join(certsPath, 'harper-ca.crt'),
+					certificateAuthority: certs.ca,
 				},
 			},
 		});
@@ -202,9 +210,9 @@ suite('OCSP Certificate Verification - Disabled', (ctx: ContextWithHarper) => {
 			const req = https.request(
 				`https://${ctx.harper.hostname}:${HTTPS_PORT}/cert-test-nonexistent`,
 				{
-					cert: readFileSync(join(certsPath, 'client-valid-chain.crt')),
-					key: readFileSync(join(certsPath, 'client-valid.key')),
-					ca: readFileSync(join(certsPath, 'harper-ca.crt')),
+					cert: readFileSync(certs.valid.cert),
+					key: readFileSync(certs.valid.key),
+					ca: readFileSync(certs.ca),
 					rejectUnauthorized: false,
 				},
 				(res) => {
@@ -223,11 +231,12 @@ suite('OCSP Certificate Verification - Disabled', (ctx: ContextWithHarper) => {
 
 suite('OCSP Certificate Verification - Fail-Open Mode', (ctx: ContextWithHarper) => {
 	let certsPath: string;
+	let certs: OcspCertificates;
 
 	before(async () => {
 		certsPath = await mkdtemp(join(tmpdir(), 'harper-ocsp-failopen-'));
 		// Use placeholder port since OCSP responder won't be started (testing fail-open behavior)
-		generateOcspCertificates(certsPath, '127.0.0.1', 58888);
+		certs = generateOcspCertificates(certsPath, '127.0.0.1', 58888);
 
 		// Setup Harper with fail-open mode and very short timeout
 		await setupHarper(ctx, {
@@ -245,7 +254,7 @@ suite('OCSP Certificate Verification - Fail-Open Mode', (ctx: ContextWithHarper)
 					},
 				},
 				tls: {
-					certificateAuthority: join(certsPath, 'harper-ca.crt'),
+					certificateAuthority: certs.ca,
 				},
 			},
 		});
@@ -262,9 +271,9 @@ suite('OCSP Certificate Verification - Fail-Open Mode', (ctx: ContextWithHarper)
 			const req = https.request(
 				`https://${ctx.harper.hostname}:${HTTPS_PORT}/cert-test-nonexistent`,
 				{
-					cert: readFileSync(join(certsPath, 'client-valid-chain.crt')),
-					key: readFileSync(join(certsPath, 'client-valid.key')),
-					ca: readFileSync(join(certsPath, 'harper-ca.crt')),
+					cert: readFileSync(certs.valid.cert),
+					key: readFileSync(certs.valid.key),
+					ca: readFileSync(certs.ca),
 					rejectUnauthorized: false,
 				},
 				(res) => {
@@ -282,11 +291,12 @@ suite('OCSP Certificate Verification - Fail-Open Mode', (ctx: ContextWithHarper)
 
 suite('OCSP Certificate Verification - Fail-Closed with Timeout', (ctx: ContextWithHarper) => {
 	let certsPath: string;
+	let certs: OcspCertificates;
 
 	before(async () => {
 		certsPath = await mkdtemp(join(tmpdir(), 'harper-ocsp-timeout-'));
 		// Use placeholder port since OCSP responder won't be started (testing fail-closed behavior)
-		generateOcspCertificates(certsPath, '127.0.0.1', 58888);
+		certs = generateOcspCertificates(certsPath, '127.0.0.1', 58888);
 
 		// Setup Harper with fail-closed mode and very short timeout
 		await setupHarper(ctx, {
@@ -304,7 +314,7 @@ suite('OCSP Certificate Verification - Fail-Closed with Timeout', (ctx: ContextW
 					},
 				},
 				tls: {
-					certificateAuthority: join(certsPath, 'harper-ca.crt'),
+					certificateAuthority: certs.ca,
 				},
 			},
 		});
@@ -321,9 +331,9 @@ suite('OCSP Certificate Verification - Fail-Closed with Timeout', (ctx: ContextW
 			const req = https.request(
 				`https://${ctx.harper.hostname}:${HTTPS_PORT}/`,
 				{
-					cert: readFileSync(join(certsPath, 'client-valid-chain.crt')),
-					key: readFileSync(join(certsPath, 'client-valid.key')),
-					ca: readFileSync(join(certsPath, 'harper-ca.crt')),
+					cert: readFileSync(certs.valid.cert),
+					key: readFileSync(certs.valid.key),
+					ca: readFileSync(certs.ca),
 					rejectUnauthorized: false,
 				},
 				(res) => {

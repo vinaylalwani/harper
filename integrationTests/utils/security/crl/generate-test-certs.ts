@@ -9,13 +9,38 @@ import path from 'node:path';
 import { execSync } from 'node:child_process';
 
 /**
+ * Certificate paths returned by CRL certificate generation
+ */
+export interface CrlCertificates {
+	/** Path to CA certificate */
+	ca: string;
+	/** Valid client certificate paths */
+	valid: {
+		/** Path to valid client certificate chain (cert + CA) */
+		cert: string;
+		/** Path to valid client private key */
+		key: string;
+	};
+	/** Revoked client certificate paths */
+	revoked: {
+		/** Path to revoked client certificate chain (cert + CA) */
+		cert: string;
+		/** Path to revoked client private key */
+		key: string;
+	};
+	/** Path to Certificate Revocation List */
+	crl: string;
+}
+
+/**
  * Generate CRL test certificates
  *
  * @param outputDir - Directory where certificates will be generated
  * @param crlHost - Hostname for CRL distribution point URL
  * @param crlPort - Port for CRL distribution point URL
+ * @returns Object containing paths to all generated certificates
  */
-export function generateCrlCertificates(outputDir: string, crlHost: string, crlPort: number): void {
+export function generateCrlCertificates(outputDir: string, crlHost: string, crlPort: number): CrlCertificates {
 	console.log('Generating CRL test certificates...');
 
 	// Generate test CA
@@ -157,4 +182,17 @@ crl = ${outputDir}/test.crl
 	console.log('  - client-valid-chain.crt (Valid client certificate chain)');
 	console.log('  - client-revoked-chain.crt (Revoked client certificate chain)');
 	console.log('  - test.crl (Certificate Revocation List)');
+
+	return {
+		ca: caCertPath,
+		valid: {
+			cert: validChainPath,
+			key: validKeyPath,
+		},
+		revoked: {
+			cert: revokedChainPath,
+			key: revokedKeyPath,
+		},
+		crl: crlPath,
+	};
 }

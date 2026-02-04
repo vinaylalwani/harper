@@ -20,6 +20,7 @@ import {
 	setupCrlServerWithCerts,
 	stopCrlServer,
 	type CrlServerContext,
+	type CrlCertificates,
 } from '../utils/securityServices.ts';
 
 const HTTPS_PORT = 9927;
@@ -28,11 +29,10 @@ const HTTPS_PORT = 9927;
 // all other tests that need the server
 suite('CRL Certificate Verification', (ctx: ContextWithHarper) => {
 	let crlServer: CrlServerContext | null = null;
-	let certsPath: string;
 
 	before(async () => {
 		// 1. Create temp directory for certificates
-		certsPath = await mkdtemp(join(tmpdir(), 'harper-crl-test-'));
+		const certsPath = await mkdtemp(join(tmpdir(), 'harper-crl-test-'));
 
 		// 2. Setup CRL server (picks port, generates certs, starts server with retry)
 		crlServer = await setupCrlServerWithCerts(certsPath);
@@ -56,7 +56,7 @@ suite('CRL Certificate Verification', (ctx: ContextWithHarper) => {
 					},
 				},
 				tls: {
-					certificateAuthority: join(certsPath, 'harper-ca.crt'),
+					certificateAuthority: crlServer.certs.ca,
 				},
 			},
 		});
@@ -71,8 +71,10 @@ suite('CRL Certificate Verification', (ctx: ContextWithHarper) => {
 		// 2. Teardown Harper (before removing certs in case Harper is using them)
 		await teardownHarper(ctx);
 
-		// 3. Cleanup certificates
-		await rm(certsPath, { recursive: true, force: true, maxRetries: 3 });
+		// 3. Cleanup certificates (owned by CRL server context)
+		if (crlServer) {
+			await rm(crlServer.certsPath, { recursive: true, force: true, maxRetries: 3 });
+		}
 	});
 
 	test('should accept valid certificate with CRL check', async () => {
@@ -82,9 +84,9 @@ suite('CRL Certificate Verification', (ctx: ContextWithHarper) => {
 			const req = https.request(
 				`https://${ctx.harper.hostname}:${HTTPS_PORT}/cert-test-nonexistent`,
 				{
-					cert: readFileSync(join(certsPath, 'client-valid-chain.crt')),
-					key: readFileSync(join(certsPath, 'client-valid.key')),
-					ca: readFileSync(join(certsPath, 'harper-ca.crt')),
+					cert: readFileSync(crlServer!.certs.valid.cert),
+					key: readFileSync(crlServer!.certs.valid.key),
+					ca: readFileSync(crlServer!.certs.ca),
 					rejectUnauthorized: false, // Harper uses self-signed server cert
 				},
 				(res) => {
@@ -106,9 +108,9 @@ suite('CRL Certificate Verification', (ctx: ContextWithHarper) => {
 			const req = https.request(
 				`https://${ctx.harper.hostname}:${HTTPS_PORT}/`,
 				{
-					cert: readFileSync(join(certsPath, 'client-revoked-chain.crt')),
-					key: readFileSync(join(certsPath, 'client-revoked.key')),
-					ca: readFileSync(join(certsPath, 'harper-ca.crt')),
+					cert: readFileSync(crlServer!.certs.revoked.cert),
+					key: readFileSync(crlServer!.certs.revoked.key),
+					ca: readFileSync(crlServer!.certs.ca),
 					rejectUnauthorized: false,
 				},
 				(res) => {
@@ -134,14 +136,19 @@ suite('CRL Certificate Verification', (ctx: ContextWithHarper) => {
 	});
 
 	test('should cache CRL and track revoked certificates', async () => {
+		// Read certificates once before stopping server
+		const validCert = readFileSync(crlServer!.certs.valid.cert);
+		const validKey = readFileSync(crlServer!.certs.valid.key);
+		const ca = readFileSync(crlServer!.certs.ca);
+
 		const makeRequest = () =>
 			new Promise<number>((resolve, reject) => {
 				const req = https.request(
 					`https://${ctx.harper.hostname}:${HTTPS_PORT}/cert-test-nonexistent`,
 					{
-						cert: readFileSync(join(certsPath, 'client-valid-chain.crt')),
-						key: readFileSync(join(certsPath, 'client-valid.key')),
-						ca: readFileSync(join(certsPath, 'harper-ca.crt')),
+						cert: validCert,
+						key: validKey,
+						ca,
 						rejectUnauthorized: false,
 					},
 					(res) => {
@@ -171,11 +178,12 @@ suite('CRL Certificate Verification', (ctx: ContextWithHarper) => {
 
 suite('CRL Certificate Verification - Disabled', (ctx: ContextWithHarper) => {
 	let certsPath: string;
+	let certs: CrlCertificates;
 
 	before(async () => {
 		certsPath = await mkdtemp(join(tmpdir(), 'harper-crl-disabled-'));
 		// Use placeholder port since CRL is disabled and won't be accessed
-		generateCrlCertificates(certsPath, '127.0.0.1', 19999);
+		certs = generateCrlCertificates(certsPath, '127.0.0.1', 19999);
 
 		// Setup Harper with CRL disabled
 		await setupHarper(ctx, {
@@ -194,7 +202,7 @@ suite('CRL Certificate Verification - Disabled', (ctx: ContextWithHarper) => {
 					},
 				},
 				tls: {
-					certificateAuthority: join(certsPath, 'harper-ca.crt'),
+					certificateAuthority: certs.ca,
 				},
 			},
 		});
@@ -210,9 +218,9 @@ suite('CRL Certificate Verification - Disabled', (ctx: ContextWithHarper) => {
 			const req = https.request(
 				`https://${ctx.harper.hostname}:${HTTPS_PORT}/cert-test-nonexistent`,
 				{
-					cert: readFileSync(join(certsPath, 'client-valid-chain.crt')),
-					key: readFileSync(join(certsPath, 'client-valid.key')),
-					ca: readFileSync(join(certsPath, 'harper-ca.crt')),
+					cert: readFileSync(certs.valid.cert),
+					key: readFileSync(certs.valid.key),
+					ca: readFileSync(certs.ca),
 					rejectUnauthorized: false,
 				},
 				(res) => {
@@ -231,11 +239,12 @@ suite('CRL Certificate Verification - Disabled', (ctx: ContextWithHarper) => {
 
 suite('CRL Certificate Verification - Fail-Open Mode', (ctx: ContextWithHarper) => {
 	let certsPath: string;
+	let certs: CrlCertificates;
 
 	before(async () => {
 		certsPath = await mkdtemp(join(tmpdir(), 'harper-crl-failopen-'));
 		// Use placeholder port since CRL server won't be started (testing fail-open behavior)
-		generateCrlCertificates(certsPath, '127.0.0.1', 19999);
+		certs = generateCrlCertificates(certsPath, '127.0.0.1', 19999);
 
 		// Setup Harper with fail-open mode and very short timeout
 		await setupHarper(ctx, {
@@ -253,7 +262,7 @@ suite('CRL Certificate Verification - Fail-Open Mode', (ctx: ContextWithHarper) 
 					},
 				},
 				tls: {
-					certificateAuthority: join(certsPath, 'harper-ca.crt'),
+					certificateAuthority: certs.ca,
 				},
 			},
 		});
@@ -270,9 +279,9 @@ suite('CRL Certificate Verification - Fail-Open Mode', (ctx: ContextWithHarper) 
 			const req = https.request(
 				`https://${ctx.harper.hostname}:${HTTPS_PORT}/cert-test-nonexistent`,
 				{
-					cert: readFileSync(join(certsPath, 'client-valid-chain.crt')),
-					key: readFileSync(join(certsPath, 'client-valid.key')),
-					ca: readFileSync(join(certsPath, 'harper-ca.crt')),
+					cert: readFileSync(certs.valid.cert),
+					key: readFileSync(certs.valid.key),
+					ca: readFileSync(certs.ca),
 					rejectUnauthorized: false,
 				},
 				(res) => {
@@ -290,11 +299,12 @@ suite('CRL Certificate Verification - Fail-Open Mode', (ctx: ContextWithHarper) 
 
 suite('CRL Certificate Verification - Fail-Closed with Timeout', (ctx: ContextWithHarper) => {
 	let certsPath: string;
+	let certs: CrlCertificates;
 
 	before(async () => {
 		certsPath = await mkdtemp(join(tmpdir(), 'harper-crl-timeout-'));
 		// Use placeholder port since CRL server won't be started (testing fail-closed behavior)
-		generateCrlCertificates(certsPath, '127.0.0.1', 19999);
+		certs = generateCrlCertificates(certsPath, '127.0.0.1', 19999);
 
 		// Setup Harper with fail-closed mode and very short timeout
 		await setupHarper(ctx, {
@@ -312,7 +322,7 @@ suite('CRL Certificate Verification - Fail-Closed with Timeout', (ctx: ContextWi
 					},
 				},
 				tls: {
-					certificateAuthority: join(certsPath, 'harper-ca.crt'),
+					certificateAuthority: certs.ca,
 				},
 			},
 		});
@@ -329,9 +339,9 @@ suite('CRL Certificate Verification - Fail-Closed with Timeout', (ctx: ContextWi
 			const req = https.request(
 				`https://${ctx.harper.hostname}:${HTTPS_PORT}/`,
 				{
-					cert: readFileSync(join(certsPath, 'client-valid-chain.crt')),
-					key: readFileSync(join(certsPath, 'client-valid.key')),
-					ca: readFileSync(join(certsPath, 'harper-ca.crt')),
+					cert: readFileSync(certs.valid.cert),
+					key: readFileSync(certs.valid.key),
+					ca: readFileSync(certs.ca),
 					rejectUnauthorized: false,
 				},
 				(res) => {
