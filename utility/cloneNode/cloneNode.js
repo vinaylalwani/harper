@@ -512,7 +512,7 @@ async function leaderReq(req) {
 async function cloneKeys() {
 	try {
 		if (clone_keys !== false) {
-			logger.debug?.('Cloning JWT keys');
+			logger.notify?.('Cloning JWT keys');
 			const keysDir = path.join(rootPath, hdbTerms.LICENSE_KEY_DIR_NAME);
 			// sendOperationToNode is used for extra security, it uses mtls when connecting to leader node.
 			const jwtPublic = await sendOperationToNode(
@@ -534,6 +534,16 @@ async function cloneKeys() {
 				{ rejectUnauthorized: false }
 			);
 			writeFileSync(path.join(keysDir, hdbTerms.JWT_ENUM.JWT_PRIVATE_KEY_NAME), jwtPrivate.message);
+
+			const jwtPass = await sendOperationToNode(
+				{ url: leaderReplicationUrl },
+				{
+					operation: OPERATIONS_ENUM.GET_KEY,
+					name: '.jwtPass',
+				},
+				{ rejectUnauthorized: false }
+			);
+			writeFileSync(path.join(keysDir, hdbTerms.JWT_ENUM.JWT_PASSPHRASE_NAME), jwtPass.message);
 		}
 	} catch (err) {
 		logger.error?.('Error cloning JWT keys', err);

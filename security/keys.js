@@ -1247,17 +1247,25 @@ async function getKey(req) {
 
 	const { name } = req;
 
-	if (name === '.jwtPrivate') {
+	// Handle JWT keys
+	const jwtKeyMap = {
+		'.jwtPrivate': 'privateKey',
+		'.jwtPublic': 'publicKey',
+		'.jwtPass': 'passphrase',
+	};
+
+	if (jwtKeyMap[name]) {
 		const jwt = await getJWTRSAKeys();
-		return jwt.privateKey;
-	} else if (name === '.jwtPublic') {
-		const jwt = await getJWTRSAKeys();
-		return jwt.publicKey;
-	} else if (privateKeys.get(name)) {
-		return privateKeys.get(req.name);
-	} else {
-		throw new ClientError('Key not found');
+		return jwt[jwtKeyMap[name]];
 	}
+
+	// Handle private keys
+	const privateKey = privateKeys.get(name);
+	if (privateKey) {
+		return privateKey;
+	}
+
+	throw new ClientError('Key not found');
 }
 function getHostnamesFromCertificate(certificate) {
 	return [
