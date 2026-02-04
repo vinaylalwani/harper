@@ -17,16 +17,14 @@ import * as https from 'node:https';
 import { setupHarper, teardownHarper, type ContextWithHarper } from '../utils/harperLifecycle.ts';
 import {
 	generateCrlCertificates,
-	startCrlServer,
+	setupCrlServerWithCerts,
 	stopCrlServer,
 	type CrlServerContext,
 } from '../utils/securityServices.ts';
 
-// Use dynamic port to invalidate URL-based CRL caching between test runs
-const CRL_PORT = 18889 + (Math.floor(Date.now() / 1000) % 1000);
 const HTTPS_PORT = 9927;
 
-// The last test stops the CRLserver to verify caching, so it must run after
+// The last test stops the CRL server to verify caching, so it must run after
 // all other tests that need the server
 suite('CRL Certificate Verification', (ctx: ContextWithHarper) => {
 	let crlServer: CrlServerContext | null = null;
@@ -36,10 +34,8 @@ suite('CRL Certificate Verification', (ctx: ContextWithHarper) => {
 		// 1. Create temp directory for certificates
 		certsPath = await mkdtemp(join(tmpdir(), 'harper-crl-test-'));
 
-		// 2. Generate test certificates first (before Harper starts)
-		// We need a placeholder hostname for certificate generation
-		const placeholderHost = '127.0.0.1';
-		generateCrlCertificates(certsPath, placeholderHost, CRL_PORT);
+		// 2. Setup CRL server (picks port, generates certs, starts server with retry)
+		crlServer = await setupCrlServerWithCerts(certsPath);
 
 		// 3. Setup Harper with CA certificate configuration
 		await setupHarper(ctx, {
@@ -64,9 +60,6 @@ suite('CRL Certificate Verification', (ctx: ContextWithHarper) => {
 				},
 			},
 		});
-
-		// 4. Start CRL server
-		crlServer = await startCrlServer(CRL_PORT, certsPath);
 	});
 
 	after(async () => {
@@ -181,7 +174,8 @@ suite('CRL Certificate Verification - Disabled', (ctx: ContextWithHarper) => {
 
 	before(async () => {
 		certsPath = await mkdtemp(join(tmpdir(), 'harper-crl-disabled-'));
-		generateCrlCertificates(certsPath, '127.0.0.1', CRL_PORT);
+		// Use placeholder port since CRL is disabled and won't be accessed
+		generateCrlCertificates(certsPath, '127.0.0.1', 19999);
 
 		// Setup Harper with CRL disabled
 		await setupHarper(ctx, {
@@ -240,7 +234,8 @@ suite('CRL Certificate Verification - Fail-Open Mode', (ctx: ContextWithHarper) 
 
 	before(async () => {
 		certsPath = await mkdtemp(join(tmpdir(), 'harper-crl-failopen-'));
-		generateCrlCertificates(certsPath, '127.0.0.1', CRL_PORT);
+		// Use placeholder port since CRL server won't be started (testing fail-open behavior)
+		generateCrlCertificates(certsPath, '127.0.0.1', 19999);
 
 		// Setup Harper with fail-open mode and very short timeout
 		await setupHarper(ctx, {
@@ -298,7 +293,8 @@ suite('CRL Certificate Verification - Fail-Closed with Timeout', (ctx: ContextWi
 
 	before(async () => {
 		certsPath = await mkdtemp(join(tmpdir(), 'harper-crl-timeout-'));
-		generateCrlCertificates(certsPath, '127.0.0.1', CRL_PORT);
+		// Use placeholder port since CRL server won't be started (testing fail-closed behavior)
+		generateCrlCertificates(certsPath, '127.0.0.1', 19999);
 
 		// Setup Harper with fail-closed mode and very short timeout
 		await setupHarper(ctx, {

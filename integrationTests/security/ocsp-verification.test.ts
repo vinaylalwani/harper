@@ -17,13 +17,11 @@ import * as https from 'node:https';
 import { setupHarper, teardownHarper, type ContextWithHarper } from '../utils/harperLifecycle.ts';
 import {
 	generateOcspCertificates,
-	startOcspResponder,
+	setupOcspResponderWithCerts,
 	stopOcspResponder,
 	type OcspResponderContext,
 } from '../utils/securityServices.ts';
 
-// Use dynamic port to avoid conflicts in test environments
-const OCSP_PORT = 18888 + (Math.floor(Date.now() / 1000) % 1000);
 const HTTPS_PORT = 9927;
 
 // The last test stops the OCSP responder to verify caching, so it must
@@ -36,10 +34,8 @@ suite('OCSP Certificate Verification', (ctx: ContextWithHarper) => {
 		// 1. Create temp directory for certificates
 		certsPath = await mkdtemp(join(tmpdir(), 'harper-ocsp-test-'));
 
-		// 2. Generate test certificates first (before Harper starts)
-		// We need a placeholder hostname for certificate generation
-		const placeholderHost = '127.0.0.1';
-		generateOcspCertificates(certsPath, placeholderHost, OCSP_PORT);
+		// 2. Setup OCSP responder (picks port, generates certs, starts responder with retry)
+		ocspResponder = await setupOcspResponderWithCerts(certsPath);
 
 		// 3. Setup Harper with CA certificate configuration
 		await setupHarper(ctx, {
@@ -61,9 +57,6 @@ suite('OCSP Certificate Verification', (ctx: ContextWithHarper) => {
 				},
 			},
 		});
-
-		// 4. Start OCSP responder
-		ocspResponder = await startOcspResponder(OCSP_PORT, certsPath);
 	});
 
 	after(async () => {
@@ -173,7 +166,8 @@ suite('OCSP Certificate Verification - Disabled', (ctx: ContextWithHarper) => {
 
 	before(async () => {
 		certsPath = await mkdtemp(join(tmpdir(), 'harper-ocsp-disabled-'));
-		generateOcspCertificates(certsPath, '127.0.0.1', OCSP_PORT);
+		// Use placeholder port since OCSP is disabled and won't be accessed
+		generateOcspCertificates(certsPath, '127.0.0.1', 58888);
 
 		// Setup Harper with OCSP disabled
 		await setupHarper(ctx, {
@@ -232,7 +226,8 @@ suite('OCSP Certificate Verification - Fail-Open Mode', (ctx: ContextWithHarper)
 
 	before(async () => {
 		certsPath = await mkdtemp(join(tmpdir(), 'harper-ocsp-failopen-'));
-		generateOcspCertificates(certsPath, '127.0.0.1', OCSP_PORT);
+		// Use placeholder port since OCSP responder won't be started (testing fail-open behavior)
+		generateOcspCertificates(certsPath, '127.0.0.1', 58888);
 
 		// Setup Harper with fail-open mode and very short timeout
 		await setupHarper(ctx, {
@@ -290,7 +285,8 @@ suite('OCSP Certificate Verification - Fail-Closed with Timeout', (ctx: ContextW
 
 	before(async () => {
 		certsPath = await mkdtemp(join(tmpdir(), 'harper-ocsp-timeout-'));
-		generateOcspCertificates(certsPath, '127.0.0.1', OCSP_PORT);
+		// Use placeholder port since OCSP responder won't be started (testing fail-closed behavior)
+		generateOcspCertificates(certsPath, '127.0.0.1', 58888);
 
 		// Setup Harper with fail-closed mode and very short timeout
 		await setupHarper(ctx, {
