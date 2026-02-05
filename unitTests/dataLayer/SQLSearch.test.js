@@ -11,9 +11,6 @@ const chai = require('chai');
 const { expect } = chai;
 const sinon = require('sinon');
 
-const fs = require('fs-extra');
-const path = require('path');
-const Papa = require('papaparse');
 const SQLSearch = require('#js/dataLayer/SQLSearch');
 const harperBridge = require('#js/dataLayer/harperBridge/harperBridge');
 const log = require('#js/utility/logging/harper_logger');
@@ -54,7 +51,6 @@ let _getFinalAttributeData_spy;
 let _getData_spy;
 let _finalSQL_spy;
 let _buildSQL_spy;
-let error_logger_spy;
 
 let test_env = [];
 
@@ -73,7 +69,7 @@ function setClassMethodSpies() {
 	_finalSQL_spy = sandbox.spy(SQLSearch.prototype, '_finalSQL');
 	_buildSQL_spy = sandbox.spy(SQLSearch.prototype, '_buildSQL');
 	backtickASTSchemaItems_spy = sandbox.spy(hdb_utils, 'backtickASTSchemaItems');
-	error_logger_spy = sandbox.spy(log, 'error');
+	sandbox.spy(log, 'error');
 }
 
 async function setupBasicTestData() {

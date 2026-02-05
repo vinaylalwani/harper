@@ -741,6 +741,7 @@ function getConfiguration() {
 
  */
 async function setConfiguration(setConfigJson) {
+	// eslint-disable-next-line no-unused-vars
 	const { operation, hdb_user, hdbAuthHeader, ...configFields } = setConfigJson;
 	try {
 		updateConfigValue(undefined, undefined, configFields, true);

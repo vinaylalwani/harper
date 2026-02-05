@@ -385,7 +385,6 @@ describe('Querying through Resource API', () => {
 
 		it('Query by simple join with nested partial select', async function () {
 			let results = [];
-			let start_count = QueryTable.primaryStore.readCount;
 			for await (let record of QueryTable.search({
 				conditions: [{ attribute: ['related', 'name'], value: 'related name 1' }],
 				select: ['id', { name: 'related', select: ['name', { name: 'relatedToMany', select: ['id'] }] }, 'name'],
@@ -403,7 +402,6 @@ describe('Querying through Resource API', () => {
 
 		it('Query by simple join with nested partial select using parser', async function () {
 			let results = [];
-			let start_count = QueryTable.primaryStore.readCount;
 			for await (let record of QueryTable.search(
 				parseQuery('related.name=related name 1&select(id,related[select(name,relatedToMany{id})])')
 			)) {
@@ -528,7 +526,6 @@ describe('Querying through Resource API', () => {
 
 		it('Query by joined condition with many-to-one and multiple joined condition', async function () {
 			let results = [];
-			let start_count = RelatedTable.primaryStore.readCount;
 			for await (let record of QueryTable.search({
 				conditions: [
 					{ attribute: ['related', 'name'], comparator: 'greater_than_equal', value: 'related name 3' },
@@ -937,7 +934,7 @@ describe('Querying through Resource API', () => {
 		});
 		it('Does not allow search when no value is provided', async function () {
 			assert.throws(() => {
-				for (let record of QueryTable.search({
+				for (let _record of QueryTable.search({
 					conditions: [{ attribute: 'name', descending: true }],
 				})) {
 				}
@@ -945,7 +942,7 @@ describe('Querying through Resource API', () => {
 		});
 		it('Sort on non-indexed property', async function () {
 			assert.throws(() => {
-				for (let record of QueryTable.search({
+				for (let _record of QueryTable.search({
 					sort: { attribute: 'notIndexed', descending: true },
 				})) {
 				}

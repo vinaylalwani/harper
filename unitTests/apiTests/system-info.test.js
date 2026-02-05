@@ -1,10 +1,7 @@
 'use strict';
 
-const { assert, expect } = globalThis.chai || require('chai');
-const { callOperation, removeAllSchemas } = require('./utility');
-const crypto = require('crypto');
-const { promisify } = require('util');
-const sleep = promisify(setTimeout);
+const { expect } = globalThis.chai || require('chai');
+const { callOperation } = require('./utility');
 
 describe('test schema operations', () => {
 	it('describes all schemas and expect empty object', async () => {

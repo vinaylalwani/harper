@@ -49,7 +49,7 @@ export class Resources extends Map<string, ResourceEntry> {
 		}
 		super.set(path, entry);
 		// now mark any entries that have sub paths so we can efficiently route forward
-		for (const [path, entry] of this) {
+		for (const [path] of this) {
 			let slashIndex = 2;
 			while ((slashIndex = path.indexOf('/', slashIndex)) > -1) {
 				const parentEntry = this.get(path.slice(0, slashIndex));
@@ -143,6 +143,7 @@ export class Resources extends Map<string, ResourceEntry> {
 			}
 		});
 	}
+	// eslint-disable-next-line no-unused-vars
 	setRepresentation(path, type, representation) {}
 }
 export let resources: Resources;

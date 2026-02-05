@@ -10,9 +10,7 @@ const testUtils = require('../../testUtils.js');
 testUtils.getMockTestPath();
 const operations = rewire('#js/components/operations');
 const env = require('#js/utility/environment/environmentManager');
-const { TEST_DATA_BASE64_CF_PROJECT } = require('../../test_data');
 const { expect } = chai;
-const assert = require('assert');
 const configUtils = require('#js/config/configUtils');
 
 describe('Test custom functions operations', () => {

@@ -46,7 +46,7 @@ if (getWorkerIndex() === 0) {
 			if (message.user?.username) message.user = await server.getUser(message.user.username);
 			try {
 				await publish(message, data, message);
-			} catch (error) {
+			} catch {
 				warn('Failed to publish will', data);
 			}
 			LastWill.delete(will.id);
@@ -152,9 +152,8 @@ class SubscriptionsSession {
 	async addSubscription(subscriptionRequest, needsAck, filter?) {
 		const { topic, rh: retainHandling, startTime } = subscriptionRequest;
 		const searchIndex = topic.indexOf('?');
-		let search, path;
+		let path;
 		if (searchIndex > -1) {
-			search = topic.slice(searchIndex);
 			path = topic.slice(0, searchIndex);
 		} else path = topic;
 		if (!path) throw new Error('No topic provided');
@@ -255,7 +254,7 @@ class SubscriptionsSession {
 			}
 			if (!subscription[Symbol.asyncIterator])
 				throw new Error(`Subscription is not (async) iterable for topic ${topic}`);
-			const result = (async () => {
+			const _result = (async () => {
 				for await (const update of subscription) {
 					try {
 						let messageId;

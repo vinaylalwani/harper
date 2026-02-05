@@ -1,10 +1,7 @@
 'use strict';
 
 const TableSizeObject = require('./TableSizeObject.js');
-const lmdbTerms = require('../../../../utility/lmdb/terms.js');
-const lmdbEnvironmentUtility = require('../../../../utility/lmdb/environmentUtility.js');
 const log = require('../../../../utility/logging/harper_logger.js');
-const { getSchemaPath, getTransactionAuditStorePath } = require('./initializePaths.js');
 const { getDatabases } = require('../../../../resources/databases.ts');
 
 module.exports = lmdbGetTableSize;

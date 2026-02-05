@@ -4,7 +4,6 @@ const hdbTerms = require('../../../../utility/hdbTerms.ts');
 const environmentUtility = require('../../../../utility/lmdb/environmentUtility.js');
 const writeUtility = require('../../../../utility/lmdb/writeUtility.js');
 const { getSystemSchemaPath, getSchemaPath } = require('../lmdbUtility/initializePaths.js');
-const systemSchema = require('../../../../json/systemSchema.json');
 const { validateBySchema } = require('../../../../validation/validationWrapper.js');
 const Joi = require('joi');
 const LMDBCreateAttributeObject = require('../lmdbUtility/LMDBCreateAttributeObject.js');

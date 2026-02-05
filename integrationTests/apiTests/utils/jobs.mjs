@@ -28,7 +28,7 @@ export async function checkJobCompleted(job_id, expectedErrorMessage, expectedCo
 				console.log(status + ' (AS EXPECTED) job id: ' + job_id);
 				try {
 					assert.ok(jsonData[0].message.includes(expectedErrorMessage), response.text);
-				} catch (err) {
+				} catch {
 					console.log(response.text);
 					assert.ok(jsonData[0].message.error.includes(expectedErrorMessage), response.text);
 				}

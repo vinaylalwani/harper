@@ -7,7 +7,6 @@ const hdbLogger = require('../../utility/logging/harper_logger.js');
 const { onMessageFromWorkers } = require('../../server/threads/manageThreads.js');
 const fs = require('fs');
 const path = require('node:path');
-const terms = require('../hdbTerms');
 const { setTimeout: delay } = require('node:timers/promises');
 const { execFile, fork } = require('node:child_process');
 
@@ -110,14 +109,6 @@ function expectedRestartOfChildren() {
 		if (childProcess.config) childProcess.config.restarts = 0; // reset the restart count
 	}
 }
-/**
- * To restart Harper we use processManagement to fork a process and then call restart from that process.
- * We do this because we were seeing random errors when HDB was calling restart on itself.
- * @returns {Promise<void>}
- */
-function restartHdb() {
-	start(servicesConfig.generateRestart());
-}
 
 /**
  * Checks to see if Harper is currently running, returning the pid if it is
@@ -141,14 +132,6 @@ function kill() {
 	}
 	childProcesses = [];
 	return;
-}
-
-/**
- * starts all services based on the servicesConfig
- * @returns {Promise<void>}
- */
-function startAllServices() {
-	start(servicesConfig.generateAllServiceConfigs());
 }
 
 /**

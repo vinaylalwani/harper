@@ -10,10 +10,7 @@ const analytics = require('#src/resources/analytics/write');
 // might want to enable an iteration with NATS being assigned as a source
 describe('CRUD operations with the Resource API', () => {
 	let CRUDTable, CRUDRelatedTable;
-	let long_str = 'testing' + Math.random();
-	for (let i = 0; i < 10; i++) {
-		long_str += 'testing';
-	}
+
 	before(async function () {
 		setupTestDBPath();
 		setMainIsWorker(true);
@@ -219,7 +216,7 @@ describe('CRUD operations with the Resource API', () => {
 				conditions: [{ attribute: 'id', comparator: 'greater_than_equal', value: start }],
 			});
 			let publishRecorded, messageRecorded;
-			for await (let { id, metrics } of analyticsResults) {
+			for await (let { metrics } of analyticsResults) {
 				publishRecorded = metrics.find(({ metric, path }) => metric === 'db-write' && path === 'CRUDTable');
 				messageRecorded = metrics.find(({ metric, path }) => metric === 'db-message' && path === 'CRUDTable');
 				if (publishRecorded) break;
@@ -282,7 +279,7 @@ describe('CRUD operations with the Resource API', () => {
 				relatedId: 2,
 				sparse: null,
 			});
-			for await (let entry of CRUDTable.search([{ attribute: 'relatedId', value: 1 }])) {
+			for await (let _entry of CRUDTable.search([{ attribute: 'relatedId', value: 1 }])) {
 				throw new Error('should not have found any related records with relatedId = 1');
 			}
 		});

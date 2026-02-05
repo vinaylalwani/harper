@@ -5,10 +5,9 @@ import axios from 'axios';
 import { setupTestApp } from './setupTestApp.mjs';
 import { request } from 'http';
 
-describe('test REST with property updates', function (options) {
-	let available_records;
+describe('test REST with property updates', function () {
 	before(async function () {
-		available_records = await setupTestApp();
+		await setupTestApp();
 	});
 
 	it('post with sub-property manipulation', async () => {
@@ -76,7 +75,7 @@ describe('test REST with property updates', function (options) {
 			}),
 			{
 				headers,
-				validateStatus: function (status) {
+				validateStatus: function (_status) {
 					return true;
 				},
 			}
@@ -161,18 +160,18 @@ describe('test REST with property updates', function (options) {
 
 	describe('joins', async () => {
 		before(async () => {
-			let response = await axios.put('http://localhost:9926/Related/6', {
+			await axios.put('http://localhost:9926/Related/6', {
 				id: '6',
 				name: 'Related 6',
 				another: 'Another value',
 			});
-			response = await axios.put('http://localhost:9926/namespace/SubObject/33', {
+			await axios.put('http://localhost:9926/namespace/SubObject/33', {
 				id: '33',
 				subObject: { name: 'a sub-object' },
 				subArray: [{ name: 'a sub-object of an array' }],
 				relatedId: '6',
 			});
-			response = await axios.put('http://localhost:9926/namespace/SubObject/34', {
+			await axios.put('http://localhost:9926/namespace/SubObject/34', {
 				id: '34',
 				subObject: { name: 'a sub-object' },
 				subArray: [{ name: 'a sub-object of an array' }],
@@ -254,7 +253,7 @@ describe('test REST with property updates', function (options) {
 					conditions: [{ search_attribute: ['related', 'name'], search_value: 'Related 6' }],
 				},
 				{
-					validateStatus: function (status) {
+					validateStatus: function (_status) {
 						return true;
 					},
 				}
@@ -288,7 +287,7 @@ describe('test REST with property updates', function (options) {
 					},
 				},
 				{
-					validateStatus: function (status) {
+					validateStatus: function (_status) {
 						return true;
 					},
 				}
@@ -306,7 +305,7 @@ describe('test REST with property updates', function (options) {
 					sql: 'SELECT * FROM data.FourProp',
 				},
 				{
-					validateStatus: function (status) {
+					validateStatus: function (_status) {
 						return true;
 					},
 				}
@@ -352,14 +351,15 @@ describe('test REST with property updates', function (options) {
 	});
 });
 
-describe('test REST with property updates with loadAsInstance=false', function (options) {
-	let available_records;
+describe('test REST with property updates with loadAsInstance=false', function (_options) {
 	let namespace;
+
 	before(async function () {
-		available_records = await setupTestApp();
+		await setupTestApp();
 		({ namespace } = await import('../testApp/resources.js'));
 		namespace.SubObject.loadAsInstance = false;
 	});
+
 	it('get with sub-property access via ?select', async () => {
 		let response = await axios.put('http://localhost:9926/namespace/SubObject/6', {
 			id: '5',
@@ -374,6 +374,7 @@ describe('test REST with property updates with loadAsInstance=false', function (
 		response = await axios.get('http://localhost:9926/namespace/SubObject/6?select(any,)');
 		assert.equal(response.data.any.name, 'can be an object');
 	});
+
 	after(() => {
 		delete namespace.SubObject.loadAsInstance;
 	});

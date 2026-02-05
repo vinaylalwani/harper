@@ -12,10 +12,8 @@ const SYSTEM_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, SYSTEM_FOLDER_NAME);
 const DEV_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, 'dev');
 const { orderedArray } = testUtils;
 const test_data = require('../../../../testData');
-
 const rewire = require('rewire');
 const environment_utility = rewire('#js/utility/lmdb/environmentUtility');
-const lmdb_terms = require('#js/utility/lmdb/terms');
 const write_utility = require('#js/utility/lmdb/writeUtility');
 const SearchObject = require('#js/dataLayer/SearchObject');
 const lmdb_search = require('#js/dataLayer/harperBridge/harperBridge').searchByValue;

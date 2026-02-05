@@ -33,7 +33,7 @@ describe('test MQTT connections and commands', function () {
 			rejectUnauthorized: false,
 		});
 		await new Promise((resolve, reject) => {
-			client2.on('connect', (connack) => {
+			client2.on('connect', (_connack) => {
 				resolve();
 			});
 			client2.on('error', (error) => {
@@ -51,8 +51,8 @@ describe('test MQTT connections and commands', function () {
 					//	client.publish('VariedProps/' + available_records[2], 'Hello mqtt')
 				}
 			});
-			client.once('message', (topic, payload, packet) => {
-				let record = decode(payload);
+			client.once('message', (topic, payload) => {
+				decode(payload);
 				resolve();
 			});
 		});
@@ -63,7 +63,7 @@ describe('test MQTT connections and commands', function () {
 			client2.subscribe(path, { rh: 2 }, function (err) {
 				if (err) reject(err);
 			});
-			const onMessage = (topic, payload, packet) => {
+			const onMessage = (topic, payload) => {
 				let record = decode(payload);
 				reject(new Error('Should not receive any retained messages'));
 			};
@@ -95,7 +95,6 @@ describe('test MQTT connections and commands', function () {
 		const tableName = 'SimpleRecord';
 		let intervals = [];
 		let clients = [];
-		let published = 0;
 		let received = [];
 		let subscriptions = [];
 		for (let x = 1; x < vus + 1; x++) {
@@ -110,13 +109,12 @@ describe('test MQTT connections and commands', function () {
 			clients.push(client);
 			subscriptions.push(
 				new Promise((resolve) => {
-					client.on('connect', function (connack) {
+					client.on('connect', function (_connack) {
 						client.subscribe(topic, function (err) {
 							if (!err) {
 								resolve();
 								intervals.push(
 									setInterval(() => {
-										published++;
 										client.publish(topic, JSON.stringify({ name: 'radbot 9000', pub_time: Date.now() }), {
 											qos: 1,
 											retain: false,
@@ -130,7 +128,6 @@ describe('test MQTT connections and commands', function () {
 			);
 
 			client.on('message', function (topic, message) {
-				let now = Date.now();
 				// message is Buffer
 				let obj = JSON.parse(message.toString());
 				received.push(obj);
@@ -210,7 +207,7 @@ describe('test MQTT connections and commands', function () {
 			client.subscribe(topic, function (err) {
 				if (err) reject(err);
 			});
-			onMessage = function (topic, message) {
+			onMessage = function (topic) {
 				try {
 					reject('Should not get a message on topic ' + topic);
 				} catch (error) {
@@ -234,7 +231,7 @@ describe('test MQTT connections and commands', function () {
 			protocol: 'mqtt',
 		});
 		await new Promise((resolve) => {
-			client.on('connect', function (connack) {
+			client.on('connect', function (_connack) {
 				client.subscribe(topic, function (err) {
 					console.error(err);
 					client.publish(topic, Buffer.from([1, 2, 3, 4, 5]), {
@@ -245,7 +242,6 @@ describe('test MQTT connections and commands', function () {
 			});
 
 			client.on('message', function (topic, message) {
-				let now = Date.now();
 				// message is Buffer
 				assert.deepEqual(Array.from(message), [1, 2, 3, 4, 5]);
 				resolve();
@@ -283,7 +279,7 @@ describe('test MQTT connections and commands', function () {
 			client.on('connect', function () {
 				client.subscribe(topic, function (err, subscriptions) {
 					assert.equal(subscriptions[0].qos, 128);
-					client_authorized.subscribe(topic, function (err, subscriptions) {
+					client_authorized.subscribe(topic, function () {
 						client.publish(topic, JSON.stringify({ name: 'should not be published ' }), {
 							qos: 1,
 							retain: false,
@@ -293,7 +289,7 @@ describe('test MQTT connections and commands', function () {
 				});
 			});
 
-			client_authorized.on('message', function (topic, message) {
+			client_authorized.on('message', function (topic) {
 				published_messages.push(topic);
 			});
 
@@ -313,7 +309,7 @@ describe('test MQTT connections and commands', function () {
 			clean: true,
 			connectTimeout: 2000,
 		});
-		await new Promise((resolve, reject) => {
+		await new Promise((resolve) => {
 			client.on('connect', function () {
 				client.subscribe('Related/#', function (err, subscriptions) {
 					assert.equal(subscriptions[0].qos, 128);
@@ -338,7 +334,7 @@ describe('test MQTT connections and commands', function () {
 					//	client.publish('VariedProps/' + available_records[2], 'Hello mqtt')
 				}
 			});
-			client.once('message', (topic, payload, packet) => {
+			client.once('message', (topic, payload) => {
 				let record = JSON.parse(payload);
 				resolve();
 			});
@@ -385,11 +381,10 @@ describe('test MQTT connections and commands', function () {
 			client.subscribe(path, { qos: 1 }, function (err) {
 				if (err) reject(err);
 			});
-			let last_sent = 0;
-			const onMessage = (topic, payload, packet) => {
+			const onMessage = (topic, payload) => {
 				let record = JSON.parse(payload);
 				messages.push(record);
-				if (messages.length == 2) {
+				if (messages.length === 2) {
 					assert.equal(messages[0].name, 'a starting point');
 					assert.equal(messages[0].count, 2);
 					assert.equal(messages[1].count, 3);
@@ -481,9 +476,9 @@ describe('test MQTT connections and commands', function () {
 				}
 			);
 		});
-		await new Promise((resolve, reject) => {
-			client.on('message', (topic, payload, packet) => {
-				let record = JSON.parse(payload);
+		await new Promise((resolve) => {
+			client.on('message', (topic, payload) => {
+				JSON.parse(payload);
 				resolve();
 			});
 			client.publish(
@@ -520,8 +515,8 @@ describe('test MQTT connections and commands', function () {
 				}
 			);
 		});
-		await new Promise((resolve, reject) => {
-			client.on('message', (topic, payload, packet) => {
+		await new Promise((resolve) => {
+			client.on('message', (topic, payload) => {
 				assert.equal(payload.toString(), 'This is a test of a plain string');
 				resolve();
 			});
@@ -540,7 +535,7 @@ describe('test MQTT connections and commands', function () {
 			client.on('error', reject);
 		});
 		await new Promise((resolve, reject) => {
-			client.on('message', (topic, payload, packet) => {
+			client.on('message', (topic, payload) => {
 				assert.equal(payload.toString(), 'This is a test of a plain string');
 				resolve();
 			});
@@ -609,8 +604,8 @@ describe('test MQTT connections and commands', function () {
 			);
 		});
 		await new Promise((resolve, reject) => {
-			client.on('message', (topic, payload, packet) => {
-				let record = JSON.parse(payload);
+			client.on('message', (topic, payload) => {
+				JSON.parse(payload);
 				reject('Should not receive a message that we are unsubscribed to');
 			});
 			client.publish(
@@ -686,8 +681,8 @@ describe('test MQTT connections and commands', function () {
 				);
 			});
 			await new Promise((resolve, reject) => {
-				client.on('message', (topic, payload, packet) => {
-					let record = JSON.parse(payload);
+				client.on('message', (topic, payload) => {
+					JSON.parse(payload);
 					reject('Should not receive a message that we are unsubscribed to');
 				});
 				client.publish(
@@ -730,12 +725,12 @@ describe('test MQTT connections and commands', function () {
 		// directly send an invalid packet, which should cause the connection to close
 		client.stream.write(Buffer.from([67, 255]));
 
-		await new Promise((resolve, reject) => {
+		await new Promise((resolve) => {
 			client.on('close', resolve);
 		});
 	});
 
-	const wildcardsTests = (splitSegments) =>
+	const wildcardsTests = () =>
 		async function () {
 			const topic_expectations = {
 				//'SimpleRecord/+': ['SimpleRecord/', 'SimpleRecord/44', 'SimpleRecord/47'],
@@ -760,10 +755,10 @@ describe('test MQTT connections and commands', function () {
 				});
 				let message_count = 0;
 				let message_listener;
-				await new Promise((resolve, reject) => {
+				await new Promise((resolve) => {
 					client2.on(
 						'message',
-						(message_listener = (topic, payload, packet) => {
+						(message_listener = (topic, payload) => {
 							assert(expected_topics.includes(topic));
 							let record = JSON.parse(payload);
 							assert(record.name);
@@ -831,8 +826,7 @@ describe('test MQTT connections and commands', function () {
 				});
 			}
 		};
-	it('subscribe to single-level wildcard/full table with split segments', wildcardsTests(true));
-	it('subscribe to single-level wildcard/full table', wildcardsTests(false));
+	it('subscribe to single-level wildcard/full table', wildcardsTests());
 	it('subscribe to multi-level wildcard/full table', async function () {
 		await new Promise((resolve, reject) => {
 			client2.subscribe('SimpleRecord/#', function (err) {
@@ -842,10 +836,10 @@ describe('test MQTT connections and commands', function () {
 		});
 		let message_count = 0;
 		let message_listener;
-		await new Promise((resolve, reject) => {
+		await new Promise((resolve) => {
 			client2.on(
 				'message',
-				(message_listener = (topic, payload, packet) => {
+				(message_listener = (topic, payload) => {
 					let record = JSON.parse(payload);
 					assert(record.name);
 					if (++message_count == 4) resolve();
@@ -902,7 +896,7 @@ describe('test MQTT connections and commands', function () {
 		});
 	});
 	it('subscribe to wildcards we do not support', async function () {
-		await new Promise((resolve, reject) => {
+		await new Promise((resolve) => {
 			client2.subscribe('SimpleRecord/+test', function (err, granted) {
 				if (err) resolve(err);
 				else {
@@ -963,9 +957,9 @@ describe('test MQTT connections and commands', function () {
 			client.on('connect', resolve);
 			client.on('error', reject);
 		});
-		await new Promise((resolve, reject) => {
-			client.on('message', (topic, payload, packet) => {
-				let record = JSON.parse(payload);
+		await new Promise((resolve) => {
+			client.on('message', (topic, payload) => {
+				JSON.parse(payload);
 				resolve();
 			});
 
@@ -1021,7 +1015,7 @@ describe('test MQTT connections and commands', function () {
 			protocolVersion: 5,
 		});
 		let messages = [];
-		await new Promise((resolve, reject) => {
+		await new Promise((resolve) => {
 			client._handlePublish = async function (packet, done) {
 				const message = packet.payload;
 				messages.push(message.toString());
@@ -1044,7 +1038,7 @@ describe('test MQTT connections and commands', function () {
 			clientId: 'test-client1',
 			protocolVersion: 5,
 		});
-		await new Promise((resolve, reject) => {
+		await new Promise((resolve) => {
 			client.on('message', (message) => {
 				messages.push(message);
 				resolve();
@@ -1082,9 +1076,9 @@ describe('test MQTT connections and commands', function () {
 				}
 			);
 		});
-		await new Promise((resolve, reject) => {
-			client.on('message', (topic, payload, packet) => {
-				let record = JSON.parse(payload);
+		await new Promise((resolve) => {
+			client.on('message', (topic, payload) => {
+				JSON.parse(payload);
 				resolve();
 			});
 
@@ -1102,16 +1096,16 @@ describe('test MQTT connections and commands', function () {
 	});
 	it('connection events', async function () {
 		let events_received = [];
-		server.mqtt.events.on('connection', (a1, a2) => {
+		server.mqtt.events.on('connection', (_a1, _a2) => {
 			events_received.push('connection');
 		});
-		server.mqtt.events.on('connected', (a1, a2) => {
+		server.mqtt.events.on('connected', (_a1, _a2) => {
 			events_received.push('connected');
 		});
-		server.mqtt.events.on('disconnected', (a1, a2) => {
+		server.mqtt.events.on('disconnected', (_a1, _a2) => {
 			events_received.push('disconnected');
 		});
-		server.mqtt.events.on('error', (a1, a2) => {
+		server.mqtt.events.on('error', (_a1, _a2) => {
 			events_received.push('error');
 		});
 		let client = connect('mqtt://localhost:1883', {
@@ -1124,7 +1118,7 @@ describe('test MQTT connections and commands', function () {
 		});
 		await new Promise((resolve) => client.subscribe('this does not exist', { qos: 1 }, resolve));
 		client.end();
-		await new Promise((resolve, reject) => {
+		await new Promise((resolve) => {
 			setTimeout(resolve, 20);
 		});
 		assert(events_received.includes('connection'));
@@ -1143,7 +1137,7 @@ describe('test MQTT connections and commands', function () {
 			client.on('error', reject);
 		});
 		let messages = [];
-		client.on('message', (topic, payload, packet) => {
+		client.on('message', (topic, payload) => {
 			messages.push(topic, payload.length > 0 ? JSON.parse(payload) : 'deleted');
 		});
 		await new Promise((resolve, reject) => {
@@ -1183,7 +1177,7 @@ describe('test MQTT connections and commands', function () {
 			client.on('error', reject);
 		});
 		let messages = [];
-		client.on('message', (topic, payload, packet) => {
+		client.on('message', (topic, payload) => {
 			messages.push(topic, payload.length > 0 ? JSON.parse(payload) : 'deleted');
 		});
 		await new Promise((resolve, reject) => {

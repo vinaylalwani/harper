@@ -19,7 +19,6 @@ const SearchObject = require('#js/dataLayer/SearchObject');
 const lmdb_search = rewire('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbSearch');
 const lmdb_terms = require('#js/utility/lmdb/terms');
 const hdb_terms = require('#src/utility/hdbTerms');
-const LMDB_ERRORS = require('../../../../commonTestErrors').LMDB_ERRORS_ENUM;
 const assert = require('assert');
 const fs = require('fs-extra');
 const sinon = require('sinon');

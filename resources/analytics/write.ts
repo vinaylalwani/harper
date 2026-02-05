@@ -153,7 +153,7 @@ function sendAnalytics() {
 			threadId,
 			metrics,
 		};
-		for (const [name, action] of activeActions) {
+		for (const [_name, action] of activeActions) {
 			if (action.values) {
 				const values = action.values.subarray(0, action.values.index);
 				values.sort();
@@ -431,6 +431,7 @@ async function aggregation(fromPeriod, toPeriod = 60000) {
 		lastTime = key;
 		const { metrics, threadId } = value;
 		for (const entry of metrics || []) {
+			// eslint-disable-next-line no-unused-vars
 			let { path, method, type, metric, count, total, distribution, threads, ...measures } = entry;
 			if (!count) count = 1;
 			let key = metric + (path ? '-' + path : '');
@@ -705,7 +706,7 @@ async function logAnalytics(report) {
 		const logDir = dirname(getLogFilePath());
 		try {
 			analyticsLog = await open(join(logDir, 'analytics.log'), 'r+');
-		} catch (error) {
+		} catch {
 			analyticsLog = await open(join(logDir, 'analytics.log'), 'w+');
 		}
 	}

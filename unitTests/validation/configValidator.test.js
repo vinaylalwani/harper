@@ -5,10 +5,9 @@ const { expect } = chai;
 const sinon = require('sinon');
 const rewire = require('rewire');
 const config_val = rewire('#js/validation/configValidator');
-const { configValidator, routesValidator, doesPathExist } = config_val;
+const { configValidator, routesValidator } = config_val;
 const path = require('path');
 const testUtils = require('../testUtils.js');
-const hdb_utils = require('#js/utility/common_utils');
 const fs = require('fs-extra');
 const os = require('os');
 const logger = require('#js/utility/logging/harper_logger');
@@ -144,10 +143,6 @@ describe('Test configValidator module', () => {
 	const sandbox = sinon.createSandbox();
 
 	describe('Test config schema in configValidator function', () => {
-		beforeEach(() => {});
-
-		afterEach(() => {});
-
 		it('Test itc and localStudio in config_schema with bad values', () => {
 			let bad_config_obj = testUtils.deepClone(FAKE_CONFIG);
 			bad_config_obj.itc.network.port = 'bad_port';
@@ -293,12 +288,11 @@ describe('Test configValidator module', () => {
 	});
 
 	describe('Test setDefaultRoot function', () => {
-		let hdb_root_rw;
 		const parent = {};
 		const set_default_root = config_val.__get__('setDefaultRoot');
 
 		it('Test throws error if hdb_root is undefined', () => {
-			hdb_root_rw = config_val.__set__('hdbRoot', undefined);
+			config_val.__set__('hdbRoot', undefined);
 			const helpers = { state: { path: ['customFunctions', 'root'] } };
 
 			let error;
@@ -312,7 +306,7 @@ describe('Test configValidator module', () => {
 		});
 
 		it('Test error throws if config param isnt real', () => {
-			hdb_root_rw = config_val.__set__('hdbRoot', HDB_ROOT);
+			config_val.__set__('hdbRoot', HDB_ROOT);
 			const helpers = { state: { path: ['customFunctiones', 'root'] } };
 
 			let error;
@@ -328,7 +322,7 @@ describe('Test configValidator module', () => {
 		});
 
 		it('Test that if customFunctions.root is undefined, one is created', () => {
-			hdb_root_rw = config_val.__set__('hdbRoot', HDB_ROOT);
+			config_val.__set__('hdbRoot', HDB_ROOT);
 			const helpers = { state: { path: ['componentsRoot'] } };
 			const result = set_default_root(parent, helpers);
 
@@ -336,7 +330,7 @@ describe('Test configValidator module', () => {
 		});
 
 		it('Test that if logging.root is undefined, one is created', () => {
-			hdb_root_rw = config_val.__set__('hdbRoot', HDB_ROOT);
+			config_val.__set__('hdbRoot', HDB_ROOT);
 			const helpers = { state: { path: ['logging', 'root'] } };
 			const result = set_default_root(parent, helpers);
 
@@ -376,7 +370,7 @@ describe('Test configValidator module', () => {
 		const validate_interval = config_val.__get__('validateRotationInterval');
 		const message_stub = sinon.stub();
 		const helpers = { message: message_stub };
-		const result = validate_interval('10B', helpers);
+		validate_interval('10B', helpers);
 		expect(helpers.message.args[0][0]).to.equal(
 			'Invalid logging.rotation.interval unit. Available units are D, H or M (minutes)'
 		);
@@ -386,7 +380,7 @@ describe('Test configValidator module', () => {
 		const validate_interval = config_val.__get__('validateRotationInterval');
 		const message_stub = sinon.stub();
 		const helpers = { message: message_stub };
-		const result = validate_interval('ONED', helpers);
+		validate_interval('ONED', helpers);
 		expect(helpers.message.args[0][0]).to.equal(
 			"Invalid logging.rotation.interval value. Value should be a number followed by unit e.g. '10D'"
 		);

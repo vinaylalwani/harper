@@ -11,7 +11,7 @@ const os = require('os');
 const YAML = require('yaml');
 const harperLoggerModule = require('#js/utility/logging/harper_logger');
 const { createLogger } = harperLoggerModule;
-const { getHttpOptions, handleApplication, logRequest, getRequestId } = require('#src/server/http');
+const { getHttpOptions, handleApplication, logRequest } = require('#src/server/http');
 
 const HARPER_LOGGER_MODULE = '#js/utility/logging/harper_logger';
 const LOG_DIR_TEST = 'testLogger';
@@ -163,7 +163,6 @@ describe('Test harper_logger module', () => {
 	});
 
 	describe('Test createLogRecord function', () => {
-		let createLogRecord_rw;
 		let fake_timer;
 
 		before(() => {
@@ -243,13 +242,13 @@ describe('Test harper_logger module', () => {
 		after(() => {
 			try {
 				fs.removeSync(TEST_LOG_DIR);
-			} catch (e) {}
+			} catch {}
 		});
 
 		afterEach(() => {
 			try {
 				fs.emptyDirSync(TEST_LOG_DIR);
-			} catch (e) {
+			} catch {
 				//do nothing here windows doesn't like emptying an already empty folder
 			}
 			harper_logger.__set__('NON_PM2_PROCESS', true);
@@ -497,18 +496,14 @@ describe('Test harper_logger module', () => {
 
 			setTimeout(() => {
 				const expected_log_levels = ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'notify'];
-				let pass = false;
 				let logs = convertLogToMessages(logged);
 				for (const log of logs) {
 					if (expected_log_levels.includes(log.level)) {
-						pass = true;
 						continue;
 					}
-					pass = false;
 					break;
 				}
 
-				//expect(pass).to.be.true;
 				expect(logs.length).to.equal(7);
 
 				done();
@@ -687,7 +682,7 @@ describe('Test harper_logger module', () => {
 			it('Test the correct hierarchical logs are available when level set to debug', () => {
 				let logger = createLogger({
 					level: LOG_LEVEL.DEBUG,
-					writeToLog: (msg) => {},
+					writeToLog: (_msg) => {},
 				});
 				let tagged_logger = logger.withTag('test', true);
 				let keys = [];
@@ -698,7 +693,7 @@ describe('Test harper_logger module', () => {
 			it('Test the correct hierarchical logs are available when level set to warn', () => {
 				let logger = createLogger({
 					level: LOG_LEVEL.WARN,
-					writeToLog: (msg) => {},
+					writeToLog: (_msg) => {},
 				});
 				let tagged_logger = logger.withTag('test', true);
 				let keys = [];
@@ -709,7 +704,7 @@ describe('Test harper_logger module', () => {
 			it('Test the correct hierarchical logs are available when level set to fatal', () => {
 				let logger = createLogger({
 					level: LOG_LEVEL.FATAL,
-					writeToLog: (msg) => {},
+					writeToLog: (_msg) => {},
 				});
 
 				let tagged_logger = logger.withTag('test', true);
@@ -819,7 +814,6 @@ describe('Test harper_logger module', () => {
 	});
 
 	describe('Test global logger', () => {
-		let originalHttpOptions, originalHttpLogOptions, httpLogPath, httpLogger;
 		before(() => {
 			this.externalLogger = harperLoggerModule.forComponent('external');
 			const { path: logPath, level, rotation } = this.externalLogger;

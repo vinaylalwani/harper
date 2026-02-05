@@ -198,7 +198,7 @@ export async function authentication(request, nextHandler) {
 											// API has its own logic for handling this
 											status: -1,
 										});
-									} catch (refreshError) {
+									} catch {
 										throw error;
 									}
 								}

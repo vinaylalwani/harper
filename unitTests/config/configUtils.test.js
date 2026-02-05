@@ -145,7 +145,6 @@ const LOG_ROOT = '/yaml/log';
 const CONFIG_FILE_PATH = path.join(DIRNAME, 'yaml', 'harperdb-config.yaml');
 const OLD_CONFIG_PATH = 'test-config/settings.js';
 const BAD_CONFIG_FILE_PATH = path.join(DIRNAME, 'yaml', 'harperdb.doesntexist');
-
 const BACKUP_FOLDER_PATH = path.join(DIRNAME, 'yaml/backup');
 const EMPTY_GET_VALUE = 'Empty parameter sent to getConfigValue';
 const UNINIT_GET_CONFIG_ERR = 'Unable to get config value because config is uninitialized';

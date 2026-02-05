@@ -185,7 +185,7 @@ export class ResourceBridge extends LMDBBridge {
 	}
 
 	async upsertRecords(upsertObj) {
-		const { schemaTable, attributes } = insertUpdateValidate(upsertObj);
+		const { attributes } = insertUpdateValidate(upsertObj);
 
 		let new_attributes;
 		const Table = getDatabases()[upsertObj.schema][upsertObj.table];
@@ -567,6 +567,7 @@ function getRecords(searchObject, returnKeyValue?) {
 						done: true,
 					};
 				},
+				// eslint-disable-next-line no-unused-vars
 				throw(error) {
 					finishedIteration();
 					return {

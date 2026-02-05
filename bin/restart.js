@@ -10,7 +10,6 @@ const { restartWorkers, onMessageByType, shutdownWorkersNow } = require('../serv
 const { handleHDBError, hdbErrors } = require('../utility/errors/hdbError.js');
 const { HTTP_STATUS_CODES } = hdbErrors;
 const envMgr = require('../utility/environment/environmentManager.js');
-const { server } = require('../server/Server.ts');
 const path = require('node:path');
 const { unlinkSync } = require('node:fs');
 envMgr.initSync();

@@ -24,7 +24,6 @@ const THREAD_INFO = 'thread_info';
 const ADDED_PORT = 'added-port';
 const ACKNOWLEDGEMENT = 'ack';
 let getThreadInfo;
-let mainThreadPort = parentPort;
 _assignPackageExport('threads', connectedPorts);
 
 module.exports = {
@@ -190,7 +189,7 @@ function startWorker(path, options = {}) {
 		// way)
 		harperLogger.error(`Worker index ${options.workerIndex} error:`, error);
 	});
-	worker.on('exit', (code) => {
+	worker.on('exit', (_code) => {
 		workers.splice(workers.indexOf(worker), 1);
 		if (!worker.wasShutdown && options.autoRestart !== false) {
 			// if this wasn't an intentional shutdown, restart now (unless we have tried too many times)
@@ -481,7 +480,7 @@ if (parentPort && workerData?.addPorts) {
 		});
 	}, REPORTING_INTERVAL).unref();
 	getThreadInfo = () =>
-		new Promise((resolve, reject) => {
+		new Promise((resolve) => {
 			// request thread info from the parent thread and wait for it to response with info on all the threads
 			parentPort.on('message', receiveThreadInfo);
 			parentPort.postMessage({ type: REQUEST_THREAD_INFO });

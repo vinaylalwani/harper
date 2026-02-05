@@ -1,4 +1,4 @@
-import { info, trace, warn } from '../utility/logging/harper_logger.js';
+import { info } from '../utility/logging/harper_logger.js';
 import { IterableEventQueue } from './IterableEventQueue.ts';
 import { keyArrayToString } from './Resources.ts';
 import { readAuditEntry } from './auditStore.ts';
@@ -196,6 +196,7 @@ function notifyFromTransactionData(subscriptions) {
 /**
  * Interface with lmdb-js to listen for commits and traverse the audit log.
  * @param primaryStore
+ * @param auditStore
  */
 export function listenToCommits(primaryStore, auditStore) {
 	const store = auditStore || primaryStore;
@@ -203,7 +204,7 @@ export function listenToCommits(primaryStore, auditStore) {
 	const lmdbEnv = store.env;
 	if (!lmdbEnv.hasAfterCommitListener) {
 		lmdbEnv.hasAfterCommitListener = true;
-		store.on('aftercommit', ({ next, last, txnId }) => {
+		store.on('aftercommit', () => {
 			const subscriptions = allSameThreadSubscriptions[path]; // there is a different set of subscribers for same-thread subscriptions
 			if (!subscriptions) return;
 			// we want each thread to do this mutually exclusively so that we don't have multiple threads trying to process the same data (the intended purpose of crossThreads=false)

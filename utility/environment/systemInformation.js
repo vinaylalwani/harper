@@ -50,7 +50,7 @@ module.exports = {
 
 /**
  * executes the time function to return the time info for the system
- * @returns {Systeminformation.TimeData}
+ * @returns {SystemInformationObject.TimeData}
  */
 function getTimeInfo() {
 	return si.time();
@@ -58,7 +58,7 @@ function getTimeInfo() {
 
 /**
  * executes cpu related functions
- * @returns {Promise<{}|Pick<Systeminformation.CpuData, "manufacturer" | "brand" | "vendor" | "speed" | "cores" | "physicalCores" | "processors">>}
+ * @returns {Promise<{}|Pick<SystemInformationObject.CpuData, "manufacturer" | "brand" | "vendor" | "speed" | "cores" | "physicalCores" | "processors">>}
  */
 async function getCPUInfo() {
 	try {
@@ -70,11 +70,6 @@ async function getCPUInfo() {
 		let {
 			// eslint-disable-next-line no-unused-vars
 			rawCurrentload,
-			rawCurrentloadIdle,
-			rawCurrentloadIrq,
-			rawCurrentloadNice,
-			rawCurrentloadSystem,
-			rawCurrentloadUser,
 			cpus,
 			...cpuCurrentLoad
 		} = await si.currentLoad();
@@ -94,7 +89,7 @@ async function getCPUInfo() {
 
 /**
  * fetches information related memory
- * @returns {Promise<{}|Pick<Systeminformation.MemData, "total" | "free" | "used" | "active" | "available" | "swaptotal" | "swapused" | "swapfree">>}
+ * @returns {Promise<{}|Pick<SystemInformationObject.MemData, "total" | "free" | "used" | "active" | "available" | "swaptotal" | "swapused" | "swapfree">>}
  */
 async function getMemoryInfo() {
 	try {
@@ -221,7 +216,7 @@ async function getNetworkInfo() {
 
 /**
  * gets system information
- * @returns {Promise<Pick<Systeminformation.OsData, "platform" | "distro" | "release" | "codename" | "kernel" | "arch" | "hostname">|{}>}
+ * @returns {Promise<Pick<SystemInformationObject.OsData, "platform" | "distro" | "release" | "codename" | "kernel" | "arch" | "hostname">|{}>}
  */
 async function getSystemInformation() {
 	if (systemInformationCache !== undefined) {

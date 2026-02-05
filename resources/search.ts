@@ -4,7 +4,6 @@ import { compareKeys, MAXIMUM_KEY } from 'ordered-binary';
 import { SKIP } from '@harperfast/extended-iterable';
 import { INVALIDATED, EVICTED } from './Table.ts';
 import type { DirectCondition, Id } from './ResourceInterface.ts';
-import { MultiPartId } from './Resource.ts';
 import { RequestTarget } from './RequestTarget.ts';
 import { lastMetadata } from './RecordEncoder.ts';
 import { RocksDatabase } from '@harperfast/rocksdb-js';

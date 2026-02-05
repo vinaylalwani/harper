@@ -30,6 +30,6 @@ async function removeAllSchemas() {
 	const describe_body = await describe_response.json();
 	for (const schema of Object.keys(describe_body)) {
 		let drop_result = await callOperation({ operation: 'drop_schema', schema });
-		let drop_body = await drop_result.json();
+		await drop_result.json();
 	}
 }

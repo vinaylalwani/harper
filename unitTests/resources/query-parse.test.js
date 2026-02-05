@@ -3,7 +3,6 @@ const { parseQuery } = require('#src/resources/search');
 const { RequestTarget } = require('#src/resources/RequestTarget');
 // might want to enable an iteration with NATS being assigned as a source
 describe('Parsing queries', () => {
-	let QueryTable, RelatedTable;
 	before(function () {});
 	it('Basic AND query', function () {
 		const query = parseQuery('id=1&name=2');

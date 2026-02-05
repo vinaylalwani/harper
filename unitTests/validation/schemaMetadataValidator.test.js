@@ -19,7 +19,7 @@ describe.skip('test checkSchemaExists function', () => {
 	it('test describeSchema throws an error', async () => {
 		global.hdb_schema = {};
 		let schema_describe_rw = schema_meta_validator.__set__('schemaDescribe', {
-			describeSchema: async (describe_schema_object) => {
+			describeSchema: async (_describe_schema_object) => {
 				throw Error('bad stuff');
 			},
 		});
@@ -33,7 +33,7 @@ describe.skip('test checkSchemaExists function', () => {
 	it('test describeSchema fetches the schema', async () => {
 		global.hdb_schema = {};
 		let schema_describe_rw = schema_meta_validator.__set__('schemaDescribe', {
-			describeSchema: async (describe_schema_object) => {
+			describeSchema: async (_describe_schema_object) => {
 				return FAKE_SCHEMA.dev;
 			},
 		});
@@ -60,10 +60,10 @@ describe.skip('test checkSchemaTableExists', () => {
 	it('test describeTable errors', async () => {
 		global.hdb_schema = {};
 		let schema_describe_rw = schema_meta_validator.__set__('schemaDescribe', {
-			describeSchema: async (describe_schema_object) => {
+			describeSchema: async (_describe_schema_object) => {
 				return FAKE_SCHEMA.dev;
 			},
-			describeTable: async (describe_object) => {
+			describeTable: async (_describe_object) => {
 				throw Error('fail');
 			},
 		});
@@ -78,10 +78,10 @@ describe.skip('test checkSchemaTableExists', () => {
 	it('test describeTable returns nothing', async () => {
 		global.hdb_schema = {};
 		let schema_describe_rw = schema_meta_validator.__set__('schemaDescribe', {
-			describeSchema: async (describe_schema_object) => {
+			describeSchema: async (_describe_schema_object) => {
 				return FAKE_SCHEMA.dev;
 			},
-			describeTable: async (describe_object) => {},
+			describeTable: async (_describe_object) => {},
 		});
 
 		let message = await schema_meta_validator.checkSchemaTableExists('dev', 'breed');
@@ -100,10 +100,10 @@ describe.skip('test checkSchemaTableExists', () => {
 			hash_attribute: 'breed_id',
 		};
 		let schema_describe_rw = schema_meta_validator.__set__('schemaDescribe', {
-			describeSchema: async (describe_schema_object) => {
+			describeSchema: async (_describe_schema_object) => {
 				return FAKE_SCHEMA.dev;
 			},
-			describeTable: async (describe_object) => {
+			describeTable: async (_describe_object) => {
 				return breed_table;
 			},
 		});

@@ -4,7 +4,6 @@ const search = require('./search.js');
 const globalSchema = require('../utility/globalSchema.js');
 const logger = require('../utility/logging/harper_logger.js');
 const write = require('./insert.js');
-const transaction = require('./transaction.js');
 const clone = require('clone');
 const alasql = require('alasql');
 const alasqlFunctionImporter = require('../sqlTranslator/alasqlFunctionImporter.js');

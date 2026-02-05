@@ -1,12 +1,9 @@
-import whyIsNodeStillRunning from 'why-is-node-still-running';
-import { assert, expect } from 'chai';
+import { assert } from 'chai';
 import axios from 'axios';
-import { decode, encode, DecoderStream } from 'cbor-x';
-import { getVariables } from './utility.js';
+import { decode, encode } from 'cbor-x';
 import { setupTestApp } from './setupTestApp.mjs';
 import http from 'node:http';
 import { Request } from '#src/server/serverHelpers/Request';
-const { authorization, url } = getVariables();
 
 describe('test REST calls', () => {
 	let available_records;
@@ -102,9 +99,6 @@ describe('test REST calls', () => {
 		assert.equal(response.data.name, 'www-form-urlencoded');
 	});
 	it('POST a new record', async () => {
-		const headers = {
-			//authorization,
-		};
 		let response = await axios.post('http://localhost:9926/VariedProps/', {
 			name: 'new record without an id',
 		});
@@ -118,9 +112,6 @@ describe('test REST calls', () => {
 		assert.equal(response.data, true);
 	});
 	it('POST a new record with a specified id', async () => {
-		const headers = {
-			//authorization,
-		};
 		let response = await axios.post('http://localhost:9926/VariedProps/', {
 			name: 'new record with an id',
 			id: '12345678901234567890',
@@ -179,7 +170,7 @@ describe('test REST calls', () => {
 		});
 		it('do query for missing property', async () => {
 			let response = await axios('http://localhost:9926/FourProp/?notaprop=22', {
-				validateStatus: function (status) {
+				validateStatus: function (_status) {
 					return true;
 				},
 			});
@@ -364,7 +355,7 @@ describe('test REST calls', () => {
 				headers: {
 					Authorization: 'Basic ' + Buffer.from('test:test').toString('base64'),
 				},
-				validateStatus: function (status) {
+				validateStatus: function (_status) {
 					return true;
 				},
 			});
@@ -535,7 +526,7 @@ describe('test REST calls', () => {
 	it('conflicted endpoints return error', async () => {
 		const response = await axios.get('http://localhost:9926/Conflicted/35555', {
 			customResponse: true,
-			validateStatus: function (status) {
+			validateStatus: function (_status) {
 				return true;
 			},
 		});
@@ -545,7 +536,7 @@ describe('test REST calls', () => {
 	it('Returns thrown plain object', async () => {
 		const response = await axios.get('http://localhost:9926/Echo/error-plain-object', {
 			customResponse: true,
-			validateStatus: function (status) {
+			validateStatus: function (_status) {
 				return true;
 			},
 		});
@@ -555,7 +546,7 @@ describe('test REST calls', () => {
 	it('Returns correct error for bad body', async () => {
 		const response = await axios.get('http://localhost:9926/Echo/error-bad-body', {
 			customResponse: true,
-			validateStatus: function (status) {
+			validateStatus: function (_status) {
 				return true;
 			},
 		});

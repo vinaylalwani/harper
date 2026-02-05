@@ -23,13 +23,12 @@ const os = require('node:os');
 describe.skip('Test installer module', () => {
 	const sandbox = sinon.createSandbox();
 	let console_log_stub;
-	let console_error_stub;
 	let hdb_log_trace_stub;
 	let hdb_log_error_stub;
 
 	before(() => {
 		console_log_stub = sandbox.stub(console, 'log');
-		console_error_stub = sandbox.stub(console, 'error');
+		sandbox.stub(console, 'error');
 		hdb_log_trace_stub = sandbox.stub(hdb_logger, 'trace');
 		hdb_log_error_stub = sandbox.stub(hdb_logger, 'error');
 	});
@@ -420,7 +419,7 @@ describe.skip('Test installer module', () => {
 			try {
 				fs.removeSync(testRoot);
 				// eslint-disable-next-line sonarjs/no-ignored-exceptions
-			} catch (err) {
+			} catch {
 				// Ignore cleanup errors
 			}
 		});

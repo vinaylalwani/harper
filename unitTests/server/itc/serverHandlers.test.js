@@ -17,17 +17,14 @@ describe('Test hdbChildIpcHandler module', () => {
 	const TEST_ERR = 'The roof is on fire';
 	const sandbox = sinon.createSandbox();
 	let log_error_stub;
-	let log_info_stub;
 	let log_trace_stub;
-	let log_warn_stub;
-	let log_debug_stub;
 
 	before(() => {
 		log_error_stub = sandbox.stub(harper_logger, 'error');
-		log_info_stub = sandbox.stub(harper_logger, 'info');
+		sandbox.stub(harper_logger, 'info');
 		log_trace_stub = sandbox.stub(harper_logger, 'trace');
-		log_warn_stub = sandbox.stub(harper_logger, 'warn');
-		log_debug_stub = sandbox.stub(harper_logger, 'debug');
+		sandbox.stub(harper_logger, 'warn');
+		sandbox.stub(harper_logger, 'debug');
 	});
 
 	after(() => {

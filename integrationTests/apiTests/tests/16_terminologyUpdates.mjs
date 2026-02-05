@@ -1,6 +1,6 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { testData, getCsvPath } from '../config/envConfig.mjs';
+import { getCsvPath } from '../config/envConfig.mjs';
 import { setTimeout } from 'node:timers/promises';
 import { req } from '../utils/request.mjs';
 import { timestamp } from '../utils/timestamp.mjs';

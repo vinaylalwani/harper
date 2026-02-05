@@ -36,7 +36,6 @@ import { Status } from '../server/status/index.ts';
 import { lifecycle as componentLifecycle } from './status/index.ts';
 import { DEFAULT_CONFIG } from './DEFAULT_CONFIG.ts';
 import { PluginModule } from './PluginModule.ts';
-import { platform } from 'node:os';
 import { getEnvBuiltInComponents } from './Application.ts';
 import { RocksDatabase } from '@harperfast/rocksdb-js';
 

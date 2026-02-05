@@ -29,7 +29,7 @@ async function resetReadTxn(schema, table) {
 	try {
 		let environment = await environmentUtility.openEnvironment(getSchemaPath(schema, table), table.toString());
 		environment.resetReadTxn();
-	} catch (error) {
+	} catch {
 		// if no environment, then the read txn can't be out of date!
 	}
 }

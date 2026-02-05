@@ -8,7 +8,7 @@ const { expect } = chai;
 function build(opts = {}) {
 	const app = fastify(opts);
 	app.register(request_time_plugin);
-	app.get('/', async function (request, reply) {
+	app.get('/', async function (_request, _reply) {
 		return { hello: 'world' };
 	});
 

@@ -4,10 +4,7 @@
 
 import { Resource } from '../../resources/Resource.ts';
 import type { SourceContext, Query } from '../../resources/ResourceInterface.ts';
-import { loggerWithTag } from '../../utility/logging/logger.js';
 import type { CertificateVerificationContext } from './types.ts';
-
-const logger = loggerWithTag('cert-verification-source');
 
 // Import verification functions
 let performCRLCheck: any;

@@ -16,7 +16,6 @@ const {
 const { existsSync } = require('fs');
 const { pack } = require('msgpackr');
 const { randomBytes } = require('crypto');
-const { transaction } = require('#src/resources/transaction');
 
 describe('Blob test', () => {
 	let BlobTest;
@@ -120,7 +119,6 @@ describe('Blob test', () => {
 			),
 			{ saveBeforeCommit: true }
 		);
-		let caughtError;
 		await assert.rejects(() => BlobTest.put({ id: 111, blob }));
 		let filePath = getFilePathForBlob(blob);
 		await delay(20); // wait for the file to be deleted
@@ -271,7 +269,7 @@ describe('Blob test', () => {
 		let testString = 'this is a test string for deletion'.repeat(800);
 		let blob = await createBlob(Readable.from(testString));
 		await BlobTest.put({ id: 3, blob });
-		for await (let entry of blob.stream()) {
+		for await (let _entry of blob.stream()) {
 			break;
 		}
 		// just make sure there is no error
@@ -298,9 +296,9 @@ describe('Blob test', () => {
 		});
 		try {
 			await blob.written;
-		} catch (e) {}
+		} catch {}
 		try {
-			for await (let entry of blob.stream()) {
+			for await (let _entry of blob.stream()) {
 				console.log('got entry');
 			}
 		} catch (err) {
@@ -315,8 +313,7 @@ describe('Blob test', () => {
 			eventError = err;
 		});
 		try {
-			for await (let entry of record.blob.stream()) {
-			}
+			for await (let _entry of record.blob.stream()) {}
 		} catch (err) {
 			thrownError = err;
 		}
@@ -335,8 +332,7 @@ describe('Blob test', () => {
 		});
 
 		try {
-			for await (let entry of blob.stream()) {
-			}
+			for await (let _entry of blob.stream()) {}
 		} catch (err) {
 			thrownError = err;
 		}
@@ -350,8 +346,7 @@ describe('Blob test', () => {
 			eventError = err;
 		});
 		try {
-			for await (let entry of record.blob.stream()) {
-			}
+			for await (let _entry of record.blob.stream()) {}
 		} catch (err) {
 			thrownError = err;
 		}
