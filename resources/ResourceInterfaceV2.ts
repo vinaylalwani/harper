@@ -1,3 +1,4 @@
+import type { User } from '../security/user.js';
 import type { RecordObject } from './RecordEncoder.ts';
 import { RequestTarget } from './RequestTarget.ts';
 import {
@@ -52,4 +53,6 @@ export interface ResourceInterfaceV2<Record extends object = any> extends Resour
 
 	doesExist(): boolean;
 	wasLoadedFromSource(): boolean | void;
+
+	getCurrentUser(): User | undefined;
 }

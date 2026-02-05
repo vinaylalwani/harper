@@ -57,6 +57,15 @@ export interface ResourceInterface<Record extends object = any>
 
 	doesExist(): boolean;
 	wasLoadedFromSource(): boolean | void;
+
+	getCurrentUser(): User | undefined;
+}
+
+export interface Session {
+	id?: any;
+	user?: User;
+	update: (updatedSession: any) => unknown;
+	delete: (id: any) => Promise<void>;
 }
 
 export interface Context {
@@ -65,12 +74,7 @@ export interface Context {
 	/** Check the username and password against the core user table to verify user identity */
 	login: (username: string, password: string) => Promise<string>;
 	/** Describes the current cookie-based session if it is present and grants the capacity to delete it. authentication.enableSessions must be turned on in the harperdb-config.yaml  */
-	session?: {
-		id?: any;
-		user?: User;
-		update: (updatedSession: any) => unknown;
-		delete: (id: any) => Promise<void>;
-	};
+	session?: Session;
 	/**	 The database transaction object */
 	transaction?: DatabaseTransaction;
 	/**	 If the operation that will be performed with this context should check user authorization */
