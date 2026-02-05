@@ -140,11 +140,7 @@ describe('test lmdbCreateTable module', () => {
 		let expected_attributes = ['__createdtime__', '__updatedtime__', 'id'];
 		let expected_dbis = ['__createdtime__', '__updatedtime__', 'id'];
 
-		await testUtils.assertErrorAsync(
-			lmdb_create_table,
-			[TABLE_SYSTEM_DATA_TEST_A, CREATE_TABLE_OBJ_TEST_A],
-			undefined
-		);
+		await testUtils.assertErrorAsync(lmdb_create_table, [TABLE_SYSTEM_DATA_TEST_A, CREATE_TABLE_OBJ_TEST_A], undefined);
 
 		let new_env = await testUtils.assertErrorAsync(
 			environment_utility.openEnvironment,
@@ -224,11 +220,7 @@ describe('test lmdbCreateTable module', () => {
 		let expected_attributes = ['__createdtime__', '__updatedtime__', 'name'];
 
 		await fs.mkdirp(path.join(BASE_PATH, 'alt-table-path'));
-		await testUtils.assertErrorAsync(
-			lmdb_create_table,
-			[TABLE_SYSTEM_DATA_TEST_C, CREATE_TABLE_OBJ_TEST_C],
-			undefined
-		);
+		await testUtils.assertErrorAsync(lmdb_create_table, [TABLE_SYSTEM_DATA_TEST_C, CREATE_TABLE_OBJ_TEST_C], undefined);
 
 		let new_env = await testUtils.assertErrorAsync(
 			environment_utility.openEnvironment,
@@ -239,11 +231,7 @@ describe('test lmdbCreateTable module', () => {
 		await testUtils.assertErrorAsync(fs.access, [table_path_c], undefined);
 		await new_env.close();
 
-		await testUtils.assertErrorAsync(
-			lmdb_create_table,
-			[TABLE_SYSTEM_DATA_TEST_B, CREATE_TABLE_OBJ_TEST_B],
-			undefined
-		);
+		await testUtils.assertErrorAsync(lmdb_create_table, [TABLE_SYSTEM_DATA_TEST_B, CREATE_TABLE_OBJ_TEST_B], undefined);
 
 		new_env = await testUtils.assertErrorAsync(
 			environment_utility.openEnvironment,
@@ -316,11 +304,7 @@ describe('test lmdbCreateTable module', () => {
 			},
 		});
 
-		await testUtils.assertErrorAsync(
-			lmdb_create_table,
-			[TABLE_SYSTEM_DATA_TEST_B, CREATE_TABLE_OBJ_TEST_B],
-			error_msg
-		);
+		await testUtils.assertErrorAsync(lmdb_create_table, [TABLE_SYSTEM_DATA_TEST_B, CREATE_TABLE_OBJ_TEST_B], error_msg);
 
 		rw();
 	});

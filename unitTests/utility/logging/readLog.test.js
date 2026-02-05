@@ -106,10 +106,7 @@ describe('Test readLog module', () => {
 				start: 'pancake',
 			};
 
-			await testUtils.testHDBError(
-				read_log(test_request),
-				testUtils.generateHDBError("'start' must be a number", 400)
-			);
+			await testUtils.testHDBError(read_log(test_request), testUtils.generateHDBError("'start' must be a number", 400));
 		});
 
 		it('Test no filter with correct number of logs returned', async () => {
