@@ -6,11 +6,11 @@
 const assert = require('assert');
 const chai = require('chai');
 const cu = require('#js/utility/common_utils');
-const test_utils = require('../test_utils');
+const testUtils = require('../testUtils.js');
 const stream = require('stream');
 const papa_parse = require('papaparse');
 // try to move to /bin directory so our properties reader doesn't explode.
-test_utils.changeProcessToBinDir();
+testUtils.changeProcessToBinDir();
 const rewire = require('rewire');
 const cu_rewire = rewire('#js/utility/common_utils');
 const { expect } = chai;

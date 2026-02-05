@@ -1,5 +1,5 @@
 'use strict';
-const test_util = require('../test_utils');
+const test_util = require('../testUtils.js');
 test_util.preTestPrep();
 
 // I temporarily change HDB_ROOT to the unit test folder for testing schema and table create/delete functions.

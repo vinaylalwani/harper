@@ -1,4 +1,3 @@
-require('./test_utils');
 const crypto = require('crypto');
 
 const assert = require('assert');

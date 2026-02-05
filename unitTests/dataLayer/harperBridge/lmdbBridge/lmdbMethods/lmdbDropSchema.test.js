@@ -1,12 +1,12 @@
 'use strict';
 
-const test_utils = require('../../../../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../../../../testUtils.js');
+testUtils.preTestPrep();
 const path = require('path');
 const { HDB_ERROR_MSGS, HTTP_STATUS_CODES } = require('#js/utility/errors/commonErrors');
 
 const SYSTEM_FOLDER_NAME = 'system';
-const BASE_PATH = test_utils.getMockLMDBPath();
+const BASE_PATH = testUtils.getMockLMDBPath();
 const SYSTEM_SCHEMA_PATH = path.join(BASE_PATH, SYSTEM_FOLDER_NAME);
 const DEV_SCHEMA_PATH = path.join(BASE_PATH, 'dev');
 
@@ -85,7 +85,7 @@ describe('test validateDropSchema module', () => {
 	let date_stub;
 
 	before(async () => {
-		await fs.remove(test_utils.getMockLMDBPath());
+		await fs.remove(testUtils.getMockLMDBPath());
 		date_stub = sandbox.stub(Date, 'now').returns(TIMESTAMP);
 	});
 
@@ -100,7 +100,7 @@ describe('test validateDropSchema module', () => {
 		before(async function () {
 			this.timeout(20000);
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(testUtils.getMockLMDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 			await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -187,7 +187,7 @@ describe('test validateDropSchema module', () => {
 			await hdb_table_env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(testUtils.getMockLMDBPath());
 		});
 
 		it('test validate invalid schema', async () => {
@@ -204,7 +204,7 @@ describe('test validateDropSchema module', () => {
 		});
 
 		it('test validate happy path', async () => {
-			let result = await test_utils.assertErrorAsync(validate_drop_schema, ['dev'], undefined);
+			let result = await testUtils.assertErrorAsync(validate_drop_schema, ['dev'], undefined);
 			assert.deepStrictEqual(result, 'dev');
 		});
 
@@ -250,12 +250,12 @@ describe('test validateDropSchema module', () => {
 				assert.deepEqual(actual, expected);
 			}
 
-			await test_utils.assertErrorAsync(fs.access, [path.join(DEV_SCHEMA_PATH, 'test.mdb')], undefined);
+			await testUtils.assertErrorAsync(fs.access, [path.join(DEV_SCHEMA_PATH, 'test.mdb')], undefined);
 
-			await test_utils.assertErrorAsync(fs.access, [path.join(DEV_SCHEMA_PATH, 'test2.mdb')], undefined);
+			await testUtils.assertErrorAsync(fs.access, [path.join(DEV_SCHEMA_PATH, 'test2.mdb')], undefined);
 
 			let drop_object = new DropAttributeObject('dev');
-			await test_utils.assertErrorAsync(lmdb_drop_schema, [drop_object], undefined);
+			await testUtils.assertErrorAsync(lmdb_drop_schema, [drop_object], undefined);
 
 			search_table_results = Array.from(await search_by_value(search_obj));
 			assert.deepStrictEqual(search_table_results, []);

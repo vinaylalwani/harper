@@ -1,11 +1,11 @@
 'use strict';
 
-const test_utils = require('../../../../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../../../../testUtils.js');
+testUtils.preTestPrep();
 const path = require('path');
 const SYSTEM_FOLDER_NAME = 'system';
 const SCHEMA_NAME = 'schema';
-const BASE_PATH = test_utils.getMockLMDBPath();
+const BASE_PATH = testUtils.getMockLMDBPath();
 const BASE_SCHEMA_PATH = path.join(BASE_PATH, SCHEMA_NAME);
 const SYSTEM_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, SYSTEM_FOLDER_NAME);
 const DEV_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, 'dev');
@@ -25,7 +25,7 @@ const fs = require('fs-extra');
 const sinon = require('sinon');
 const systemSchema = require('../../../../../json/systemSchema.json');
 const common_utils = require('#js/utility/common_utils');
-const { orderedArray } = test_utils;
+const { orderedArray } = testUtils;
 const TIMESTAMP = Date.now();
 
 const sandbox = sinon.createSandbox();
@@ -58,7 +58,7 @@ describe('test lmdbSearch module', () => {
 		let env;
 		before(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(testUtils.getMockLMDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 			await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -98,7 +98,7 @@ describe('test lmdbSearch module', () => {
 			await env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(testUtils.getMockLMDBPath());
 		});
 
 		it('test equals on string limit 20', async () => {
@@ -127,7 +127,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'state', 'CO', 'id', ATTRIBUTES, undefined, false, 20);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.EQUALS, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -146,7 +146,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'state', 'CO', 'id', ATTRIBUTES, undefined, false, 20, 20);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.EQUALS, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -165,7 +165,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'state', 'CO', 'id', ATTRIBUTES, undefined, true, 20, 20);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.EQUALS, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -201,7 +201,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'state', 'CO', 'id', ATTRIBUTES, undefined, false, 20);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.EQUALS, HASH_ATTRIBUTE_NAME, true],
 					undefined
@@ -229,7 +229,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'city', 'bert', 'id', ATTRIBUTES, undefined, false, 20);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.CONTAINS, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -244,7 +244,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'city', 'bert', 'id', ATTRIBUTES, undefined, false, 1, 1);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.CONTAINS, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -259,7 +259,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'city', 'bert', 'id', ATTRIBUTES, undefined, false, 1, 20);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.CONTAINS, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -274,7 +274,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'city', 'bert', 'id', ATTRIBUTES, undefined, true, 1, 1);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.CONTAINS, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -295,7 +295,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'city', 'bert', 'id', ATTRIBUTES, undefined, false, 5);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.CONTAINS, HASH_ATTRIBUTE_NAME, true],
 					undefined
@@ -316,7 +316,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'city', 'bert', 'id', ATTRIBUTES, undefined, false, 5, 5);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.CONTAINS, HASH_ATTRIBUTE_NAME, true],
 					undefined
@@ -337,7 +337,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'city', 'bert', 'id', ATTRIBUTES, undefined, true, 5, 5);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.CONTAINS, HASH_ATTRIBUTE_NAME, true],
 					undefined
@@ -363,7 +363,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'city', 'land', 'id', ATTRIBUTES, undefined, false, 10);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.ENDS_WITH, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -389,7 +389,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'city', 'land', 'id', ATTRIBUTES, undefined, false, 10, 10);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.ENDS_WITH, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -415,7 +415,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'city', 'land', 'id', ATTRIBUTES, undefined, true, 10, 10);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.ENDS_WITH, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -441,7 +441,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'city', 'South', 'id', ATTRIBUTES, undefined, false, 10);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.STARTS_WITH, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -467,7 +467,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'city', 'South', 'id', ATTRIBUTES, undefined, false, 10, 10);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.STARTS_WITH, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -493,7 +493,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'city', 'South', 'id', ATTRIBUTES, undefined, true, 10);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.STARTS_WITH, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -519,7 +519,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'city', 'South', 'id', ATTRIBUTES, undefined, true, 10, 10);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.STARTS_WITH, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -545,7 +545,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'temperature', 25, 'id', ATTRIBUTES, undefined, false, 10);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.GREATER_THAN, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -582,7 +582,7 @@ describe('test lmdbSearch module', () => {
 				10
 			);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.GREATER_THAN, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -608,7 +608,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'temperature', 40, 'id', ATTRIBUTES, undefined, false, 10);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.GREATER_THAN_EQUAL, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -645,7 +645,7 @@ describe('test lmdbSearch module', () => {
 				10
 			);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.GREATER_THAN_EQUAL, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -670,7 +670,7 @@ describe('test lmdbSearch module', () => {
 			];
 			let search_object = new SearchObject('dev', 'test', 'temperature', 25, 'id', ATTRIBUTES, undefined, false, 10);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.LESS_THAN, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -706,7 +706,7 @@ describe('test lmdbSearch module', () => {
 				10
 			);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.LESS_THAN, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -731,7 +731,7 @@ describe('test lmdbSearch module', () => {
 			];
 			let search_object = new SearchObject('dev', 'test', 'temperature', 40, 'id', ATTRIBUTES, undefined, false, 10);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.LESS_THAN_EQUAL, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -767,7 +767,7 @@ describe('test lmdbSearch module', () => {
 				10
 			);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.LESS_THAN_EQUAL, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -793,7 +793,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'temperature', 40, 'id', ATTRIBUTES, 66, false, 10);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.BETWEEN, HASH_ATTRIBUTE_NAME],
 					undefined
@@ -819,7 +819,7 @@ describe('test lmdbSearch module', () => {
 
 			let search_object = new SearchObject('dev', 'test', 'temperature', 40, 'id', ATTRIBUTES, 66, false, 10, 10);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search.executeSearch,
 					[search_object, lmdb_terms.SEARCH_TYPES.BETWEEN, HASH_ATTRIBUTE_NAME],
 					undefined

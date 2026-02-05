@@ -1,6 +1,6 @@
 'use strict';
-const test_utils = require('../../../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../../../testUtils.js');
+testUtils.preTestPrep();
 
 const returnObject = require('#js/dataLayer/harperBridge/bridgeUtility/insertUpdateReturnObj');
 const chai = require('chai');

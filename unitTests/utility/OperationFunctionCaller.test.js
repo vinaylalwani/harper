@@ -1,8 +1,8 @@
 'use strict';
 // LEAVING THESE IN AND COMMENTED OUT TO FACILITATE FIXING CORE-471.  When these are uncommented, mocha will hang
-// after the tests complete.  The tests will hang even if we only import test_utils, preTestPrep does not need to be invoked.
-//const test_utils = require('../test_utils');
-//test_utils.preTestPrep();
+// after the tests complete.  The tests will hang even if we only import testUtils, preTestPrep does not need to be invoked.
+//const testUtils = require('../testUtils.js');
+//testUtils.preTestPrep();
 const assert = require('assert');
 const op_func_caller = require('#js/utility/OperationFunctionCaller');
 const sinon = require('sinon');

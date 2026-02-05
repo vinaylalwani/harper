@@ -5,7 +5,7 @@ process.on('unhandledRejection', (reason, promise) => {
 	throw new Error(`Unhandled Rejection at:', ${promise}, 'reason:', ${reason}`);
 });
 
-require('../test_utils');
+require('../testUtils.js');
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised').default;
 chai.use(chaiAsPromised);

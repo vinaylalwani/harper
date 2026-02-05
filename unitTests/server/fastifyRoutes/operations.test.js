@@ -6,7 +6,7 @@ const rewire = require('rewire');
 const fs = require('fs-extra');
 const path = require('path');
 const tar = require('tar-fs');
-const test_util = require('../../test_utils');
+const test_util = require('../../testUtils.js');
 test_util.getMockTestPath();
 const operations = rewire('#js/components/operations');
 const env = require('#js/utility/environment/environmentManager');

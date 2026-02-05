@@ -1,5 +1,5 @@
 'use strict';
-const test_util = require('../test_utils');
+const test_util = require('../testUtils.js');
 test_util.preTestPrep();
 
 const sinon = require('sinon');

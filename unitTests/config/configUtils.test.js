@@ -10,7 +10,7 @@ const config_utils_rw = rewire('#js/config/configUtils');
 const YAML = require('yaml');
 const logger = require('#js/utility/logging/harper_logger');
 const common_utils = require('#js/utility/common_utils');
-const test_utils = require('../testUtils.js');
+const testUtils = require('../testUtils.js');
 const hdbTerms = require('#src/utility/hdbTerms');
 const { handleHDBError } = require('#js/utility/errors/hdbError');
 const { HTTP_STATUS_CODES } = require('#js/utility/errors/commonErrors');
@@ -866,7 +866,7 @@ describe('Test configUtils module', () => {
 			const parse_yaml_doc_stub = sandbox.stub().returns(fake_config_doc);
 			config_utils_rw.__set__('parseYamlDoc', parse_yaml_doc_stub);
 
-			test_utils.assertErrorSync(
+			testUtils.assertErrorSync(
 				config_utils_rw.updateConfigValue,
 				['FAKE_TIMEZONE', 'test_timezone', undefined, false, false],
 				handleHDBError(

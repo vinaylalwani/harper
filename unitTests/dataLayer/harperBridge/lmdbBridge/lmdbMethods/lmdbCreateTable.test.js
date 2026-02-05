@@ -1,11 +1,11 @@
 'use strict';
 
-const test_utils = require('../../../../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../../../../testUtils.js');
+testUtils.preTestPrep();
 const path = require('path');
 
 const LMDB_TEST_FOLDER_NAME = 'system';
-const BASE_PATH = test_utils.getMockLMDBPath();
+const BASE_PATH = testUtils.getMockLMDBPath();
 const BASE_TEST_PATH = path.join(BASE_PATH, LMDB_TEST_FOLDER_NAME);
 
 const rewire = require('rewire');
@@ -92,7 +92,7 @@ describe('test lmdbCreateTable module', () => {
 		global.lmdb_map = undefined;
 		global.hdb_schema = { system: systemSchema };
 		date_stub = sandbox.stub(Date, 'now').returns(TIMESTAMP);
-		await fs.remove(test_utils.getMockLMDBPath());
+		await fs.remove(testUtils.getMockLMDBPath());
 		await fs.mkdirp(BASE_TEST_PATH);
 		env.setProperty(hdb_terms.CONFIG_PARAMS.DATABASES, {
 			prod: {
@@ -133,39 +133,39 @@ describe('test lmdbCreateTable module', () => {
 	});
 
 	it('Test creating a table under the dev schema', async () => {
-		let expected_table = test_utils.assignObjecttoNullObject(TABLE_SYSTEM_DATA_TEST_A);
+		let expected_table = testUtils.assignObjecttoNullObject(TABLE_SYSTEM_DATA_TEST_A);
 		let schema_path = path.join(BASE_PATH, CREATE_TABLE_OBJ_TEST_A.schema);
 		let transactions_path = path.join(BASE_PATH, 'transactions');
 		let table_path = path.join(schema_path, CREATE_TABLE_OBJ_TEST_A.table + '.mdb');
 		let expected_attributes = ['__createdtime__', '__updatedtime__', 'id'];
 		let expected_dbis = ['__createdtime__', '__updatedtime__', 'id'];
 
-		await test_utils.assertErrorAsync(
+		await testUtils.assertErrorAsync(
 			lmdb_create_table,
 			[TABLE_SYSTEM_DATA_TEST_A, CREATE_TABLE_OBJ_TEST_A],
 			undefined
 		);
 
-		let new_env = await test_utils.assertErrorAsync(
+		let new_env = await testUtils.assertErrorAsync(
 			environment_utility.openEnvironment,
 			[schema_path, CREATE_TABLE_OBJ_TEST_A.table],
 			undefined
 		);
 
-		await test_utils.assertErrorAsync(fs.access, [table_path], undefined);
+		await testUtils.assertErrorAsync(fs.access, [table_path], undefined);
 
-		let table_record = test_utils.assertErrorSync(
+		let table_record = testUtils.assertErrorSync(
 			search_utility.searchByHash,
 			[hdb_table_env, systemSchema.hdb_table.hash_attribute, HDB_TABLE_ATTRIBUTES, TABLE_SYSTEM_DATA_TEST_A.id],
 			undefined
 		);
 		assert.deepStrictEqual(table_record, expected_table);
 
-		let all_dbis = test_utils.assertErrorSync(environment_utility.listDBIs, [new_env], undefined);
+		let all_dbis = testUtils.assertErrorSync(environment_utility.listDBIs, [new_env], undefined);
 
 		assert.deepStrictEqual(all_dbis, expected_dbis);
 		let attribute_ids = Array.from(
-			test_utils.assertErrorSync(
+			testUtils.assertErrorSync(
 				search_utility.equals,
 				[
 					hdb_attribute_env,
@@ -177,7 +177,7 @@ describe('test lmdbCreateTable module', () => {
 			)
 		);
 
-		let attribute_records = test_utils.assertErrorSync(
+		let attribute_records = testUtils.assertErrorSync(
 			search_utility.batchSearchByHash,
 			[
 				hdb_attribute_env,
@@ -202,13 +202,13 @@ describe('test lmdbCreateTable module', () => {
 			CREATE_TABLE_OBJ_TEST_A.table + '.mdb'
 		);
 		let expected_txn_dbis = ['hash_value', 'timestamp', 'user_name'];
-		await test_utils.assertErrorAsync(fs.access, [table_transaction_path], undefined);
-		let txn_env = await test_utils.assertErrorAsync(
+		await testUtils.assertErrorAsync(fs.access, [table_transaction_path], undefined);
+		let txn_env = await testUtils.assertErrorAsync(
 			environment_utility.openEnvironment,
 			[transaction_path, CREATE_TABLE_OBJ_TEST_A.table, true],
 			undefined
 		);
-		let txn_dbis = test_utils.assertErrorSync(environment_utility.listDBIs, [txn_env], undefined);
+		let txn_dbis = testUtils.assertErrorSync(environment_utility.listDBIs, [txn_env], undefined);
 
 		assert.deepStrictEqual(txn_dbis, expected_txn_dbis);
 
@@ -216,7 +216,7 @@ describe('test lmdbCreateTable module', () => {
 	});
 
 	it('Test creating a table under the prod schema', async () => {
-		let expected_table = test_utils.assignObjecttoNullObject(TABLE_SYSTEM_DATA_TEST_B);
+		let expected_table = testUtils.assignObjecttoNullObject(TABLE_SYSTEM_DATA_TEST_B);
 		let schema_path = path.join(BASE_PATH, 'alt-prod-path');
 		let transactions_path = path.join(BASE_PATH, 'transactions');
 		let table_path = path.join(schema_path, CREATE_TABLE_OBJ_TEST_B.table + '.mdb');
@@ -224,47 +224,47 @@ describe('test lmdbCreateTable module', () => {
 		let expected_attributes = ['__createdtime__', '__updatedtime__', 'name'];
 
 		await fs.mkdirp(path.join(BASE_PATH, 'alt-table-path'));
-		await test_utils.assertErrorAsync(
+		await testUtils.assertErrorAsync(
 			lmdb_create_table,
 			[TABLE_SYSTEM_DATA_TEST_C, CREATE_TABLE_OBJ_TEST_C],
 			undefined
 		);
 
-		let new_env = await test_utils.assertErrorAsync(
+		let new_env = await testUtils.assertErrorAsync(
 			environment_utility.openEnvironment,
 			[path.join(BASE_PATH, 'alt-table-path'), CREATE_TABLE_OBJ_TEST_C.table],
 			undefined
 		);
 
-		await test_utils.assertErrorAsync(fs.access, [table_path_c], undefined);
+		await testUtils.assertErrorAsync(fs.access, [table_path_c], undefined);
 		await new_env.close();
 
-		await test_utils.assertErrorAsync(
+		await testUtils.assertErrorAsync(
 			lmdb_create_table,
 			[TABLE_SYSTEM_DATA_TEST_B, CREATE_TABLE_OBJ_TEST_B],
 			undefined
 		);
 
-		new_env = await test_utils.assertErrorAsync(
+		new_env = await testUtils.assertErrorAsync(
 			environment_utility.openEnvironment,
 			[schema_path, CREATE_TABLE_OBJ_TEST_B.table],
 			undefined
 		);
 
-		await test_utils.assertErrorAsync(fs.access, [table_path], undefined);
+		await testUtils.assertErrorAsync(fs.access, [table_path], undefined);
 
-		let table_record = test_utils.assertErrorSync(
+		let table_record = testUtils.assertErrorSync(
 			search_utility.searchByHash,
 			[hdb_table_env, systemSchema.hdb_table.hash_attribute, HDB_TABLE_ATTRIBUTES, TABLE_SYSTEM_DATA_TEST_B.id],
 			undefined
 		);
 		assert.deepStrictEqual(table_record, expected_table);
 
-		let all_dbis = await test_utils.assertErrorAsync(environment_utility.listDBIs, [new_env], undefined);
+		let all_dbis = await testUtils.assertErrorAsync(environment_utility.listDBIs, [new_env], undefined);
 
 		assert.deepStrictEqual(all_dbis, expected_attributes);
 		let attribute_ids = Array.from(
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				search_utility.equals,
 				[
 					hdb_attribute_env,
@@ -276,7 +276,7 @@ describe('test lmdbCreateTable module', () => {
 			)
 		);
 
-		let attribute_records = await test_utils.assertErrorAsync(
+		let attribute_records = await testUtils.assertErrorAsync(
 			search_utility.batchSearchByHash,
 			[
 				hdb_attribute_env,
@@ -297,13 +297,13 @@ describe('test lmdbCreateTable module', () => {
 		let transaction_path = path.join(transactions_path, CREATE_TABLE_OBJ_TEST_B.schema);
 		let table_transaction_path = path.join(transaction_path, CREATE_TABLE_OBJ_TEST_B.table + '.mdb');
 		let expected_txn_dbis = ['hash_value', 'timestamp', 'user_name'];
-		await test_utils.assertErrorAsync(fs.access, [table_transaction_path], undefined);
-		let txn_env = await test_utils.assertErrorAsync(
+		await testUtils.assertErrorAsync(fs.access, [table_transaction_path], undefined);
+		let txn_env = await testUtils.assertErrorAsync(
 			environment_utility.openEnvironment,
 			[transaction_path, CREATE_TABLE_OBJ_TEST_B.table, true],
 			undefined
 		);
-		let txn_dbis = test_utils.assertErrorSync(environment_utility.listDBIs, [txn_env], undefined);
+		let txn_dbis = testUtils.assertErrorSync(environment_utility.listDBIs, [txn_env], undefined);
 		await txn_env.close();
 		assert.deepStrictEqual(txn_dbis, expected_txn_dbis);
 	});
@@ -316,7 +316,7 @@ describe('test lmdbCreateTable module', () => {
 			},
 		});
 
-		await test_utils.assertErrorAsync(
+		await testUtils.assertErrorAsync(
 			lmdb_create_table,
 			[TABLE_SYSTEM_DATA_TEST_B, CREATE_TABLE_OBJ_TEST_B],
 			error_msg

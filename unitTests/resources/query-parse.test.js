@@ -1,4 +1,3 @@
-require('../test_utils');
 const assert = require('assert');
 const { parseQuery } = require('#src/resources/search');
 // might want to enable an iteration with NATS being assigned as a source

@@ -1,12 +1,12 @@
 'use strict';
 
-const test_utils = require('../../../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../../../testUtils.js');
+testUtils.preTestPrep();
 const path = require('path');
 
 const SYSTEM_FOLDER_NAME = 'system';
 const SCHEMA_NAME = 'schema';
-const BASE_PATH = test_utils.getMockLMDBPath();
+const BASE_PATH = testUtils.getMockLMDBPath();
 const BASE_SCHEMA_PATH = path.join(BASE_PATH, SCHEMA_NAME);
 const BASE_TXN_PATH = path.join(BASE_PATH, 'transactions');
 const SYSTEM_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, SYSTEM_FOLDER_NAME);
@@ -87,7 +87,7 @@ describe('Test ResourceBridge deleteRecordsBefore', () => {
 
 			timestamps = [];
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(testUtils.getMockLMDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 			await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -170,12 +170,12 @@ describe('Test ResourceBridge deleteRecordsBefore', () => {
 			await hdb_attribute_env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(testUtils.getMockLMDBPath());
 		});
 
 		it('Test delete where table has no records', async () => {
 			let delete_before = { schema: 'dev', table: 'test2', date: new Date(timestamps[0]) };
-			let results = await test_utils.assertErrorAsync(harper_bridge.deleteRecordsBefore, [delete_before], undefined);
+			let results = await testUtils.assertErrorAsync(harper_bridge.deleteRecordsBefore, [delete_before], undefined);
 			assert.deepStrictEqual(results.message, 'No records found to delete');
 		});
 

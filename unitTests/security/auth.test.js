@@ -2,8 +2,8 @@ const assert = require('node:assert/strict');
 const sinon = require('sinon');
 
 // First set up test environment
-const test_utils = require('../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../testUtils.js');
+testUtils.preTestPrep();
 
 describe('auth.ts - certificate verification integration', function () {
 	let sandbox;

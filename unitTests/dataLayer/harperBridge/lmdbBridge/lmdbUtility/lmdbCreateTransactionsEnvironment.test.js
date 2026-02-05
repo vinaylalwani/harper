@@ -1,10 +1,10 @@
 'use strict';
 
-const test_utils = require('../../../../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../../../../testUtils.js');
+testUtils.preTestPrep();
 const path = require('path');
 const TRANSACTIONS_NAME = 'transactions';
-const BASE_PATH = test_utils.getMockLMDBPath();
+const BASE_PATH = testUtils.getMockLMDBPath();
 const BASE_TRANSACTIONS_PATH = path.join(BASE_PATH, TRANSACTIONS_NAME);
 
 const rewire = require('rewire');
@@ -30,20 +30,20 @@ describe('test lmdbCreateTransactionsEnvironment module', () => {
 	describe('test lmdbCreateTransactionsEnvironment function', () => {
 		before(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(testUtils.getMockLMDBPath());
 			await fs.mkdirp(BASE_TRANSACTIONS_PATH);
 		});
 
 		after(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(testUtils.getMockLMDBPath());
 		});
 
 		it('test adding a transaction environment', async () => {
 			let transaction_path = path.join(BASE_TRANSACTIONS_PATH, CREATE_TABLE_OBJ.schema);
 			let expected_txn_dbis = ['hash_value', 'timestamp', 'user_name'];
 
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				environment_utility.openEnvironment,
 				[transaction_path, CREATE_TABLE_OBJ.table, true],
 				LMDB_ERRORS.INVALID_BASE_PATH
@@ -51,9 +51,9 @@ describe('test lmdbCreateTransactionsEnvironment module', () => {
 
 			assert.deepStrictEqual(global.lmdb_map, Object.create(null));
 
-			await test_utils.assertErrorAsync(lmdb_create_txn_envs, [CREATE_TABLE_OBJ], undefined);
+			await testUtils.assertErrorAsync(lmdb_create_txn_envs, [CREATE_TABLE_OBJ], undefined);
 
-			let txn_env = await test_utils.assertErrorAsync(
+			let txn_env = await testUtils.assertErrorAsync(
 				environment_utility.openEnvironment,
 				[transaction_path, CREATE_TABLE_OBJ.table, true],
 				undefined
@@ -61,7 +61,7 @@ describe('test lmdbCreateTransactionsEnvironment module', () => {
 
 			assert.notDeepStrictEqual(txn_env, undefined);
 
-			let txn_dbis = test_utils.assertErrorSync(environment_utility.listDBIs, [txn_env], undefined);
+			let txn_dbis = testUtils.assertErrorSync(environment_utility.listDBIs, [txn_env], undefined);
 			assert.deepStrictEqual(txn_dbis, expected_txn_dbis);
 
 			assert.deepStrictEqual(global.lmdb_map[`txn.${CREATE_TABLE_OBJ.schema}.${CREATE_TABLE_OBJ.table}`], txn_env);

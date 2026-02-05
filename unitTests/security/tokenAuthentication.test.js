@@ -1,6 +1,6 @@
 'use strict';
 
-const test_util = require('../test_utils');
+const test_util = require('../testUtils.js');
 test_util.preTestPrep();
 const fs = require('fs-extra');
 const jwt = require('jsonwebtoken');
