@@ -7,11 +7,9 @@ import {
 } from '../../security/keys.js';
 import { validateBySchema } from '../../validation/validationWrapper.js';
 import Joi from 'joi';
-import { basename } from 'path';
 const { pki } = require('node-forge');
 import { get } from '../../utility/environment/environmentManager.js';
 import { OPERATIONS_ENUM, CONFIG_PARAMS } from '../../utility/hdbTerms.ts';
-import { PRIVATEKEY_PEM_NAME } from '../../utility/terms/certificates.js';
 import { ensureNode } from './subscriptionManager.ts';
 import { getHDBNodeTable } from './knownNodes.ts';
 import { getThisNodeUrl, sendOperationToNode, urlToNodeName, getThisNodeName, hostnameToUrl } from './replicator.ts';

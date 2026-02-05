@@ -164,6 +164,7 @@
 	},
 	"devDependencies": {
 		"@tsconfig/node16": "^1.0.3",
+		"@types/lodash": "^4.17.23",
 		"@types/micromatch": "^4.0.9",
 		"@types/node": "20.14.8",
 		"@types/tar-fs": "^2.0.4",

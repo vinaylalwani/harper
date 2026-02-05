@@ -203,7 +203,6 @@ export class NodeReplicationConnection extends EventEmitter {
 
 	async connect() {
 		if (!this.session) this.resetSession();
-		const tables = [];
 		// TODO: Need to do this specifically for each node
 		this.socket = await createWebSocket(this.url, { serverName: this.nodeName, authorization: this.authorization });
 
@@ -1119,7 +1118,6 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 							}
 							// wait if there is back-pressure
 							if (ws._socket.writableNeedDrain) {
-								let startOfBackPressure = performance.now();
 								isPausedForBackPressure = true;
 								updateBackPressureRatio();
 								return new Promise<void>((resolve) => {
@@ -1509,7 +1507,7 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 		clearInterval(blobsTimer);
 		if (auditSubscription) auditSubscription.emit('close');
 		if (subscriptionRequest) subscriptionRequest.end();
-		for (const [id, { reject }] of awaitingResponse) {
+		for (const [_id, { reject }] of awaitingResponse) {
 			reject(new Error(`Connection closed ${reasonBuffer?.toString()} ${code}`));
 		}
 		logger.debug?.(connectionId, 'closed', code, reasonBuffer?.toString());
@@ -1662,7 +1660,7 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 		}
 		const connectedNode = options.connection?.nodeSubscriptions?.[0];
 		receivingDataFromNodeIds = [];
-		const nodeSubscriptions = options.connection?.nodeSubscriptions.map((node: any, index: number) => {
+		const nodeSubscriptions = options.connection?.nodeSubscriptions.map((node: any) => {
 			const tableSubs = [];
 			let { replicateByDefault: replicateByDefault } = node;
 			if (node.subscriptions) {
@@ -1974,7 +1972,6 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 	}
 	// Check the attributes in the msg vs the table and if they dont match call ensureTable to create them
 	function ensureTableIfChanged(tableDefinition: any, existingTable: any) {
-		const dbName = tableDefinition.database ?? 'data';
 		if (!existingTable) existingTable = {};
 		const wasSchemaDefined = existingTable.schemaDefined;
 		let hasChanges = false;
@@ -2012,8 +2009,4 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 		}
 		return existingTable;
 	}
-}
-
-class Encoder {
-	constructor() {}
 }

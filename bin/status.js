@@ -152,7 +152,7 @@ async function getHubLeafStatus(hdbSysInfo) {
 		const hubCon = await natsUtils.createConnection(hubPort, username, decrypt_hash, false);
 		hubCon.close();
 		status[NATS_SERVER_NAME.HUB].status = STATUSES.RUNNING;
-	} catch (err) {
+	} catch {
 		status[NATS_SERVER_NAME.HUB].status = STATUSES.ERRORED;
 	}
 
@@ -162,7 +162,7 @@ async function getHubLeafStatus(hdbSysInfo) {
 		const leafCon = await natsUtils.createConnection(leafPort, username, decrypt_hash, false);
 		leafCon.close();
 		status[NATS_SERVER_NAME.LEAF].status = STATUSES.RUNNING;
-	} catch (err) {
+	} catch {
 		status[NATS_SERVER_NAME.LEAF].status = STATUSES.ERRORED;
 	}
 

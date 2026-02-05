@@ -13,7 +13,6 @@ let upgrade_rw;
 const hdbInfoController = require('../../dataLayer/hdbInfoController');
 const updatePrompt = require('../../upgrade/upgradePrompt');
 const directivesManager = require('../../upgrade/directivesManager');
-const chalk = require('chalk');
 const { packageJson } = require('../../utility/packageUtils');
 const { UpgradeObject } = require('../../upgrade/UpgradeObjects');
 const fs = require('fs-extra');
@@ -38,11 +37,10 @@ describe('Test upgrade.js', () => {
 		error: log_error_stub,
 		info: log_info_stub,
 	};
-	let log_rw;
 
 	before(() => {
 		upgrade_rw = rewire(`../../bin/upgrade`);
-		log_rw = upgrade_rw.__set__('hdbLogger', logger_fake);
+		upgrade_rw.__set__('hdbLogger', logger_fake);
 		consoleLog_stub = sandbox.stub(console, 'log').returns();
 		printToLogAndConsole_stub = sandbox.stub().returns();
 		upgrade_rw.__set__('printToLogAndConsole', printToLogAndConsole_stub);
@@ -127,7 +125,7 @@ describe('Test upgrade.js', () => {
 			getVersionUpdateInfo_stub.resolves();
 			try {
 				await upgrade_rw.upgrade();
-			} catch (e) {
+			} catch {
 				//this is here to catch the error the exit stub is throwing so tests do not fail
 			}
 
@@ -145,7 +143,7 @@ describe('Test upgrade.js', () => {
 			version_stub.get(() => null);
 			try {
 				await upgrade_rw.upgrade();
-			} catch (e) {
+			} catch {
 				//this is here to catch the error the exit stub is throwing so tests do not fail
 			}
 
@@ -166,7 +164,7 @@ describe('Test upgrade.js', () => {
 
 			try {
 				await upgrade_rw.upgrade();
-			} catch (e) {
+			} catch {
 				//this is here to catch the error the exit stub is throwing so tests do not fail
 			}
 
@@ -185,7 +183,7 @@ describe('Test upgrade.js', () => {
 
 			try {
 				await upgrade_rw.upgrade();
-			} catch (e) {
+			} catch {
 				//this is here to catch the error the exit stub is throwing so tests do not fail
 			}
 
@@ -205,7 +203,7 @@ describe('Test upgrade.js', () => {
 
 			try {
 				await upgrade_rw.upgrade();
-			} catch (e) {
+			} catch {
 				//this is here to catch the error the exit stub is throwing so tests do not fail
 			}
 
@@ -226,7 +224,7 @@ describe('Test upgrade.js', () => {
 
 			try {
 				await upgrade_rw.upgrade();
-			} catch (e) {
+			} catch {
 				//this is here to catch the error the exit stub is throwing so tests do not fail
 			}
 

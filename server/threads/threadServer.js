@@ -16,7 +16,6 @@ let { createServer: createSecureSocketServer } = require('node:tls');
 const { restartNumber, getWorkerIndex } = require('./manageThreads.js');
 const { createReuseportFd } = require('../serverHelpers/Request.ts');
 const { createTLSSelector } = require('../../security/keys.js');
-const { resolvePath } = require('../../config/configUtils.js');
 const { startupLog } = require('../../bin/run.js');
 const { SERVERS, setPortServerMap, portServer } = require('../serverRegistry.ts');
 const httpComponent = require('../http.ts');
@@ -67,7 +66,6 @@ process.on('uncaughtException', (error) => {
 	if (error.message === 'write EIO') return; // that means the terminal is closed
 	harperLogger.error('uncaughtException', error);
 });
-const { HDB_SETTINGS_NAMES, CONFIG_PARAMS } = terms;
 env.initSync();
 exports.globals = globals;
 exports.listenOnPorts = listenOnPorts;
@@ -78,7 +76,7 @@ function startServers() {
 	if (rootPath) {
 		try {
 			process.chdir(rootPath);
-		} catch (error) {
+		} catch {
 			// ignore any errors with this; just a best effort for now
 		}
 	}
@@ -206,7 +204,6 @@ function listenOnPorts() {
 			}
 		}
 
-		let fd;
 		try {
 			const lastColon = port.lastIndexOf(':');
 			if (lastColon > 0)

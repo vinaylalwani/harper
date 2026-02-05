@@ -44,7 +44,7 @@ if (__filename.endsWith('dev.js') && !process.env.HARPER_SKIP_COMPILE) {
 					existingTSFiles.add(file);
 					sourceTime = statSync(join(PACKAGE_ROOT, file)).mtimeMs - 5000;
 					compiledTime = statSync(join(PACKAGE_ROOT, TS_DIRECTORY, file.replace(/.ts$/, '.js'))).mtimeMs;
-				} catch (_) {}
+				} catch {}
 
 				if (sourceTime > compiledTime) needsCompile = true;
 			});
@@ -55,7 +55,7 @@ if (__filename.endsWith('dev.js') && !process.env.HARPER_SKIP_COMPILE) {
 				if (!existingTSFiles.has(file.replace(/.js$/, '.ts'))) {
 					try {
 						unlinkSync(join(PACKAGE_ROOT, TS_DIRECTORY, file));
-					} catch (_) {}
+					} catch {}
 				}
 			});
 		} else {

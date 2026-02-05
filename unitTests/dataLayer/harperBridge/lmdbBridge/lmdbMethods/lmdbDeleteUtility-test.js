@@ -121,7 +121,6 @@ describe('Test lmdbDeleteRecords module', () => {
 
 	describe('Test lmdbDeleteRecords function', () => {
 		let m_time;
-		let insert_m_time;
 		let m_time_stub;
 		let expected_timestamp_txn;
 		let expected_hashes_txn;
@@ -166,7 +165,6 @@ describe('Test lmdbDeleteRecords module', () => {
 			await lmdb_create_table(TABLE_SYSTEM_DATA_TEST_A, CREATE_TABLE_OBJ_TEST_A);
 
 			m_time = INSERT_TIMESTAMP;
-			insert_m_time = m_time;
 			m_time_stub = sandbox.stub(lmdb_common, 'getNextMonotonicTime').returns(m_time);
 
 			let insert_obj = test_utils.deepClone(INSERT_OBJECT_TEST);

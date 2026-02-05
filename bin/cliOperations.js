@@ -118,7 +118,7 @@ function buildRequest() {
 			try {
 				rest = JSON.parse(rest);
 				// eslint-disable-next-line sonarjs/no-ignored-exceptions
-			} catch (e) {
+			} catch {
 				/* noop */
 			}
 
@@ -145,7 +145,7 @@ async function cliOperations(req) {
 		} catch (error) {
 			try {
 				target = new URL(`https://${req.target}:9925`);
-			} catch (asHostError) {
+			} catch {
 				throw error; // throw the original error
 			}
 		}
@@ -192,7 +192,7 @@ async function cliOperations(req) {
 		try {
 			responseData = JSON.parse(response.body);
 			// eslint-disable-next-line sonarjs/no-ignored-exceptions
-		} catch (e) {
+		} catch {
 			responseData = {
 				status: response.statusCode + ' ' + (response.statusMessage || 'Unknown'),
 				body: response.body,

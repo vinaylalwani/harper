@@ -14,7 +14,6 @@ const {
 } = require('../../validation/transactionLogValidator.js');
 const harperBridge = require('../../dataLayer/harperBridge/harperBridge.js');
 
-const CLUSTERING_DISABLED_MSG = 'This operation relies on clustering and cannot run with it disable.';
 const PARTIAL_DELETE_SUCCESS_MSG = 'Logs successfully deleted from transaction log.';
 const ALL_DELETE_SUCCESS_MSG = 'All logs successfully deleted from transaction log.';
 
@@ -121,7 +120,7 @@ async function deleteTransactionLogsBefore(req) {
 	}
 
 	const stream_name = cryptoHash.createNatsTableStreamName(database, table);
-	const { jsm } = await natsUtils.getNATSReferences();
+	await natsUtils.getNATSReferences();
 	const streamInfo = await natsUtils.getStreamInfo(stream_name);
 
 	// Get first TS from first message in stream. If TS in req is less than/equal to

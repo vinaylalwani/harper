@@ -207,29 +207,6 @@ async function setupBenchmarkData() {
 	console.log(chalk.blue('Benchmark data setup COMPLETE'));
 }
 
-async function dropBenchmarkData() {
-	console.log(chalk.blue('Dropping benchmark data'));
-	try {
-		await instance.post(
-			BASE_ROUTE,
-			{
-				operation: 'drop_schema',
-				schema: 'benchmarks',
-			},
-			{
-				headers: {
-					'X-Custom-Header': 'foobar',
-					'Authorization': BASIC_AUTH,
-					'Content-Type': 'application/json',
-				},
-			}
-		);
-	} catch (e) {
-		console.log(chalk.red('There was an error dropping benchmark data - ', e));
-	}
-	console.log(chalk.blue('Dropping benchmark data COMPLETE'));
-}
-
 async function rawDataFunctionBenchmark() {
 	console.log('Raw data function benchmarks starting');
 	for (let y = 0; y < REQS_LENGTH; y++) {

@@ -28,19 +28,12 @@ const { startHTTPThreads } = require('../server/threads/socketRouter.ts');
 const hdbInfoController = require('../dataLayer/hdbInfoController.js');
 const { isMainThread } = require('worker_threads');
 
-const SYSTEM_SCHEMA = require('../json/systemSchema.json');
-const schemaDescribe = require('../dataLayer/schemaDescribe.js');
-const lmdbCreateTxnEnvironment = require('../dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbCreateTransactionsAuditEnvironment.js');
-const CreateTableObject = require('../dataLayer/CreateTableObject.js');
 const hdbTerms = require('../utility/hdbTerms.ts');
 const { getHdbPid } = require('../utility/processManagement/processManagement.js');
 
 let pmUtils;
 let cmdArgs;
 let skipExitListeners = false;
-
-// These may change to match unix return codes (i.e. 0, 1)
-const ENOENT_ERR_CODE = -2;
 
 const UPGRADE_COMPLETE_MSG = 'Upgrade complete.  Starting HarperDB.';
 const UPGRADE_ERR = 'Got an error while trying to upgrade your HarperDB instance.  Exiting HarperDB.';
@@ -296,47 +289,6 @@ function writeLicenseFromVars() {
 		const ERROR_MSG = `Failed to write license & fingerprint due to: ${e.message}`;
 		console.error(ERROR_MSG);
 		hdbLogger.error(ERROR_MSG);
-	}
-}
-
-/**
- * iterates the system schema & all other schemas and makes sure there is a transaction audit environment for the schema.table
- * @returns {Promise<void>}
- */
-async function checkAuditLogEnvironmentsExist() {
-	if (env.getHdbBasePath() !== undefined) {
-		hdbLogger.info('Checking Transaction Audit Environments exist');
-
-		for (const tableName of Object.keys(SYSTEM_SCHEMA)) {
-			await openCreateAuditEnvironment(terms.SYSTEM_SCHEMA_NAME, tableName);
-		}
-
-		let describeResults = await schemaDescribe.describeAll();
-
-		for (const schemaName of Object.keys(describeResults)) {
-			for (const tableName of Object.keys(describeResults[schemaName])) {
-				await openCreateAuditEnvironment(schemaName, tableName);
-			}
-		}
-
-		hdbLogger.info('Finished checking Transaction Audit Environments exist');
-	}
-}
-
-/**
- * runs the create environment command for the specified schema.table
- * @param {string} schema
- * @param {string} tableName
- * @returns {Promise<void>}
- */
-async function openCreateAuditEnvironment(schema, tableName) {
-	try {
-		let createTblObj = new CreateTableObject(schema, tableName);
-		await lmdbCreateTxnEnvironment(createTblObj);
-	} catch (e) {
-		let errorMsg = `Unable to create the transaction audit environment for ${schema}.${tableName}, due to: ${e.message}`;
-		console.error(errorMsg);
-		hdbLogger.error(errorMsg);
 	}
 }
 

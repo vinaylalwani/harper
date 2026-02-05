@@ -29,7 +29,6 @@ const verify_txn = require('../_verifyTxns');
 
 let insert_date = new Date();
 insert_date.setMinutes(insert_date.getMinutes() - 10);
-const INSERT_TIMESTAMP = insert_date.getTime();
 
 const LMDBInsertTransactionObject = require('../../../../../dataLayer/harperBridge/lmdbBridge/lmdbUtility/LMDBInsertTransactionObject');
 const LMDBUpdateTransactionObject = require('../../../../../dataLayer/harperBridge/lmdbBridge/lmdbUtility/LMDBUpdateTransactionObject');
@@ -131,29 +130,20 @@ const TABLE_SYSTEM_DATA_TEST_A = {
 const sandbox = sinon.createSandbox();
 
 describe('Test lmdbUpdateRecords module', () => {
-	let date_stub;
 	let hdb_schema_env;
 	let hdb_table_env;
 	let hdb_attribute_env;
 	before(() => {
-		//date_stub = sandbox.stub(Date, 'now').returns(TIMESTAMP);
 		env_manager.setProperty(hdb_terms.CONFIG_PARAMS.LOGGING_AUDITLOG, true);
-	});
-
-	after(() => {
-		//date_stub.restore();
 	});
 
 	describe('Test lmdbUpdateRecords function', () => {
 		let m_time;
-		let insert_m_time;
 		let m_time_stub;
 		let expected_timestamp_txn;
 		let expected_hashes_txn;
 
 		beforeEach(async () => {
-			//date_stub.restore();
-			//date_stub = sandbox.stub(Date, 'now').returns(INSERT_TIMESTAMP);
 			global.hdb_schema = {
 				[SCHEMA_TABLE_TEST.schema]: {
 					[SCHEMA_TABLE_TEST.name]: {
@@ -188,7 +178,6 @@ describe('Test lmdbUpdateRecords module', () => {
 			await lmdb_create_table(TABLE_SYSTEM_DATA_TEST_A, CREATE_TABLE_OBJ_TEST_A);
 
 			m_time = TIMESTAMP;
-			insert_m_time = m_time;
 			m_time_stub = sandbox.stub(lmdb_common, 'getNextMonotonicTime').returns(m_time);
 
 			let insert_obj = test_utils.deepClone(INSERT_OBJECT_TEST);
@@ -203,9 +192,6 @@ describe('Test lmdbUpdateRecords module', () => {
 			insert_obj.records.forEach((record) => {
 				expected_hashes_txn[record[HASH_ATTRIBUTE_NAME]] = [m_time];
 			});
-
-			//date_stub.restore();
-			//date_stub = sandbox.stub(Date, 'now').returns(TIMESTAMP);
 
 			m_time_stub.restore();
 			m_time = TIMESTAMP;

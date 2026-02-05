@@ -277,7 +277,7 @@ describe.skip('Test if no table object', function () {
 
 	it('Should show error when get not have table on dev schema', function (done) {
 		let setTableDataToGlobal = global_schema.__get__('setTableDataToGlobal');
-		setTableDataToGlobal('dev', 'dogs', (err, results) => {
+		setTableDataToGlobal('dev', 'dogs', (err) => {
 			assert.equal(err.message, "Table 'dev.dogs' does not exist");
 			done();
 		});
@@ -375,8 +375,6 @@ describe.skip('Test if have cat table object', function () {
 });
 
 describe.skip('Test if have bird table object', function () {
-	let describeTable_stub = undefined;
-
 	beforeEach(async function () {
 		test_env.push(
 			...(await test_util.createMockDB(DOG_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, DOG_TABLE_NAME, TEST_DATA_DOG))

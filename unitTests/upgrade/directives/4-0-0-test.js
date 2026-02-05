@@ -12,20 +12,15 @@ const path = require('path');
 const fs = require('fs-extra');
 const env = require('../../../utility/environment/environmentManager');
 const environment_utility = require('../../../utility/lmdb/environmentUtility');
-const lmdbCreateRecords = rewire('../../../dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbCreateRecords.js');
-const InsertObject = require('../../../dataLayer/InsertObject');
 const logger = require('../../../utility/logging/harper_logger');
 const test_utils = require('../../../unitTests/test_utils');
 const common_utils = require('../../../utility/common_utils');
 const routes = require('../../../utility/clustering/routes');
 const insert = require('../../../dataLayer/insert');
-const person_data = require('../../personData');
-const PERSON_ATTRIBUTES = ['id', 'first_name', 'state', 'age', 'alive', 'birth_month'];
 const keys = require('../../../security/keys');
 const upgrade_prompt = require('../../../upgrade/upgradePrompt');
 
 const upgrade_script = rewire('../../../upgrade/directives/upgrade_scripts/4_0_0_reindex_script');
-const { insertRecords } = require('../../../utility/lmdb/writeUtility');
 
 const ROOT = 'yourcomputer/hdb';
 
@@ -91,15 +86,11 @@ describe.skip('Test 4-0-0 module', () => {
 		let create_config_file_stub;
 		let init_old_config_stub;
 		let copy_sync_stub;
-		let get_stub;
 		let remove_sync_stub;
 		let write_file_stub;
-		let log_error_stub;
 		let console_error_stub;
 		let console_log_stub;
 		let init_sync_stub;
-		let get_props_file_path_stub;
-		let access_sync_stub;
 		let properties_reader_stub;
 
 		before(() => {
@@ -107,18 +98,18 @@ describe.skip('Test 4-0-0 module', () => {
 		});
 
 		beforeEach(() => {
-			get_stub = sandbox.stub(env, 'get').onFirstCall().returns(old_settings_path).onSecondCall().returns(ROOT);
+			sandbox.stub(env, 'get').onFirstCall().returns(old_settings_path).onSecondCall().returns(ROOT);
 			create_config_file_stub = sandbox.stub(config_utils, 'createConfigFile');
 			init_old_config_stub = sandbox.stub(config_utils, 'initOldConfig').returns(old_config_obj);
 			copy_sync_stub = sandbox.stub(fs, 'copySync');
 			remove_sync_stub = sandbox.stub(fs, 'removeSync');
 			write_file_stub = sandbox.stub(fs, 'writeFileSync');
-			log_error_stub = sandbox.stub(logger, 'error');
+			sandbox.stub(logger, 'error');
 			console_error_stub = sandbox.stub(console, 'error');
 			console_log_stub = sandbox.stub(console, 'log');
 			init_sync_stub = sandbox.stub(env, 'initSync');
-			get_props_file_path_stub = sandbox.stub(common_utils, 'getPropsFilePath').returns(expected_boot_props_path);
-			access_sync_stub = sandbox.stub(fs, 'accessSync');
+			sandbox.stub(common_utils, 'getPropsFilePath').returns(expected_boot_props_path);
+			sandbox.stub(fs, 'accessSync');
 			properties_reader_stub = sandbox.stub().returns({
 				get: () => test_user,
 			});
@@ -467,7 +458,7 @@ describe('Test reindexing lmdb', () => {
 		}
 		try {
 			await fs.rm(path.join(test_path, '4_0_0_upgrade_tmp'), { recursive: true });
-		} catch (e) {}
+		} catch {}
 	});
 	it('reindexes lmdb databases from old databases', async () => {
 		let result = await upgrade_script(false);
@@ -508,7 +499,7 @@ describe('Test reindexing lmdb', () => {
 		);
 		try {
 			let schema_dbi = await environment_utility.openDBI(schema_env, 'name');
-			for (let { key: id, value: record } of schema_dbi.getRange({ start: false })) {
+			for (let { value: record } of schema_dbi.getRange({ start: false })) {
 				assert.strictEqual(typeof record.name, 'string');
 			}
 		} finally {
@@ -520,7 +511,7 @@ describe('Test reindexing lmdb', () => {
 		);
 		try {
 			let table_dbi = await environment_utility.openDBI(table_env, 'id');
-			for (let { key: id, value: record } of table_dbi.getRange({ start: false })) {
+			for (let { value: record } of table_dbi.getRange({ start: false })) {
 				assert.strictEqual(typeof record.name, 'string');
 				assert.strictEqual(typeof record.schema, 'string');
 			}
@@ -533,7 +524,7 @@ describe('Test reindexing lmdb', () => {
 		);
 		try {
 			let attribute_dbi = await environment_utility.openDBI(attribute_env, 'id');
-			for (let { key: id, value: record } of attribute_dbi.getRange({ start: false })) {
+			for (let { value: record } of attribute_dbi.getRange({ start: false })) {
 				assert.strictEqual(typeof record.schema, 'string');
 				assert.strictEqual(typeof record.table, 'string');
 				assert.strictEqual(typeof record.attribute, 'string');

@@ -4,15 +4,13 @@ const { getMockLMDBPath } = require('../test_utils');
 const { table } = require('../../resources/databases');
 const { setAuditRetention } = require('../../resources/auditStore');
 const { setMainIsWorker } = require('../../server/threads/manageThreads');
-const { transaction } = require('../../resources/transaction');
+
 // might want to enable an iteration with NATS being assigned as a source
 //const { setNATSReplicator } = require('../../server/nats/natsReplicator');
+
 describe('Audit log', () => {
 	let AuditedTable;
 	let events = [];
-	let timer = 0;
-	let return_value = true;
-	let return_error;
 
 	before(async function () {
 		getMockLMDBPath();

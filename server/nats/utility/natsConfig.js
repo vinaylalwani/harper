@@ -89,7 +89,7 @@ async function generateNatsConfig(isRestart = false, processName = undefined) {
 	// Extract all active cluster users from all users
 	let sysUsers = [];
 	let hdbUsers = [];
-	for (const [key, value] of users.entries()) {
+	for (const [_key, value] of users.entries()) {
 		if (value.role?.role === hdbTerms.ROLE_TYPES_ENUM.CLUSTER_USER && value.active) {
 			sysUsers.push(new SysUserObject(value.username, cryptoHash.decrypt(value.hash)));
 			hdbUsers.push(new HdbUserObject(value.username, cryptoHash.decrypt(value.hash)));

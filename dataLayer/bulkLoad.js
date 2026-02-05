@@ -4,7 +4,6 @@ const insert = require('./insert.js');
 const validator = require('../validation/fileLoadValidator.js');
 const needle = require('needle');
 const hdbTerms = require('../utility/hdbTerms.ts');
-const natsTerms = require('../server/nats/utility/natsTerms.js');
 const hdbUtils = require('../utility/common_utils.js');
 const { handleHDBError, hdbErrors } = require('../utility/errors/hdbError.js');
 const { HTTP_STATUS_CODES, HDB_ERROR_MSGS, CHECK_LOGS_WRAPPER } = hdbErrors;
@@ -24,9 +23,6 @@ const AWSConnector = require('../utility/AWS/AWSConnector.js');
 const { BulkLoadFileObject, BulkLoadDataObject } = require('./dataObjects/BulkLoadObjects.js');
 const PermissionResponseObject = require('../security/data_objects/PermissionResponseObject.js');
 const { verifyBulkLoadAttributePerms } = require('../utility/operation_authorization.js');
-const ClusteringOriginObject = require('../utility/clustering/ClusteringOriginObject.js');
-const natsUtils = require('../server/nats/utility/natsUtils.js');
-const cryptoHash = require('../security/cryptoHash.js');
 const { databases } = require('../resources/databases.ts');
 const { coerceType } = require('../resources/Table.ts');
 
@@ -53,10 +49,10 @@ module.exports = {
 /**
  * Load csv values specified as a string in the message 'data' field.
  * @param jsonMessage
- * @param natsMsgHeader
+ * @param _natsMsgHeader
  * @returns {Promise<string>}
  */
-async function csvDataLoad(jsonMessage, natsMsgHeader) {
+async function csvDataLoad(jsonMessage, _natsMsgHeader) {
 	let validationMsg = validator.dataObject(jsonMessage);
 	if (validationMsg) {
 		throw handleHDBError(
@@ -350,7 +346,7 @@ async function deleteTempFile(filePath) {
 		try {
 			await fs.access(filePath);
 			await fs.unlink(filePath);
-		} catch (e) {
+		} catch {
 			logger.warn(`could not delete temp csv file at ${filePath}, file does not exist`);
 		}
 	}

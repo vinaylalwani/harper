@@ -1,7 +1,6 @@
 'use strict';
 
 const { decode } = require('msgpackr');
-const { isMainThread, parentPort, threadId } = require('worker_threads');
 const natsUtils = require('./utility/natsUtils.js');
 const natsTerms = require('./utility/natsTerms.js');
 const hdbTerms = require('../../utility/hdbTerms.ts');
@@ -24,8 +23,6 @@ const MAX_REMOTE_CON_RETRY_DELAY = 10000;
 
 let natsConnection;
 let server_name;
-let jsManager;
-let jsClient;
 let initialized;
 const consumerMsgs = new Map();
 const connectionStatus = new Map();
@@ -51,11 +48,9 @@ async function initialize() {
 	initialized = true;
 	harperLogger.notify('Initializing clustering ingest service.');
 
-	const { connection, jsm, js } = await natsUtils.getNATSReferences();
+	const { connection } = await natsUtils.getNATSReferences();
 	natsConnection = connection;
 	server_name = connection.info.server_name;
-	jsManager = jsm;
-	jsClient = js;
 }
 
 async function updateConsumer(message) {
@@ -216,10 +211,9 @@ async function ingestConsumer(stream_name, js, jsm, domain) {
 		});
 
 		consumerMsgs.set(stream_name + domain, messages);
-		let calledByStop = false;
 
 		// watch the to see if the consume operation misses heartbeats
-		(async () => {
+		const _result = (async () => {
 			for await (const s of await messages.status()) {
 				if (s.type === ConsumerEvents.ConsumerDeleted) {
 					await messages.close();
@@ -240,7 +234,6 @@ async function ingestConsumer(stream_name, js, jsm, domain) {
 						// in this case this is wrapped by a loop, so it attempts
 						// to re-setup the consumer
 						messages.stop();
-						calledByStop = true;
 					}
 				}
 			}

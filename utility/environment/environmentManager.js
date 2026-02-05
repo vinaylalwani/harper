@@ -104,7 +104,7 @@ function doesPropFileExist() {
 		installProps[BOOT_PROPS_FILE_PATH] = bootPropPath;
 
 		return true;
-	} catch (e) {
+	} catch {
 		log.trace(`Environment manager found no properties file at ${bootPropPath}`);
 		return false;
 	}

@@ -6,11 +6,7 @@ const validate_hash_function = lmdb_process_rows.__get__('validateHash');
 const validate_attribute_function = lmdb_process_rows.__get__('validateAttribute');
 const process_rows_function = lmdb_process_rows.__get__('processRows');
 const hdb_terms = require('../../../../../utility/hdbTerms');
-const uuid = require('uuid');
-const sinon = require('sinon');
 const MOCK_UUID_VALUE = 'cool-uuid-value';
-
-const sandbox = sinon.createSandbox();
 
 const { TEST_WRITE_OPS_ERROR_MSGS } = require('../../../../commonTestErrors');
 const test_utils = require('../../../../test_utils');

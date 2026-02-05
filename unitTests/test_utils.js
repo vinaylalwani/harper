@@ -9,9 +9,7 @@ const assert = require('assert');
 const rewire = require('rewire');
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);
-const { spawn } = require('child_process');
 const COMMON_TEST_TERMS = require('./commonTestTerms');
-const { platform } = require('os');
 
 const LeafConfigObject = require('../server/nats/utility/LeafConfigObject');
 const SysUserObject = require('../server/nats/utility/SysUserObject');
@@ -23,10 +21,8 @@ const terms = require('../utility/hdbTerms');
 const nats_terms = rewire('../server/nats/utility/natsTerms');
 const crypto_hash = require('../security/cryptoHash');
 const { handleHDBError } = require('../utility/errors/hdbError');
-const environment_utility = require('../utility/lmdb/environmentUtility');
 const pm2_utils = require('../utility/processManagement/processManagement');
-const lmdb_create_schema = require('../dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbCreateSchema');
-const { createTable, createRecords } = require('../dataLayer/harperBridge/harperBridge');
+const { createRecords } = require('../dataLayer/harperBridge/harperBridge');
 const nats_utils = require('../server/nats/utility/natsUtils');
 const config_utils = require('../config/configUtils');
 const user = require('../security/user');
@@ -46,7 +42,6 @@ const UNIT_TEST_DIR = __dirname;
 const ENV_DIR_NAME = 'envDir';
 const ENV_DIR_PATH = path.join(__dirname, 'envDir');
 const BASE_SCHEMA_PATH = path.join(ENV_DIR_PATH, 'schema');
-const BASE_TXN_PATH = path.join(ENV_DIR_PATH, 'transactions');
 const BASE_SYSTEM_PATH = path.join(BASE_SCHEMA_PATH, 'system');
 
 const TEMP_TEST_DIR = path.resolve(__dirname, './server/nats/tempTestDir');
@@ -75,7 +70,7 @@ function changeProcessToBinDir() {
 	try {
 		process.chdir(path.join(process.cwd(), 'bin'));
 		console.log(`Current directory ${process.cwd()}`);
-	} catch (e) {
+	} catch {
 		// no-op, we are probably already in bin
 	}
 }
@@ -200,11 +195,13 @@ function validateMockArgs(argArray) {
 	}
 }
 
+// eslint-disable-next-line no-unused-vars
 function CreateSchemaObj(schema) {
 	this.operation = 'create_schema';
 	this.schema = schema;
 }
 
+// eslint-disable-next-line no-unused-vars
 function CreateTableObj(schema, table, hash_attribute) {
 	this.operation = 'create_table';
 	this.schema = schema;
@@ -212,6 +209,7 @@ function CreateTableObj(schema, table, hash_attribute) {
 	this.hash_attribute = hash_attribute;
 }
 
+// eslint-disable-next-line no-unused-vars
 function CreateSystemTableObj(schema, table, hash_attribute) {
 	this.name = table;
 	this.schema = schema;
@@ -291,7 +289,7 @@ async function tearDownMockDB(envs = undefined, partial_teardown = false) {
 				try {
 					await Table.delete();
 					// eslint-disable-next-line no-empty
-				} catch (err) {}
+				} catch {}
 			}
 		}
 
@@ -751,8 +749,6 @@ async function generateTestKeys(test_root) {
 		throw new Error('Unable to find test cert for setting up test nats server');
 	}
 
-	const r_path = config_utils.getConfigFromFile(terms.CONFIG_PARAMS.ROOTPATH);
-
 	const private_key = await fs.readFile(
 		path.join(config_utils.getConfigFromFile(terms.CONFIG_PARAMS.ROOTPATH), 'keys', 'privateKey.pem')
 	);
@@ -823,11 +819,10 @@ async function stopTestLeafServer() {
 		try {
 			await nats_connection.close();
 			// eslint-disable-next-line no-empty
-		} catch (err) {}
+		} catch {}
 	}
 
 	try {
-		// I don't
 		await runCommand(`${NATS_SERVER_PATH} --signal stop`, undefined);
 	} catch (err) {
 		console.error(err);

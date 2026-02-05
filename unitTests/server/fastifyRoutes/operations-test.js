@@ -10,9 +10,7 @@ const test_util = require('../../test_utils');
 test_util.getMockTestPath();
 const operations = rewire('../../../components/operations');
 const env = require('../../../utility/environment/environmentManager');
-const { TEST_DATA_BASE64_CF_PROJECT } = require('../../test_data');
 const { expect } = chai;
-const assert = require('assert');
 const configUtils = require('../../../config/configUtils');
 
 describe('Test custom functions operations', () => {
@@ -130,7 +128,6 @@ describe('Test custom functions operations', () => {
 			await fs.ensureFile(path.join(CF_DIR_ROOT, 'my-cool-component', '.hidden'));
 			await fs.ensureFile(path.join(CF_DIR_ROOT, 'my-cool-component', 'utils', 'utils.js'));
 			await fs.outputFile(path.join(CF_DIR_ROOT, 'my-other-component', 'config.yaml'), test_yaml_string);
-			const rootConfig = configUtils.getConfiguration();
 			sandbox.stub(configUtils, 'getConfiguration').returns({
 				'my-other-component': {
 					package: '@my-org/my-other-component',

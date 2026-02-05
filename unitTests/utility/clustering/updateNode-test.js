@@ -14,11 +14,8 @@ const updateNode = rewire('../../../utility/clustering/updateNode');
 
 describe('Test updateNode module', () => {
 	const sandbox = sinon.createSandbox();
-	let get_node_record_stub;
 	let request_stub;
 	let upsert_node_record_stub;
-	let hdb_log_error_stub;
-	let create_table_streams_stub;
 	let update_remote_consumer_stub;
 	let update_consumer_iterator_stub;
 	let review_subs_stub = sandbox.stub();
@@ -82,11 +79,11 @@ describe('Test updateNode module', () => {
 		test_utils.setGlobalSchema('name', 'reptile', 'crocodilia', ['name', 'age']);
 		test_utils.setGlobalSchema('id', 'country', 'england', ['id', 'county']);
 		test_utils.setGlobalSchema('number', 'dog', 'poodle', ['number']);
-		get_node_record_stub = sandbox.stub(clustering_utils, 'getNodeRecord').resolves(test_existing_record);
+		sandbox.stub(clustering_utils, 'getNodeRecord').resolves(test_existing_record);
 		request_stub = sandbox.stub(nats_utils, 'request').resolves(fake_reply);
 		upsert_node_record_stub = sandbox.stub(clustering_utils, 'upsertNodeRecord').resolves();
-		hdb_log_error_stub = sandbox.stub(hdb_logger, 'error');
-		create_table_streams_stub = sandbox.stub(nats_utils, 'createTableStreams');
+		sandbox.stub(hdb_logger, 'error');
+		sandbox.stub(nats_utils, 'createTableStreams');
 		update_remote_consumer_stub = sandbox.stub(nats_utils, 'updateRemoteConsumer');
 		update_consumer_iterator_stub = sandbox.stub(nats_utils, 'updateConsumerIterator');
 		env_mgr.setProperty('clustering_enabled', true);

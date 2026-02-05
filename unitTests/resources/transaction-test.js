@@ -92,7 +92,6 @@ describe('Transactions', () => {
 	});
 	it('Can run txn with commit in the middle', async function () {
 		const context = {};
-		let start = Date.now();
 		await transaction(context, async () => {
 			TxnTest.put(7, { name: 'seven' }, context);
 			TxnTest2.put(13, { name: 'thirteen' }, context);
@@ -319,16 +318,13 @@ describe('Transactions', () => {
 		it('Can run txn with commit in the middle', async function () {
 			class NewTxnTest extends TxnTest {
 				static loadAsInstance = false;
-				get(target) {
+				get(_target) {
 					return this.getContext().callback();
 				}
 			}
-			class NewTxnTest2 extends TxnTest2 {
-				static loadAsInstance = false;
-			}
 			const context = {
 				callback: async () => {
-					const result = await NewTxnTest.create({ id: 8, name: 'eight' }, context);
+					await NewTxnTest.create({ id: 8, name: 'eight' }, context);
 					await context.transaction.commit();
 					assert.equal((await TxnTest.get(8)).name, 'eight');
 				},

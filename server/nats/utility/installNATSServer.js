@@ -57,7 +57,7 @@ async function checkNATSServerInstalled() {
 	try {
 		//check if binary exists
 		await fs.access(NATS_SERVER_BINARY_PATH);
-	} catch (e) {
+	} catch {
 		return false;
 	}
 
@@ -77,7 +77,7 @@ async function checkGoVersion() {
 	try {
 		let output = await runCommand('go version', undefined);
 		version = output.match(/[\d.]+/)[0];
-	} catch (e) {
+	} catch {
 		throw Error('go does not appear to be installed or is not in the PATH, cannot install clustering dependencies.');
 	}
 	if (!semver.gte(version, REQUIRED_GO_VERSION)) {

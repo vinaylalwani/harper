@@ -50,7 +50,6 @@ describe('Test configureCluster module', () => {
 			],
 		},
 	];
-	let search_stub;
 	const test_req = {
 		operation: 'configure_cluster',
 		connections: [
@@ -84,7 +83,7 @@ describe('Test configureCluster module', () => {
 		configure_cluster.__set__('removeNode', remove_node_stub);
 		configure_cluster.__set__('addNode', add_node_stub);
 		configure_cluster.__set__('configClusterValidator', validate_stub);
-		search_stub = sandbox.stub(cluster_utils, 'getAllNodeRecords').resolves(fake_node_records);
+		sandbox.stub(cluster_utils, 'getAllNodeRecords').resolves(fake_node_records);
 	});
 
 	after(() => {

@@ -116,19 +116,16 @@ const FAKE_PRIVATE_KEY_PATH = path.join(TEMP_TEST_ROOT_DIR, 'keys', 'privateKey.
 describe.skip('Test natsConfig module', () => {
 	const sandbox = sinon.createSandbox();
 	const init_sync_stub = sandbox.stub();
-	let list_users_stub;
-	let port_taken_stub;
 	let create_connection_stub;
-	let get_clustering_routes_stub;
 	let get_config_from_file_stub;
 
 	before(() => {
 		fs.mkdirpSync(TEMP_TEST_ROOT_DIR);
 		fs.mkdirpSync(TEMP_TEST_CLUSTERING_DIR);
 		natsConfig.__set__('envManager.initSync', init_sync_stub);
-		list_users_stub = sandbox.stub(user, 'listUsers').resolves(FAKE_USER_LIST);
-		port_taken_stub = sandbox.stub(hdb_utils, 'isPortTaken').resolves(false);
-		get_clustering_routes_stub = sandbox.stub(config_utils, 'getClusteringRoutes').returns(FAKE_ROUTES);
+		sandbox.stub(user, 'listUsers').resolves(FAKE_USER_LIST);
+		sandbox.stub(hdb_utils, 'isPortTaken').resolves(false);
+		sandbox.stub(config_utils, 'getClusteringRoutes').returns(FAKE_ROUTES);
 		sandbox.stub(user, 'getClusterUser').resolves(fake_cluster_user);
 		sandbox.stub(nats_utils, 'checkNATSServerInstalled').resolves(true);
 		sandbox.stub(nats_utils, 'getServerConfig').returns(FAKE_SERVER_CONFIG);

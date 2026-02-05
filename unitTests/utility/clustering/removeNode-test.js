@@ -54,12 +54,15 @@ describe('Test removeNode module', () => {
 
 	before(() => {
 		remove_node.__set__('node_name', 'node1_test');
+		env_mgr.setProperty('clustering_nodename', 'local_node');
 		get_node_record_stub = sandbox.stub(clustering_utils, 'getNodeRecord').resolves(fake_record);
 		request_stub = sandbox.stub(nats_utils, 'request').resolves(fake_reply);
 		delete_stub = sandbox.stub(_delete, 'deleteRecord').resolves();
 		update_remote_consumer_stub = sandbox.stub(nats_utils, 'updateRemoteConsumer');
 		update_consumer_iterator_stub = sandbox.stub(nats_utils, 'updateConsumerIterator');
 		env_mgr.setProperty('clustering_enabled', true);
+		env_mgr.setProperty('replication_url', undefined);
+		env_mgr.setProperty('replication_hostname', undefined);
 	});
 
 	after(() => {
@@ -71,13 +74,13 @@ describe('Test removeNode module', () => {
 	});
 
 	it('Test all the things are called as expected happy path', async () => {
+		await remove_node(test_request);
 		const expected_payload = {
 			operation: 'remove_node',
 			node_name: 'node1_test',
 			subscriptions: [],
 			system_info: undefined,
 		};
-		const result = await remove_node(test_request);
 		expect(request_stub.args[0][0]).to.eql('node1_test.__request__');
 		expect(request_stub.args[0][1]).to.eql(expected_payload);
 		expect(delete_stub.args[0][0]).to.eql({

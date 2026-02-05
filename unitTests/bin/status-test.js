@@ -18,9 +18,7 @@ const status = rewire('../../bin/status');
 describe('Test status module', () => {
 	const sandbox = sinon.createSandbox();
 	let console_log_stub;
-	let read_file_stub;
 	let get_hdb_process_info_stub;
-	let get_server_config_stub;
 	const fake_network = {
 		nodes: [
 			{
@@ -144,22 +142,21 @@ describe('Test status module', () => {
 		node_name: 'node-2',
 		is_enabled: true,
 	};
-	let http_request_stub;
 
 	before(() => {
 		console_log_stub = sandbox.stub(console, 'log');
 		env_mgr.setProperty(hdb_terms.CONFIG_PARAMS.ROOTPATH, 'unit-test');
 		env_mgr.setProperty(hdb_terms.CONFIG_PARAMS.REPLICATION_HOSTNAME, 'unit-test');
-		read_file_stub = sandbox.stub(fs, 'readFile').resolves('62076');
+		sandbox.stub(fs, 'readFile').resolves('62076');
 		get_hdb_process_info_stub = sandbox.stub(sys_info, 'getHDBProcessInfo').resolves(fake_hdb_process_info);
-		get_server_config_stub = sandbox.stub(nats_utils, 'getServerConfig').returns({ port: 1234 });
+		sandbox.stub(nats_utils, 'getServerConfig').returns({ port: 1234 });
 		sandbox.stub(user, 'getClusterUser').resolves({ username: 'unit-t-user', decrypt_hash: '123nifoh24' });
 		sandbox.stub(nats_utils, 'createConnection').resolves(fake_nats_connection);
 		status.__set__('clusterNetwork', network_stub);
 		sandbox.stub(cluster_status, 'clusterStatus').resolves(fake_cluster_status);
 		sandbox.stub(nats_utils, 'closeConnection').resolves();
 		sandbox.stub(installation, 'isHdbInstalled').returns(true);
-		http_request_stub = sandbox
+		sandbox
 			.stub(hdb_utils, 'httpRequest')
 			.resolves({ body: JSON.stringify(fake_replication_status) });
 	});

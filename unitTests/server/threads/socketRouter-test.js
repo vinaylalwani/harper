@@ -2,11 +2,7 @@ const {
 	startHTTPThreads,
 	startSocketServer,
 	updateWorkerIdleness,
-	remoteAffinityRouting,
-	mostIdleRouting,
 } = require('../../../server/threads/socketRouter');
-const { shutdownWorkers } = require('../../../server/threads/manageThreads');
-const terms = require('../../../utility/hdbTerms');
 const assert = require('assert');
 
 describe.skip('Socket Router', () => {
@@ -114,7 +110,7 @@ describe.skip('Socket Router', () => {
 		updateWorkerIdleness();
 		for (let worker of workers) {
 			worker.socketsRouted = 0;
-			worker.postMessage = function ({ type, port, fd }) {
+			worker.postMessage = function ({ port, fd }) {
 				// stub this and don't send to real worker, just count messages
 				this.socketsRouted++;
 				assert.equal(port, 8927);

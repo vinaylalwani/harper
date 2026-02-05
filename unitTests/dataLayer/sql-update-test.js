@@ -96,7 +96,7 @@ describe('Test SQL Update/Insert/Delete', function () {
 			assert.strictEqual(sql_results.length, 0);
 		});
 		it('SQL INSERT', async function () {
-			const { data, hash } = sqlIntegrationData.customers;
+			const { hash } = sqlIntegrationData.customers;
 			const test_update_statement = `INSERT INTO ${TEST_SCHEMA_NORTHWND}.customers (customerid, customername) VALUES ('new-id', 'new-name')`;
 			let sql_results = await executeSQL({
 				sql: test_update_statement,
@@ -112,8 +112,7 @@ describe('Test SQL Update/Insert/Delete', function () {
 		});
 
 		it('SQL INSERT concurrently', async function () {
-			const { data, hash } = sqlIntegrationData.customers;
-			const test_row = data[4];
+			const { hash } = sqlIntegrationData.customers;
 			const test_update_statement = `INSERT INTO ${TEST_SCHEMA_NORTHWND}.customers (customerid, customername) VALUES ('new-id2', 'new-name')`;
 			// attempt to execute two UPDATES concurrently to ensure they are actually properly serialized
 			let sql_results = await Promise.all(

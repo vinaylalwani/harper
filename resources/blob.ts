@@ -73,7 +73,6 @@ let currentBlobCallback: (blob: Blob) => Blob | void;
 export const Blob = global.Blob || polyfillBlob(); // use the global Blob class if it exists (it doesn't on Node v16)
 let encodeForStorageForRecordId: number = undefined; // only enable encoding of the file path if we are saving to the DB, not for serialization to external clients, and only for one record
 let promisedWrites: Array<Promise<void>>;
-let promisedReads: Array<Promise<void>>;
 let currentStore: any; // the root store of the database we are currently encoding for
 export let blobsWereEncoded = false; // keep track of whether blobs were encoded with file paths
 // the header is 8 bytes
@@ -191,7 +190,7 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 					if (writeFinished) {
 						throw new Error(`Incomplete blob for ${filePath}`);
 					}
-					return new Promise((resolve, reject) => {
+					return new Promise((resolve) => {
 						if (
 							store.attemptLock(lockKey, 0, () => {
 								writeFinished = true;
@@ -814,7 +813,7 @@ function getNextStorageIndex(blobStoragePaths: string[], fileId: number) {
 async function createFrequencyTableForStoragePaths(blobStoragePaths: string[]) {
 	if (!statfs) return; // statfs is not available on all older node versions
 	const availableSpaces = await Promise.all(
-		blobStoragePaths.map(async (path, index) => {
+		blobStoragePaths.map(async (path) => {
 			let stats: StatsFs;
 			try {
 				stats = await statfs(path);

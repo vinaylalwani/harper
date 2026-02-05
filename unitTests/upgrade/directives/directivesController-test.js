@@ -5,10 +5,7 @@ const { generateUpgradeObj } = test_util;
 test_util.preTestPrep();
 
 const chai = require('chai');
-const sinon = require('sinon');
 const { expect } = chai;
-// const fs = require('fs');
-// const hdb_utils = require('../../../../utility/common_utils');
 
 const test_vers3_1_0 = require('./testDirectives/3-1-0_stub');
 const test_vers4_1_1 = require('./testDirectives/4-1-1_stub');
@@ -21,12 +18,6 @@ test_map.set(test_vers4_1_1.version, test_vers4_1_1);
 test_map.set(test_vers3_1_0.version, test_vers3_1_0);
 
 describe('directivesController Module', () => {
-	let sandbox;
-
-	before(() => {
-		sandbox = sinon.createSandbox();
-	});
-
 	beforeEach(function () {
 		directivesController_rw.__set__('versions', test_map);
 	});

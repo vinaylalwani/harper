@@ -103,7 +103,7 @@ async function readLog(request) {
 		}
 		remaining = logData.slice(lastPosition);
 	});
-	readLogInputStream.on('end', (logData) => {
+	readLogInputStream.on('end', (_logData) => {
 		if (readLogInputStream.destroyed) return;
 		if (pendingLogEntry) {
 			pendingLogEntry.message = remaining.trim();

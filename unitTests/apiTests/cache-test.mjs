@@ -42,7 +42,7 @@ describe('test REST calls with cache table', () => {
 		assert.equal(response.status, 204);
 		let start_count = tables.CacheOfResource.sourceGetsPerformed;
 		response = await axios('http://localhost:9926/CacheOfResource/33', {
-			validateStatus: function (status) {
+			validateStatus: function (_status) {
 				return true;
 			},
 		});
@@ -57,7 +57,7 @@ describe('test REST calls with cache table', () => {
 		assert.equal(response.status, 204);
 		start_count = tables.CacheOfResource.sourceGetsPerformed;
 		response = await axios('http://localhost:9926/CacheOfResource/33', {
-			validateStatus: function (status) {
+			validateStatus: function (_status) {
 				return true;
 			},
 		});

@@ -14,22 +14,19 @@ const restart = rewire('../../bin/restart');
 
 describe('Test restart module', () => {
 	const sandbox = sinon.createSandbox();
-	let console_error_stub;
 	let process_man_restart_stub;
 	let remove_nats_config_stub;
 	let restart_workers_stub;
-	let get_config_from_file;
-	let process_exit_stub;
 
 	before(() => {
-		console_error_stub = sandbox.stub(console, 'error');
+		sandbox.stub(console, 'error');
 		process_man_restart_stub = sandbox.stub(process_man, 'restart');
 		remove_nats_config_stub = sandbox.stub(nats_config, 'removeNatsConfig');
 		restart_workers_stub = sandbox.stub();
 		restart.__set__('restartWorkers', restart_workers_stub);
-		get_config_from_file = sandbox.stub(config_utils, 'getConfigFromFile').resolves(true);
+		sandbox.stub(config_utils, 'getConfigFromFile').resolves(true);
 		env_mgr.setProperty('clustering_enabled', true);
-		process_exit_stub = sandbox.stub(process, 'exit').withArgs(0);
+		sandbox.stub(process, 'exit').withArgs(0);
 	});
 	afterEach(() => {
 		sandbox.resetHistory();
@@ -93,7 +90,6 @@ describe('Test restart module', () => {
 		const restart_clustering = restart.__get__('restartClustering');
 		let generate_nats_config_stub;
 		let update_local_stream_stub;
-		let close_connection_stub;
 		let get_hdb_process_stub;
 		let start_clustering_process_stub;
 		let start_clustering_threads_stub;
@@ -101,7 +97,7 @@ describe('Test restart module', () => {
 		before(() => {
 			generate_nats_config_stub = sandbox.stub(nats_config, 'generateNatsConfig');
 			update_local_stream_stub = sandbox.stub(nats_utils, 'updateLocalStreams');
-			close_connection_stub = sandbox.stub(nats_utils, 'closeConnection');
+			sandbox.stub(nats_utils, 'closeConnection');
 			get_hdb_process_stub = sandbox.stub(sys_info, 'getHDBProcessInfo').resolves({ clustering: [{ pid: 12345 }] });
 			start_clustering_process_stub = sandbox.stub(process_man, 'startClusteringProcesses');
 			start_clustering_threads_stub = sandbox.stub(process_man, 'startClusteringThreads');

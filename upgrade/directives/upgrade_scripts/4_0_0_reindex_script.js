@@ -113,7 +113,7 @@ async function processTables(reindexPath, isTransactionReindex, deleteOldDb) {
 	if (!errorOccurred) {
 		try {
 			await fs.rm(TMP_PATH, { recursive: true });
-		} catch (e) {}
+		} catch {}
 	}
 }
 

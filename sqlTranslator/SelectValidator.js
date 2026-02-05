@@ -13,7 +13,6 @@ const customAggregators = ['DISTINCT_ARRAY'];
 
 const validateTables = Symbol('validateTables'),
 	validateTable = Symbol('validateTable'),
-	getAllColumns = Symbol('getAllColumns'),
 	validateAllColumns = Symbol('validateAllColumns'),
 	findColumn = Symbol('findColumn'),
 	validateOrderBy = Symbol('validateOrderBy'),
@@ -23,8 +22,6 @@ const validateTables = Symbol('validateTables'),
 	checkColumnsForAsterisk = Symbol('checkColumnsForAsterisk'),
 	validateGroupBy = Symbol('validateGroupBy'),
 	hasColumns = Symbol('hasColumns');
-
-const BETWEEN = 'BETWEEN';
 
 /**
  * Validates the tables and attributes against the actual schema
@@ -80,7 +77,7 @@ class SelectValidator {
 	[hasColumns]() {
 		let hasColumns = false;
 		let iterator = new RecursiveIterator(this.statement);
-		for (let { node, path } of iterator) {
+		for (let { node } of iterator) {
 			if (node && node.columnid) {
 				hasColumns = true;
 				break;
@@ -199,7 +196,7 @@ class SelectValidator {
 
 		let iterator = new RecursiveIterator(segment);
 		let attributes = [];
-		for (let { node, path } of iterator) {
+		for (let { node } of iterator) {
 			if (!commonUtils.isEmpty(node) && !commonUtils.isEmpty(node.columnid) && node.columnid !== '*') {
 				if (isOrderBy) {
 					this[validateOrderBy](node);

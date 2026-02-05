@@ -5,7 +5,6 @@ test_utils.preTestPrep();
 const BASE_PATH = test_utils.getMockLMDBPath();
 
 const rewire = require('rewire');
-const environment_utility = rewire('../../../../../utility/lmdb/environmentUtility');
 const lmdb_create_txn_envs = require('../../../../../dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbCreateTransactionsAuditEnvironment');
 
 const lmdb_write_txn = require('../../../../../dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbWriteTransaction');

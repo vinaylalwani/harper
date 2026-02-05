@@ -57,8 +57,6 @@ const READ_PERM = 'read';
 const UPDATE_PERM = 'update';
 const DESCRIBE_PERM = 'describe';
 
-const UPSERT_OP = 'upsert';
-
 const DESCRIBE_SCHEMA_KEY = schemaDescribe.describeSchema.name;
 const DESCRIBE_TABLE_KEY = schemaDescribe.describeTable.name;
 const FORBIDDEN_SYSTEM_OPS_ENUM = {
@@ -524,7 +522,7 @@ function hasPermissions(userObject, op, schemaTableMap, permsResponse, action) {
 				permsResponse.addInvalidItem(HDB_ERROR_MSGS.SCHEMA_NOT_FOUND(schemaTable));
 				continue;
 			}
-		} catch (e) {
+		} catch {
 			//we should never get here b/c if statement above should catch any possible errors and log the issue to
 			// permsResponse but keeping this here just to be safe
 			permsResponse.addInvalidItem(HDB_ERROR_MSGS.SCHEMA_NOT_FOUND(schemaTable));
@@ -758,7 +756,7 @@ function getAttributePermissions(rolePerms, operationSchema, table) {
 				roleAttributePermissions.set(perm.attribute_name, perm);
 			}
 		});
-	} catch (e) {
+	} catch {
 		harperLogger.info(`No attribute permissions found for schema ${operationSchema} and table ${table}.`);
 	}
 	return roleAttributePermissions;

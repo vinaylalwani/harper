@@ -7,7 +7,6 @@ import { convertToMS } from '../utility/common_utils.js';
 import { PREVIOUS_TIMESTAMP_PLACEHOLDER, LAST_TIMESTAMP_PLACEHOLDER } from './RecordEncoder.ts';
 import * as harperLogger from '../utility/logging/harper_logger.js';
 import { getRecordAtTime } from './crdt.ts';
-import { isMainThread } from 'worker_threads';
 import { decodeFromDatabase, deleteBlobsInObject } from './blob.ts';
 import { onStorageReclamation } from '../server/storageReclamation.ts';
 
@@ -231,8 +230,6 @@ export const ACTION_32_BIT = 14;
 export const ACTION_64_BIT = 15;
 /** Used to indicate we have received a remote local time update */
 export const REMOTE_SEQUENCE_UPDATE = 11;
-const HAS_PREVIOUS_VERSION = 64;
-const HAS_EXTENDED_TYPE = 128;
 export const HAS_CURRENT_RESIDENCY_ID = 512;
 export const HAS_PREVIOUS_RESIDENCY_ID = 1024;
 export const HAS_ORIGINATING_OPERATION = 2048;

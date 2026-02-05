@@ -14,8 +14,6 @@ const reviewSubscriptions = require('./reviewSubscriptions.js');
 const { Node, NodeSubscription } = require('./NodeObject.js');
 const { broadcast } = require('../../server/threads/manageThreads.js');
 const { setNode: plexusSetNode } = require('../../server/replication/setNode.ts');
-const envMgr = require('../environment/environmentManager.js');
-const terms = require('../hdbTerms.ts');
 
 const UNSUCCESSFUL_MSG =
 	'Unable to create subscriptions due to schema and/or tables not existing on the local or remote node';

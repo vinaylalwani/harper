@@ -5,7 +5,7 @@ const moment = require('moment');
 validate.extend(validate.validators.datetime, {
 	// The value is guaranteed not to be null or undefined but otherwise it
 	// could be anything.
-	parse: function (value, options) {
+	parse: function (value, _options) {
 		return +moment.utc(value);
 	},
 	// Input is a unix timestamp

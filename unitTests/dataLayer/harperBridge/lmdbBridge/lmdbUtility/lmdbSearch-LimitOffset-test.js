@@ -18,8 +18,6 @@ const write_utility = require('../../../../../utility/lmdb/writeUtility');
 const SearchObject = require('../../../../../dataLayer/SearchObject');
 const lmdb_search = rewire('../../../../../dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbSearch');
 const lmdb_terms = require('../../../../../utility/lmdb/terms');
-const hdb_terms = require('../../../../../utility/hdbTerms');
-const LMDB_ERRORS = require('../../../../commonTestErrors').LMDB_ERRORS_ENUM;
 const assert = require('assert');
 const fs = require('fs-extra');
 const sinon = require('sinon');
@@ -29,11 +27,6 @@ const { orderedArray } = test_utils;
 const TIMESTAMP = Date.now();
 
 const sandbox = sinon.createSandbox();
-
-const TIMESTAMP_OBJECT = {
-	[hdb_terms.TIME_STAMP_NAMES_ENUM.CREATED_TIME]: TIMESTAMP,
-	[hdb_terms.TIME_STAMP_NAMES_ENUM.UPDATED_TIME]: TIMESTAMP,
-};
 
 const HASH_ATTRIBUTE_NAME = 'id';
 

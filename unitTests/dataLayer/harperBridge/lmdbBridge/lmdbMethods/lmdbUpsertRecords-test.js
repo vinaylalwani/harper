@@ -133,9 +133,7 @@ describe('Test lmdbUpsertRecords module', () => {
 
 	describe('Test lmdbUpsertRecords function', () => {
 		let m_time;
-		let insert_m_time;
 		let m_time_stub;
-		let expected_timestamp_txn;
 		let expected_hashes_txn;
 
 		beforeEach(async function () {
@@ -176,14 +174,13 @@ describe('Test lmdbUpsertRecords module', () => {
 			await lmdb_create_table(TABLE_SYSTEM_DATA_TEST_A, CREATE_TABLE_OBJ_TEST_A);
 
 			m_time = TIMESTAMP;
-			insert_m_time = m_time;
 			m_time_stub = sandbox.stub(lmdb_common, 'getNextMonotonicTime').returns(m_time);
 
 			let insert_obj = test_utils.deepClone(INSERT_OBJECT_TEST);
 			await lmdb_create_records(insert_obj);
 
 			let insert_txn_obj = new LMDBUpsertTransactionObject(insert_obj.records, m_time, INSERT_HASHES);
-			expected_timestamp_txn = test_utils.assignObjecttoNullObject({
+			test_utils.assignObjecttoNullObject({
 				[m_time]: [JSON.stringify(insert_txn_obj)],
 			});
 

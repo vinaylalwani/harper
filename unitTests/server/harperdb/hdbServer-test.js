@@ -42,18 +42,8 @@ const test_req_options = {
 
 // eslint-disable-next-line no-magic-numbers
 const REQ_MAX_BODY_SIZE = 1024 * 1024 * 1024; //this is 1GB in bytes
-const DEFAULT_FASTIFY_PLUGIN_ARR = [
-	'fastify',
-	'hdb-request-time',
-	'@fastify/compress',
-	'@fastify/static',
-	'content-type-negotiation',
-];
 
-let setUsersToGlobal_stub;
-let setSchemaGlobal_stub;
 let handlePostRequest_spy;
-let logger_error_spy;
 
 const test_op_resp = [];
 for (let i = 0; i < 10; i++) {
@@ -85,10 +75,10 @@ describe('Test hdbServer module', () => {
 		});
 		sandbox.stub(serverHandlers, 'authHandler').callsFake((req, resp, done) => done());
 		sandbox.stub(server_utilities, 'chooseOperation').callsFake(() => {});
-		setUsersToGlobal_stub = sandbox.stub(user_schema, 'setUsersWithRolesCache').resolves();
+		sandbox.stub(user_schema, 'setUsersWithRolesCache').resolves();
 		//setSchemaGlobal_stub = sandbox.stub(global_schema, 'setSchemaDataToGlobal').callsArg(0);
 		handlePostRequest_spy = sandbox.spy(serverHandlers, 'handlePostRequest');
-		logger_error_spy = sandbox.stub(harper_logger, 'error').callsFake(() => {});
+		sandbox.stub(harper_logger, 'error').callsFake(() => {});
 		sandbox.stub().callsFake(() => {});
 
 		test_utils.preTestPrep();
@@ -149,7 +139,6 @@ describe('Test hdbServer module', () => {
 			test_utils.preTestPrep(test_config_settings);
 
 			const hdbServer = await require(HDB_SERVER_PATH);
-			let caught_error;
 			hdbServer.hdbServer({ securePort: 9927 }); // need to use explicit ports
 		});
 

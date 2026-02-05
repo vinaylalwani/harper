@@ -14,7 +14,6 @@ const sandbox = sinon.createSandbox();
 
 const harper_logger = require('../../../utility/logging/harper_logger');
 const user_schema = require('../../../security/user');
-const global_schema = require('../../../utility/globalSchema');
 const operations = rewire('../../../components/operations');
 const env = require('../../../utility/environment/environmentManager');
 
@@ -39,8 +38,6 @@ const test_req_options = {
 const test_cert_val = test_utils.getHTTPSCredentials().cert;
 const test_key_val = test_utils.getHTTPSCredentials().key;
 
-let setUsersToGlobal_stub;
-let setSchemaGlobal_stub;
 let server;
 
 describe('Test customFunctionsServer module', () => {
@@ -52,8 +49,7 @@ describe('Test customFunctionsServer module', () => {
 		sandbox.stub(harper_logger, 'error').callsFake(() => {});
 		sandbox.stub(harper_logger, 'fatal').callsFake(() => {});
 		sandbox.stub(harper_logger, 'trace').callsFake(() => {});
-		setUsersToGlobal_stub = sandbox.stub(user_schema, 'setUsersWithRolesCache').resolves();
-		//setSchemaGlobal_stub = sandbox.stub(global_schema, 'setSchemaDataToGlobal').callsArg(0);
+		sandbox.stub(user_schema, 'setUsersWithRolesCache').resolves();
 		sandbox.stub().callsFake(() => {});
 
 		test_utils.preTestPrep();

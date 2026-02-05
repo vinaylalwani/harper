@@ -20,12 +20,11 @@ function buildProcessDowngradeArgs(yes_or_no) {
 
 describe('Test upgradePrompt module', () => {
 	let sandbox;
-	let prompt_spy;
 	let stdin_stubber;
 
 	before(() => {
 		sandbox = sinon.createSandbox();
-		prompt_spy = sandbox.spy(prompt, 'get');
+		sandbox.spy(prompt, 'get');
 		stdin_stubber = mock_stdin.stdin();
 	});
 

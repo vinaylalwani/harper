@@ -7,7 +7,6 @@ const BasicStrategy = require('passport-http').BasicStrategy;
 const util = require('util');
 const userFunctions = require('./user.ts');
 const cbFindValidateUsers = util.callbackify(userFunctions.findAndValidateUser);
-const hdbErrors = require('../utility/errors/commonErrors.js');
 const hdbTerms = require('../utility/hdbTerms.ts');
 const tokenAuthentication = require('./tokenAuthentication.ts');
 const { AccessViolation } = require('../utility/errors/hdbError');

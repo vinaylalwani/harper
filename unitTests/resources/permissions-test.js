@@ -111,9 +111,9 @@ describe('Permissions through Resource API', () => {
 		};
 	});
 	it('Can not get without permission', async function () {
-		let caught_error, result;
+		let caught_error;
 		try {
-			result = TestTable.get('id-2', {
+			TestTable.get('id-2', {
 				user: restricted_user,
 				authorize: true,
 			});
@@ -123,9 +123,9 @@ describe('Permissions through Resource API', () => {
 		assert(caught_error.message.includes('Unauthorized access'));
 	});
 	it('Can not write without permission', async function () {
-		let caught_error, result;
+		let caught_error;
 		try {
-			result = TestTable.put(
+			TestTable.put(
 				'id-2',
 				{ name: 'new record' },
 				{
@@ -139,7 +139,7 @@ describe('Permissions through Resource API', () => {
 		assert(caught_error.message.includes('Unauthorized access'));
 		caught_error = null;
 		try {
-			result = TestTable.delete('id-2', {
+			TestTable.delete('id-2', {
 				user: restricted_user,
 				authorize: true,
 			});
@@ -201,7 +201,7 @@ describe('Permissions through Resource API', () => {
 		assert.equal(results[0].related.name, undefined);
 	});
 	it('Can write with permission', async function () {
-		let result = TestTable.put(
+		TestTable.put(
 			'id-2',
 			{ name: 'new record' },
 			{
@@ -215,9 +215,9 @@ describe('Permissions through Resource API', () => {
 		});
 	});
 	it('Can not write with restricted attribute', async function () {
-		let caught_error, result;
+		let caught_error;
 		try {
-			result = TestTable.put(
+			TestTable.put(
 				'id-2',
 				{ name: 'new record', prop1: 'change' },
 				{

@@ -8,7 +8,6 @@ const SYSTEM_FOLDER_NAME = 'system';
 const SCHEMA_NAME = 'schema';
 const BASE_PATH = test_utils.getMockLMDBPath();
 const BASE_SCHEMA_PATH = path.join(BASE_PATH, SCHEMA_NAME);
-const BASE_TXN_PATH = path.join(BASE_PATH, 'transactions');
 const SYSTEM_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, SYSTEM_FOLDER_NAME);
 const DEV_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, 'dev');
 
@@ -16,7 +15,6 @@ let test_data = require('../../../testData');
 
 const rewire = require('rewire');
 const environment_utility = rewire('../../../../utility/lmdb/environmentUtility');
-const write_utility = require('../../../../utility/lmdb/writeUtility');
 const SearchObject = require('../../../../dataLayer/SearchObject');
 const harper_bridge = require('../../../../dataLayer/harperBridge/harperBridge');
 const { createTable, createSchema, createRecords, searchByValue, dropTable } = harper_bridge;
@@ -24,7 +22,6 @@ const hdb_terms = require('../../../../utility/hdbTerms');
 const assert = require('assert');
 const fs = require('fs-extra');
 const systemSchema = require('../../../../json/systemSchema');
-const ReadAuditLogObject = require('../../../../dataLayer/ReadAuditLogObject');
 const { promisify } = require('util');
 const sleep = promisify(setTimeout);
 

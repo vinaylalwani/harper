@@ -13,7 +13,7 @@ export function transaction<T>(callback: (transaction: TransactionSet) => T): T;
 export function transaction<T>(
 	context: Request | ((transaction: TransactionSet) => T),
 	callback?: (transaction: TransactionSet) => T,
-	options?: any
+	_options?: any
 ): T {
 	if (!callback) {
 		// optional first argument, handle case of no request

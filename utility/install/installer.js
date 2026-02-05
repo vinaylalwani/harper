@@ -17,7 +17,7 @@ const assignCMDENVVariables = require('../../utility/assignCmdEnvVariables.js');
 const hdbInfoController = require('../../dataLayer/hdbInfoController.js');
 const { packageJson } = require('../packageUtils.js');
 const hdbTerms = require('../hdbTerms.ts');
-const { CONFIG_PARAM_MAP, CONFIG_PARAMS } = hdbTerms;
+const { CONFIG_PARAMS } = hdbTerms;
 const installValidator = require('../../validation/installValidator.js');
 const mountHdb = require('../mount_hdb.js');
 const configUtils = require('../../config/configUtils.js');
@@ -42,14 +42,10 @@ const TC_NOT_ACCEPTED = 'Terms & Conditions acceptance is required to proceed wi
 const UPGRADE_MSG = 'An out of date version of HarperDB is already installed.';
 const HDB_EXISTS_MSG = 'It appears that HarperDB is already installed. Exiting install...';
 const ABORT_MSG = 'Aborting install';
-const HDB_PORT_REGEX = new RegExp(
-	/^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$/
-);
-const KEY_PAIR_BITS = 2048;
+
 const NODE_NAME_REGEX = new RegExp(/^[^\s.,*>]+$/);
 const PROCESS_HOME = os.homedir();
 const DEFAULT_HDB_ROOT = path.join(PROCESS_HOME, hdbTerms.HDB_ROOT_DIR_NAME);
-const DEFAULT_HDB_PORT = 9925;
 const DEFAULT_ADMIN_USERNAME = 'HDB_ADMIN';
 const DEFAULT_CLUSTER_USERNAME = 'CLUSTER_USER';
 const DEFAULT_CONFIG_MODE = 'dev';
@@ -532,7 +528,7 @@ async function createBootPropertiesFile() {
 	let install_user;
 	try {
 		install_user = os.userInfo().username;
-	} catch (err) {
+	} catch {
 		// this could fail on android, try env variables
 		install_user =
 			process.env.USERNAME || process.env.USER || process.env.LOGNAME || process.env.LNAME || process.env.SUDO_USER;
@@ -549,7 +545,7 @@ async function createBootPropertiesFile() {
 		try {
 			fs.mkdirpSync(homeDirPath, { mode: hdbTerms.HDB_FILE_PERMISSIONS });
 			fs.mkdirpSync(homeDirKeysDirPath, { mode: hdbTerms.HDB_FILE_PERMISSIONS });
-		} catch (err) {
+		} catch {
 			console.error(
 				`Could not make settings directory ${hdbTerms.HDB_HOME_DIR_NAME} in home directory.  Please check your permissions and try again.`
 			);

@@ -13,7 +13,6 @@ describe('Test clusterStatus module', () => {
 	const sandbox = sinon.createSandbox();
 	let get_all_node_records_stub;
 	let request_stub;
-	let log_error_stub;
 	let upsert_node_record_stub;
 	const test_sys_info = {
 		hdb_version: '4.0.0test',
@@ -82,7 +81,7 @@ describe('Test clusterStatus module', () => {
 		cluster_status.__set__('thisNodeName', 'localTestNode');
 		get_all_node_records_stub = sandbox.stub(clustering_utils, 'getAllNodeRecords').resolves(test_existing_record);
 		request_stub = sandbox.stub(nats_utils, 'request');
-		log_error_stub = sandbox.stub(hdb_logger, 'error');
+		sandbox.stub(hdb_logger, 'error');
 	});
 
 	afterEach(() => {
@@ -297,7 +296,7 @@ describe('Test clusterStatus module', () => {
 		const result = await cluster_status.clusterStatus();
 		expect(result.connections[0]).to.haveOwnProperty('latency_ms');
 		expect(result.connections[1]).to.haveOwnProperty('latency_ms');
-		// Cant guarantee latency value will be the same when testing so we test for it above then delete when doing a result comparison test
+		// Can't guarantee latency value will be the same when testing so we test for it above then delete when doing a result comparison test
 		delete result.connections[0].latency_ms;
 		delete result.connections[1].latency_ms;
 		expect(result).to.eql(expected_result);

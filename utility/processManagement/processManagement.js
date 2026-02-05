@@ -166,14 +166,6 @@ function expectedRestartOfChildren() {
 		if (childProcess.config) childProcess.config.restarts = 0; // reset the restart count
 	}
 }
-/**
- * To restart HarperDB we use processManagement to fork a process and then call restart from that process.
- * We do this because we were seeing random errors when HDB was calling restart on itself.
- * @returns {Promise<void>}
- */
-async function restartHdb() {
-	await start(servicesConfig.generateRestart());
-}
 
 /**
  * Checks to see if Harper is currently running, returning the pid if it is
@@ -252,7 +244,6 @@ async function startService(serviceName, noKill = false) {
 	start(startConfig, noKill);
 }
 
-let replyWorker;
 /**
  * Starts all the processes that make up clustering
  * @returns {Promise<void>}
@@ -268,7 +259,7 @@ async function startClusteringProcesses(noKill = false) {
  * @returns {Promise<void>}
  */
 async function startClusteringThreads() {
-	replyWorker = startWorker(hdbTerms.LAUNCH_SERVICE_SCRIPTS.NATS_REPLY_SERVICE, {
+	startWorker(hdbTerms.LAUNCH_SERVICE_SCRIPTS.NATS_REPLY_SERVICE, {
 		name: hdbTerms.PROCESS_DESCRIPTORS.CLUSTERING_REPLY_SERVICE,
 	});
 
@@ -276,7 +267,7 @@ async function startClusteringThreads() {
 	// This code is here to delete it if it still exists.
 	try {
 		await natsUtils.deleteLocalStream('__HARPERDB_WORK_QUEUE__');
-	} catch (err) {}
+	} catch {}
 
 	// Check to see if the node name or purge config has been updated,
 	// if it has we need to change config on any local streams.
@@ -315,7 +306,7 @@ async function reloadClustering() {
 function readPidFile(pidFile) {
 	try {
 		return Number.parseInt(fs.readFileSync(pidFile, 'utf8'), 10);
-	} catch (err) {
+	} catch {
 		return null;
 	}
 }

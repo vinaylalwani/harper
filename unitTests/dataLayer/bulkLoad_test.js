@@ -14,8 +14,6 @@ let bulkLoad_rewire = rewire('../../dataLayer/bulkLoad');
 const PermissionResponseObject = require('../../security/data_objects/PermissionResponseObject');
 const hdb_terms = require('../../utility/hdbTerms');
 const hdb_utils = require('../../utility/common_utils');
-const nats_utils = require('../../server/nats/utility/natsUtils');
-const transact_to_clustering_utils = require('../../utility/clustering/transactToClusteringUtilities');
 const validator = require('../../validation/fileLoadValidator');
 const insert = require('../../dataLayer/insert');
 const logger = require('../../utility/logging/harper_logger');
@@ -30,13 +28,7 @@ const VALID_CSV_DATA =
 	'id,name,section,country,image\n1,ENGLISH POINTER,British and Irish Pointers and Setters,GREAT BRITAIN,http://www.fci.be/Nomenclature/Illustrations/001g07.jpg\n2,ENGLISH SETTER,British and Irish Pointers and Setters,GREAT BRITAIN,http://www.fci.be/Nomenclature/Illustrations/002g07.jpg\n3,KERRY BLUE TERRIER,Large and medium sized Terriers,IRELAND,\n';
 const INVALID_CSV_ID_COLUMN_NAME =
 	'id/,name,section,country,image\n1,ENGLISH POINTER,British and Irish Pointers and Setters,GREAT BRITAIN,http://www.fci.be/Nomenclature/Illustrations/001g07.jpg\n2,ENGLISH SETTER,British and Irish Pointers and Setters,GREAT BRITAIN,http://www.fci.be/Nomenclature/Illustrations/002g07.jpg\n3,KERRY BLUE TERRIER,Large and medium sized Terriers,IRELAND,\n';
-const VALID_CSV_PATH = '/tmp/csv_input_valid.csv';
-const INVALID_CSV_PATH = '/tmp/csv_input_invalid_id.csv';
-const EMPTY_FILE_PATH = '/tmp/empty.csv';
-const HOSTED_CSV_FILE_URL = 'https://s3.amazonaws.com/complimentarydata/breeds.csv';
-const MIDDLEWARE_PARSE_PARAMETERS = 'SELECT * FROM CSV(?, {headers:true, separator:","})';
 const CSV_URL_TEMP_DIR = `${env.get('HDB_ROOT')}/tmp`;
-const TEMP_CSV_FILE = `tempCSVURLLoad.csv`;
 const TEST_DATA_DIR = path.join(process.cwd(), '../', 'test/data');
 
 const BULK_LOAD_RESPONSE = {
@@ -301,7 +293,6 @@ describe('Test bulkLoad.js', () => {
 	describe('Test csvURLLoad function', () => {
 		let sandbox = sinon.createSandbox();
 		let download_csv_stub = sandbox.stub();
-		let remove_dir_stub;
 		let success_msg = 'Successfully loaded 77 of 77 records';
 		let file_load_stub = sandbox.stub().resolves(success_msg);
 		let file_load_orig = bulkLoad_rewire.__get__('fileLoad');
@@ -309,7 +300,7 @@ describe('Test bulkLoad.js', () => {
 		before(() => {
 			bulkLoad_rewire.__set__('downloadCSVFile', download_csv_stub);
 			bulkLoad_rewire.__set__('fileLoad', file_load_stub);
-			remove_dir_stub = sandbox.stub(hdb_utils, 'removeDir');
+			sandbox.stub(hdb_utils, 'removeDir');
 		});
 
 		after(() => {
@@ -469,9 +460,7 @@ describe('Test bulkLoad.js', () => {
 
 	describe('Test csvFileLoad function', () => {
 		let validation_msg_stub;
-		let fs_access_stub;
 		let logger_error_spy;
-		let file_load_rw;
 		let sandbox = sinon.createSandbox();
 		let bulk_file_load_result_fake = {
 			records: 10,
@@ -485,9 +474,9 @@ describe('Test bulkLoad.js', () => {
 
 		beforeEach(() => {
 			validation_msg_stub = sandbox.stub(validator, 'fileObject').returns('');
-			fs_access_stub = sandbox.stub(fs, 'access');
+			sandbox.stub(fs, 'access');
 			logger_error_spy = sandbox.spy(logger, 'error');
-			file_load_rw = bulkLoad_rewire.__get__('fileLoad');
+			bulkLoad_rewire.__get__('fileLoad');
 		});
 
 		afterEach(() => {
@@ -551,7 +540,6 @@ describe('Test bulkLoad.js', () => {
 		let importFromS3_rw;
 
 		let test_S3_message_json;
-		let check_schema_table_exist_stub;
 
 		before(() => {
 			validator_stub = sandbox.stub(validator, 's3FileObject').callThrough();
@@ -577,7 +565,7 @@ describe('Test bulkLoad.js', () => {
 
 			logger_error_spy = sandbox.spy(logger, 'error');
 			importFromS3_rw = bulkLoad_rewire.__get__('importFromS3');
-			check_schema_table_exist_stub = sandbox.stub(hdb_utils, 'checkGlobalSchemaTable').returns(undefined);
+			sandbox.stub(hdb_utils, 'checkGlobalSchemaTable').returns(undefined);
 
 			global.hdb_schema = {
 				golden: {
@@ -818,7 +806,6 @@ describe('Test bulkLoad.js', () => {
 		let call_bulk_file_load_stub;
 		let call_bulk_file_load_orig_stub = undefined;
 		let console_info_spy;
-		let logger_error_spy;
 		let bulk_file_load_result_fake = {
 			records: 7,
 			number_written: 6,
@@ -830,7 +817,7 @@ describe('Test bulkLoad.js', () => {
 			insert_chunk_rewire = bulkLoad_rewire.__get__('insertChunk');
 			call_bulk_file_load_rewire = bulkLoad_rewire.__set__('callBulkFileLoad', call_bulk_file_load_stub);
 			console_info_spy = sandbox.spy(console, 'info');
-			logger_error_spy = sandbox.spy(logger, 'error');
+			sandbox.spy(logger, 'error');
 		});
 
 		afterEach(() => {
@@ -930,7 +917,6 @@ describe('Test bulkLoad.js', () => {
 
 	describe('Test insertJson function', () => {
 		let sandbox = sinon.createSandbox();
-		let fs_create_read_stream_stub;
 		let validateChunk_stub;
 		let insertChunk_stub;
 		let logger_error_spy;
@@ -979,7 +965,7 @@ describe('Test bulkLoad.js', () => {
 		it('ERROR - Should return a HDB error if the readStream emits an error', async () => {
 			const streamEventEmitter = new EventEmitter();
 			streamEventEmitter.resume = () => {};
-			fs_create_read_stream_stub = sandbox.stub(fs, 'createReadStream').returns(streamEventEmitter);
+			sandbox.stub(fs, 'createReadStream').returns(streamEventEmitter);
 			let results;
 
 			try {

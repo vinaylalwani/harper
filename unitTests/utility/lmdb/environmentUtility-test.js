@@ -65,7 +65,7 @@ describe('Test LMDB environmentUtility module', () => {
 
 	describe('Test validateEnvironmentPath function', () => {
 		let rw_validator;
-		let env, transaction;
+		let env;
 		before(async () => {
 			rw_validator = rw_lmdb_env_util.__get__('validateEnvironmentPath');
 			global.lmdb_map = undefined;
@@ -96,7 +96,7 @@ describe('Test LMDB environmentUtility module', () => {
 
 	describe('Test validateEnvDBIName function', () => {
 		let rw_validator;
-		let env, transaction;
+		let env;
 		before(async () => {
 			rw_validator = rw_lmdb_env_util.__get__('validateEnvDBIName');
 			global.lmdb_map = undefined;
@@ -214,7 +214,7 @@ describe('Test LMDB environmentUtility module', () => {
 	});
 
 	describe('Test openEnvironment function', () => {
-		let env, transaction;
+		let env;
 		before(async () => {
 			global.lmdb_map = undefined;
 
@@ -370,7 +370,7 @@ describe('Test LMDB environmentUtility module', () => {
 		after(async () => {
 			try {
 				await env_orig.close();
-			} catch (e) {}
+			} catch {}
 			global.lmdb_map = undefined;
 			await fs.remove(test_utils.getMockLMDBPath());
 		});
@@ -423,7 +423,7 @@ describe('Test LMDB environmentUtility module', () => {
 	});
 
 	describe('Test createDBI function', () => {
-		let env, transaction;
+		let env;
 		beforeEach(async () => {
 			global.lmdb_map = undefined;
 			await fs.remove(test_utils.getMockLMDBPath());
@@ -521,7 +521,7 @@ describe('Test LMDB environmentUtility module', () => {
 	});
 
 	describe('Test openDBI function', () => {
-		let env, transaction;
+		let env;
 		before(async () => {
 			global.lmdb_map = undefined;
 			await fs.remove(test_utils.getMockLMDBPath());
@@ -593,7 +593,7 @@ describe('Test LMDB environmentUtility module', () => {
 	});
 
 	describe('Test listDBIDefinitions function', () => {
-		let env, transaction;
+		let env;
 		let env2;
 		before(async () => {
 			global.lmdb_map = undefined;
@@ -636,7 +636,7 @@ describe('Test LMDB environmentUtility module', () => {
 	});
 
 	describe('Test listDBIs function', () => {
-		let env, transaction;
+		let env;
 		let env2;
 		before(async () => {
 			global.lmdb_map = undefined;
@@ -674,7 +674,7 @@ describe('Test LMDB environmentUtility module', () => {
 	});
 
 	describe('Test environmentDataSize function', () => {
-		let env, transaction;
+		let env;
 
 		before(async () => {
 			global.lmdb_map = undefined;
@@ -708,12 +708,12 @@ describe('Test LMDB environmentUtility module', () => {
 	});
 
 	describe('Test closeEnvironment function', () => {
-		let env, transaction;
+		let env;
 		beforeEach(async () => {
 			global.lmdb_map = undefined;
 			try {
 				if (env) await lmdb_env_util.closeEnvironment(env);
-			} catch (e) {}
+			} catch {}
 			await fs.remove(test_utils.getMockLMDBPath());
 			await fs.mkdirp(BASE_TEST_PATH);
 
@@ -724,7 +724,7 @@ describe('Test LMDB environmentUtility module', () => {
 			global.lmdb_map = undefined;
 			try {
 				await lmdb_env_util.closeEnvironment(env);
-			} catch (e) {}
+			} catch {}
 			await fs.remove(test_utils.getMockLMDBPath());
 		});
 
@@ -747,7 +747,7 @@ describe('Test LMDB environmentUtility module', () => {
 	});
 
 	describe('Test statDBI function', () => {
-		let env, transaction;
+		let env;
 		before(async () => {
 			global.lmdb_map = undefined;
 			await fs.remove(test_utils.getMockLMDBPath());
@@ -794,7 +794,7 @@ describe('Test LMDB environmentUtility module', () => {
 	});
 
 	describe('Test dropDBI function', () => {
-		let env, transaction;
+		let env;
 		before(async () => {
 			global.lmdb_map = undefined;
 			await fs.remove(test_utils.getMockLMDBPath());
@@ -850,7 +850,7 @@ describe('Test LMDB environmentUtility module', () => {
 	});
 
 	describe('Test initializeDBIs function', () => {
-		let env, transaction;
+		let env;
 		before(async () => {
 			global.lmdb_map = undefined;
 			await fs.remove(test_utils.getMockLMDBPath());

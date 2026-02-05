@@ -1,4 +1,4 @@
-const { readFileSync, createReadStream } = require('fs');
+const { createReadStream } = require('fs');
 let contents = createReadStream(process.argv[2], { encoding: 'utf8' });
 /*console.log('got contents');
 let lines = contents.split('\n');
@@ -29,7 +29,7 @@ const interestingMetric = 'http_req_duration';
 						count = 0;
 					}
 				}
-			} catch (error) {}
+			} catch {}
 		}
 	}
 })();

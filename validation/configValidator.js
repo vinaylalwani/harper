@@ -8,13 +8,11 @@ const { totalmem } = require('os');
 const path = require('path');
 const hdbLogger = require('../utility/logging/harper_logger.js');
 const hdbUtils = require('../utility/common_utils.js');
-const certificatesTerms = require('../utility/terms/certificates.js');
 const hdbTerms = require('../utility/hdbTerms.ts');
 const validator = require('./validationWrapper.js');
 
 const DEFAULT_LOG_FOLDER = 'log';
 const DEFAULT_COMPONENTS_FOLDER = 'components';
-const DEFAULT_CORES_IF_ERR = 4;
 const INVALID_SIZE_UNIT_MSG = 'Invalid logging.rotation.maxSize unit. Available units are G, M or K';
 const INVALID_INTERVAL_UNIT_MSG = 'Invalid logging.rotation.interval unit. Available units are D, H or M (minutes)';
 const INVALID_MAX_SIZE_VALUE_MSG =
@@ -22,7 +20,6 @@ const INVALID_MAX_SIZE_VALUE_MSG =
 const INVALID_INTERVAL_VALUE_MSG =
 	"Invalid logging.rotation.interval value. Value should be a number followed by unit e.g. '10D'";
 const UNDEFINED_OPS_API = 'rootPath config parameter is undefined';
-const UNDEFINED_NATS_ENABLED = 'clustering.enabled config parameter is undefined';
 
 const portConstraints = Joi.alternatives([number.min(0), string])
 	.optional()
@@ -295,17 +292,6 @@ function doesPathExist(pathToCheck) {
 	}
 
 	return `Specified path ${pathToCheck} does not exist.`;
-}
-
-function validatePemFile(value, helpers) {
-	if (value === null) return;
-
-	const doesExistMsg = doesPathExist(value);
-	if (doesExistMsg) {
-		return helpers.message(doesExistMsg);
-	}
-
-	return value;
 }
 
 function validatePath(value, helpers) {

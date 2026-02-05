@@ -2,7 +2,6 @@ const assert = require('node:assert/strict');
 const sinon = require('sinon');
 const { CrossThreadStatusCollector, StatusAggregator } = require('../../../components/status/crossThread.ts');
 const { ComponentStatusRegistry } = require('../../../components/status/ComponentStatusRegistry.ts');
-const { COMPONENT_STATUS_LEVELS } = require('../../../components/status/types.ts');
 const itcModule = require('../../../server/threads/itc.js');
 const manageThreadsModule = require('../../../server/threads/manageThreads.js');
 

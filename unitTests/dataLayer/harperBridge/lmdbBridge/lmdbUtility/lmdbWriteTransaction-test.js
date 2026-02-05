@@ -39,9 +39,6 @@ const LMDBUpdateTransactionObject = require('../../../../../dataLayer/harperBrid
 const LMDBUpsertTransactionObject = require('../../../../../dataLayer/harperBridge/lmdbBridge/lmdbUtility/LMDBUpsertTransactionObject');
 const LMDBDeleteTransactionObject = require('../../../../../dataLayer/harperBridge/lmdbBridge/lmdbUtility/LMDBDeleteTransactionObject');
 
-const orig_clustering_setting = env_mngr.get('CLUSTERING');
-const orig_disable_txn_setting = env_mngr.get('DISABLE_TRANSACTION_LOG');
-
 const CREATE_TABLE_OBJ = new CreateTableObject('dev', 'test', 'id');
 
 const INSERT_RECORDS = [
@@ -258,7 +255,7 @@ describe('test lmdbWriteTransaction module', () => {
 			await env.close();
 			try {
 				await fs.remove(BASE_PATH);
-			} catch (error) {}
+			} catch {}
 			global.lmdb_map = undefined;
 		});
 

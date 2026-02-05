@@ -5,7 +5,6 @@ const chai = require('chai');
 const { expect } = chai;
 const sinon = require('sinon');
 const { headers } = require('nats');
-const { decode } = require('msgpackr');
 const TEST_HEADERS = headers();
 
 const test_utils = require('../../test_utils');
@@ -35,17 +34,14 @@ async function teardownTestStream() {
 
 describe('Test natsIngestService module', () => {
 	const sandbox = sinon.createSandbox();
-	let get_operation_function_spy;
-	let call_operation_function_as_await_stub;
-	let log_stub;
 	let Hippopotamus;
 	let sub_restore;
 	TEST_HEADERS.append(nats_terms.MSG_HEADERS.ORIGIN, 'some_other_node');
 
 	before(async () => {
-		log_stub = sandbox.stub(hdb_logger, 'notify');
-		get_operation_function_spy = sandbox.spy(server_utilities, 'getOperationFunction');
-		call_operation_function_as_await_stub = sandbox.stub(operation_function_caller, 'callOperationFunctionAsAwait');
+		sandbox.stub(hdb_logger, 'notify');
+		sandbox.spy(server_utilities, 'getOperationFunction');
+		sandbox.stub(operation_function_caller, 'callOperationFunctionAsAwait');
 		await test_utils.launchTestLeafServer();
 		test_utils.setFakeClusterUser();
 		test_utils.getMockLMDBPath();
@@ -66,7 +62,7 @@ describe('Test natsIngestService module', () => {
 		try {
 			test_utils.unsetFakeClusterUser();
 			await test_utils.stopTestLeafServer();
-		} catch (err) {}
+		} catch {}
 
 		sub_restore();
 		sandbox.restore();
@@ -81,14 +77,9 @@ describe('Test natsIngestService module', () => {
 		await nats_ingest_service.initialize();
 		const nats_connection = nats_ingest_service.__get__('natsConnection');
 		const server_name = nats_ingest_service.__get__('server_name');
-		const js_manager = nats_ingest_service.__get__('jsManager');
-		const js_client = nats_ingest_service.__get__('jsClient');
 
 		expect(nats_connection).to.haveOwnProperty('options');
 		expect(server_name).to.equal('testLeafServer-leaf');
-		expect(js_manager).to.haveOwnProperty('streams');
-		expect(js_manager).to.haveOwnProperty('consumers');
-		expect(js_client).to.haveOwnProperty('streamAPI');
 	}).timeout(10000);
 
 	describe('Test a consumer is created and messages ingested', () => {
@@ -105,12 +96,10 @@ describe('Test natsIngestService module', () => {
 				],
 			},
 		];
-		let access_consumers;
 
 		before(async () => {
 			await setupTestStream();
 			sandbox.stub(search, 'searchByValue').resolves(fake_connections);
-			access_consumers = nats_ingest_service.__get__('accessConsumers');
 		});
 
 		after(async () => {
@@ -134,9 +123,8 @@ describe('Test natsIngestService module', () => {
 			};
 
 			await nats_ingest_service.initialize();
-			const js_manager = nats_ingest_service.__get__('jsManager');
-			const js_client = nats_ingest_service.__get__('jsClient');
-			nats_ingest_service.ingestConsumer(STREAM_NAME, js_client, js_manager, 'testLeafServer-leaf');
+			const { js, jsm } = await nats_utils.getNATSReferences();
+			nats_ingest_service.ingestConsumer(STREAM_NAME, js, jsm, 'testLeafServer-leaf');
 			await nats_utils.publishToStream(SUBJECT_NAME, STREAM_NAME, TEST_HEADERS, test_operation);
 			await nats_utils.publishToStream(SUBJECT_NAME, STREAM_NAME, TEST_HEADERS, second_test_operation);
 			await new Promise((resolve) => setTimeout(resolve, 2000));

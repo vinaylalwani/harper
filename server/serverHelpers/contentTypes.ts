@@ -176,7 +176,7 @@ function tryJSONParse(input) {
 	try {
 		if (input?.[0] === 123) return JSONParse(input);
 		else return input;
-	} catch (error) {
+	} catch {
 		return input;
 	}
 }
@@ -580,7 +580,7 @@ function deserializerUnknownType(contentType: ContentType): Deserialize {
 					// if the first byte is `{` then it is likely JSON
 					if (data?.[0] === 123) return JSONParse(data);
 					// eslint-disable-next-line sonarjs/no-ignored-exceptions
-				} catch (error) {
+				} catch {
 					// continue if cannot parse as JSON
 				}
 			}

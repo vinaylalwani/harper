@@ -22,15 +22,14 @@ let LOG_PATH;
 
 describe.skip('Test processManagement servicesConfig module', () => {
 	const sandbox = sinon.createSandbox();
-	let os_cpus_stub;
 
 	before(() => {
-		os_cpus_stub = sandbox.stub(os, 'cpus').returns([1, 2, 3, 4, 5, 6]);
+		sandbox.stub(os, 'cpus').returns([1, 2, 3, 4, 5, 6]);
 		env_mangr.initTestEnvironment();
 		LOG_PATH = env.get(hdb_terms.HDB_SETTINGS_NAMES.LOG_PATH_KEY);
 		try {
 			sandbox.stub(env, 'initSync');
-		} catch (error) {
+		} catch {
 			console.log('initSync not cleaned up');
 		}
 	});

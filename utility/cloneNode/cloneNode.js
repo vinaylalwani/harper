@@ -51,7 +51,7 @@ class CloneSyncError extends CloneNodeError {
 	}
 }
 
-const { SYSTEM_TABLE_NAMES, SYSTEM_SCHEMA_NAME, CONFIG_PARAMS, OPERATIONS_ENUM } = hdbTerms;
+const { SYSTEM_TABLE_NAMES, CONFIG_PARAMS, OPERATIONS_ENUM } = hdbTerms;
 const WAIT_FOR_RESTART_TIME = 10000;
 const CLONE_CONFIG_FILE = 'clone-node-config.yaml';
 const SYSTEM_TABLES_TO_CLONE = [
@@ -146,7 +146,7 @@ module.exports = async function cloneNode(background = false, run = false) {
 				const hdbProperties = PropertiesReader(bootPropsFilePath);
 				rootPath = path.parse(hdbProperties.get(hdbTerms.BOOT_PROP_PARAMS.SETTINGS_PATH_KEY)).dir;
 			}
-		} catch (err) {
+		} catch {
 			throw new Error(
 				`There was an error setting the clone default root path. Please set ROOTPATH using an environment or CLI variable.`
 			);
@@ -179,7 +179,7 @@ module.exports = async function cloneNode(background = false, run = false) {
 		cloneConfigPath = join(rootPath, CLONE_CONFIG_FILE);
 		cloneNodeConfig = YAML.parseDocument(await fs.readFile(cloneConfigPath, 'utf8'), { simpleKeys: true }).toJSON();
 		console.log('Clone config file found');
-	} catch (err) {}
+	} catch {}
 
 	const hdbConfigPath = join(rootPath, hdbTerms.HDB_CONFIG_FILE);
 

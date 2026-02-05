@@ -5,7 +5,6 @@ import { setupTestApp } from '../apiTests/setupTestApp.mjs';
 import { buildRequest, cliOperations } from '../../bin/cliOperations.js';
 
 describe('test CLI operations', () => {
-	let available_records;
 	let sandbox;
 	let log_spy;
 	let error_log_spy;
@@ -13,7 +12,7 @@ describe('test CLI operations', () => {
 	before(async function () {
 		sandbox = sinon.createSandbox();
 		this.timeout(5000);
-		available_records = await setupTestApp();
+		await setupTestApp();
 		sandbox.stub(fs, 'exists').resolves(true);
 		log_spy = sandbox.spy(console, 'log');
 		error_log_spy = sandbox.spy(console, 'error');

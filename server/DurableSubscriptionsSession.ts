@@ -45,7 +45,7 @@ if (getWorkerIndex() === 0) {
 			if (message.user?.username) message.user = await server.getUser(message.user.username);
 			try {
 				await publish(message, data, message);
-			} catch (error) {
+			} catch {
 				warn('Failed to publish will', data);
 			}
 			LastWill.delete(will.id);
@@ -255,7 +255,7 @@ class SubscriptionsSession {
 			}
 			if (!subscription[Symbol.asyncIterator])
 				throw new Error(`Subscription is not (async) iterable for topic ${topic}`);
-			const result = (async () => {
+			const _result = (async () => {
 				for await (const update of subscription) {
 					try {
 						let messageId;

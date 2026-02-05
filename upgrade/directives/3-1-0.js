@@ -244,12 +244,12 @@ function moveLicenseFiles() {
 			const successMoveLicenseMsg = 'License file successfully moved.';
 			console.log(successMoveLicenseMsg);
 			hdbLog.info(successMoveLicenseMsg);
-		} catch (e) {
+		} catch {
 			const moveLicenseFailed = `moving license file failed`;
 			console.error(moveLicenseFailed);
 			hdbLog.error(moveLicenseFailed);
 		}
-	} catch (e) {
+	} catch {
 		const licenseDirNoExist = `license file '${LICENSE_FILE_PATH}' does not exist.`;
 		console.warn(licenseDirNoExist);
 		hdbLog.warn(licenseDirNoExist);
@@ -268,12 +268,12 @@ function moveLicenseFiles() {
 			const successMoveRegMsg = 'Registration file successfully moved.';
 			console.log(successMoveRegMsg);
 			hdbLog.info(successMoveRegMsg);
-		} catch (e) {
+		} catch {
 			const moveRegistrationFailed = `moving registration file failed`;
 			console.error(moveRegistrationFailed);
 			hdbLog.error(moveRegistrationFailed);
 		}
-	} catch (e) {
+	} catch {
 		const registrationFileNoExist = `registration file '${REG_FILE_PATH}' does not exist.`;
 		console.warn(registrationFileNoExist);
 		hdbLog.warn(registrationFileNoExist);

@@ -326,8 +326,6 @@ let PERMISSION_BASE = {
 const TEST_SCHEMA = 'dev';
 const TEST_TABLE = 'dog';
 let TEST_ATTRIBUTES = ['name', 'breed', 'id', 'age'];
-let RESTRICTED_ATTRIBUTES = ['breed', 'age'];
-let RESTRICTED_ATTRIBUTES_2 = ['name', 'id'];
 let AFFECTED_ATTRIBUTES_SET = new Set(TEST_ATTRIBUTES);
 
 let ROLE_PERMISSION_KEY = 'name';
@@ -411,7 +409,7 @@ describe('Test operation_authorization', function () {
 	it('required_permissions should include settings for all API operations', function () {
 		const require_perms_rw = op_auth_rewire.__get__('requiredPermissions');
 		const missing_ops = [];
-		OPERATION_MAP.forEach((required_op, key, map) => {
+		OPERATION_MAP.forEach((required_op) => {
 			const test_op = getOperationFuncName(required_op);
 			//evaluateSQL op breaks down to a specific SQL query type operation that is used in perms check so we need
 			// to test those values instead of evaluateSQL.  All of those values

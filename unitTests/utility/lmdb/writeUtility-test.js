@@ -5,7 +5,6 @@ const common = require('../../../utility/lmdb/commonUtility');
 const writeUtility = rewire('../../../utility/lmdb/writeUtility');
 const environmentUtility = rewire('../../../utility/lmdb/environmentUtility');
 const rw_write_validator = writeUtility.__get__('validateWrite');
-const search_util = require('../../../utility/lmdb/searchUtility');
 const assert = require('assert');
 const path = require('path');
 const test_utils = require('../../test_utils');
@@ -59,7 +58,7 @@ describe('Test writeUtility module', () => {
 	let get_monotonic_time_stub;
 
 	describe('Test validateInsert function', () => {
-		let env, transaction;
+		let env;
 		before(async () => {
 			global.lmdb_map = undefined;
 			await fs.remove(test_utils.getMockLMDBPath());
@@ -188,15 +187,14 @@ describe('Test writeUtility module', () => {
 	});
 
 	describe('Test insertRecords function', () => {
-		let stub;
 		let get_monotonic_time_stub;
-		let env, transaction;
+		let env;
 		beforeEach(async () => {
 			get_monotonic_time_stub = sandbox.stub(common, 'getNextMonotonicTime').returns(TXN_TIMESTAMP);
 			global.lmdb_map = undefined;
 			try {
 				if (env) await environmentUtility.closeEnvironment(env);
-			} catch (e) {}
+			} catch {}
 			await fs.remove(test_utils.getMockLMDBPath());
 			await fs.mkdirp(BASE_TEST_PATH);
 			TEST_ENVIRONMENT_NAME = uuid();
@@ -263,17 +261,17 @@ describe('Test writeUtility module', () => {
 
 		it('test insert one row', async () => {
 			let records = [];
-			for (let { key, value } of env.dbis.id.getRange({ start: false })) {
+			for (let { value } of env.dbis.id.getRange({ start: false })) {
 				records.push(value);
 			}
 			assert.deepStrictEqual(records, []);
 
-			for (let { key, value } of env.dbis.name.getRange({ start: false })) {
+			for (let { value } of env.dbis.name.getRange({ start: false })) {
 				records.push(value);
 			}
 			assert.deepStrictEqual(records, []);
 
-			for (let { key, value } of env.dbis.age.getRange({ start: false })) {
+			for (let { value } of env.dbis.age.getRange({ start: false })) {
 				records.push(value);
 			}
 			assert.deepStrictEqual(records, []);
@@ -530,7 +528,7 @@ describe('Test writeUtility module', () => {
 	});
 
 	describe('Test updateRecords function', () => {
-		let env, transaction;
+		let env;
 		let get_monotonic_time_stub;
 
 		beforeEach(async () => {
@@ -538,7 +536,7 @@ describe('Test writeUtility module', () => {
 			global.lmdb_map = undefined;
 			try {
 				if (env) await environmentUtility.closeEnvironment(env);
-			} catch (e) {}
+			} catch {}
 			await fs.remove(test_utils.getMockLMDBPath());
 			await fs.mkdirp(BASE_TEST_PATH);
 			TEST_ENVIRONMENT_NAME = uuid();
@@ -607,7 +605,7 @@ describe('Test writeUtility module', () => {
 			let all_attributes_for_update = ['__createdtime__', '__updatedtime__', 'age', 'height', 'id', 'name'];
 
 			let records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(value);
 			}
 
@@ -630,7 +628,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(all_dbis, all_attributes_for_update);
 
 			records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(value);
 			}
 			let expected2 = [UPDATE_ONE_RECORD_ARRAY_EXPECTED[0]];
@@ -641,7 +639,7 @@ describe('Test writeUtility module', () => {
 			let all_attributes_for_update = ['__createdtime__', '__updatedtime__', 'age', 'height', 'id', 'name'];
 
 			let records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(value);
 			}
 
@@ -664,7 +662,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(all_dbis, all_attributes_for_update);
 
 			records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(value);
 			}
 			assert.deepStrictEqual(copyRecords(records), expected);
@@ -674,7 +672,7 @@ describe('Test writeUtility module', () => {
 			let all_attributes_for_update = ['__createdtime__', '__updatedtime__', 'age', 'height', 'id', 'name'];
 
 			let records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(value);
 			}
 
@@ -696,7 +694,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(all_dbis, all_attributes_for_update);
 
 			records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(value);
 			}
 			let expected2 = [UPDATE_ONE_RECORD_ARRAY_EXPECTED[0]];
@@ -707,7 +705,7 @@ describe('Test writeUtility module', () => {
 			let all_attributes_for_update = ['__createdtime__', '__updatedtime__', 'age', 'height', 'id', 'name'];
 
 			let records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(value);
 			}
 			records = copyRecords(records);
@@ -731,7 +729,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(all_dbis, all_attributes_for_update);
 
 			records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(value);
 			}
 			let expected2 = test_utils.deepClone([UPDATE_ONE_RECORD_ARRAY_EXPECTED[0]]);
@@ -743,7 +741,7 @@ describe('Test writeUtility module', () => {
 			let all_attributes_for_update = ['__createdtime__', '__updatedtime__', 'age', 'height', 'id', 'name'];
 
 			let records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(value);
 			}
 			let orig_records = copyRecords(records);
@@ -767,7 +765,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(all_dbis, all_attributes_for_update);
 
 			records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(value);
 			}
 			assert.deepStrictEqual(copyRecords(records), UPDATE_ONE_RECORD_ARRAY_EXPECTED);
@@ -777,7 +775,7 @@ describe('Test writeUtility module', () => {
 			let all_attributes_for_update = ['__createdtime__', '__updatedtime__', 'age', 'city', 'height', 'id', 'name'];
 
 			let records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(value);
 			}
 			assert.deepStrictEqual(copyRecords(records), ONE_RECORD_ARRAY_EXPECTED);
@@ -796,7 +794,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(all_dbis, all_attributes_for_update);
 
 			records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(value);
 			}
 
@@ -823,7 +821,7 @@ describe('Test writeUtility module', () => {
 			};
 
 			let records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(value);
 			}
 			assert.deepStrictEqual(copyRecords(records), ONE_RECORD_ARRAY_EXPECTED);
@@ -839,7 +837,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(results, expected_update_response);
 
 			records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(value);
 			}
 			let expected2 = [
@@ -860,7 +858,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(results, expected_update_response);
 
 			records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(value);
 			}
 
@@ -890,7 +888,7 @@ describe('Test writeUtility module', () => {
 			};
 
 			let records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(value);
 			}
 
@@ -907,7 +905,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(results, expected_update_response);
 
 			records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(value);
 			}
 			let expected2 = [
@@ -928,7 +926,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(results, expected_update_response);
 
 			records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(value);
 			}
 			expected2 = [
@@ -991,7 +989,7 @@ describe('Test writeUtility module', () => {
 	});
 
 	describe('Test upsertRecords function', () => {
-		let env, transaction;
+		let env;
 		let get_monotonic_time_stub;
 		let uuid_stub;
 		before(() => {
@@ -1011,7 +1009,7 @@ describe('Test writeUtility module', () => {
 			global.lmdb_map = undefined;
 			try {
 				if (env) await environmentUtility.closeEnvironment(env);
-			} catch (e) {}
+			} catch {}
 			await fs.remove(test_utils.getMockLMDBPath());
 			await fs.mkdirp(BASE_TEST_PATH);
 			TEST_ENVIRONMENT_NAME = uuid();
@@ -1123,7 +1121,7 @@ describe('Test writeUtility module', () => {
 			let all_attributes_for_update = ['__createdtime__', '__updatedtime__', 'age', 'height', 'id', 'name'];
 
 			let records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(copyRecord(value));
 			}
 			let expected = [ONE_RECORD_ARRAY_EXPECTED[0]];
@@ -1149,7 +1147,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(all_dbis, all_attributes_for_update);
 
 			records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(copyRecord(value));
 			}
 			assert.deepStrictEqual(records, [UPDATE_ONE_RECORD_ARRAY_EXPECTED[0]]);
@@ -1159,7 +1157,7 @@ describe('Test writeUtility module', () => {
 			let all_attributes_for_update = ['__createdtime__', '__updatedtime__', 'age', 'height', 'id', 'name'];
 
 			let records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(copyRecord(value));
 			}
 			let expected = [ONE_RECORD_ARRAY_EXPECTED[0]];
@@ -1189,7 +1187,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(all_dbis, all_attributes_for_update);
 
 			records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(copyRecord(value));
 			}
 			let expected2 = [UPDATE_ONE_RECORD_ARRAY_EXPECTED[0], UPDATE_ONE_FAKE_RECORD_EXPECTED];
@@ -1200,7 +1198,7 @@ describe('Test writeUtility module', () => {
 			let all_attributes_for_upsert = ['__createdtime__', '__updatedtime__', 'age', 'height', 'id', 'name', 'city'];
 
 			let records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(copyRecord(value));
 			}
 			assert.deepStrictEqual(records, ONE_RECORD_ARRAY_EXPECTED);
@@ -1220,7 +1218,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(results, expected_upsert_response);
 
 			records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(copyRecord(value));
 			}
 			let expected2 = [
@@ -1246,7 +1244,7 @@ describe('Test writeUtility module', () => {
 			};
 
 			let records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(copyRecord(value));
 			}
 			assert.deepStrictEqual(records, ONE_RECORD_ARRAY_EXPECTED);
@@ -1266,7 +1264,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(results, expected_upsert_response);
 
 			records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(copyRecord(value));
 			}
 			let expected2 = [
@@ -1290,7 +1288,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(results, expected_upsert_response);
 
 			records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(copyRecord(value));
 			}
 			expected2 = [
@@ -1318,7 +1316,7 @@ describe('Test writeUtility module', () => {
 			};
 
 			let records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(copyRecord(value));
 			}
 			assert.deepEqual(records, ONE_RECORD_ARRAY_EXPECTED);
@@ -1337,7 +1335,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(results, expected_upsert_response);
 
 			records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(copyRecord(value));
 			}
 			let expected2 = [
@@ -1359,7 +1357,7 @@ describe('Test writeUtility module', () => {
 			assert.deepStrictEqual(results, expected_upsert_response);
 
 			records = [];
-			for (let { key, value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
+			for (let { value } of env.dbis[HASH_ATTRIBUTE_NAME].getRange({ start: false })) {
 				records.push(copyRecord(value));
 			}
 			expected2 = [

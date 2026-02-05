@@ -12,19 +12,16 @@ const server_itc_handlers = rewire('../../../server/itc/serverHandlers');
 const job_runner = require('../../../server/jobs/jobRunner');
 const global_schema = require('../../../utility/globalSchema');
 const schema_describe = require('../../../dataLayer/schemaDescribe');
-const itc = require('../../../server/threads/itc');
-const manageThreads = require('../../../server/threads/manageThreads');
 const hdbTerms = require('../../../utility/hdbTerms');
 
 describe('Test hdbChildIpcHandler module', () => {
 	const TEST_ERR = 'The roof is on fire';
 	const sandbox = sinon.createSandbox();
 	let log_error_stub;
-	let log_info_stub;
 
 	before(() => {
 		log_error_stub = sandbox.stub(harper_logger, 'error');
-		log_info_stub = sandbox.stub(harper_logger, 'info');
+		sandbox.stub(harper_logger, 'info');
 	});
 
 	after(() => {
@@ -37,16 +34,14 @@ describe('Test hdbChildIpcHandler module', () => {
 		const sync_schema_stub = sandbox.stub();
 		let sync_schema_rw;
 		let set_users_to_global_stub;
-		let parse_msg_stub;
 		let schema_handler;
 		let user_handler;
-		let job_handler;
 
 		before(() => {
 			server_itc_handlers.__set__('cleanLmdbMap', clean_map_stub);
 			sync_schema_rw = server_itc_handlers.__set__('syncSchemaMetadata', sync_schema_stub);
 			set_users_to_global_stub = sandbox.stub(user_schema, 'setUsersWithRolesCache');
-			parse_msg_stub = sandbox.stub(job_runner, 'parseMessage');
+			sandbox.stub(job_runner, 'parseMessage');
 			schema_handler = server_itc_handlers.__get__('schemaHandler');
 			user_handler = server_itc_handlers.__get__('userHandler');
 		});
@@ -231,7 +226,6 @@ describe('Test hdbChildIpcHandler module', () => {
 		let componentStatusInternalStub;
 		let threadsStub;
 		let log_trace_stub;
-		let log_debug_stub;
 		let log_warn_stub;
 
 		before(() => {
@@ -242,7 +236,7 @@ describe('Test hdbChildIpcHandler module', () => {
 			sendItcEventStub = sandbox.stub();
 			sendToThreadStub = sandbox.stub();
 			log_trace_stub = sandbox.stub(harper_logger, 'trace');
-			log_debug_stub = sandbox.stub(harper_logger, 'debug');
+			sandbox.stub(harper_logger, 'debug');
 			log_warn_stub = sandbox.stub(harper_logger, 'warn');
 			
 			// Mock the component status registry

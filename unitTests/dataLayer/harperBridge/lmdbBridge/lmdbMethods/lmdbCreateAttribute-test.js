@@ -79,7 +79,6 @@ describe('test lmdbCreateAttribute module', () => {
 	let hdb_schema_env;
 	let hdb_table_env;
 	let hdb_attribute_env;
-	let rw_env_util;
 	let catsdrool_env;
 	before(async () => {
 		//uuid_stub = sandbox.stub(uuid, 'v4').returns(MOCK_UUID_VALUE);

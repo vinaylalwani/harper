@@ -13,7 +13,6 @@ const chalk = require('chalk');
 const hdbLogger = require('../utility/logging/harper_logger.js');
 const hdbTerms = require('../utility/hdbTerms.ts');
 const directivesManager = require('../upgrade/directivesManager.js');
-const hdbUtils = require('../utility/common_utils.js');
 const installation = require('../utility/installation.ts');
 const hdbInfoController = require('../dataLayer/hdbInfoController.js');
 const upgradePrompt = require('../upgrade/upgradePrompt.js');

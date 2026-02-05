@@ -1,6 +1,6 @@
 'use strict';
 
-const { assert, expect } = globalThis.chai || require('chai');
+const { expect } = globalThis.chai || require('chai');
 const { callOperation, removeAllSchemas } = require('../utility');
 const crypto = require('crypto');
 const { promisify } = require('util');

@@ -40,7 +40,7 @@ const defaultGetAvailableSpaceRatio = async (path: string): Promise<number> => {
 		const fsStats = await statfs(path);
 		return fsStats.bavail / fsStats.blocks;
 	} else {
-		return new Promise((resolve, reject) => {
+		return new Promise((resolve) => {
 			import('hdd-space').then((hddSpace) => {
 				hddSpace.default((space: any) => {
 					for (const volume of space.parts) {

@@ -42,11 +42,10 @@ export function start({ ensureTable }) {
 
 	async function handleFile(gqlContent, urlPath, filePath, resources) {
 		// lazy load the graphql package so we don't load it for users that don't use graphql
-		const { parse, Source, Kind, NamedTypeNode, StringValueNode } = await import('graphql');
+		const { parse, Source, Kind } = await import('graphql');
 		const ast = parse(new Source(gqlContent.toString(), filePath));
 		const types = new Map();
 		const tables = [];
-		let query;
 		// we begin by iterating through the definitions in the AST to get the types and convert them
 		// to a friendly format for table attributes
 		for (const definition of ast.definitions) {
@@ -161,9 +160,6 @@ export function start({ ensureTable }) {
 						}
 					}
 					typeDef.type = typeName;
-					if (typeName === 'Query') {
-						query = typeDef;
-					}
 			}
 		}
 		// check the types and if any types reference other types, fill those in.

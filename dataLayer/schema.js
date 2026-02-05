@@ -186,17 +186,11 @@ async function dropSchema(dropSchemaObject) {
 		);
 	}
 
-	//we refresh and assign the entire schema metadata to global in order to make sure we have the latest
-	let schema = await schemaMetadataValidator.schemaDescribe.describeSchema({ schema: dropSchemaObject.schema });
-	//global.hdb_schema[dropSchemaObject.schema] = schema;
-
 	// Get all the tables that belong to schema.
 	const tables = Object.keys(global.hdb_schema[dropSchemaObject.schema]);
 
 	await harperBridge.dropSchema(dropSchemaObject);
 	signalling.signalSchemaChange(new SchemaEventMsg(process.pid, dropSchemaObject.operation, dropSchemaObject.schema));
-
-	//delete global.hdb_schema[dropSchemaObject.schema];
 
 	// Purge the streams for all tables that were part of schema.
 	// Streams are part of Nats and are used by clustering, they are 'message stores' that track transactions on a table.

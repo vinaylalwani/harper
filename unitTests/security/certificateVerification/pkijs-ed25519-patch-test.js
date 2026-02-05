@@ -132,7 +132,7 @@ describe('certificateVerification/pkijs-ed25519-patch.ts', function () {
 					// Simulate a verification that might fail
 					throw new Error('Verification failed');
 					// eslint-disable-next-line sonarjs/no-ignored-exceptions
-				} catch (error) {
+				} catch {
 					// Any failure in verification should return false
 					return false;
 				}

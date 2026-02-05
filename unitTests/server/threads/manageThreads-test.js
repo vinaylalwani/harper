@@ -67,8 +67,8 @@ describe('(Re)start/monitor workers', () => {
 	});
 	it('getThreadInfo should return stats', async function () {
 		this.timeout(5000);
-		let worker1 = startWorker('unitTests/server/threads/thread-for-tests', { name: 'gti-test' });
-		let worker2 = startWorker('unitTests/server/threads/thread-for-tests', { name: 'gti-test' });
+		startWorker('unitTests/server/threads/thread-for-tests', { name: 'gti-test' });
+		startWorker('unitTests/server/threads/thread-for-tests', { name: 'gti-test' });
 		await new Promise((resolve) => setTimeout(resolve, 3500)); // wait for resources to be reported
 		let worker_info = await getThreadInfo();
 		assert(worker_info.length >= 2);
@@ -80,8 +80,8 @@ describe('(Re)start/monitor workers', () => {
 	});
 	it('Shutdown workers', async function () {
 		let initial_workers_num = workers.length;
-		let worker1 = startWorker('unitTests/server/threads/thread-for-tests', { name: 'test' });
-		let worker2 = startWorker('unitTests/server/threads/thread-for-tests', { name: 'test' });
+		startWorker('unitTests/server/threads/thread-for-tests', { name: 'test' });
+		startWorker('unitTests/server/threads/thread-for-tests', { name: 'test' });
 		await shutdownWorkers('test');
 		assert(workers.length < initial_workers_num + 2);
 	});

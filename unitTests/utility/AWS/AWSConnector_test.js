@@ -36,8 +36,6 @@ describe('Test AWSConnector module', () => {
 
 	describe('Test getS3AuthObj function', () => {
 		let stub_func;
-		const auth_success = 'auth success';
-		const s3_fail = 'auth fail';
 
 		beforeEach(() => {
 			AWSConnector_rw = rewire('../../../utility/AWS/AWSConnector');

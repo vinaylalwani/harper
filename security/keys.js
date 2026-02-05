@@ -57,10 +57,9 @@ const {
 	replicateOperation,
 } = require('../server/replication/replicator.ts');
 const { readFileSync, statSync } = require('node:fs');
-const env = require('../utility/environment/environmentManager.js');
 const { getTicketKeys, onMessageFromWorkers } = require('../server/threads/manageThreads.js');
 const { isMainThread } = require('worker_threads');
-const { TLSSocket, createSecureContext } = require('node:tls');
+const { TLSSocket } = require('node:tls');
 
 const CERT_VALIDITY_DAYS = 3650;
 const CERT_DOMAINS = ['127.0.0.1', 'localhost', '::1'];
@@ -139,7 +138,7 @@ async function getReplicationCert() {
 	const SNICallback = createTLSSelector('operations-api');
 	const secureTarget = {
 		secureContexts: null,
-		setSecureContext: (ctx) => {},
+		setSecureContext: (_ctx) => {},
 	};
 	await SNICallback.initialize(secureTarget);
 	const cert = secureTarget.secureContexts.get(getThisNodeName());
@@ -199,7 +198,6 @@ function loadCertificates() {
 				for (let ca of [false, true]) {
 					let path = config[ca ? 'certificateAuthority' : 'certificate'];
 					if (path && isMainThread) {
-						let lastModified;
 						loadAndWatch(
 							path,
 							(certificate) => {
@@ -940,14 +938,12 @@ function createTLSSelector(type, mtlsOptions) {
 							secureContext.certStart = certificate.toString().slice(0, 100);
 							// we want to configure SNI handling to pick the right certificate based on all the registered SANs
 							// in the certificate
-							let hasIpAddress;
 							for (let hostname of hostnames) {
 								if (hostname) {
 									if (hostname[0] === '*') {
 										hasWildcards = true;
 										hostname = hostname.slice(1);
 									}
-									if (net.isIP(hostname)) hasIpAddress = true;
 									// we use this certificate if it has a higher quality than the existing one for this hostname
 									let existingCertQuality = secureContexts.get(hostname)?.quality ?? 0;
 									logger.trace?.('Assigning TLS for hostname', hostname, 'if', quality, '>', existingCertQuality);
@@ -1041,11 +1037,6 @@ async function getPrivateKeyByName(private_key_name) {
 	}
 
 	return private_key;
-}
-
-function reverseSubscription(subscription) {
-	const { subscribe, publish } = subscription;
-	return { ...subscription, subscribe: publish, publish: subscribe };
 }
 
 /**
@@ -1219,7 +1210,7 @@ function hostnamesFromCert(cert /*X509Certificate*/) {
 					// quoted value
 					try {
 						part = JSON.parse(part);
-					} catch (e) {
+					} catch {
 						// ignore
 					}
 				}

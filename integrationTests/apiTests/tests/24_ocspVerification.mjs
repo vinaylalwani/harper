@@ -232,7 +232,7 @@ operationsApi:
 					operation: 'drop_user',
 					username: 'Revoked Client',
 				});
-			} catch (error) {
+			} catch {
 				// Silently ignore
 			}
 		}

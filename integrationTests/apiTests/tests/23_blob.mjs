@@ -171,7 +171,7 @@ describe('23. Blob', () => {
 		if (process.env.DOCKER_CONTAINER_ID) {
 			await exec(
 				`docker exec ${process.env.DOCKER_CONTAINER_ID} ls -al /home/harperdb/hdb/blobs/blob/0/0/ | tail -n 1`,
-				(error, stdout, stderr) => {
+				(error, stdout) => {
 					console.log('stdout: ' + stdout);
 					const outputLineItems = stdout.split(' ');
 					assert.ok(

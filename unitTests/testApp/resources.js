@@ -34,7 +34,7 @@ export class Echo extends Resource {
 		return super.subscribe(query);
 	}
 
-	get(target) {
+	get(_target) {
 		if (this.getId() === 'error-plain-object') throw { message: 'Test error' };
 		if (this.getId() === 'error-bad-body') {
 			return {
@@ -209,14 +209,14 @@ server.getUser = function (username, password) {
 
 // These are for the "handles iterator content type handler" tests in unitTests/apiTests/basicREST-test.mjs
 server.contentTypes.set('application/custom-async-iterator', {
-	async *serializeStream(data) {
+	async *serializeStream(_data) {
 		yield 'one';
 		yield 'two';
 	},
 });
 
 server.contentTypes.set('application/custom-iterator', {
-	*serializeStream(data) {
+	*serializeStream(_data) {
 		yield 'one';
 		yield 'two';
 	},

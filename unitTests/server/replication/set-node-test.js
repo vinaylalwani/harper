@@ -36,23 +36,19 @@ describe('Test setNode', () => {
 	let send_to_node_stub;
 	let set_cert_table_stub;
 	let ensure_node_stub;
-	let get_this_node_name_stub;
-	let get_this_node_url_stub;
-	let get_rep_cert_stub;
-	let get_rep_ca_stub;
 
 	before(() => {
 		env_mgr.setHdbBasePath(config_utils.getConfigFromFile('rootPath'));
 		env_mgr.setProperty('storage_path', path.join(config_utils.getConfigFromFile('rootPath'), 'database'));
-		get_this_node_url_stub = sandbox.stub(replicator, 'getThisNodeUrl').returns(`wss://${test_this_node_name}:9925`);
+		sandbox.stub(replicator, 'getThisNodeUrl').returns(`wss://${test_this_node_name}:9925`);
 		send_to_node_stub = sandbox.stub(replicator, 'sendOperationToNode');
 		set_cert_table_stub = sandbox.stub(keys, 'setCertTable');
 		ensure_node_stub = sandbox.stub(sub_mgr, 'ensureNode');
-		get_this_node_name_stub = sandbox.stub(replicator, 'getThisNodeName').returns(test_this_node_name);
-		get_rep_cert_stub = sandbox
+		sandbox.stub(replicator, 'getThisNodeName').returns(test_this_node_name);
+		sandbox
 			.stub(keys, 'getReplicationCert')
 			.resolves({ options: { is_self_signed: true, key_file: 'privateKey.pem' } });
-		get_rep_ca_stub = sandbox.stub(keys, 'getReplicationCertAuth').resolves({ certificate: test_using_ca });
+		sandbox.stub(keys, 'getReplicationCertAuth').resolves({ certificate: test_using_ca });
 		sandbox.stub(keys, 'createCsr').resolves(test_csr);
 		keys.loadCertificates();
 	});
@@ -114,7 +110,7 @@ describe('Test setNode', () => {
 
 	it('Test addNodeBack', async () => {
 		sandbox.stub(keys, 'signCertificate').resolves({ signingCA: test_signing_ca, usingCA: test_using_ca });
-		const res = await set_node.addNodeBack({ url: 'wss://127.0.0.4:9925', csr: test_csr });
+		await set_node.addNodeBack({ url: 'wss://127.0.0.4:9925', csr: test_csr });
 		expect(ensure_node_stub.args[0]).to.eql([
 			'127.0.0.4',
 			{
@@ -144,7 +140,7 @@ describe('Test setNode', () => {
 			delete: fake_delete,
 		};
 		sandbox.stub(known_nodes, 'getHDBNodeTable').returns(hdb_nodes_fake);
-		const res = await set_node.setNode({
+		await set_node.setNode({
 			operation: 'remove_node',
 			node_name: 'node-to-delete',
 		});

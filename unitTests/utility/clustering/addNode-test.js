@@ -17,9 +17,6 @@ describe('Test addNode module', () => {
 	let get_node_record_stub;
 	let request_stub;
 	let upsert_node_record_stub;
-	let hdb_log_error_stub;
-	let create_table_streams_stub;
-	let get_sys_info_sub;
 	let update_remote_consumer_stub;
 	let update_consumer_iterator_stub;
 	let review_subs_stub = sandbox.stub();
@@ -57,7 +54,7 @@ describe('Test addNode module', () => {
 	const fake_reply = new UpdateRemoteResponseObject('success', 'Test node successfully added', test_sys_info);
 
 	before(() => {
-		get_sys_info_sub = sandbox.stub(clustering_utils, 'getSystemInfo').resolves(test_sys_info);
+		sandbox.stub(clustering_utils, 'getSystemInfo').resolves(test_sys_info);
 		addNode.__set__('localNodeName', 'local_node');
 		addNode.__set__('reviewSubscriptions', review_subs_stub);
 		test_utils.setGlobalSchema('name', 'breed', 'beagle', ['name', 'age']);
@@ -66,8 +63,8 @@ describe('Test addNode module', () => {
 		get_node_record_stub = sandbox.stub(clustering_utils, 'getNodeRecord').resolves([]);
 		request_stub = sandbox.stub(nats_utils, 'request').resolves(fake_reply);
 		upsert_node_record_stub = sandbox.stub(clustering_utils, 'upsertNodeRecord').resolves();
-		hdb_log_error_stub = sandbox.stub(hdb_logger, 'error');
-		create_table_streams_stub = sandbox.stub(nats_utils, 'createTableStreams');
+		sandbox.stub(hdb_logger, 'error');
+		sandbox.stub(nats_utils, 'createTableStreams');
 		update_remote_consumer_stub = sandbox.stub(nats_utils, 'updateRemoteConsumer');
 		update_consumer_iterator_stub = sandbox.stub(nats_utils, 'updateConsumerIterator');
 		env_mgr.setProperty('clustering_enabled', true);

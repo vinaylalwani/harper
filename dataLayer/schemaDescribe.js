@@ -1,7 +1,5 @@
 'use strict';
 
-//this is to avoid a circular dependency with insert.  insert needs the describe all function but so does the main schema module.  as such the functions have been broken out into a separate module.
-const search = require('./search.js');
 const logger = require('../utility/logging/harper_logger.js');
 const { validateBySchema } = require('../validation/validationWrapper.js');
 const Joi = require('joi');

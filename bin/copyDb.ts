@@ -87,7 +87,7 @@ export async function compactOnStart() {
 
 		updateConfigValue(CONFIG_PARAMS.STORAGE_COMPACTONSTART, false);
 
-		for (const [db, { dbPath, backupDest }] of compactedDb) {
+		for (const [_db, { dbPath, backupDest }] of compactedDb) {
 			console.error('Moving backup database', backupDest, 'back to', dbPath);
 			try {
 				await move(backupDest, dbPath, { overwrite: true });
@@ -250,7 +250,7 @@ export async function copyDb(sourceDatabase: string, targetDatabasePath: string)
 						'bytes'
 					);
 					return;
-				} catch (error) {
+				} catch {
 					// try to resume with a bigger key
 					if (typeof start === 'string') {
 						if (start === 'z') {

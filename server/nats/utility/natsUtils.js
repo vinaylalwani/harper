@@ -28,12 +28,7 @@ const encoder = new Encoder(); // use default encoder options
 const { isEmpty } = hdbUtils;
 const user = require('../../../security/user.ts');
 
-const INGEST_MAX_MSG_AGE = 48 * 3600000000000; // nanoseconds
-const INGEST_MAX_BYTES = 5000000000;
 const MAX_INGEST_THREADS = 2; // This can also be set in harperdb-config
-
-// Max delay between attempts to connect to remote node
-const MAX_REMOTE_CON_RETRY_DELAY = 10000;
 
 if (isMainThread) {
 	onMessageByType(hdbTerms.ITC_EVENT_TYPES.RESTART, () => {
@@ -49,10 +44,6 @@ const {
 	AckPolicy,
 	DeliverPolicy,
 	DiscardPolicy,
-	NatsConnection,
-	JetStreamManager,
-	JetStreamClient,
-	StringCodec,
 	JSONCodec,
 	createInbox,
 	headers,
@@ -140,7 +131,7 @@ async function checkNATSServerInstalled() {
 	try {
 		//check if binary exists
 		await fs.access(NATS_SERVER_PATH);
-	} catch (e) {
+	} catch {
 		return false;
 	}
 
@@ -553,7 +544,7 @@ async function publishToStream(subjectName, stream_name, msgHeader, message) {
 				// try again once we have the lock
 				try {
 					await js.publish(subject, encodedMessage, { headers: msgHeader });
-				} catch (error) {
+				} catch {
 					if (err.code && err.code.toString() === '503') {
 						hdbLogger.trace(`publishToStream creating stream: ${stream_name}`);
 						let subjectParts = subject.split('.');
@@ -730,7 +721,7 @@ function reloadNATS(pid_file_path) {
 			procErr += data.toString();
 		});
 
-		reload.stderr.on('close', (data) => {
+		reload.stderr.on('close', () => {
 			if (procErr) {
 				reject(procErr);
 			}

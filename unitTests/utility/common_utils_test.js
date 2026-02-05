@@ -7,8 +7,6 @@ const assert = require('assert');
 const chai = require('chai');
 const cu = require('../../utility/common_utils');
 const test_utils = require('../test_utils');
-const stream = require('stream');
-const papa_parse = require('papaparse');
 // try to move to /bin directory so our properties reader doesn't explode.
 test_utils.changeProcessToBinDir();
 const rewire = require('rewire');

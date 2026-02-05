@@ -217,7 +217,7 @@ operationsApi:
 					operation: 'drop_user',
 					username: 'Revoked CRL Client',
 				});
-			} catch (error) {
+			} catch {
 				// Silently ignore
 			}
 		}

@@ -6,14 +6,12 @@ const UpdateRecordsResponseObject = require('./UpdateRecordsResponseObject.js');
 const UpsertRecordsResponseObject = require('./UpsertRecordsResponseObject.js');
 const common = require('./commonUtility.js');
 const LMDB_ERRORS = require('../errors/commonErrors.js').LMDB_ERRORS_ENUM;
-const lmdbTerms = require('./terms.js');
 const hdbTerms = require('../hdbTerms.ts');
 const hdbUtils = require('../common_utils.js');
 const uuid = require('uuid');
 // eslint-disable-next-line no-unused-vars
 const lmdb = require('lmdb');
 const { handleHDBError, hdbErrors } = require('../errors/hdbError.js');
-const { OVERFLOW_MARKER, MAX_SEARCH_KEY_LENGTH } = lmdbTerms;
 const envMngr = require('../environment/environmentManager.js');
 envMngr.initSync();
 
@@ -196,7 +194,7 @@ async function updateRecords(
 		let promise;
 		try {
 			promise = updateUpsertRecord(env, hash_attribute, record, hashValue, result, true, timestamp);
-		} catch (e) {
+		} catch {
 			result.skipped_hashes.push(hashValue);
 			removeIndices.push(index);
 			continue;

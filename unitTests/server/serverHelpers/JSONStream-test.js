@@ -5,8 +5,6 @@ const { streamAsJSON } = require('../../../server/serverHelpers/JSONStream');
 test_utils.preTestPrep();
 
 const assert = require('assert');
-const sinon = require('sinon');
-const sandbox = sinon.createSandbox();
 function streamToJSON(stream) {
 	return new Promise((resolve, reject) => {
 		let buffers = [];

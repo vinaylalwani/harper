@@ -40,7 +40,7 @@ export class RootConfigWatcher extends EventEmitter {
 
 				this.emit('change', (this.#config = config));
 			})
-			.catch((error) => {
+			.catch((_error) => {
 				// if yaml parse error ignore?
 			});
 	}

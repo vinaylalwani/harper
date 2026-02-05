@@ -2,18 +2,15 @@
 
 const environmentUtility = require('./environmentUtility.js');
 
-const log = require('../logging/harper_logger.js');
 const common = require('./commonUtility.js');
 const lmdbTerms = require('./terms.js');
 const LMDB_ERRORS = require('../errors/commonErrors.js').LMDB_ERRORS_ENUM;
-const hdbUtils = require('../common_utils.js');
 const hdbTerms = require('../hdbTerms.ts');
 const cursorFunctions = require('./searchCursorFunctions.js');
 const { parseRow } = cursorFunctions;
 // eslint-disable-next-line no-unused-vars
 const lmdb = require('lmdb');
 const { OVERFLOW_MARKER, MAX_SEARCH_KEY_LENGTH } = lmdbTerms;
-const LAZY_PROPERTY_ACCESS = { lazy: true };
 
 /** UTILITY CURSOR FUNCTIONS **/
 
@@ -22,7 +19,6 @@ const LAZY_PROPERTY_ACCESS = { lazy: true };
  * @param {lmdb.Transaction} transactionOrEnv
  * @param {String} hash_attribute
  * @param {String} attribute
- * @param {Function} evalFunction
  * @param {boolean} reverse - defines if the iterator goes from last to first
  * @param {number} limit - defines the max number of entries to iterate
  * @param {number} offset - defines the entries to skip
@@ -45,50 +41,6 @@ function iterateFullIndex(
 			offset,
 			reverse,
 		});
-	});
-}
-
-/**
- * Creates the basis for a forward/reverse range search of a dbi with an evaluation function used to determine the logic inside the iteration
- * @param {lmdb.Transaction} transaction
- * @param {String} hash_attribute
- * @param {String} attribute
- * @param {String|Number} searchValue
- * @param {Function} evalFunction
- * @param {boolean} reverse - defines if the iterator goes from last to first
- * @param {number} limit - defines the max number of entries to iterate
- * @param {number} offset - defines the entries to skip
- * @returns {[[],[]]}
- */
-function iterateRangeNext(
-	transactionOrEnv,
-	hash_attribute,
-	attribute,
-	searchValue,
-	evalFunction,
-	reverse = false,
-	limit = undefined,
-	offset = undefined
-) {
-	return setupTransaction(transactionOrEnv, hash_attribute, attribute, (transaction, dbi, env, hash_attribute) => {
-		const overflowCheck = getOverflowCheck(env, transaction, hash_attribute, attribute);
-		let results = [[], []];
-		//because reversing only returns 1 entry from a dup sorted key we get all entries for the search value
-		let startValue = reverse === true ? undefined : searchValue === undefined ? false : searchValue;
-		let endValue = reverse === true ? searchValue : undefined;
-
-		for (let { key, value } of dbi.getRange({
-			transaction,
-			start: startValue,
-			end: endValue,
-			reverse,
-			limit,
-			offset,
-		})) {
-			evalFunction(searchValue, overflowCheck(key, value), value, results, hash_attribute, attribute);
-		}
-
-		return results;
 	});
 }
 
@@ -885,10 +837,10 @@ function batchHashSearch(transactionOrEnv, hash_attribute, fetchAttributes, ids,
  * @param {String} hash_attribute - name of the hash_attribute for this environment
  * @param {Array.<String>} fetchAttributes - string array of attributes to pull from the object
  * @param {Array.<String>} ids - list of ids to search
- * @param {[]} [notFound] -optional,  meant to be an array passed by reference so that skipped ids can be aggregated.
+ * @param {[]} [_notFound] -optional,  meant to be an array passed by reference so that skipped ids can be aggregated.
  * @returns {TransactionCursor}
  */
-function initializeBatchSearchByHash(transactionOrEnv, hash_attribute, fetchAttributes, ids, notFound) {
+function initializeBatchSearchByHash(transactionOrEnv, hash_attribute, fetchAttributes, ids, _notFound) {
 	common.validateEnv(transactionOrEnv);
 
 	if (hash_attribute === undefined) {

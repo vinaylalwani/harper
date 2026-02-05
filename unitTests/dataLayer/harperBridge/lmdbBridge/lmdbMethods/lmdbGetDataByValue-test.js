@@ -15,7 +15,6 @@ const test_data = require('../../../../testData');
 const rewire = require('rewire');
 const environment_utility = rewire('../../../../../utility/lmdb/environmentUtility');
 const write_utility = require('../../../../../utility/lmdb/writeUtility');
-const delete_utility = require('../../../../../utility/lmdb/deleteUtility');
 const SearchObject = require('../../../../../dataLayer/SearchObject');
 const lmdb_search = rewire('../../../../../dataLayer/harperBridge/lmdbBridge/lmdbMethods/lmdbGetDataByValue');
 const common_utils = require('../../../../../utility/common_utils');

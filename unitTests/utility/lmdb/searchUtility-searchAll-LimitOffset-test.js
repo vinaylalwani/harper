@@ -10,7 +10,6 @@ const path = require('path');
 const assert = require('assert');
 const test_data = require('../../personData.json');
 const sinon = require('sinon');
-const arrayOfValues = test_utils.arrayOfValues;
 const uuid = require('uuid').v4;
 const sandbox = sinon.createSandbox();
 const BASE_TEST_PATH = path.join(test_utils.getMockLMDBPath(), 'lmdbTest');

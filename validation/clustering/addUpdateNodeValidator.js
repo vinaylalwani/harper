@@ -3,20 +3,8 @@
 const Joi = require('joi');
 const { string, boolean, date } = Joi.types();
 const validator = require('../validationWrapper.js');
-const { validateSchemaExists, validateTableExists, validateSchemaName } = require('../common_validators.js');
-const hdbTerms = require('../../utility/hdbTerms.ts');
-const natsTerms = require('../../server/nats/utility/natsTerms.js');
 const envManager = require('../../utility/environment/environmentManager.js');
 envManager.initSync();
-
-const nodeNameConstraint = string
-	.invalid(envManager.get(hdbTerms.CONFIG_PARAMS.CLUSTERING_NODENAME) ?? 'node_name')
-	.pattern(natsTerms.NATS_TERM_CONSTRAINTS_RX)
-	.messages({
-		'string.pattern.base': '{:#label} invalid, must not contain ., * or >',
-		'any.invalid': "'node_name' cannot be this nodes name",
-	})
-	.empty(null);
 
 const validationSchema = {
 	operation: string.valid('add_node', 'update_node', 'set_node_replication'),

@@ -1,5 +1,5 @@
 require('../../test_utils');
-const { start, setReplicator, startOnMainThread } = require('../../../server/replication/replicator');
+const { start, startOnMainThread } = require('../../../server/replication/replicator');
 const { table, databases } = require('../../../resources/databases');
 const { setMainIsWorker } = require('../../../server/threads/manageThreads');
 const { listenOnPorts } = require('../../../server/threads/threadServer');

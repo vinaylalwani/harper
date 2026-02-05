@@ -2,13 +2,10 @@
 
 const insert = require('../../dataLayer/insert.js');
 const hdbUtils = require('../common_utils.js');
-const util = require('util');
 const terms = require('../hdbTerms.ts');
 const envMgr = require('../environment/environmentManager.js');
 envMgr.initSync();
-const auth = require('../../security/fastifyAuth.js');
 const search = require('../../dataLayer/search.js');
-const { Node, NodeSubscription } = require('./NodeObject.js');
 const SearchByHashObject = require('../../dataLayer/SearchByHashObject.js');
 const UpsertObject = require('../../dataLayer/UpsertObject.js');
 const { RemotePayloadObject, RemotePayloadSubscription } = require('./RemotePayloadObject.js');
@@ -20,7 +17,6 @@ const { packageJson } = require('../packageUtils.js');
 const { getDatabases } = require('../../resources/databases.ts');
 
 //Promisified functions
-const pAuthAuthorize = util.promisify(auth.authorize);
 const pSearchByHash = search.searchByHash;
 const pSearchByValue = search.searchByValue;
 

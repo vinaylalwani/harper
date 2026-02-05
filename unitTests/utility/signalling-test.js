@@ -6,7 +6,6 @@ const rewire = require('rewire');
 const { expect } = chai;
 const sinon_chai = require('sinon-chai');
 chai.use(sinon_chai);
-let test_utils;
 let itc_utils;
 let hdb_logger;
 let signalling;
@@ -21,7 +20,6 @@ describe('Test signalling module', () => {
 		hdb_logger = require('../../utility/logging/harper_logger');
 		log_error_stub = sandbox.stub(hdb_logger, 'error');
 		sandbox.stub(hdb_logger, 'trace');
-		test_utils = require('../test_utils');
 		itc_utils = require('../../server/threads/itc');
 		send_itc_event_stub = sandbox.stub(itc_utils, 'sendItcEvent');
 		signalling = rewire('../../utility/signalling');

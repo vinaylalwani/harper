@@ -23,7 +23,6 @@ let insert_stub;
 let version_stub;
 let getLatestHdbInfoRecord_stub;
 let hasUpgradesRequired_stub;
-let checkIfInstallIsSupported_stub;
 let consoleLog_stub;
 let consoleError_stub;
 let log_info_stub;
@@ -223,7 +222,7 @@ describe('Test hdbInfoController module ', function () {
 		before(() => {
 			version_stub = sandbox.stub(packageJson, 'version').get(() => '4.0.0');
 			hasUpgradesRequired_stub = sandbox.stub(directiveManager, 'hasUpgradesRequired').returns(true);
-			checkIfInstallIsSupported_stub = sandbox.stub().returns();
+			sandbox.stub().returns();
 			process.argv.push('--CONFIRM_DOWNGRADE', 'yes');
 		});
 

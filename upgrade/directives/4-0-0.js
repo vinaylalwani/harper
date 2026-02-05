@@ -12,7 +12,6 @@ const PropertiesReader = require('properties-reader');
 const SearchObj = require('../../dataLayer/SearchObject.js');
 const UpdateObj = require('../../dataLayer/UpdateObject.js');
 const search = require('../../dataLayer/search.js');
-const util = require('util');
 const pSearchByValue = search.searchByValue;
 const insert = require('../../dataLayer/insert.js');
 const routes = require('../../utility/clustering/routes.js');

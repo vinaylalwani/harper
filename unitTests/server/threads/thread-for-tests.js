@@ -6,7 +6,7 @@ const server_handlers = require('../../../server/itc/serverHandlers');
 let timer = setTimeout(() => {}, 10000); // use it keep the thread running until shutdown
 let array = [];
 if (!isMainThread) {
-	server_handlers.broadcast2 = (event) => {
+	server_handlers.broadcast2 = (_event) => {
 		parentPort.postMessage({ type: 'received-broadcast' });
 	};
 	parentPort.on('message', (message) => {

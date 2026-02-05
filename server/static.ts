@@ -24,7 +24,7 @@ export function handleApplication(scope: Scope) {
 	const indexEntries = new Map<string, string>();
 
 	// If the `files` or `urlPath` options change, clear the maps and let them regenerate
-	scope.options.on('change', (key, value) => {
+	scope.options.on('change', (key) => {
 		if (key[0] === 'files' || key[0] === 'urlPath') {
 			// If the files or urlPath options change, we need to reinitialize the static files map
 			staticFiles.clear();

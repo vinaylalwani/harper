@@ -130,7 +130,7 @@ export function applyEd25519Patch(): void {
 
 				return nodeCert.verify(nodeIssuer.publicKey);
 				// eslint-disable-next-line sonarjs/no-ignored-exceptions
-			} catch (error) {
+			} catch {
 				// Any failure in verification should return false
 				return false;
 			}
@@ -176,7 +176,7 @@ export function applyEd25519Patch(): void {
 					// Verify the signature
 					return await cryptoSubtle.verify(algorithmName, publicKey, signatureValue, data);
 					// eslint-disable-next-line sonarjs/no-ignored-exceptions
-				} catch (error) {
+				} catch {
 					// Any failure in verification should return false
 					return false;
 				}

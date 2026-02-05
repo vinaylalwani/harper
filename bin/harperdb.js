@@ -11,7 +11,6 @@ const cliOperations = require('./cliOperations.js');
 const { packageJson, PACKAGE_ROOT } = require('../utility/packageUtils.js');
 const checkNode = require('../launchServiceScripts/utility/checkNodeVersion.js');
 const hdbTerms = require('../utility/hdbTerms.ts');
-const { HDB_COMPONENT_CONFIG_FILE } = require('../utility/hdbTerms');
 const { SERVICE_ACTIONS_ENUM } = hdbTerms;
 
 const HELP = `

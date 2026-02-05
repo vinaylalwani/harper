@@ -5,7 +5,6 @@ const search = require('../dataLayer/search.js');
 const delete_ = require('../dataLayer/delete.js');
 const validation = require('../validation/role_validation.js');
 const signalling = require('../utility/signalling.js');
-const uuidV4 = require('uuid').v4;
 const util = require('util');
 const terms = require('../utility/hdbTerms.ts');
 const hdbUtils = require('../utility/common_utils.js');
@@ -39,7 +38,7 @@ function scrubRoleDetails(role) {
 		if (role.hdb_user) {
 			delete role.hdb_user;
 		}
-	} catch (err) {
+	} catch {
 		//no-op, failure is ok
 	}
 	return role;

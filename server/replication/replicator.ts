@@ -270,7 +270,7 @@ function assignReplicationSource(options) {
 		if (!database) {
 			// if no database, then the notification means the database was removed
 			const dbSubscriptions = options.databaseSubscriptions || databaseSubscriptions;
-			for (const [url, dbConnections] of connections) {
+			for (const [_url, dbConnections] of connections) {
 				const dbConnection = dbConnections.get(databaseName);
 				if (dbConnection) {
 					dbConnection.subscribe([], false);
@@ -298,7 +298,6 @@ export function setReplicator(dbName: string, table: any, options: any) {
 		return console.error(`Attempt to replicate non-existent table ${table.name} from database ${dbName}`);
 	}
 	if (table.replicate === false || table.sources?.some((source) => source.isReplicator)) return;
-	let source;
 	// We may try to consult this to get the other nodes for back-compat
 	// const { hub_routes } = getClusteringRoutes();
 	table.sourcedFrom(
@@ -333,7 +332,7 @@ export function setReplicator(dbName: string, table: any, options: any) {
 				}
 				this.subscription = subscription;
 			}
-			static subscribeOnThisThread(workerIndex, totalWorkers) {
+			static subscribeOnThisThread(_workerIndex, _totalWorkers) {
 				// we need a subscription on every thread because we could get subscription requests from any
 				// incoming TCP connection
 				return true;
@@ -638,7 +637,7 @@ export function forEachReplicatedDatabase(options, callback) {
 	onRemovedDB((databaseName) => {
 		forDatabase(databaseName);
 	});
-	return onUpdatedTable((Table, isChanged) => {
+	return onUpdatedTable((Table, _isChanged) => {
 		forDatabase(Table.databaseName);
 	});
 	function forDatabase(databaseName) {

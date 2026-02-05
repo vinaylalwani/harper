@@ -2,7 +2,6 @@
 
 const rewire = require('rewire');
 const delete_utility = require('../../../utility/lmdb/deleteUtility');
-const search_util = require('../../../utility/lmdb/searchUtility');
 const common = require('../../../utility/lmdb/commonUtility');
 const fs = require('fs-extra');
 const environment_utility = rewire('../../../utility/lmdb/environmentUtility');
@@ -50,7 +49,7 @@ const TXN_TIMESTAMP = common.getNextMonotonicTime();
 const sandbox = sinon.createSandbox();
 
 describe('Test deleteUtility', () => {
-	let env, transaction;
+	let env;
 
 	let get_monotonic_time_stub;
 
@@ -62,8 +61,7 @@ describe('Test deleteUtility', () => {
 		await fs.mkdirp(BASE_TEST_PATH);
 		TEST_ENVIRONMENT_NAME = uuid();
 		env = await environment_utility.createEnvironment(BASE_TEST_PATH, TEST_ENVIRONMENT_NAME);
-		let clone_records = test_utils.deepClone(MULTI_RECORD_ARRAY);
-		let rez = await write_utility.insertRecords(
+		await write_utility.insertRecords(
 			env,
 			HASH_ATTRIBUTE_NAME,
 			test_utils.deepClone(All_ATTRIBUTES),

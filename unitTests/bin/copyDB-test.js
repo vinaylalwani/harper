@@ -18,14 +18,13 @@ describe('Test database copy and compact', () => {
 	let root_before_test;
 	let stat_before_compact;
 	let console_error_spy;
-	let console_log_spy;
 	let update_config_stub;
 	let test_db_path;
 	let test_db_backup_path;
 
 	before(async function () {
 		console_error_spy = sandbox.spy(console, 'error');
-		console_log_spy = sandbox.spy(console, 'log');
+		sandbox.spy(console, 'log');
 		update_config_stub = sandbox.stub(config_utils, 'updateConfigValue');
 		storage_path = path.resolve(__dirname, '../envDir/copyTest');
 		storage_before_test = env_mgr.get('storage_path');

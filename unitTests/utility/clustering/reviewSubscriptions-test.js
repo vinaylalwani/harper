@@ -14,7 +14,6 @@ const review_subscriptions = rewire('../../../utility/clustering/reviewSubscript
 describe('Test reviewSubscriptions module', () => {
 	const sandbox = sinon.createSandbox();
 	let nats_utils_request_stub;
-	let hdb_utils_schema_exists_stub;
 	let hdb_utils_table_exists_stub;
 	let create_schema_stub;
 	let create_table_stub;
@@ -55,7 +54,7 @@ describe('Test reviewSubscriptions module', () => {
 
 	before(() => {
 		nats_utils_request_stub = sandbox.stub(nats_utils, 'request').resolves(fake_desc_all);
-		hdb_utils_schema_exists_stub = sandbox.stub(hdb_utils, 'doesSchemaExist').returns(false);
+		sandbox.stub(hdb_utils, 'doesSchemaExist').returns(false);
 		hdb_utils_table_exists_stub = sandbox.stub(hdb_utils, 'doesTableExist').returns(false);
 		create_schema_stub = sandbox.stub(schema_mod, 'createSchema').resolves();
 		create_table_stub = sandbox.stub(schema_mod, 'createTable').resolves();

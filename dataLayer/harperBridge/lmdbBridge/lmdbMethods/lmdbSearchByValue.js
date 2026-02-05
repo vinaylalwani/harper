@@ -1,5 +1,6 @@
 'use strict';
 
+// eslint-disable-next-line no-unused-vars
 const SearchObject = require('../../../SearchObject.js');
 const searchValidator = require('../../../../validation/searchValidator.js');
 const commonUtils = require('../../../../utility/common_utils.js');

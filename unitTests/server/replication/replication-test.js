@@ -1,17 +1,11 @@
 const assert = require('assert');
-const sinon = require('sinon');
 const { getMockLMDBPath } = require('../../test_utils');
-const { start, setReplicator, servers, sendOperationToNode } = require('../../../server/replication/replicator');
-const { table, databases } = require('../../../resources/databases');
-const { setMainIsWorker } = require('../../../server/threads/manageThreads');
-const { listenOnPorts } = require('../../../server/threads/threadServer');
-const { Worker, workerData } = require('worker_threads');
+const { servers, sendOperationToNode } = require('../../../server/replication/replicator');
+const { databases } = require('../../../resources/databases');
 const { CONFIG_PARAMS } = require('../../../utility/hdbTerms');
 const { get: env_get } = require('../../..//utility/environment/environmentManager');
-const env = require('../../../utility/environment/environmentManager');
 const { fork } = require('node:child_process');
 const { createTestTable, createNode } = require('./setup-replication');
-const { clusterStatus } = require('../../../utility/clustering/clusterStatus');
 const { ResourceBridge } = require('../../../dataLayer/harperBridge/ResourceBridge');
 const { open } = require('lmdb');
 const { transaction } = require('../../../resources/transaction');
@@ -154,7 +148,7 @@ describe('Replication', () => {
 		this.timeout(5000);
 		let name = 'name ' + Math.random();
 		let context = { replicatedConfirmation: 1 };
-		await transaction(context, async (transaction) => {
+		await transaction(context, async (_transaction) => {
 			TestTable.put(
 				{
 					id: '1',
@@ -242,7 +236,7 @@ describe('Replication', () => {
 		assert(caught_error);
 	});
 	it('Create a new table on node-1 and verify that it is replicated to node-2', async function () {
-		let operation_result = await new ResourceBridge().createTable(null, {
+		await new ResourceBridge().createTable(null, {
 			operation: 'create_table',
 			table: 'NewTestTable',
 			database: 'test',

@@ -21,7 +21,6 @@ describe('Test updateRemoteSource module', () => {
 	let upsert_node_record_stub;
 	let get_node_record_stub;
 	let get_table_hash_stub;
-	let log_error_stub;
 	let update_remote_consumer_stub;
 	let update_consumer_iterator_stub;
 	let create_local_table_streams_stub;
@@ -70,7 +69,7 @@ describe('Test updateRemoteSource module', () => {
 		upsert_node_record_stub = sandbox.stub(cluster_utils, 'upsertNodeRecord');
 		get_node_record_stub = sandbox.stub(cluster_utils, 'getNodeRecord').resolves([]);
 		get_table_hash_stub = sandbox.stub(hdb_utils, 'getTableHashAttribute');
-		log_error_stub = sandbox.stub(hdb_logger, 'error');
+		sandbox.stub(hdb_logger, 'error');
 		update_remote_consumer_stub = sandbox.stub(nats_utils, 'updateRemoteConsumer');
 		update_consumer_iterator_stub = sandbox.stub(nats_utils, 'updateConsumerIterator');
 		get_table_hash_stub.onCall(0).returns('name');

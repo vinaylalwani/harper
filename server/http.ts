@@ -39,7 +39,7 @@ let httpOptions: any = {};
 export const suppressHandleApplicationWarning = true;
 export function handleApplication(scope: Scope) {
 	httpOptions = scope.options.getAll();
-	scope.options.on('change', (key) => {
+	scope.options.on('change', (_key) => {
 		// TODO: Check to see if the key is something we can or can't handle
 		httpOptions = scope.options.getAll();
 	});
@@ -393,7 +393,7 @@ function getHTTPServer(port, secure, isOperationsServer, isMtls) {
 				try {
 					nodeResponse.writeHead(status, headers && (headers[Symbol.iterator] ? Array.from(headers) : headers));
 					// eslint-disable-next-line sonarjs/no-ignored-exceptions
-				} catch (error) {} // silently ignore errors writing headers, because they may have been set already
+				} catch {} // silently ignore errors writing headers, because they may have been set already
 				nodeResponse.end(errorToString(error));
 				logRequest(nodeRequest, status, requestId, performance.now() - startTime);
 				// a status code is interpreted as an expected error, so just info or warn, otherwise log as error
@@ -491,7 +491,7 @@ Object.defineProperty(IncomingMessage.prototype, 'upgrade', {
 			this.headers.upgrade.toLowerCase() == 'websocket'
 		);
 	},
-	set(v) {},
+	set(_v) {},
 });
 
 type OnUpgradeOptions = {

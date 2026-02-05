@@ -485,7 +485,7 @@ function setTable(tables, tableName, Table) {
 export function database({ database: databaseName, table: tableName }) {
 	if (!databaseName) databaseName = DEFAULT_DATABASE_NAME;
 	getDatabases();
-	const database = ensureDB(databaseName);
+	ensureDB(databaseName);
 	let databasePath = join(getHdbBasePath(), DATABASES_DIR_NAME);
 	const databaseConfig = envGet(CONFIG_PARAMS.DATABASES) || {};
 	if (process.env.SCHEMAS_DATA_PATH) databaseConfig.data = { path: process.env.SCHEMAS_DATA_PATH };
@@ -852,7 +852,6 @@ const MIN_OUTSTANDING_INDEXING = 10;
 async function runIndexing(Table, attributes, indicesToRemove) {
 	try {
 		logger.info(`Indexing ${Table.tableName} attributes`, attributes);
-		const schemaVersion = Table.schemaVersion;
 		await signalling.signalSchemaChange(
 			new SchemaEventMsg(process.pid, 'schema-change', Table.databaseName, Table.tableName)
 		);
@@ -962,11 +961,6 @@ async function runIndexing(Table, attributes, indicesToRemove) {
 		logger.error('Error in indexing', error);
 	}
 }
-/**
- * Once an origin has fully declared all the tables for a database, this can be run to remove any tables or attributes
- * that are unused.
- */
-function cleanupDatabase(origin) {}
 
 export function dropTableMeta({ table: tableName, database: databaseName }) {
 	const rootStore = database({ database: databaseName, table: tableName });

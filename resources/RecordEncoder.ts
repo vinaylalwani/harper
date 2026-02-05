@@ -56,8 +56,7 @@ const TRACKED_WRITE_TYPES = new Set(['put', 'patch', 'delete', 'message', 'publi
 // WeakMaps are definitely not the fastest form of private properties, but they are the only
 // way to do this with how the objects are frozen for now.
 export const entryMap = new WeakMap<any, Entry>();
-let lastEncoding,
-	lastValueEncoding,
+let lastValueEncoding,
 	timestampNextEncoding = 0,
 	metadataInNextEncoding = -1,
 	expiresAtNextEncoding = -1,
@@ -110,7 +109,7 @@ export class RecordEncoder extends Encoder {
 						residencyIdAtNextEncoding = 0; // reset indicator to mean no residency id
 					}
 				}
-				const encoded = (lastEncoding = superEncode.call(this, record, options | 2048 | valueStart)); // encode with 8 bytes reserved space for txnId
+				const encoded = (superEncode.call(this, record, options | 2048 | valueStart)); // encode with 8 bytes reserved space for txnId
 				lastValueEncoding = encoded.subarray((encoded.start || 0) + valueStart, encoded.end);
 				let position = encoded.start || 0;
 				if (timestamp) {

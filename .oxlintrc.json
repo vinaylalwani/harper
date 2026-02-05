@@ -4,6 +4,7 @@
 	"categories": {},
 	"rules": {
 		"no-undef": "error",
+		"no-unused-vars": "error",
 		"no-console": "off",
 		"no-constant-condition": "off",
 		"prefer-const": "off",

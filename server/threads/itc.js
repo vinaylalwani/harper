@@ -1,11 +1,10 @@
 'use strict';
 
-const hdbLogger = require('../../utility/logging/harper_logger.js');
 const hdbUtils = require('../../utility/common_utils.js');
 const hdbTerms = require('../../utility/hdbTerms.ts');
 const { ITC_ERRORS } = require('../../utility/errors/commonErrors.js');
-const { parentPort, threadId, isMainThread, workerData } = require('worker_threads');
-const { onMessageFromWorkers, broadcast, broadcastWithAcknowledgement } = require('./manageThreads.js');
+const { threadId, isMainThread } = require('worker_threads');
+const { onMessageFromWorkers, broadcastWithAcknowledgement } = require('./manageThreads.js');
 
 module.exports = {
 	sendItcEvent,

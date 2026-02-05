@@ -6,7 +6,6 @@ const { addUpdateNodeValidator } = require('../../validation/clustering/addUpdat
 const hdbLogger = require('../logging/harper_logger.js');
 const hdbTerms = require('../hdbTerms.ts');
 const natsTerms = require('../../server/nats/utility/natsTerms.js');
-const hdbUtils = require('../common_utils.js');
 const natsUtils = require('../../server/nats/utility/natsUtils.js');
 const clusteringUtils = require('./clusterUtilities.js');
 const envManager = require('../environment/environmentManager.js');

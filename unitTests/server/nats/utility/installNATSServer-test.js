@@ -19,7 +19,7 @@ describe('test checkGoVersion', () => {
 	let check_go_version = installer.__get__('checkGoVersion');
 
 	it('test go not available', async () => {
-		let cmd_stub = sandbox.stub().callsFake(async (cmd, cwd) => {
+		let cmd_stub = sandbox.stub().callsFake(async (_cmd, _cwd) => {
 			throw Error('no go');
 		});
 
@@ -57,7 +57,7 @@ describe('test checkGoVersion', () => {
 	});
 
 	it('test go is older version than expected', async () => {
-		let cmd_stub = sandbox.stub().callsFake(async (cmd, cwd) => {
+		let cmd_stub = sandbox.stub().callsFake(async (_cmd, _cwd) => {
 			return '1.0.0';
 		});
 
@@ -92,7 +92,7 @@ describe('test checkGoVersion', () => {
 	});
 
 	it('test go is same version as expected', async () => {
-		let cmd_stub = sandbox.stub().callsFake(async (cmd, cwd) => {
+		let cmd_stub = sandbox.stub().callsFake(async (_cmd, _cwd) => {
 			return '1.17.6';
 		});
 
@@ -126,7 +126,7 @@ describe('test checkGoVersion', () => {
 	});
 
 	it('test go is greater version than expected', async () => {
-		let cmd_stub = sandbox.stub().callsFake(async (cmd, cwd) => {
+		let cmd_stub = sandbox.stub().callsFake(async (_cmd, _cwd) => {
 			return '2.0.0';
 		});
 
@@ -168,7 +168,7 @@ describe('test extractNATSServer function', () => {
 		let zip_path_restore = installer.__set__('ZIP_PATH', '/tmp/nats-server.zip');
 		let deps_restore = installer.__set__('DEPENDENCIES_PATH', '/tmp/');
 
-		let zip_stub = sandbox.stub().callsFake((arg) => {
+		let zip_stub = sandbox.stub().callsFake((_arg) => {
 			return {
 				entries: () => {
 					return { 'nats-server-src': '' };
@@ -203,8 +203,8 @@ describe('test cleanUp function', () => {
 	const sandbox = sinon.createSandbox();
 	let cleanup = installer.__get__('cleanUp');
 	it('test function', async () => {
-		let fs_move_stub = sandbox.stub().callsFake(async (path1, path2, opt) => {});
-		let fs_remove_stub = sandbox.stub().callsFake(async (path) => {});
+		let fs_move_stub = sandbox.stub().callsFake(async (_path1, _path2, _opt) => {});
+		let fs_remove_stub = sandbox.stub().callsFake(async (_path) => {});
 		let fs_restore = installer.__set__('fs', {
 			move: fs_move_stub,
 			remove: fs_remove_stub,
@@ -247,7 +247,6 @@ describe('test installer function', () => {
 	let installer_func = installer.__get__('installer');
 	let console_log_spy;
 	let console_error_spy;
-	let nats_version_restore;
 	const required_nats_version = '2.8.0';
 	const required_nats_version_restore = installer.__set__('REQUIRED_NATS_SERVER_VERSION', required_nats_version);
 
@@ -356,8 +355,8 @@ describe('test installer function', () => {
 		let extract_stub = sandbox.stub().callsFake(async () => {
 			return '/tmp/nats-server-2.7.1/';
 		});
-		let run_cmd_stub = sandbox.stub().callsFake(async (cmd, cwd) => {});
-		let cleanup_stub = sandbox.stub().callsFake(async (folder) => {});
+		let run_cmd_stub = sandbox.stub().callsFake(async (_cmd, _cwd) => {});
+		let cleanup_stub = sandbox.stub().callsFake(async (_folder) => {});
 		let download_stub = sandbox.stub().callsFake(async () => {
 			throw Error('bad download');
 		});
@@ -399,7 +398,7 @@ describe('test checkNATSServerInstalled', () => {
 	let check_installed = installer.__get__('checkNATSServerInstalled');
 
 	it('test nats-server binary does not exist', async () => {
-		let access_stub = check_server_sandbox.stub().callsFake(async (path) => {
+		let access_stub = check_server_sandbox.stub().callsFake(async (_path) => {
 			throw Error('ENONT');
 		});
 
@@ -416,7 +415,7 @@ describe('test checkNATSServerInstalled', () => {
 		expect(access_stub.callCount).to.equal(1);
 		let expected_err;
 		try {
-			let rez = await access_stub.returnValues[0];
+			await access_stub.returnValues[0];
 		} catch (e) {
 			expected_err = e;
 		}
@@ -429,11 +428,11 @@ describe('test checkNATSServerInstalled', () => {
 	});
 
 	it('test nats-server binary does exist, wrong version of nats-server', async () => {
-		let access_stub = check_server_sandbox.stub().callsFake(async (path) => {
+		let access_stub = check_server_sandbox.stub().callsFake(async (_path) => {
 			return;
 		});
 
-		let cmd_stub = check_server_sandbox.stub().callsFake(async (cmd, cwd) => {
+		let cmd_stub = check_server_sandbox.stub().callsFake(async (_cmd, _cwd) => {
 			return 'nats-server v2.7.0';
 		});
 
@@ -471,11 +470,11 @@ describe('test checkNATSServerInstalled', () => {
 	});
 
 	it('test nats-server binary does exist, same version of nats-server returned as expected', async () => {
-		let access_stub = check_server_sandbox.stub().callsFake(async (path) => {
+		let access_stub = check_server_sandbox.stub().callsFake(async (_path) => {
 			return;
 		});
 
-		let cmd_stub = check_server_sandbox.stub().callsFake(async (cmd, cwd) => {
+		let cmd_stub = check_server_sandbox.stub().callsFake(async (_cmd, _cwd) => {
 			return 'nats-server v2.7.2';
 		});
 
@@ -513,11 +512,11 @@ describe('test checkNATSServerInstalled', () => {
 	});
 
 	it('test nats-server binary does exist, greater version of nats-server returned as expected', async () => {
-		let access_stub = check_server_sandbox.stub().callsFake(async (path) => {
+		let access_stub = check_server_sandbox.stub().callsFake(async (_path) => {
 			return;
 		});
 
-		let cmd_stub = check_server_sandbox.stub().callsFake(async (cmd, cwd) => {
+		let cmd_stub = check_server_sandbox.stub().callsFake(async (_cmd, _cwd) => {
 			return 'nats-server v2.7.3';
 		});
 
@@ -560,7 +559,7 @@ describe('test runCommand function', () => {
 	let run_command = installer.__get__('runCommand');
 
 	it('test function, with error', async () => {
-		let exec_stub = run_command_sandbox.stub().callsFake(async (cmd, opts) => {
+		let exec_stub = run_command_sandbox.stub().callsFake(async (_cmd, _opts) => {
 			return { stderr: 'this is bad\n' };
 		});
 
@@ -582,7 +581,7 @@ describe('test runCommand function', () => {
 	});
 
 	it('test function, without error', async () => {
-		let exec_stub = run_command_sandbox.stub().callsFake(async (cmd, opts) => {
+		let exec_stub = run_command_sandbox.stub().callsFake(async (_cmd, _opts) => {
 			return { stdout: 'all good\n' };
 		});
 

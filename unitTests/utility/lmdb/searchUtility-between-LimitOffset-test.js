@@ -37,7 +37,7 @@ describe('test between function', () => {
 		await environment_utility.createDBI(env, 'temperature_str', true);
 		await environment_utility.createDBI(env, 'state', true);
 
-		let rez = await write_utility.insertRecords(
+		await write_utility.insertRecords(
 			env,
 			HASH_ATTRIBUTE_NAME,
 			['id', 'temperature', 'temperature_double', 'temperature_str', 'state'],

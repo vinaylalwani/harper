@@ -49,16 +49,6 @@ const TEST_DATA_DOG = [
 	},
 ];
 
-let SEARCH_STUB_RESULTS = [
-	{
-		id: '6e175c63-575c-4f0c-beb0-0586a4fbcaf3',
-		name: 'dog',
-		hash_attribute: 'id',
-		schema: 'dev',
-		residence: null,
-	},
-];
-
 const test_data = test_util.deepClone(TEST_DATA_DOG);
 const TEST_SCHEMA = 'dev';
 const HASH_ATTRIBUTE = 'id';
@@ -78,7 +68,6 @@ const DESCRIBE_TABLE_MESSAGE = {
 let test_envs;
 
 describe('Test describeAll', function () {
-	let search_orig = undefined;
 	let desc_table_orig = undefined;
 	let sandbox = undefined;
 
@@ -120,7 +109,6 @@ describe('Test describeAll', function () {
 });
 
 describe('Test describeSchema', function () {
-	let search_orig = undefined;
 	let desc_table_orig = undefined;
 	let sandbox = undefined;
 	before(async function () {
@@ -143,7 +131,7 @@ describe('Test describeSchema', function () {
 	it('describeSchema, test no schema error', async function () {
 		let error;
 		try {
-			let desc_schema = await schema_describe.describeSchema({});
+			await schema_describe.describeSchema({});
 		} catch (err) {
 			error = err;
 		}
@@ -193,14 +181,10 @@ describe('Test describeSchema', function () {
 });
 
 describe('Test describeTable', function () {
-	let search_orig = undefined;
-	let desc_table_orig = undefined;
-	let desc_table_stub = undefined;
 	let sandbox = undefined;
 
 	before(async function () {
 		test_envs = await test_util.createMockDB(HASH_ATTRIBUTE, TEST_SCHEMA, TEST_TABLE_DOG, test_data);
-		desc_table_orig = schema_describe.describeTable;
 		sandbox = sinon.createSandbox();
 	});
 

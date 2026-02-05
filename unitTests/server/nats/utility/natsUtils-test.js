@@ -5,9 +5,6 @@ const chai = require('chai');
 const { expect } = chai;
 const sinon = require('sinon');
 const { headers } = require('nats');
-const { decode } = require('msgpackr');
-const path = require('path');
-const fs = require('fs-extra');
 
 const test_utils = require('../../../test_utils');
 const hdb_terms = require('../../../../utility/hdbTerms');
@@ -58,7 +55,7 @@ describe('Test natsUtils module', () => {
 		let check_installed = nats_utils.checkNATSServerInstalled;
 
 		it('test nats-server binary does not exist', async () => {
-			let access_stub = check_server_sandbox.stub().callsFake(async (path) => {
+			let access_stub = check_server_sandbox.stub().callsFake(async (_path) => {
 				throw Error('ENONT');
 			});
 
@@ -75,7 +72,7 @@ describe('Test natsUtils module', () => {
 			expect(access_stub.callCount).to.equal(1);
 			let expected_err;
 			try {
-				let rez = await access_stub.returnValues[0];
+				await access_stub.returnValues[0];
 			} catch (e) {
 				expected_err = e;
 			}
@@ -88,11 +85,11 @@ describe('Test natsUtils module', () => {
 		});
 
 		it('test nats-server binary does exist, wrong version of nats-server', async () => {
-			let access_stub = check_server_sandbox.stub().callsFake(async (path) => {
+			let access_stub = check_server_sandbox.stub().callsFake(async (_path) => {
 				return;
 			});
 
-			let cmd_stub = check_server_sandbox.stub().callsFake(async (cmd, cwd) => {
+			let cmd_stub = check_server_sandbox.stub().callsFake(async (_cmd, _cwd) => {
 				return 'nats-server v2.7.0';
 			});
 
@@ -130,11 +127,11 @@ describe('Test natsUtils module', () => {
 		});
 
 		it('test nats-server binary does exist, same version of nats-server returned as expected', async () => {
-			let access_stub = check_server_sandbox.stub().callsFake(async (path) => {
+			let access_stub = check_server_sandbox.stub().callsFake(async (_path) => {
 				return;
 			});
 
-			let cmd_stub = check_server_sandbox.stub().callsFake(async (cmd, cwd) => {
+			let cmd_stub = check_server_sandbox.stub().callsFake(async (_cmd, _cwd) => {
 				return 'nats-server v2.7.2';
 			});
 
@@ -172,11 +169,11 @@ describe('Test natsUtils module', () => {
 		});
 
 		it('test nats-server binary does exist, greater version of nats-server returned as expected', async () => {
-			let access_stub = check_server_sandbox.stub().callsFake(async (path) => {
+			let access_stub = check_server_sandbox.stub().callsFake(async (_path) => {
 				return;
 			});
 
-			let cmd_stub = check_server_sandbox.stub().callsFake(async (cmd, cwd) => {
+			let cmd_stub = check_server_sandbox.stub().callsFake(async (_cmd, _cwd) => {
 				return 'nats-server v2.7.3';
 			});
 
@@ -219,7 +216,7 @@ describe('Test natsUtils module', () => {
 		let run_command = nats_utils.runCommand;
 
 		it('test function, with error', async () => {
-			let exec_stub = run_command_sandbox.stub().callsFake(async (cmd, opts) => {
+			let exec_stub = run_command_sandbox.stub().callsFake(async (_cmd, _opts) => {
 				return { stderr: 'this is bad\n' };
 			});
 
@@ -241,7 +238,7 @@ describe('Test natsUtils module', () => {
 		});
 
 		it('test function, without error', async () => {
-			let exec_stub = run_command_sandbox.stub().callsFake(async (cmd, opts) => {
+			let exec_stub = run_command_sandbox.stub().callsFake(async (_cmd, _opts) => {
 				return { stdout: 'all good\n' };
 			});
 
@@ -281,7 +278,7 @@ describe('Test natsUtils module', () => {
 				await test_utils.stopTestLeafServer();
 				test_utils.unsetFakeClusterUser();
 				await nats_utils.closeConnection();
-			} catch (err) {}
+			} catch {}
 		});
 
 		it('Test createConnection connects to a leaf server', async () => {

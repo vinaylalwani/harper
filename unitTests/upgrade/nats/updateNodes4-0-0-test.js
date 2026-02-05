@@ -65,20 +65,17 @@ describe.skip('Test updateNodes4-0-0 module', () => {
 	const remove_node_stub = sandbox.stub();
 	let update_node;
 	let nats_request_stub;
-	let upsert_node_record_stub;
-	let delete_process_stub;
 	let hdb_log_trace_stub;
-	let async_timeout_stub;
 
 	before(() => {
 		sandbox.stub(cluster_utils, 'getAllNodeRecords').resolves(test_node_record);
 		nats_request_stub = sandbox
 			.stub(nats_utils, 'request')
 			.resolves({ status: 'open', message: { system_info: { hdb_version: '4.0.0' } } });
-		upsert_node_record_stub = sandbox.stub(cluster_utils, 'upsertNodeRecord');
-		delete_process_stub = sandbox.stub(pm2_utils, 'deleteProcess');
+		sandbox.stub(cluster_utils, 'upsertNodeRecord');
+		sandbox.stub(pm2_utils, 'deleteProcess');
 		hdb_log_trace_stub = sandbox.stub(hdb_log, 'trace');
-		async_timeout_stub = sandbox.stub(hdb_utils, 'async_set_timeout').resolves();
+		sandbox.stub(hdb_utils, 'async_set_timeout').resolves();
 		update_nodes4_0_0.__set__('removeNode', remove_node_stub);
 	});
 

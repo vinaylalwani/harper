@@ -212,17 +212,12 @@ const FAKE_JSON_1 = {
 	},
 };
 
-const CA_PEM = '/yaml/keys/ca.pem';
-const CERT_PEM = '/yaml/keys/certificate.pem';
-const KEY_PEM = '/yaml/keys/privateKey.pem';
-const CF_ROOT = '/yaml/custom_functions';
 const LOG_ROOT = '/yaml/log';
 
 const TEST_DIR = HDB_ROOT;
 const CONFIG_FILE_PATH = path.join(DIRNAME, 'yaml', 'harperdb-config.yaml');
 const OLD_CONFIG_PATH = 'test-config/settings.js';
 const BAD_CONFIG_FILE_PATH = path.join(DIRNAME, 'yaml', 'harperdb.doesntexist');
-const BACKUP_FILE_PATH = path.join(DIRNAME, 'yaml/backup', 'harperdb-config.yaml.bak');
 const BACKUP_FOLDER_PATH = path.join(DIRNAME, 'yaml/backup');
 const EMPTY_GET_VALUE = 'Empty parameter sent to getConfigValue';
 const UNINIT_GET_CONFIG_ERR = 'Unable to get config value because config is uninitialized';
@@ -678,7 +673,6 @@ describe('Test configUtils module', () => {
 	});
 
 	describe('Test initConfig function', () => {
-		let flat_config_obj_rw;
 		let validate_config_rw;
 		let properties_reader_rw;
 		let logger_trace_stub;
@@ -713,7 +707,7 @@ describe('Test configUtils module', () => {
 		it('Test in-memory obj undefined, function reads config doc and adds values to object', () => {
 			config_utils_rw.createConfigFile(TEST_ARGS_2);
 
-			flat_config_obj_rw = config_utils_rw.__set__('flatConfigObj', undefined);
+			config_utils_rw.__set__('flatConfigObj', undefined);
 			get_props_file_path_stub.returns(CONFIG_FILE_PATH);
 			access_sync_stub.returns(true);
 			properties_reader_stub.returns({
@@ -744,7 +738,7 @@ describe('Test configUtils module', () => {
 		it('Test in-memory obj undefined, config file path undefined and error is caught', () => {
 			config_utils_rw.createConfigFile(TEST_ARGS_2);
 
-			flat_config_obj_rw = config_utils_rw.__set__('flatConfigObj', undefined);
+			config_utils_rw.__set__('flatConfigObj', undefined);
 			get_props_file_path_stub.returns(CONFIG_FILE_PATH);
 			access_sync_stub.returns(true);
 			properties_reader_stub.returns({

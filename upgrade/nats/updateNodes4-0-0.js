@@ -6,7 +6,6 @@ const clusterUtils = require('../../utility/clustering/clusterUtilities.js');
 const hdbLog = require('../../utility/logging/harper_logger.js');
 const clusterStatus = require('../../utility/clustering/clusterStatus.js');
 const addNode = require('../../utility/clustering/addNode.js');
-const pm2Utils = require('../../utility/processManagement/processManagement.js');
 const globalSchema = require('../../utility/globalSchema.js');
 const removeNode = require('../../utility/clustering/removeNode.js');
 const semverGte = require('semver/functions/gte');

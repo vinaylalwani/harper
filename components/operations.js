@@ -13,14 +13,11 @@ const hdbTerms = require('../utility/hdbTerms.ts');
 const env = require('../utility/environment/environmentManager.js');
 const configUtils = require('../config/configUtils.js');
 const hdbUtils = require('../utility/common_utils.js');
-const { PACKAGE_ROOT } = require('../utility/packageUtils.js');
 const { handleHDBError, hdbErrors } = require('../utility/errors/hdbError.js');
-const engMgr = require('../utility/environment/environmentManager.js');
 const { HDB_ERROR_MSGS, HTTP_STATUS_CODES } = hdbErrors;
 const manageThreads = require('../server/threads/manageThreads.js');
 const { replicateOperation } = require('../server/replication/replicator.ts');
 const { packageDirectory } = require('../components/packageComponent.ts');
-const APPLICATION_TEMPLATE = path.join(PACKAGE_ROOT, 'application-template');
 const rootDir = env.get(hdbTerms.CONFIG_PARAMS.ROOTPATH);
 const sshDir = path.join(rootDir, 'ssh');
 const knownHostsFile = path.join(sshDir, 'known_hosts');
@@ -698,7 +695,7 @@ Host ${host}
 				for (let knownHost of sshKeys) {
 					fs.appendFile(knownHostsFile, 'github.com ' + knownHost + '\n');
 				}
-			} catch (err) {
+			} catch {
 				additionalMessage =
 					'. Unable to get known hosts from github.com. Set your known hosts manually using set_ssh_known_hosts.';
 			}
@@ -783,7 +780,7 @@ async function deleteSSHKey(req) {
 	return response;
 }
 
-async function listSSHKeys(req) {
+async function listSSHKeys(_req) {
 	let results = [];
 	if (await fs.pathExists(sshDir)) {
 		// Read the config file to get Host and HostName
@@ -840,7 +837,7 @@ async function setSSHKnownHosts(req) {
 	return response;
 }
 
-async function getSSHKnownHosts(req) {
+async function getSSHKnownHosts(_req) {
 	if (!(await fs.pathExists(knownHostsFile))) {
 		return { known_hosts: null };
 	}

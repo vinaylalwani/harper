@@ -20,12 +20,9 @@ const ISO_DATE =
 	/^((\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z))|(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d([+-][0-2]\d:[0-5]\d|Z))|(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d([+-][0-2]\d:[0-5]\d|Z)))$/;
 
 const asyncSetTimeout = require('util').promisify(setTimeout);
-const HDB_PROC_START_TIMEOUT = 100;
-const CHECK_PROCS_LOOP_LIMIT = 5;
 
 const EMPTY_STRING = '';
 const FILE_EXTENSION_LENGTH = 4;
-const CHARACTER_LIMIT = 255;
 
 //Because undefined will not return in a JSON response, we convert undefined to null when autocasting
 const AUTOCAST_COMMON_STRINGS = {
@@ -167,7 +164,7 @@ function arrayHasEmptyOrZeroLengthValues(valuesList) {
 function buildFolderPath(...pathElements) {
 	try {
 		return pathElements.join(path.sep);
-	} catch (e) {
+	} catch {
 		console.error(pathElements);
 	}
 }
@@ -250,7 +247,7 @@ function autoCastJSON(data) {
 	) {
 		try {
 			return JSON.parse(data);
-		} catch (e) {
+		} catch {
 			//no-op
 		}
 	}
@@ -428,7 +425,7 @@ function stringifyProps(propReaderObject, comments) {
 			} else if (!isEmptyOrZeroLength(key)) {
 				lines += key + '=' + value + os.EOL;
 			}
-		} catch (e) {
+		} catch {
 			log.error(`Found bad property during upgrade with key ${key} and value: ${value}`);
 		}
 	});
@@ -439,7 +436,7 @@ function getHomeDir() {
 	let homeDir = undefined;
 	try {
 		homeDir = os.homedir();
-	} catch (err) {
+	} catch {
 		// could get here in android
 		homeDir = process.env.HOME;
 	}
@@ -613,7 +610,7 @@ function createEventPromise(eventName, eventEmitterObject, timeout_promise) {
 			log.info(`Got cluster status event response: ${inspect(msg)}`);
 			try {
 				currTimeoutPromise.cancel();
-			} catch (err) {
+			} catch {
 				log.error('Error trying to cancel timeout.');
 			}
 			resolve(msg);
@@ -795,7 +792,7 @@ function doesTableExist(schema, table) {
 function stringifyObj(value) {
 	try {
 		return JSON.stringify(value);
-	} catch (err) {
+	} catch {
 		return value;
 	}
 }

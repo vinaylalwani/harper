@@ -1,18 +1,16 @@
 'use strict';
 
 const minimist = require('minimist');
-const { isMainThread, parentPort, threadId } = require('worker_threads');
+const { isMainThread, parentPort} = require('worker_threads');
 const hdbTerms = require('../utility/hdbTerms.ts');
 const hdbLogger = require('../utility/logging/harper_logger.js');
 const hdbUtils = require('../utility/common_utils.js');
 const natsConfig = require('../server/nats/utility/natsConfig.js');
 const natsUtils = require('../server/nats/utility/natsUtils.js');
-const natsTerms = require('../server/nats/utility/natsTerms.js');
 const configUtils = require('../config/configUtils.js');
 const processMan = require('../utility/processManagement/processManagement.js');
 const sysInfo = require('../utility/environment/systemInformation.js');
 const { compactOnStart } = require('./copyDb.ts');
-const assignCMDENVVariables = require('../utility/assignCmdEnvVariables.js');
 const { restartWorkers, onMessageByType, shutdownWorkersNow } = require('../server/threads/manageThreads.js');
 const { handleHDBError, hdbErrors } = require('../utility/errors/hdbError.js');
 const { HTTP_STATUS_CODES } = hdbErrors;
@@ -23,8 +21,6 @@ const { unlinkSync } = require('node:fs');
 envMgr.initSync();
 
 const RESTART_RESPONSE = `Restarting HarperDB. This may take up to ${hdbTerms.RESTART_TIMEOUT_MS / 1000} seconds.`;
-const RESTART_NON_PM2_ERR =
-	'Restart is not available from the CLI when running in non-pm2 mode. Either call restart from the API or stop and start HarperDB.';
 const CLUSTERING_NOT_ENABLED_ERR = 'Clustering is not enabled so cannot be restarted';
 const INVALID_SERVICE_ERR = 'Invalid service';
 

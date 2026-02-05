@@ -9,23 +9,17 @@ const sandbox = sinon.createSandbox();
 const rewire = require('rewire');
 
 const serverHandlers_rw = rewire('../../../server/serverHelpers/serverHandlers');
-const auth = require('../../../security/fastifyAuth');
 const serverUtilities = require('../../../server/serverHelpers/serverUtilities');
 const logger = require('../../../utility/logging/harper_logger');
-const { handleHDBError, hdbErrors } = require('../../../utility/errors/hdbError');
+const { hdbErrors } = require('../../../utility/errors/hdbError');
 const { HTTP_STATUS_CODES } = hdbErrors;
 
 let console_stub;
 let process_exit_stub;
 let error_log_stub;
-let warn_log_stub;
 let fatal_log_stub;
-let info_log_stub;
 let choose_op_stub;
 let process_local_trans_stub;
-let final_logger_fatal_stub;
-let final_logger_error_stub;
-let final_logger_info_stub;
 
 const TEST_ERR = new Error('This is a narly error');
 
@@ -49,9 +43,9 @@ class TestMockResp {
 function setupSandbox() {
 	console_stub = sandbox.stub(console, 'error').callsFake(() => {});
 	error_log_stub = sandbox.stub(logger, 'error').callsFake(() => {});
-	warn_log_stub = sandbox.stub(logger, 'warn').callsFake(() => {});
+	sandbox.stub(logger, 'warn').callsFake(() => {});
 	fatal_log_stub = sandbox.stub(logger, 'fatal').callsFake(() => {});
-	info_log_stub = sandbox.stub(logger, 'info').callsFake(() => {});
+	sandbox.stub(logger, 'info').callsFake(() => {});
 }
 
 function testCallBack(err, data) {

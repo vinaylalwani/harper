@@ -176,42 +176,30 @@ describe('processDirectives Module', function () {
 		});
 
 		it('Test runSyncFunctions with null parameter', () => {
-			let result = undefined;
 			try {
 				runSyncFunctions_rw(null);
-			} catch (e) {
-				result = e;
-			}
+			} catch {}
 			assert.equal(results.length, 0, 'Expected empty results array');
 		});
 
 		it('Test runSyncFunctions with null parameter', () => {
-			let result = undefined;
 			try {
 				runSyncFunctions_rw(null);
-			} catch (e) {
-				result = e;
-			}
+			} catch {}
 			assert.equal(results.length, 0, 'Expected empty results array');
 		});
 
 		it('Test runSyncFunctions with non array parameter', () => {
-			let result = undefined;
 			try {
 				runSyncFunctions_rw('test');
-			} catch (e) {
-				result = e;
-			}
+			} catch {}
 			assert.equal(results.length, 0, 'Expected empty results array');
 		});
 
 		it('Test runSyncFunctions with non function values', () => {
-			let result = undefined;
 			try {
 				runSyncFunctions_rw(['test']);
-			} catch (e) {
-				result = e;
-			}
+			} catch {}
 			assert.equal(results.length, 0, 'Expected empty results array');
 		});
 	});
@@ -261,42 +249,30 @@ describe('processDirectives Module', function () {
 		});
 
 		it('Test runAsyncFunctions with null parameter', async () => {
-			let result = undefined;
 			try {
 				await runAsyncFunctions_rw(null);
-			} catch (e) {
-				result = e;
-			}
+			} catch {}
 			assert.equal(results.length, 0, 'Expected empty results array');
 		});
 
 		it('Test runAsyncFunctions with null parameter', async () => {
-			let result = undefined;
 			try {
 				await runAsyncFunctions_rw(null);
-			} catch (e) {
-				result = e;
-			}
+			} catch {}
 			assert.equal(results.length, 0, 'Expected empty results array');
 		});
 
 		it('Test runAsyncFunctions with non array parameter', async () => {
-			let result = undefined;
 			try {
 				await runAsyncFunctions_rw('test');
-			} catch (e) {
-				result = e;
-			}
+			} catch {}
 			assert.equal(results.length, 0, 'Expected empty results array');
 		});
 
 		it('Test runAsyncFunctions with non function values', async () => {
-			let result = undefined;
 			try {
 				await runAsyncFunctions_rw(['test']);
-			} catch (e) {
-				result = e;
-			}
+			} catch {}
 			assert.equal(results.length, 0, 'Expected empty results array');
 		});
 	});

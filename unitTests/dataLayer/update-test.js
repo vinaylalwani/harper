@@ -9,7 +9,6 @@ const sql = require('../../sqlTranslator/index');
 const update = rewire('../../dataLayer/update');
 const insert = require('../../dataLayer/insert');
 const test_utils = require('../test_utils');
-const transact_to_clustering_utilities = require('../../utility/clustering/transactToClusteringUtilities');
 
 describe('Test update module', () => {
 	const sandbox = sinon.createSandbox();
@@ -380,7 +379,6 @@ describe('Test update module', () => {
 
 	describe('Test updateRecords function', async () => {
 		let update_records_rw;
-		let post_operation_handler_stub;
 		let write_update_stub;
 
 		const fake_records = [
@@ -396,8 +394,6 @@ describe('Test update module', () => {
 			tableid_orig: 'dog',
 			databaseid_orig: 'dev',
 		};
-
-		let args = { table: fake_table, records: fake_records, hdb_user };
 
 		before(() => {
 			update_records_rw = update.__get__('updateRecords');

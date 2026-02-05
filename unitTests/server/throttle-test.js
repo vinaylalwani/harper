@@ -37,7 +37,7 @@ describe('throttle test', () => {
 		}
 		assert(limitReached);
 
-		function testFunction(a, b) {
+		function testFunction(_a, _b) {
 			let start = performance.now();
 			while (performance.now() < start + 10) {}
 		}

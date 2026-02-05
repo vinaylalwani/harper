@@ -1,21 +1,15 @@
 'use strict';
 
-import { assert, expect } from 'chai';
+import { assert } from 'chai';
 import axios from 'axios';
-import { decode, encode, DecoderStream } from 'cbor-x';
-import { getVariables } from './utility.js';
-import { setProperty } from '../../utility/environment/environmentManager.js';
 import { addThreads, setupTestApp, random } from './setupTestApp.mjs';
-import why_is_node_running from 'why-is-node-still-running';
 import { shutdownWorkers, setTerminateTimeout } from '../../server/threads/manageThreads.js';
-const { authorization, url } = getVariables();
 
 describe('Multi-threaded cache updates', () => {
-	let available_records;
 	before(async function () {
 		this.timeout(500000);
 		process.env.AUTHENTICATION_AUTHORIZELOCAL = 'true';
-		available_records = await setupTestApp();
+		await setupTestApp();
 		await addThreads();
 	});
 

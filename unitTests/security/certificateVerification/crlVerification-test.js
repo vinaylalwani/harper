@@ -34,12 +34,12 @@ describe('certificateVerification/crlVerification.ts', function () {
 				try {
 					await certCacheTable.delete(entry.certificate_id);
 					// eslint-disable-next-line sonarjs/no-ignored-exceptions
-				} catch (e) {
+				} catch {
 					// Ignore delete errors
 				}
 			}
 			// eslint-disable-next-line sonarjs/no-ignored-exceptions
-		} catch (e) {
+		} catch {
 			// Ignore if cache doesn't exist yet
 		}
 	});
