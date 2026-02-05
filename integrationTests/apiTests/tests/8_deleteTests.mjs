@@ -292,7 +292,6 @@ describe('8. Delete Tests', () => {
 			})
 			.expect((r) => assert.equal(r.body.message, "table 'drop_schema.drop_table' successfully created.", r.text))
 			.expect(200);
-		await setTimeout(2000);
 	});
 
 	it('Confirm correct attributes', () => {

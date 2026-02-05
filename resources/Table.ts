@@ -1825,7 +1825,7 @@ export function makeTable(options) {
 						`Saving record with id: ${id}, timestamp: ${new Date(txnTime).toISOString()}${
 							expiresAt ? ', expires at: ' + new Date(expiresAt).toISOString() : ''
 						}${
-							existingEntry ? ', replaces entry from: ' + new Date(existingEntry.version).toISOString() : ', new entry'
+							existingEntry?.version ? ', replaces entry from: ' + new Date(existingEntry.version).toISOString() : ', new entry'
 						}`,
 						(() => {
 							try {
@@ -4138,7 +4138,7 @@ export function makeTable(options) {
 								// schedule the next run for when the next cleanup interval should occur (or now if it is in the past)
 								startNextTimer(Math.max(nextScheduled + cleanupInterval, Date.now()));
 								const rootStore = primaryStore.rootStore;
-								if (rootStore.isOpen ? !rootStore.isOpen() : rootStore.status !== 'open') {
+								if (rootStore.status !== 'open') {
 									clearTimeout(cleanupTimer);
 									return;
 								}

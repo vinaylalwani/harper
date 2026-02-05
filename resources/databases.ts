@@ -787,14 +787,21 @@ export async function dropDatabase(databaseName) {
 
 		lmdbDatabaseEnvs.delete(rootStore.path);
 		rocksdbDatabaseEnvs.delete(rootStore.path);
-		if (rootStore.isOpen?.() ?? rootStore.status === 'open') {
+
+		if (rootStore.status === 'open') {
 			await rootStore.close();
-			await fs.remove(rootStore.path);
+			if (rootStore instanceof RocksDatabase) {
+				rootStore.destroy();
+			} else if (rootStore.status === 'open') {
+				await fs.remove(rootStore.path);
+			}
 		}
 	}
 	if (!rootStore) {
 		rootStore = database({ database: databaseName, table: null });
-		if (rootStore.isOpen?.() ?? rootStore.status === 'open') {
+		if (rootStore instanceof RocksDatabase) {
+			rootStore.destroy();
+		} else if (rootStore.status === 'open') {
 			await rootStore.close();
 			await fs.remove(rootStore.path);
 		}
