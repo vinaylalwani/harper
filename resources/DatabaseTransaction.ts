@@ -201,7 +201,12 @@ export class DatabaseTransaction implements Transaction {
 				// no more reads need to be performed, just commit/abort based if there are any writes
 				trackedTxns.delete(this);
 				if (this.transaction) {
-					commitResolution = this.writes.length > 0 ? this.transaction?.commit() : this.transaction?.abort();
+					if (this.writes.length > 0) {
+						commitResolution = this.transaction.commit();
+					} else {
+						commitResolution = this.transaction.abort();
+						this.transaction = null; // immediately clear transaction, no need to wait
+					}
 				}
 			}
 
@@ -216,6 +221,7 @@ export class DatabaseTransaction implements Transaction {
 				const completions = [];
 				return commitResolution.then(
 					() => {
+						this.transaction = null; // the native transaction is done (reset if needed)
 						if (this.next) {
 							completions.push(this.next.commit(options));
 						}

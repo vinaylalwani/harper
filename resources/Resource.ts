@@ -688,12 +688,12 @@ function transactional(
 			if (query.checkPermission) {
 				checkPermission = true;
 				// authorization has been requested, but only do it for this entry call
-				query.checkPermission = false;
 			}
 			if (context.authorize) {
 				checkPermission = true;
 				// authorization has been requested, but only do it for this entry call
 				context.authorize = false;
+				query.checkPermission = true;
 			}
 			if (checkPermission) {
 				if (loadAsInstance !== false) {
@@ -710,6 +710,7 @@ function transactional(
 									: resource.allowDelete(context.user, query, context);
 					if (allowed?.then) {
 						return allowed.then((allowed) => {
+							query.checkPermission = false;
 							if (!allowed) {
 								throw new AccessViolation(context.user);
 							}
@@ -725,6 +726,7 @@ function transactional(
 							);
 						});
 					}
+					query.checkPermission = false;
 					if (!allowed) {
 						throw new AccessViolation(context.user);
 					}

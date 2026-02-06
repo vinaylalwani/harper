@@ -3,6 +3,7 @@ const assert = require('assert');
 const { setupTestDBPath } = require('../test_utils');
 const { table } = require('#src/resources/databases');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
+const { RequestTarget } = require('#src/resources/RequestTarget');
 // might want to enable an iteration with NATS being assigned as a source
 describe('Permissions through Resource API', () => {
 	let TestTable, restricted_user, authorized_role, attribute_authorized_role;
@@ -171,11 +172,11 @@ describe('Permissions through Resource API', () => {
 		assert.equal(result.related, undefined);
 	});
 	it('Can query with select with (limited) permission', async function () {
-		const request = {
+		const request = new RequestTarget('?id=id-2&select(name,related)');
+		Object.assign(request, {
 			user: attribute_authorized_role,
-			authorize: true,
-			url: '?id=id-2&select(name,related)',
-		};
+			checkPermission: true,
+		});
 		let results = [];
 		for await (let result of TestTable.get(request, request)) {
 			results.push(result);
@@ -188,7 +189,7 @@ describe('Permissions through Resource API', () => {
 	it('Can query with selecting inaccessible attributes with (limited) permission', async function () {
 		const request = {
 			user: attribute_authorized_role,
-			authorize: true,
+			checkPermission: true,
 			url: '?id=id-2&select(name,prop1,related{name})',
 		};
 		let results = [];
