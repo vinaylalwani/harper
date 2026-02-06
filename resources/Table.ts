@@ -3464,8 +3464,8 @@ export function makeTable(options) {
 			if (options.transaction?.isDone) return withEntry(null, id);
 			const entry = primaryStore.getEntry(id, options);
 
-			// skip recording reads for most system tables except hdb_analytics
-			// we want to track analytics reads in licensing, etc.
+			// skip recording reads for most system tables (note that queries for hdb_analytics through get_analytics
+			// will get recorded through the search path, which is what we want).
 			if (databaseName !== 'system' && (options.type === 'read' || !options.type)) {
 				harperLogger.trace?.('Recording db-read action for', `${databaseName}.${tableName}`);
 				recordAction(entry?.size ?? 1, 'db-read', tableName, null);
