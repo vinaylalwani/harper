@@ -4,6 +4,8 @@ const { forComponent } = harperLogger;
 import { getAnalyticsHostnameTable } from './hostnames.ts';
 import type { Condition, Conditions } from '../ResourceInterface.ts';
 import { METRIC, type BuiltInMetricName } from './metadata.ts';
+import { CONFIG_PARAMS } from '../../utility/hdbTerms.ts';
+import { get as envGet } from '../../utility/environment/environmentManager.js';
 
 // default to one week time window for finding custom metrics
 const defaultCustomMetricWindow = 1000 * 60 * 60 * 24 * 7;
@@ -24,6 +26,7 @@ interface GetAnalyticsRequest {
 	start_time?: number;
 	end_time?: number;
 	get_attributes?: string[];
+	coalesce_time?: boolean;
 	conditions?: Conditions;
 }
 
@@ -31,7 +34,13 @@ type GetAnalyticsResponse = Metric[];
 
 export function getOp(req: GetAnalyticsRequest): Promise<GetAnalyticsResponse> {
 	log.trace?.('get_analytics request:', req);
-	return get(req.metric, req.get_attributes, req.start_time, req.end_time, req.conditions);
+	return get(req.metric, {
+		getAttributes: req.get_attributes,
+		startTime: req.start_time,
+		endTime: req.end_time,
+		coalesceTime: req.coalesce_time,
+		additionalConditions: req.conditions,
+	});
 }
 
 function conformCondition(condition: Condition): Condition {
@@ -48,13 +57,37 @@ function conformCondition(condition: Condition): Condition {
 	};
 }
 
-export async function get(
-	metric: string,
-	getAttributes?: string[],
-	startTime?: number,
-	endTime?: number,
-	additionalConditions?: Conditions
-): Promise<Metric[]> {
+async function coalesceResults(results: Metric[], window: number): Promise<Metric[]> {
+	const coalescedResults: Metric[] = [];
+	let coalesceId;
+	let lastCoalescedId = new Map<string, number>();
+	for await (const result of results) {
+		const id = result.id;
+		if (!coalesceId) {
+			coalesceId = id;
+		}
+		const delta = Math.abs(id - coalesceId);
+		if (delta < window && lastCoalescedId.get(result.node) !== id) {
+			coalescedResults.push({ ...result, id: coalesceId });
+			lastCoalescedId[result.node] = id;
+		} else {
+			coalescedResults.push(result);
+			coalesceId = id;
+		}
+	}
+	return coalescedResults;
+}
+
+interface GetAnalyticsOpts {
+	getAttributes?: string[];
+	startTime?: number;
+	endTime?: number;
+	coalesceTime?: boolean;
+	additionalConditions?: Conditions;
+}
+
+export async function get(metric: string, opts?: GetAnalyticsOpts): Promise<Metric[]> {
+	const { getAttributes, startTime, endTime, additionalConditions } = opts ?? {};
 	const conditions: Conditions = [{ attribute: 'metric', comparator: 'equals', value: metric }];
 	if (additionalConditions) {
 		conditions.push(...additionalConditions.map(conformCondition));
@@ -88,7 +121,7 @@ export async function get(
 	log.trace?.('get_analytics hdb_analytics.search request:', JSON.stringify(request));
 	const searchResults = await databases.system.hdb_analytics.search(request);
 
-	return searchResults.map(async (result: Metric) => {
+	let results = searchResults.map(async (result: Metric) => {
 		// remove nodeId from 'id' attr and resolve it to the actual hostname and
 		// add back in as 'node' attr if selected
 		const nodeId = result.id[1];
@@ -100,6 +133,14 @@ export async function get(
 		log.trace?.(`get_analytics result:`, JSON.stringify(result));
 		return result;
 	});
+
+	if (opts?.coalesceTime) {
+		// coalescing window is the aggregate period plus 10% & converted to milliseconds
+		const window = envGet(CONFIG_PARAMS.ANALYTICS_AGGREGATEPERIOD) * 1.1 * 1000;
+		results = await coalesceResults(results, window);
+	}
+
+	return results;
 }
 
 type MetricType = 'builtin' | 'custom';
@@ -115,7 +156,10 @@ export function listMetricsOp(req: ListMetricsRequest): Promise<ListMetricsRespo
 	return listMetrics(req.metric_types, req.custom_metrics_window);
 }
 
-export async function listMetrics(metricTypes: MetricType[] = ['builtin'], customWindow: number = defaultCustomMetricWindow): Promise<string[]> {
+export async function listMetrics(
+	metricTypes: MetricType[] = ['builtin'],
+	customWindow: number = defaultCustomMetricWindow
+): Promise<string[]> {
 	let metrics: string[] = [];
 
 	const builtins: BuiltInMetricName[] = Object.values(METRIC);
@@ -126,11 +170,13 @@ export async function listMetrics(metricTypes: MetricType[] = ['builtin'], custo
 
 	if (metricTypes.includes('custom')) {
 		const oldestCustomId = Date.now() - customWindow;
-		const conditions: Conditions = [{
-			attribute: 'id',
-			comparator: 'greater_than',
-			value: oldestCustomId,
-		}];
+		const conditions: Conditions = [
+			{
+				attribute: 'id',
+				comparator: 'greater_than',
+				value: oldestCustomId,
+			},
+		];
 		const metricConditions = builtins.map((c) => {
 			return {
 				attribute: 'metric',
