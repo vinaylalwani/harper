@@ -503,7 +503,7 @@ export function recordUpdater(store, tableId, auditStore) {
 				const structureVersion = store.encoder.structures.length + (store.encoder.typedStructs?.length ?? 0);
 				if (resolveRecord && existingEntry?.localTime) {
 					const replacingId = existingEntry?.localTime;
-					const replacingEntry = auditStore.get(replacingId);
+					const replacingEntry = auditStore.get(replacingId, tableId, id);
 					if (replacingEntry) {
 						const previousVersion = replacingEntry.previousVersion;
 						result = auditStore.putSync(

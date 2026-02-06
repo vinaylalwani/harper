@@ -79,13 +79,13 @@ const UNKNOWN = {};
  * @param store
  * @returns
  */
-export function getRecordAtTime(currentEntry, timestamp, store) {
+export function getRecordAtTime(currentEntry, timestamp, store, tableId: number, recordId: any) {
 	const auditStore = store.rootStore.auditStore;
 	let record = { ...currentEntry.value };
 	let auditTime = currentEntry.localTime;
 	// Iterate in reverse through the record history, trying to reverse all changes
 	while (auditTime > timestamp) {
-		const auditEntry = auditStore.get(auditTime);
+		const auditEntry = auditStore.get(auditTime, tableId, recordId);
 		// TODO: Caching of audit entries
 		switch (auditEntry.type) {
 			case 'put':
@@ -111,7 +111,7 @@ export function getRecordAtTime(currentEntry, timestamp, store) {
 	}
 	// then continue to iterate back through the audit history, filling in the blanks
 	while (unknownCount > 0 && auditTime > 0) {
-		const auditEntry = auditStore.get(auditTime);
+		const auditEntry = auditStore.get(auditTime, tableId, recordId);
 		let priorRecord;
 		switch (auditEntry.type) {
 			case 'put':

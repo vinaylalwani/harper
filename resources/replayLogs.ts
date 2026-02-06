@@ -41,6 +41,7 @@ export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void>
 				if (lastTimestamp !== version) {
 					lastTimestamp = version;
 					try {
+						// commit the last transaction since we are starting a new one
 						transaction?.transaction?.commitSync();
 					} catch (error) {
 						logger.error('Error committing replay transaction', error);
@@ -48,16 +49,26 @@ export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void>
 					transaction = new DatabaseTransaction();
 					transaction.db = primaryStore;
 					transaction.timestamp = version;
+					// we treat this as a retry, because it is (and we want to skip validation and writing to the transaction log)
+					transaction.retries = 1;
 				}
 				context.transaction = transaction;
-				const options = { context, residencyId, nodeId, originatingOperation, replay: true };
+				const options = { context, residencyId, nodeId, originatingOperation };
 
 				switch (type) {
 					case 'put':
 						tableInstance._writeUpdate(recordId, record, true, options);
+						tableInstance.save(); // requires an explicit save
 						break;
 					case 'patch':
 						tableInstance._writeUpdate(recordId, record, false, options);
+						tableInstance.save(); // requires an explicit save
+						break;
+					case 'message':
+						tableInstance._writePublish(recordId, record, options);
+						break;
+					case 'relocate':
+						tableInstance._writeRelocate(recordId, options);
 						break;
 					case 'delete':
 						tableInstance._writeDelete(recordId, options);

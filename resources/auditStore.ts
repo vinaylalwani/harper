@@ -491,7 +491,8 @@ export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined): 
 					return value;
 				}
 				if (action & HAS_PARTIAL_RECORD && auditTime) {
-					return getRecordAtTime(store.getEntry(this.recordId), auditTime, store);
+					const recordId = this.recordId;
+					return getRecordAtTime(store.getEntry(recordId), auditTime, store, tableId, recordId);
 				} // TODO: If we store a partial and full record, may need to read both sequentially
 			},
 			getBinaryValue() {

@@ -95,11 +95,13 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 				for (const element of data) {
 					const resourceClass = resource.constructor;
 					const id = element[resourceClass.primaryKey];
-					const elementResource = resourceClass.getResource(query, request, {
+					let target = new RequestTarget();
+					target.id = id;
+					const elementResource = resourceClass.getResource(target, request, {
 						async: true,
 					});
 					if (elementResource.then) results.push(elementResource.then((resource) => resource.put(element, request)));
-					else results.push(elementResource.put(element, request));
+					else results.push(elementResource.put(element, query));
 				}
 				return Promise.all(results);
 			}

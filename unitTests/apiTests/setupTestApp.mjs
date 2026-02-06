@@ -86,6 +86,7 @@ export async function setupTestApp() {
 		serverStarted = await startHTTPThreads(config.threads || 0);
 	}
 	try {
+		seed = 0; // reset the seed to make sure we are deterministic here
 		for (let i = 0; i < 20; i++) {
 			let object = { id: Math.round(random() * 1000000).toString(36) };
 			for (let i = 0; i < 20; i++) {

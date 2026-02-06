@@ -49,24 +49,28 @@ export type TransactionWrite = {
 	entry?: Partial<Entry>;
 	before?: () => void | Promise<void>;
 	beforeIntermediate?: () => void | Promise<void>;
-	commit?: (txnTime: number, existingEntry: Entry, retries: number) => void;
+	commit?: (txnTime: number, existingEntry: Entry, retry: boolean, transaction: RocksTransaction) => void;
 	validate?: (txnTime: number) => void;
 	fullUpdate?: boolean;
 	saved?: boolean;
+	deferSave?: boolean;
 };
+
+type RocksTransactionWithRetry = RocksTransaction & { isRetry?: boolean };
 
 export class DatabaseTransaction implements Transaction {
 	#context: Context;
 	writes: TransactionWrite[] = []; // the set of writes to commit if the conditions are met
 	completions: Promise<void>[] = []; // the set of outstanding async operations to complete
 	db: RootDatabaseKind;
-	transaction: RocksTransaction;
+	transaction: RocksTransactionWithRetry;
 	readTxn: ReadTransaction;
 	readTxnRefCount: number;
 	readTxnsUsed: number;
 	timeout: number;
 	validated = 0;
 	timestamp = 0;
+	retries = 0;
 	declare next: DatabaseTransaction;
 	declare stale: boolean;
 	declare startedFrom?: {
@@ -154,8 +158,12 @@ export class DatabaseTransaction implements Transaction {
 				this.transaction.setTimestamp(txnTime);
 			}
 		}
+		if (this.retries > 0) {
+			// this is marks the rocks transaction as a retry so we don't write the transaction log again
+			this.transaction.isRetry = true;
+		}
 		if (!txnTime) txnTime = this.timestamp = this.transaction.getTimestamp();
-		if (reloadEntry) {
+		if (reloadEntry || operation.entry === undefined) {
 			operation.entry = operation.store.getEntry(operation.key, { transaction: this.transaction });
 		}
 		operation.saved = true;
@@ -165,7 +173,7 @@ export class DatabaseTransaction implements Transaction {
 		if (result?.then) this.completions.push(result);
 		result = operation.beforeIntermediate?.() as Promise<void>;
 		if (result?.then) this.completions.push(result);
-		operation.commit(txnTime, operation.entry, 0, this.transaction);
+		operation.commit(txnTime, operation.entry, this.retries > 0, this.transaction);
 	}
 
 	/**
@@ -173,10 +181,9 @@ export class DatabaseTransaction implements Transaction {
 	 */
 	commit(options: CommitOptions = {}): MaybePromise<CommitResolution> {
 		let txnTime = this.timestamp;
-		let retries = options.retries ?? 0;
 		for (let i = 0; i < this.writes.length; i++) {
 			let operation = this.writes[i];
-			if (retries === 0 && operation.saved) continue;
+			if (this.retries === 0 && operation.saved) continue;
 			this.save(operation, i < this.validated);
 		}
 		this.validated = this.writes.length;
@@ -195,9 +202,6 @@ export class DatabaseTransaction implements Transaction {
 				trackedTxns.delete(this);
 				if (this.transaction) {
 					commitResolution = this.writes.length > 0 ? this.transaction?.commit() : this.transaction?.abort();
-					// we are done with this rocksdb transaction, so release it, and if we reuse this Harper transaction,
-					// we need a new transaction
-					this.transaction = null;
 				}
 			}
 
@@ -249,8 +253,7 @@ export class DatabaseTransaction implements Transaction {
 						if (error.code === 'ERR_BUSY') {
 							// if the transaction failed due to concurrent changes, we need to retry. First record this as an increased risk of contention/retry
 							// for future transactions
-							if (options) options.retries = (options.retries ?? 0) + 1;
-							else options = { retries: 1 };
+							this.retries++;
 							return this.commit(options); // try again
 						} else throw error;
 					}

@@ -107,7 +107,9 @@ tables.SimpleCache.sourcedFrom(SimpleCacheSource);
 export class SimpleCache extends tables.SimpleCache {
 	static loadAsInstance = false;
 	post(query, data) {
-		if (data.invalidate) this.invalidate();
+		if (data.invalidate) {
+			this.invalidate();
+		}
 		if (data.customResponse) {
 			return {
 				status: 222,

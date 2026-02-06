@@ -371,6 +371,7 @@ export function makeTable(options) {
 					};
 					const id = event.id;
 					const resource: TableResource = await Table.getResource(id, context, options);
+					await resource._loadRecord(id, event, options);
 					if (event.finished) await event.finished;
 					switch (event.type) {
 						case 'put':
@@ -1335,7 +1336,7 @@ export function makeTable(options) {
 					partialRecord,
 					applyToSourcesIntermediate.invalidate?.bind(this, context, id)
 				),
-				commit: (txnTime, existingEntry, retries, transaction: any) => {
+				commit: (txnTime, existingEntry, retry, transaction: any) => {
 					if (precedesExistingVersion(txnTime, existingEntry, options?.nodeId) <= 0) return;
 					partialRecord ??= null;
 					for (const name in indices) {
@@ -1346,7 +1347,6 @@ export function makeTable(options) {
 						}
 					}
 					logger.trace?.(`Invalidating entry in ${tableName} id: ${id}, timestamp: ${new Date(txnTime).toISOString()}`);
-
 					updateRecord(
 						id,
 						partialRecord,
@@ -1378,7 +1378,7 @@ export function makeTable(options) {
 				entry: this.#entry,
 				before: applyToSources.relocate?.bind(this, context, id),
 				beforeIntermediate: applyToSourcesIntermediate.relocate?.bind(this, context, id),
-				commit: (txnTime, existingEntry, retries, transaction: any) => {
+				commit: (txnTime, existingEntry, retry, transaction: any) => {
 					if (precedesExistingVersion(txnTime, existingEntry, options?.nodeId) <= 0) return;
 					const residency = TableResource.getResidencyRecord(options.residencyId);
 					let metadata = 0;
@@ -1708,14 +1708,14 @@ export function makeTable(options) {
 
 							const succeedingUpdates = []; // record the "future" updates, as we need to apply the updates in reverse order
 							while (localTime > txnTime || (auditedVersion >= txnTime && localTime > 0)) {
-								const auditRecord = auditStore.get(localTime);
+								const auditRecord = auditStore.get(localTime, tableId, id);
 								if (!auditRecord) break;
 								auditedVersion = auditRecord.version;
 								if (auditedVersion >= txnTime) {
 									if (auditedVersion === txnTime) {
 										precedesExisting = precedesExistingVersion(
 											txnTime,
-											{ version: auditedVersion, localTime: localTime },
+											{ version: auditedVersion, localTime: localTime, key: id },
 											options?.nodeId
 										);
 										if (precedesExisting === 0) {
@@ -1847,7 +1847,7 @@ export function makeTable(options) {
 							storeRecord ? existingEntry : { ...existingEntry, value: undefined },
 							txnTime,
 							omitLocalRecord ? INVALIDATED : 0,
-							options?.replay ? false : audit,
+							audit,
 							{
 								omitLocalRecord,
 								user: context?.user,
@@ -2705,7 +2705,7 @@ export function makeTable(options) {
 						do {
 							//TODO: Would like to do this asynchronously, but we will need to run catch after this to ensure we didn't miss anything
 							//await auditStore.prefetch([key]); // do it asynchronously for better fairness/concurrency and avoid page faults
-							const auditRecord = auditStore.getSync(nextTime);
+							const auditRecord = auditStore.getSync(nextTime, tableId, thisId);
 							if (auditRecord) {
 								request.omitCurrent = true; // we are sending the current version from history, so don't double send
 								const value = auditRecord.getValue(primaryStore, getFullRecord, nextTime);
@@ -2814,7 +2814,7 @@ export function makeTable(options) {
 					message,
 					applyToSourcesIntermediate.publish?.bind(this, context, id, message)
 				),
-				commit: (txnTime, existingEntry, retries, transaction: any) => {
+				commit: (txnTime, existingEntry, retry, transaction: any) => {
 					// just need to update the version number of the record so it points to the latest audit record
 					// but have to update the version number of the record
 					// TODO: would be faster to use getBinaryFast here and not have the record loaded
@@ -3365,26 +3365,32 @@ export function makeTable(options) {
 			if (id == undefined) throw new Error('An id is required');
 			const entry = primaryStore.getEntry(id);
 			if (!entry) return history;
-			let nextLocalTime = entry.localTime;
-			if (!nextLocalTime) throw new Error('The entry does not have a local audit time');
+			let nextVersion = entry.localTime;
+			if (!nextVersion) throw new Error('The entry does not have a local audit time');
 			const count = 0;
+			const auditWindow = 100;
 			do {
 				await rest(); // yield to other async operations
-				//TODO: Would like to do this asynchronously, but we will need to run catch after this to ensure we didn't miss anything
-				//await auditStore.prefetch([key]); // do it asynchronously for better fairness/concurrency and avoid page faults
-				const auditRecord = auditStore.get(nextLocalTime);
-				if (auditRecord) {
-					history.push({
-						id: auditRecord.recordId,
-						localTime: nextLocalTime,
-						version: auditRecord.version,
-						type: auditRecord.type,
-						value: auditRecord.getValue(primaryStore, true, nextLocalTime),
-						user: auditRecord.user,
-					});
-					nextLocalTime = auditRecord.previousVersion;
-				} else break;
-			} while (count < 1000 && nextLocalTime);
+				let insertionPoint = history.length;
+				let highestPreviousVersion = 0;
+				const start = nextVersion - auditWindow;
+				for (const auditRecord of auditStore.getRange({ start, end: nextVersion + 0.001 })) {
+					if (auditRecord.recordId === id && auditRecord.tableId === tableId) {
+						history.splice(insertionPoint, 0, {
+							id: auditRecord.recordId,
+							localTime: nextVersion,
+							version: auditRecord.version,
+							type: auditRecord.type,
+							value: auditRecord.getValue(primaryStore, true, nextVersion),
+							user: auditRecord.user,
+						});
+						if (auditRecord.previousVersion > highestPreviousVersion && auditRecord.previousVersion < start) {
+							highestPreviousVersion = auditRecord.previousVersion;
+						}
+					}
+				}
+				nextVersion = highestPreviousVersion;
+			} while (count < 1000 && nextVersion);
 			return history.reverse();
 		}
 		static clear() {
@@ -3832,7 +3838,7 @@ export function makeTable(options) {
 				// existing entry to the node name of the update
 				const nodeNameToId = server.replication?.exportIdMapping(auditStore);
 				const localTime = existingEntry.localTime;
-				const auditRecord = localTime && auditStore.get(localTime);
+				const auditRecord = localTime && auditStore.get(localTime, tableId, existingEntry.key);
 				if (auditRecord) {
 					// existing node id comes from the audit log
 					let updatedNodeName, existingNodeName;
@@ -3921,13 +3927,11 @@ export function makeTable(options) {
 						updatedRecord = await throttledCallToSource(id, sourceContext, existingEntry);
 						invalidated = metadataFlags & INVALIDATED;
 						let version = sourceContext.lastModified || (invalidated && existingVersion);
-						if (!version) version = getNextMonotonicTime();
 						hasChanges = invalidated || version > existingVersion || !existingRecord;
 						const resolveDuration = performance.now() - start;
 						recordAction(resolveDuration, 'cache-resolution', tableName, null, 'success');
 						if (responseHeaders)
 							appendHeader(responseHeaders, 'Server-Timing', `cache-resolve;dur=${resolveDuration.toFixed(2)}`, true);
-						txn.timestamp = version;
 						if (expirationMs && sourceContext.expiresAt == undefined)
 							sourceContext.expiresAt = Date.now() + expirationMs;
 						if (updatedRecord) {
@@ -3995,7 +3999,7 @@ export function makeTable(options) {
 						entry: existingEntry,
 						nodeName: 'source',
 						before: preCommitBlobsForRecordBefore(updatedRecord),
-						commit: (txnTime, existingEntry, retries, transaction: any) => {
+						commit: (txnTime, existingEntry, retry, transaction: any) => {
 							if (existingEntry?.version !== existingVersion) {
 								// don't do anything if the version has changed
 								return;

@@ -271,7 +271,10 @@ describe('test REST calls', () => {
 			// this test also tests to ensure deleted values are not reachable
 			let response = await axios('http://localhost:9926/VariedProps/?id=sw=8');
 			assert.equal(response.status, 200);
-			if (response.data.length > 2) console.log('Record starting with 8', response.data);
+			if (response.data.length < 2) {
+				let response = await axios('http://localhost:9926/VariedProps/?select(id)');
+				console.log(response.data);
+			}
 			assert.equal(response.data.length, 2);
 			assert.equal(response.data[0].id[0], '8');
 		});

@@ -33,6 +33,10 @@ export class RocksTransactionLogStore {
 	 * @param txnId
 	 */
 	put(suggestedKey: any, auditRecord: AuditRecord | Uint8Array, options: any) {
+		if (options.transaction.isRetry) {
+			// do not record transaction entries on retry
+			return;
+		}
 		const nodeId = options.nodeId;
 		const log = nodeId ? (this.nodeLogs?.[nodeId] ?? this.loadLogs()[nodeId]) : this.log;
 		let entryBinary: Uint8Array;
@@ -64,14 +68,21 @@ export class RocksTransactionLogStore {
 			this.put(suggestedKey, value, options);
 		}
 	}
-	get(key: any) {
-		return this.getSync(key);
+	get(key: any, tableId: number, recordId: any) {
+		return this.getSync(key, tableId, recordId);
 	}
-	getSync(key: any) {
+	getSync(key: any, tableId: number, recordId: any) {
 		if (typeof key === 'number') {
+			if (typeof tableId !== 'number') throw new Error('tableId must be a number');
+			if (recordId === undefined) {
+				throw new Error('recordId must be provided');
+			}
 			// this a request for a transaction log entry by a timestamp
 			for (const entry of this.getRange({ start: key, exactStart: true })) {
-				return entry;
+				if (entry.recordId === recordId && entry.tableId === tableId) {
+					return entry;
+				}
+				if (entry.version !== key) return; // no longer in this transaction
 			}
 		} else {
 			// Harper puts some metadata in the database, we will just put this in the root store instead
