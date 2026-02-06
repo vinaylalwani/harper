@@ -1042,7 +1042,7 @@ export function makeTable(options) {
 								// dictates not to go to source
 								if (!entry?.value) throw new ServerError('Entry is not cached', 504);
 							} else if (ensureLoaded) {
-								const loadingFromSource = ensureLoadedFromSource(id, entry, context);
+								const loadingFromSource = ensureLoadedFromSource(id, entry, context, this);
 								if (loadingFromSource) {
 									txn?.disregardReadTxn(); // this could take some time, so don't keep the transaction open if possible
 									target.loadedFromSource = true;
@@ -1825,7 +1825,9 @@ export function makeTable(options) {
 						`Saving record with id: ${id}, timestamp: ${new Date(txnTime).toISOString()}${
 							expiresAt ? ', expires at: ' + new Date(expiresAt).toISOString() : ''
 						}${
-							existingEntry?.version ? ', replaces entry from: ' + new Date(existingEntry.version).toISOString() : ', new entry'
+							existingEntry?.version
+								? ', replaces entry from: ' + new Date(existingEntry.version).toISOString()
+								: ', new entry'
 						}`,
 						(() => {
 							try {
