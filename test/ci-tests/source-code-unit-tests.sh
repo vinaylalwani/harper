@@ -8,8 +8,7 @@ npm --loglevel=error install mocha -g
 cd /home/ubuntu/harperdb/bin/
 node harperdb.js stop
 
-npm run cover:test
-#npm run test
+npm run test
 
 node harperdb.js stop
 
