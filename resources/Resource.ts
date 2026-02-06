@@ -714,16 +714,9 @@ function transactional(
 							if (!allowed) {
 								throw new AccessViolation(context.user);
 							}
-							when(
-								loadAsInstance !== true && resource._loadRecord
-									? resource._loadRecord(query, context, resourceOptions)
-									: resource,
-								(resource) => {
-									return when(data, (data) => {
-										return action(resource, query, context, data);
-									});
-								}
-							);
+							return when(data, (data) => {
+								return action(resource, query, context, data);
+							});
 						});
 					}
 					query.checkPermission = false;
@@ -732,16 +725,9 @@ function transactional(
 					}
 				}
 			}
-			return when(
-				loadAsInstance === undefined && resource._loadRecord
-					? resource._loadRecord(query, context, resourceOptions)
-					: resource,
-				(resource) => {
-					return when(data, (data) => {
-						return action(resource, query, context, data);
-					});
-				}
-			);
+			return when(data, (data) => {
+				return action(resource, query, context, data);
+			});
 		}
 	}
 }

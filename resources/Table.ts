@@ -371,7 +371,6 @@ export function makeTable(options) {
 					};
 					const id = event.id;
 					const resource: TableResource = await Table.getResource(id, context, options);
-					await resource._loadRecord(id, event, options);
 					if (event.finished) await event.finished;
 					switch (event.type) {
 						case 'put':
@@ -600,8 +599,7 @@ export function makeTable(options) {
 			resourceOptions?: any
 		): Promise<TableResource<Record>> | TableResource<Record> {
 			const resource: TableResource = super.getResource(target, request, resourceOptions) as any;
-			if (this.loadAsInstance === false) request._freezeRecords = true;
-			if (this.loadAsInstance) {
+			if (this.loadAsInstance !== false) {
 				return resource._loadRecord(target, request, resourceOptions);
 			}
 			return resource;
@@ -1015,7 +1013,7 @@ export function makeTable(options) {
 				}
 				return description;
 			}
-			if (target !== undefined && !constructor.loadAsInstance) {
+			if (target !== undefined && constructor.loadAsInstance === false) {
 				const context = this.getContext();
 				const txn = txnForContext(context);
 				const readTxn = txn.getReadTxn();
@@ -1067,8 +1065,14 @@ export function makeTable(options) {
 			}
 			if (target?.property) return this.getProperty(target.property);
 			if (!constructor.getReturnMutable) {
-				// if we are not explicitly using loadAsInstance, return the frozen record
-				return this.#record;
+				// if we are not explicitly using getReturnMutable, return the frozen record
+				const record = this.#record;
+				const select = target?.select;
+				if (select && record != null) {
+					const transform = transformForSelect(select, this.constructor);
+					return transform(record);
+				}
+				return record;
 			}
 			if (this.doesExist() || target?.ensureLoaded === false || this.getContext()?.returnNonexistent) {
 				return this;
@@ -3556,7 +3560,7 @@ export function makeTable(options) {
 			// we need to freeze entry records to ensure the integrity of the cache;
 			// but we only do this when users have opted into loadAsInstance/freezeRecords to avoid back-compat
 			// issues
-			if (context?._freezeRecords) Object.freeze(entry?.value);
+			Object.freeze(entry?.value);
 			if (
 				entry?.residencyId &&
 				entry.metadataFlags & INVALIDATED &&
