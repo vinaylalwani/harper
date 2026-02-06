@@ -429,8 +429,8 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 	const residencyMap = [];
 	const sentResidencyLists = [];
 	const receivedResidencyLists = [];
-	const MAX_OUTSTANDING_COMMITS = 150; // maximum before requesting that other nodes pause
-	const MAX_OUTSTANDING_BLOBS_BEING_SENT = 25;
+	const MAX_OUTSTANDING_COMMITS = env.get(CONFIG_PARAMS.REPLICATION_RECORDCONCURRENCY) ?? 150; // maximum before requesting that other nodes pause
+	const MAX_OUTSTANDING_BLOBS_BEING_SENT = env.get(CONFIG_PARAMS.REPLICATION_BLOBCONCURRENCY) ?? 5;
 	let outstandingCommits = 0;
 	let lastStructureLength = 0;
 	let replicationPaused = false;
@@ -1662,7 +1662,7 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 		receivingDataFromNodeIds = [];
 		const nodeSubscriptions = options.connection?.nodeSubscriptions.map((node: any) => {
 			const tableSubs = [];
-			let { replicateByDefault: replicateByDefault } = node;
+			let { replicateByDefault } = node;
 			if (node.subscriptions) {
 				// if the node has explicit subscriptions, we need to use that to determine subscriptions
 				for (const subscription of node.subscriptions) {
@@ -1861,7 +1861,7 @@ export function replicateOverWS(ws: WebSocket, options: any, authorization: Prom
 					`Timeout waiting for blob stream to finish ${blobId} for record ${stream.recordId ?? 'unknown'} from ${remoteNodeName}`
 				);
 				blobsInFlight.delete(blobId);
-				stream.end();
+				stream.destroy(new Error(`Timeout waiting for blob stream in replication from ${remoteNodeName}`));
 			}
 		}
 	}, blobTimeout).unref();

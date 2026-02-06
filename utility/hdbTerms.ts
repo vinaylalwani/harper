@@ -651,6 +651,8 @@ export const CONFIG_PARAMS = {
 		'replication_mtls_certificateVerification_ocsp_failureMode',
 	REPLICATION_SHARD: 'replication_shard',
 	REPLICATION_BLOBTIMEOUT: 'replication_blobTimeout',
+	REPLICATION_BLOBCONCURRENCY: 'replication_blobConcurrency',
+	REPLICATION_RECORDCONCURRENCY: 'replication_recordConcurrency',
 	REPLICATION_FAILOVER: 'replication_failOver',
 	ROOTPATH: 'rootPath',
 	SERIALIZATION_BIGINT: 'serialization_bigInt',
