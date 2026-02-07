@@ -251,10 +251,10 @@ describe('Blob test', () => {
 		let blob = await createBlob(
 			Readable.from(
 				(async function* () {
-					for (let i = 0; i < 5; i++) {
+					for (let i = 0; i < 500; i++) {
 						yield testString + i;
 						expectedResults += testString + i;
-						await delay(50);
+						await delay(i % 10); // vary it to keep things exciting
 					}
 				})()
 			)
