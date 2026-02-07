@@ -20,6 +20,7 @@ import {
 	open,
 	readFileSync,
 	read,
+	readSync,
 	unlink,
 	readdirSync,
 	existsSync,
@@ -27,6 +28,7 @@ import {
 	write,
 	statSync,
 	writeFile,
+	type FSWatcher,
 } from 'node:fs';
 import type { StatsFs } from 'node:fs';
 import { createDeflate, deflate } from 'node:zlib';
@@ -250,8 +252,8 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 		let fd: number;
 		let position = 0;
 		let totalContentRead = 0;
-		let watcher: any;
-		let timer: any;
+		let watcher: FSWatcher;
+		let timer: NodeJS.Timeout;
 		let isBeingWritten: boolean;
 		let previouslyFinishedWriting = false;
 		const blob = this;
@@ -337,25 +339,24 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 								if (size > totalContentRead) {
 									if (checkIfIsBeingWritten()) {
 										// the file is not finished being written, watch the file for changes to resume reading
-										if (watcher) {
-											// already watching, but add a timer to make sure we don't wait forever
-											timer = setTimeout(() => {
-												onError(new Error(`File read timed out reading from ${filePath}`));
-											}, FILE_READ_TIMEOUT).unref();
-										} else {
-											// set up a watcher to be notified of file changes
-											watcher = watch(filePath, { persistent: false }, () => {
-												watcher.close();
-												watcher = null;
-												if (timer) {
-													// if we are waiting for a timeout, that means we finished another read and we can proceed with the next one=
-													clearTimeout(timer); // clear it
-													timer = null;
-													readMore(resolve, reject);
-												}
-											});
-											readMore(resolve, reject); // immediately try to read again in case there was a change before we started watching
+										// set up a watcher to be notified of file changes
+										watcher = watch(filePath, { persistent: false }, () => {
+											watcher.close();
+											watcher = null;
+											clearTimeout(timer); // clear it
+											readMore(resolve, reject);
+										});
+										// immediately try to read again in case there was a change before we started watching,
+										// readSync should be fine here, the data should be in memory
+										if (readSync(fd, buffer, 0, buffer.length, position) > 0) {
+											// never mind with the watcher, let's read more data
+											watcher.close();
+											watcher = null;
+											readMore(resolve, reject);
 										}
+										timer = setTimeout(() => {
+											onError(new Error(`File read timed out reading from ${filePath}`));
+										}, FILE_READ_TIMEOUT).unref();
 									} else {
 										if (previouslyFinishedWriting) {
 											// we verified that the blob was finished writing before the last read, we can confidently say it is incomplete
