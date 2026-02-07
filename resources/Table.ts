@@ -2820,7 +2820,8 @@ export function makeTable(options) {
 				before: applyToSources.publish?.bind(this, context, id, message),
 				beforeIntermediate: preCommitBlobsForRecordBefore(
 					message,
-					applyToSourcesIntermediate.publish?.bind(this, context, id, message)
+					applyToSourcesIntermediate.publish?.bind(this, context, id, message),
+					true // because transaction log entries can be deleted at any point, we must save the blobs in the record, there is no cleanup of them
 				),
 				commit: (txnTime, existingEntry, retry, transaction: any) => {
 					// just need to update the version number of the record so it points to the latest audit record
@@ -4300,8 +4301,12 @@ export function makeTable(options) {
 			return residencyId;
 		}
 	}
-	function preCommitBlobsForRecordBefore(record: any, before?: () => Promise<void>): Promise<void> | void {
-		const blobCompletion = startPreCommitBlobsForRecord(record, primaryStore.rootStore);
+	function preCommitBlobsForRecordBefore(
+		record: any,
+		before?: () => Promise<void>,
+		saveInRecord?: boolean
+	): Promise<void> | void {
+		const blobCompletion = startPreCommitBlobsForRecord(record, primaryStore.rootStore, saveInRecord);
 		if (blobCompletion) {
 			// if there are blobs that we have started saving, they need to be saved and completed before we commit, so we need to wait for
 			// them to finish and we return a new callback for the before phase of the commit

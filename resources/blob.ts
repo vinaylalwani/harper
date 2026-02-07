@@ -101,6 +101,7 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 	size: number;
 	declare finished: Promise<void>;
 	declare saveBeforeCommit: boolean;
+	declare saveInRecord: boolean; // for indicating that we want the blob to be saved in the record
 	#onError: ((error: Error) => void)[];
 	#onSize: ((size: number) => void)[];
 	constructor(options?: BlobCreationOptions) {
@@ -520,7 +521,13 @@ export function saveBlob(blob: FileBackedBlob, deleteOnFailure = false) {
 		storageInfo.store = currentStore;
 	}
 	storageInfo.deleteOnFailure = deleteOnFailure;
-
+	if (blob.saveInRecord) {
+		if (!storageInfo.contentBuffer) {
+			// TODO: Add support for this
+			throw new Error('Cannot publish a message with a streamed blob');
+		}
+		return storageInfo; // nothing more to do if it supposed to be saved in the record
+	}
 	generateFilePath(storageInfo);
 	if (storageInfo.source) writeBlobWithStream(blob, storageInfo.source, storageInfo);
 	else if (storageInfo.contentBuffer) writeBlobWithBuffer(blob, storageInfo);
@@ -967,12 +974,15 @@ export function findBlobsInObject(object: any, callback: (blob: Blob) => void) {
  * @param record
  * @param store
  */
-export function startPreCommitBlobsForRecord(record: any, store: LMDBStore) {
+export function startPreCommitBlobsForRecord(record: any, store: LMDBStore | RocksDatabase, saveInRecord?: boolean) {
 	let completion;
 	for (const key in record) {
 		const value = record[key];
-		if (value instanceof FileBackedBlob && value.saveBeforeCommit) {
+		if (value instanceof FileBackedBlob && (saveInRecord || value.saveBeforeCommit)) {
 			currentStore = store;
+			if (saveInRecord) {
+				value.saveInRecord = true;
+			}
 			const saving = saveBlob(value, true).saving ?? Promise.resolve();
 			completion = completion ? Promise.all(completion, saving) : saving;
 		}
@@ -1026,7 +1036,10 @@ addExtension({
 			if (storageInfo.storageBuffer) {
 				return storageInfo.storageBuffer;
 			}
-			if (storageInfo.contentBuffer?.length < FILE_STORAGE_THRESHOLD) {
+			if (
+				storageInfo.contentBuffer &&
+				(storageInfo.contentBuffer?.length < FILE_STORAGE_THRESHOLD || blob.saveInRecord)
+			) {
 				options.size = storageInfo.contentBuffer.length;
 				return pack([options, storageInfo.contentBuffer]);
 			}
