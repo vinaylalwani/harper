@@ -351,10 +351,12 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 											watcher.close();
 											watcher = null;
 											readMore(resolve, reject);
+										} else {
+											// set a timer for the watcher too
+											timer = setTimeout(() => {
+												onError(new Error(`File read timed out reading from ${filePath}`));
+											}, FILE_READ_TIMEOUT).unref();
 										}
-										timer = setTimeout(() => {
-											onError(new Error(`File read timed out reading from ${filePath}`));
-										}, FILE_READ_TIMEOUT).unref();
 									} else {
 										if (previouslyFinishedWriting) {
 											// we verified that the blob was finished writing before the last read, we can confidently say it is incomplete
