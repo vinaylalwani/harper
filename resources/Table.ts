@@ -2713,15 +2713,17 @@ export function makeTable(options) {
 							//await auditStore.prefetch([key]); // do it asynchronously for better fairness/concurrency and avoid page faults
 							const auditRecord = auditStore.getSync(nextTime, tableId, thisId);
 							if (auditRecord) {
-								request.omitCurrent = true; // we are sending the current version from history, so don't double send
-								const value = auditRecord.getValue(primaryStore, getFullRecord, nextTime);
-								if (getFullRecord) auditRecord.type = 'put';
-								history.push({
-									id: thisId,
-									value,
-									localTime: nextTime,
-									...auditRecord,
-								});
+								if (startTime < nextTime) {
+									request.omitCurrent = true; // we are sending the current version from history, so don't double send
+									const value = auditRecord.getValue(primaryStore, getFullRecord, nextTime);
+									if (getFullRecord) auditRecord.type = 'put';
+									history.push({
+										id: thisId,
+										value,
+										localTime: nextTime,
+										...auditRecord,
+									});
+								}
 								nextTime = auditRecord.previousVersion;
 							} else break;
 							if (count) count--;
@@ -2835,7 +2837,7 @@ export function makeTable(options) {
 						id,
 						existingEntry?.value ?? null,
 						existingEntry,
-						existingEntry?.version || txnTime,
+						txnTime,
 						0,
 						true,
 						{
