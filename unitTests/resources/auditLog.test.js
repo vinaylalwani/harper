@@ -78,4 +78,3 @@ describe('Audit log', () => {
 		assert.deepEqual(history[0].value.id, key);
 	});
 });
-require('./crud.test.js');
