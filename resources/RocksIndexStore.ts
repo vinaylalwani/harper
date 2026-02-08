@@ -61,4 +61,8 @@ export class RocksIndexStore {
 	drop() {
 		return this.#store.drop();
 	}
+
+	clear() {
+		return this.#store.clear();
+	}
 }

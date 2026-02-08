@@ -30,6 +30,7 @@ import { totalmem } from 'node:os';
 import { RocksIndexStore } from './RocksIndexStore.ts';
 import type { Id } from './ResourceInterface.ts';
 import { mkdirSync } from 'node:fs';
+import { when } from './Resource.ts';
 
 function OpenDBIObject(dupSort, isPrimary) {
 	// what is going on with esbuild, it suddenly is randomly flip-flopping the module record for OpenDBIObject, sometimes return the correct exports object and sometimes returning the exports as the `default`.
@@ -1092,7 +1093,12 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 					) {
 						hasChanges = true;
 						if (attribute.indexNulls === undefined) attribute.indexNulls = true;
-						if (Table.primaryStore.getStats().entryCount > 0) {
+						let hasExistingData = false;
+						for (let entry of Table.primaryStore.getRange({ start: true })) {
+							hasExistingData = true;
+							break;
+						}
+						if (hasExistingData) {
 							attribute.lastIndexedKey = attributeDescriptor?.lastIndexedKey ?? undefined;
 							attribute.indexingPID = process.pid;
 							dbi.isIndexing = true;
@@ -1178,7 +1184,12 @@ async function runIndexing(Table, attributes, indicesToRemove) {
 				if (compareKeys(attribute.lastIndexedKey, start) < 0) start = attribute.lastIndexedKey;
 				if (attribute.lastIndexedKey == undefined) {
 					// if we are starting from the beginning, clear out any previous index entries since we are rewriting
-					attribute.dbi.clearAsync(); // note that we don't need to wait for this to complete, just gets enqueued in front of the other writes
+					if (attribute.dbi.clearAsync) {
+						// LMDB, note that we don't need to wait for this to complete, just gets enqueued in front of the other writes
+						attribute.dbi.clearAsync();
+					} else {
+						await attribute.dbi.clear();
+					}
 				}
 			}
 			let outstanding = 0;
@@ -1197,45 +1208,43 @@ async function runIndexing(Table, attributes, indicesToRemove) {
 				// we index, that's fine because indexing is idempotent, we can just put the same values again. If it changes
 				// during the indexing, the indexing here will fail. This is also fine because it means the other thread will have
 				// performed indexing and we don't need to do anything further
-				lastResolution = Table.primaryStore.ifVersion(key, version, () => {
-					for (let i = 0; i < attributesLength; i++) {
-						const attribute = attributes[i];
-						const property = attribute.name;
-						const index = attribute.dbi;
-						try {
-							const resolver = attribute.resolve;
-							const value = record && (resolver ? resolver(record) : record[property]);
-							if (index.customIndex) {
-								index.customIndex.index(key, value);
-								continue;
-							}
-							const values = getIndexedValues(value, index.indexNulls);
-							if (values) {
-								/*					if (LMDB_PREFETCH_WRITES)
-														index.prefetch(
-															values.map((v) => ({ key: v, value: id })),
-															noop
-														);*/
-								for (let i = 0, l = values.length; i < l; i++) {
-									index.put(values[i], key);
-								}
-							}
-						} catch (error) {
-							if (!attributeErrorReported[property]) {
-								// just report an indexing error once per attribute so we don't spam the logs
-								attributeErrorReported[property] = true;
-								logger.error(`Error indexing attribute ${property}`, error);
+				for (let i = 0; i < attributesLength; i++) {
+					const attribute = attributes[i];
+					const property = attribute.name;
+					const index = attribute.dbi;
+					try {
+						const resolver = attribute.resolve;
+						const value = record && (resolver ? resolver(record) : record[property]);
+						if (index.customIndex) {
+							index.customIndex.index(key, value);
+							continue;
+						}
+						const values = getIndexedValues(value, index.indexNulls);
+						if (values) {
+							/*					if (LMDB_PREFETCH_WRITES)
+													index.prefetch(
+														values.map((v) => ({ key: v, value: id })),
+														noop
+													);*/
+							for (let i = 0, l = values.length; i < l; i++) {
+								lastResolution = index.put(values[i], key);
 							}
 						}
+					} catch (error) {
+						if (!attributeErrorReported[property]) {
+							// just report an indexing error once per attribute so we don't spam the logs
+							attributeErrorReported[property] = true;
+							logger.error(`Error indexing attribute ${property}`, error);
+						}
 					}
-				});
-				lastResolution.then(
+				}
+				when(lastResolution,
 					() => outstanding--,
 					(error) => {
 						outstanding--;
 						logger.error(error);
 					}
-				);
+				));
 				if (workerData && workerData.restartNumber !== manageThreads.restartNumber) {
 					interrupted = true;
 				}
