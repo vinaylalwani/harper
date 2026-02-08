@@ -105,6 +105,7 @@ async function http(request: Context & Request, nextHandler) {
 			request.authorize = true;
 
 			if (url === OPENAPI_DOMAIN && method === 'GET') {
+				resourceRequest = {};
 				if (request?.user?.role?.permission?.super_user) {
 					return generateJsonApi(resources, `${request.protocol}://${request.hostname}`);
 				} else {
