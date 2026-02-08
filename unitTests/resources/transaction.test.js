@@ -469,7 +469,7 @@ describe('Transactions', () => {
 			assert.equal(instance.count, 2);
 		});
 		it('authorize gets turned off', async function () {
-			const context = { authorize: true };
+			const context = { authorize: true, user: { role: { permission: { super_user: true } } } };
 			await TxnTest.get(45, context);
 			assert.equal(context.authorize, false);
 		});
