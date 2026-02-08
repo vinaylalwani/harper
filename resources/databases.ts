@@ -1238,13 +1238,14 @@ async function runIndexing(Table, attributes, indicesToRemove) {
 						}
 					}
 				}
-				when(lastResolution,
+				when(
+					lastResolution,
 					() => outstanding--,
 					(error) => {
 						outstanding--;
 						logger.error(error);
 					}
-				));
+				);
 				if (workerData && workerData.restartNumber !== manageThreads.restartNumber) {
 					interrupted = true;
 				}
