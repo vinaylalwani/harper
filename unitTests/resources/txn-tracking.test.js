@@ -30,6 +30,7 @@ describe('Txn Expiration', () => {
 		};
 	});
 	it('Slow txn will expire', async function () {
+		await SlowResource.put(3, { name: 'three' });
 		let trackedTxns = setTxnExpiration(20);
 		let existingTxns = trackedTxns.size;
 		let result = SlowResource.get(3);
