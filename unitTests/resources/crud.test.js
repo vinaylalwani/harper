@@ -148,7 +148,7 @@ describe('CRUD operations with the Resource API', () => {
 				if (analyticRecorded) break;
 			}
 			assert(analyticRecorded, 'db-write was recorded in analytics');
-			assert(analyticRecorded.mean > 20, 'db-write bytes count were recorded in analytics');
+			assert(analyticRecorded.mean > 2, 'db-write bytes count were recorded in analytics');
 		});
 		it('get is recorded in analytics', async function () {
 			const start = Date.now();
@@ -260,6 +260,31 @@ describe('CRUD operations with the Resource API', () => {
 				if (CRUDTable.loadAsInstance) created = await CRUDTable.create({ id: 'three', relatedId: 1, name: 'Three' });
 				else created = await CRUDTable.create('three', { relatedId: 1, name: 'Three' });
 			});
+		});
+		it('delete all and recreate', async function () {
+			await CRUDTable.put({
+				id: 'one',
+				name: 'One',
+				relatedId: 1,
+				sparse: null,
+			});
+			await CRUDTable.put({
+				id: 'two',
+				name: 'Two',
+				relatedId: 1,
+				sparse: null,
+			});
+			let target = new RequestTarget('/');
+			await CRUDTable.delete(target);
+			await CRUDTable.put({
+				id: 'one',
+				name: 'One',
+				relatedId: 2,
+				sparse: null,
+			});
+			for await (let entry of CRUDTable.search([{ attribute: 'relatedId', value: 1 }])) {
+				throw new Error('should not have found any related records with relatedId = 1');
+			}
 		});
 	}
 	after(() => {

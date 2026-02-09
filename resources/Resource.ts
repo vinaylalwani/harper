@@ -40,7 +40,7 @@ const EXTENSION_TYPES = {
  */
 export class Resource<Record extends object = any> implements ResourceInterface<Record> {
 	readonly #id: Id;
-	readonly #context: Context;
+	readonly #context: Context | SourceContext;
 	#isCollection: boolean;
 	static transactions: Transaction[] & { timestamp: number };
 	static directURLMapping = false;
@@ -333,19 +333,13 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 				if (query) query.property = property;
 				else {
 					return {
-						query: { property },
-						id: pathToId(path, this),
-						isCollection: idWasCollection,
+						property,
+						id: path,
 					};
 				}
 			}
 		}
-		// convert paths to arrays like /nested/path/4 -> ['nested', 'path', 4] if splitSegments is enabled
-		const id = pathToId(path, this);
-		if (idWasCollection) {
-			return { id, isCollection: true };
-		}
-		return id;
+		return path;
 	}
 	/**
 	 * Gets an instance of a resource by id
@@ -383,7 +377,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 		return new IterableEventQueue();
 	}
 
-	connect(target: RequestTarget, incomingMessages: IterableEventQueue): AsyncIterable<any> {
+	connect(target: RequestTarget, incomingMessages: IterableEventQueue<Record>): AsyncIterable<Record> {
 		// convert subscription to an (async) iterator
 		const query = this.constructor.loadAsInstance === false ? target : incomingMessages;
 		if (query?.subscribe !== false) {
@@ -419,6 +413,14 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	 */
 	getContext(): Context | SourceContext {
 		return this.#context;
+	}
+
+	/**
+	 * Get the current user for the current request, based on the context.
+	 * @returns user object or undefined if no user is logged in
+	 */
+	getCurrentUser(): User | undefined {
+		return (this.getContext() as Context)?.user;
 	}
 
 	get?(
@@ -575,35 +577,25 @@ function transactional(
 			if (typeof idOrQuery === 'object' && idOrQuery) {
 				// it is a query
 				query = idOrQuery;
-				id = idOrQuery instanceof URLSearchParams ? idOrQuery.toString() : idOrQuery.url; // get the request target (check .url for back-compat), and try to parse
-				if (idOrQuery.id !== undefined) {
-					// it is already parsed, nothing more to do other than assign the id
+				if (idOrQuery instanceof URLSearchParams) {
+					// already RequestTarget (or URLSearchParams), consider it already parsed,
+					// we can just do property parsing, coerce, and assign the id
 					id = idOrQuery.id;
-				} else if (typeof id === 'string') {
 					if (this.directURLMapping) {
-						id = id.slice(1); // remove the leading slash
+						id = idOrQuery.toString().slice(1); // remove the leading slash
 						query.id = id;
-					} else {
-						// handle queries in local URLs like /path/?name=value
-						const searchIndex = id.indexOf('?');
-						if (searchIndex > -1) {
-							query = this.parseQuery(id.slice(searchIndex + 1), idOrQuery);
-							id = id.slice(0, searchIndex);
-							if (id === '') isCollection = true;
-						}
+					} else if (typeof id === 'string') {
 						// handle paths of the form /path/id.property
 						const parsedId = this.parsePath(id, context, query);
 						if (parsedId?.id !== undefined) {
-							if (parsedId.query) {
-								if (query) query = Object.assign(parsedId.query, query);
-								else query = parsedId.query;
-							}
-							isCollection = query.isCollection ?? parsedId.isCollection;
+							query.property = parsedId.property;
 							id = parsedId.id;
 						} else {
 							id = parsedId;
 						}
-						if (id !== undefined) query.id = id;
+						if (id) {
+							query.id = id = this.coerceId(id);
+						}
 					}
 				} else if (idOrQuery[Symbol.iterator]) {
 					// get the id part from an iterable query
@@ -621,14 +613,12 @@ function transactional(
 							if (query.length === 0) {
 								query = new RequestTarget();
 								query.id = id;
-								isCollection = false;
 							}
 						}
 					}
-				}
-				if (id === undefined) {
-					id = idOrQuery.id;
-					if (id === null) isCollection = true;
+				} else if (id === undefined) {
+					id = idOrQuery.id ?? null;
+					if (id == null) query.isCollection = true;
 				}
 			} else {
 				id = idOrQuery;
@@ -636,12 +626,9 @@ function transactional(
 				query.id = id;
 				if (id == null) {
 					if (options.method === 'get') {
-						logger.warn?.(
-							`Using an argument with a value of ${id} for ${options.method}, is deprecated`,
-							new Error('Invalid id')
-						);
+						throw new Error(`Using an argument with a value of ${id} for ${options.method}, is not allowed`);
 					}
-					isCollection = true;
+					query.isCollection = true;
 				}
 			}
 		}
@@ -649,7 +636,7 @@ function transactional(
 			query = new RequestTarget();
 			query.id = id;
 		}
-		if (isCollection) query.isCollection = true;
+		isCollection = query.isCollection;
 		let resourceOptions;
 		if (!context) {
 			// try to get the context from the async context if possible

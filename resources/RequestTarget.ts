@@ -2,6 +2,7 @@ import type { UserRoleDatabasePermissions } from '../security/user.ts';
 import type { Conditions, DirectCondition, Id, Select, Sort } from './ResourceInterface.ts';
 import { _assignPackageExport } from '../globals.js';
 import { Resource } from './Resource.ts';
+import { parseQuery } from './search.ts';
 
 export class RequestTarget extends URLSearchParams {
 	#target?: string;
@@ -9,6 +10,9 @@ export class RequestTarget extends URLSearchParams {
 	search?: string;
 	/** Target a specific record, but can be combined with select */
 	id?: Id;
+
+	/** Request a specific property from the identified record */
+	declare property?: string;
 
 	/** Indicates that this is a request to query for collection of records */
 	isCollection?: boolean;
@@ -53,6 +57,7 @@ export class RequestTarget extends URLSearchParams {
 	declare createdNewId?: string;
 
 	declare checkPermission?: UserRoleDatabasePermissions | boolean;
+	declare subscribe?: boolean;
 
 	declare allowFullScan?: boolean;
 	declare allowConditionsOnDynamicAttributes?: boolean;
@@ -61,16 +66,39 @@ export class RequestTarget extends URLSearchParams {
 		let searchIndex: number | undefined;
 		let path: string | undefined;
 		if (target && (searchIndex = target.indexOf('?')) > -1) {
+			// we have query parameters that need to be parsed
 			path = (target as string).slice(0, searchIndex);
 			const search = (target as string).slice((searchIndex as number) + 1);
 			super(search);
 			this.search = search;
+			parseQuery(search, this);
+			if (!path) {
+				// if there is a query string, but no path, treat as a collection anyway
+				this.isCollection = true;
+				this.id = null;
+				return;
+			}
 		} else {
 			super();
 			path = target;
 		}
 		this.pathname = path;
 		this.#target = target;
+		if (path) {
+			// parse for properties and set the id
+			if (path.startsWith('/')) path = path.substring(1);
+		} else {
+			return; // leave this.id undefined
+		}
+		if (path) {
+			if (path.endsWith('/')) {
+				this.isCollection = true;
+			}
+			this.id = decodeURIComponent(path);
+		} else {
+			this.isCollection = true;
+			this.id = null;
+		}
 	}
 	toString() {
 		if (this.#target) return this.#target;

@@ -225,10 +225,8 @@ export function listenToCommits(primaryStore, auditStore) {
 				}
 			};
 			// try to get lock or wait for it
-			const lockAcquired = store.tryLock('thread-local-writes', acquiredLock);
-			if (lockAcquired) {
-				acquiredLock();
-			}
+			if (!store.tryLock('thread-local-writes', acquiredLock)) return;
+			acquiredLock();
 		});
 	}
 }

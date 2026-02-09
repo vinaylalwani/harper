@@ -150,7 +150,7 @@ class SubscriptionsSession {
 		this.user = user;
 	}
 	async addSubscription(subscriptionRequest, needsAck, filter?) {
-		const { topic, rh: retainHandling, startTime: startTime } = subscriptionRequest;
+		const { topic, rh: retainHandling, startTime } = subscriptionRequest;
 		const searchIndex = topic.indexOf('?');
 		let search, path;
 		if (searchIndex > -1) {
@@ -169,15 +169,6 @@ class SubscriptionsSession {
 		} else {
 			omitCurrent = retainHandling === 2;
 		}
-		const request = {
-			search,
-			async: true,
-			user: this.user,
-			startTime,
-			omitCurrent,
-			target: '',
-			checkPermission: this.user?.role?.permission ?? {},
-		};
 		if (startTime) trace('Resuming subscription from', topic, 'from', startTime);
 		const entry = resources.getMatch(path, 'mqtt');
 		if (!entry) {
@@ -187,20 +178,22 @@ class SubscriptionsSession {
 			notFoundError.statusCode = 404;
 			throw notFoundError;
 		}
-		request.url = entry.relativeURL;
+		let url = entry.relativeURL;
+		let isCollection;
+		let onlyChildren;
 		let hashIndex: number;
-		if (request.url.indexOf('+') > -1 || (hashIndex = request.url.indexOf('#')) > -1) {
-			const path = request.url.slice(1); // remove leading slash
+		if (url.indexOf('+') > -1 || (hashIndex = url.indexOf('#')) > -1) {
+			const path = url.slice(1); // remove leading slash
 			hashIndex--; // adjust accordingly
 			if (hashIndex > -1 && hashIndex !== path.length - 1)
 				throw new Error('Multi-level wildcards can only be used at the end of a topic');
 			// treat as a collection to get all children, but we will need to filter out any that are not direct children or matching the pattern
-			request.isCollection = true; // used by Resource to determine if the resource should be treated as a collection
+			isCollection = true; // used by Resource to determine if the resource should be treated as a collection
 			if (path.indexOf('+') === path.length - 1) {
 				// if it is only a trailing single-level wildcard, we can treat it as a shallow wildcard
 				// and use the optimized onlyChildren option, which will be faster, and does not require any filtering
-				request.onlyChildren = true;
-				request.url = '/' + path.slice(0, path.length - 1);
+				onlyChildren = true;
+				url = '/' + path.slice(0, path.length - 1);
 			} else {
 				// otherwise we have a potentially complex wildcard, so we will need to filter out any that are not direct children or matching the pattern
 				const matchingPath = path.split('/');
@@ -238,11 +231,17 @@ class SubscriptionsSession {
 					};
 				}
 				const firstWildcard = matchingPath.indexOf('+');
-				request.url =
-					'/' + (firstWildcard > -1 ? matchingPath.slice(0, firstWildcard) : matchingPath).concat('').join('/');
+				url = '/' + (firstWildcard > -1 ? matchingPath.slice(0, firstWildcard) : matchingPath).concat('').join('/');
 			}
-		} else request.isCollection = false; // must explicitly turn this off so topics that end in a slash are not treated as collections
-
+		} else isCollection = false; // must explicitly turn this off so topics that end in a slash are not treated as collections
+		const request = new RequestTarget(url);
+		Object.assign(request, {
+			isCollection,
+			onlyChildren,
+			startTime,
+			omitCurrent,
+			checkPermission: this.user?.role?.permission ?? {},
+		});
 		const resourcePath = entry.path;
 		const resource = entry.Resource;
 		const context = this.createContext();
@@ -479,7 +478,7 @@ export class DurableSubscriptionsSession extends SubscriptionsSession {
 
 	async addSubscription(subscription, needsAck) {
 		await this.resumeSubscription(subscription, needsAck);
-		const { qos, startTime: startTime } = subscription;
+		const { qos, startTime } = subscription;
 		if (qos > 0 && !startTime) this.saveSubscriptions();
 		return subscription.qos;
 	}

@@ -975,7 +975,7 @@ export function findBlobsInObject(object: any, callback: (blob: Blob) => void) {
  * @param store
  */
 export function startPreCommitBlobsForRecord(record: any, store: LMDBStore | RocksDatabase, saveInRecord?: boolean) {
-	let completion;
+	let blobsNeedingSaving = [];
 	for (const key in record) {
 		const value = record[key];
 		if (value instanceof FileBackedBlob && (saveInRecord || value.saveBeforeCommit)) {
@@ -983,11 +983,20 @@ export function startPreCommitBlobsForRecord(record: any, store: LMDBStore | Roc
 			if (saveInRecord) {
 				value.saveInRecord = true;
 			}
-			const saving = saveBlob(value, true).saving ?? Promise.resolve();
-			completion = completion ? Promise.all(completion, saving) : saving;
+			blobsNeedingSaving.push(value);
 		}
 	}
-	return completion;
+	if (blobsNeedingSaving.length > 0) {
+		// we do have blobs, start saving once the returned function is called
+		return () => {
+			currentStore = store;
+			return Promise.all(
+				blobsNeedingSaving.map((blob) => {
+					return saveBlob(blob, true).saving ?? Promise.resolve();
+				})
+			);
+		};
+	}
 }
 
 const copyingUnpacker = new Packr({ copyBuffers: true, mapsAsObjects: true });

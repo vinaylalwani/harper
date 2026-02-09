@@ -1923,7 +1923,7 @@ export function makeTable(options) {
 						TableResource._updateResource(this, existingEntry);
 					}
 					if (precedesExistingVersion(txnTime, existingEntry, options?.nodeId) <= 0) return; // a newer record exists locally
-					updateIndices(this.getId(), existingRecord);
+					updateIndices(id, existingRecord);
 					logger.trace?.(`Deleting record with id: ${id}, txn timestamp: ${new Date(txnTime).toISOString()}`);
 					if (audit || trackDeletes) {
 						updateRecord(
@@ -4320,9 +4320,9 @@ export function makeTable(options) {
 				? async () => {
 						// if we are calling the sources first and waiting for blobs, do those in order
 						await callSources();
-						await blobCompletion;
+						await blobCompletion();
 					}
-				: () => blobCompletion;
+				: () => blobCompletion();
 		}
 		return before;
 	}
