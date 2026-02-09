@@ -157,7 +157,7 @@ export interface SubSelect {
 }
 export type Select = (string | SubSelect)[];
 
-export interface SubscriptionRequest {
+export interface SubscriptionRequest extends RequestTarget {
 	/** The starting time of events to return (defaults to now) */
 	startTime?: number;
 	/** The count of previously recorded events to return */
@@ -168,7 +168,7 @@ export interface SubscriptionRequest {
 	includeDescendants?: boolean;
 	supportsTransactions?: boolean;
 	rawEvents?: boolean;
-	listener: Listener;
+	listener?: Listener;
 }
 
 export type Query = RequestTarget; // for back-compat

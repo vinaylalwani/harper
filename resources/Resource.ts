@@ -43,7 +43,7 @@ const EXTENSION_TYPES = {
  */
 export class Resource<Record extends object = any> implements ResourceInterface<Record> {
 	readonly #id: Id;
-	readonly #context: Context;
+	readonly #context: Context | SourceContext;
 	#isCollection: boolean;
 	static transactions: Transaction[] & { timestamp: number };
 	static directURLMapping = false;
@@ -412,7 +412,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 		return new IterableEventQueue();
 	}
 
-	connect(target: RequestTarget, incomingMessages: IterableEventQueue): AsyncIterable<any> {
+	connect(target: RequestTarget, incomingMessages: IterableEventQueue<Record>): AsyncIterable<Record> {
 		// convert subscription to an (async) iterator
 		const query = this.constructor.loadAsInstance === false ? target : incomingMessages;
 		if (query?.subscribe !== false) {
@@ -448,6 +448,14 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	 */
 	getContext(): Context | SourceContext {
 		return this.#context;
+	}
+
+	/**
+	 * Get the current user for the current request, based on the context.
+	 * @returns user object or undefined if no user is logged in
+	 */
+	getCurrentUser(): User | undefined {
+		return (this.getContext() as Context)?.user;
 	}
 
 	get?(
