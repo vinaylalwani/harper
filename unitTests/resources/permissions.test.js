@@ -174,9 +174,9 @@ describe('Permissions through Resource API', () => {
 	it('Can query with select with (limited) permission', async function () {
 		const request = {
 			user: attribute_authorized_role,
-			checkPermission: true,
 		};
 		const target = new RequestTarget('?id=id-2&select(name,related)');
+		target.checkPermission = true;
 		let results = [];
 		for await (let result of TestTable.get(target, request)) {
 			results.push(result);
@@ -189,9 +189,9 @@ describe('Permissions through Resource API', () => {
 	it('Can query with selecting inaccessible attributes with (limited) permission', async function () {
 		const request = {
 			user: attribute_authorized_role,
-			checkPermission: true,
 		};
 		const target = new RequestTarget('?id=id-2&select(name,prop1,related{name})');
+		target.checkPermission = true;
 		let results = [];
 		for await (let result of TestTable.get(target, request)) {
 			results.push(result);
