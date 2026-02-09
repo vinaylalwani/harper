@@ -59,7 +59,7 @@ export function rebuildUpdateBefore(update: any, newerUpdate: any, fullUpdate?: 
 	}
 	return newUpdate;
 }
-export function applyReverse(record, update) {
+export function applyReverse(record, update, unknowns: Set<string>) {
 	for (const key in update) {
 		const value = update[key];
 		if (value?.__op__) {
@@ -67,7 +67,7 @@ export function applyReverse(record, update) {
 			if (reverse) reverse(record, key, { value: value.value });
 			else throw new Error(`Unsupported operation ${value.__op__}`);
 		} else {
-			record[key] = UNKNOWN;
+			unknowns.add(key);
 		}
 	}
 }
@@ -84,6 +84,7 @@ export function getRecordAtTime(currentEntry, timestamp, store, tableId: number,
 	let record = { ...currentEntry.value };
 	let auditTime = currentEntry.localTime;
 	// Iterate in reverse through the record history, trying to reverse all changes
+	const unknowns = new Set<string>();
 	while (auditTime > timestamp) {
 		const auditEntry = auditStore.get(auditTime, tableId, recordId);
 		// TODO: Caching of audit entries
@@ -92,7 +93,7 @@ export function getRecordAtTime(currentEntry, timestamp, store, tableId: number,
 				record = auditEntry.getValue(store);
 				break;
 			case 'patch':
-				applyReverse(record, auditEntry.getValue(store));
+				applyReverse(record, auditEntry.getValue(store), unknowns);
 				break;
 			case 'delete':
 				record = null;
@@ -101,18 +102,10 @@ export function getRecordAtTime(currentEntry, timestamp, store, tableId: number,
 	}
 	// some patches may leave properties in an unknown state, so we need to fill in the blanks
 	// first we determine if there any unknown properties
-	const unknowns = {};
-	let unknownCount = 0;
-	for (const key in record) {
-		if (record[key] === UNKNOWN) {
-			unknowns[key] = true;
-			unknownCount++;
-		}
-	}
 	// then continue to iterate back through the audit history, filling in the blanks
-	while (unknownCount > 0 && auditTime > 0) {
+	while (unknowns.size > 0 && auditTime > 0) {
 		const auditEntry = auditStore.get(auditTime, tableId, recordId);
-		let priorRecord;
+		let priorRecord: any;
 		switch (auditEntry.type) {
 			case 'put':
 				priorRecord = auditEntry.getValue(store);
@@ -122,17 +115,12 @@ export function getRecordAtTime(currentEntry, timestamp, store, tableId: number,
 				break;
 		}
 		for (const key in priorRecord) {
-			if (unknowns[key]) {
+			if (unknowns.has(key)) {
 				record[key] = priorRecord[key];
-				unknowns[key] = false;
-				unknownCount--;
+				unknowns.delete(key);
 			}
 		}
 		auditTime = auditEntry.previousVersion;
-	}
-	if (unknownCount > 0) {
-		// if we were unable to determine the value of a property, set it to null
-		for (const key in unknowns) record[key] = null;
 	}
 	// finally return the record in the state it was at the requested timestamp
 	return record;
