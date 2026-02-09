@@ -80,7 +80,7 @@ interface AllStatusSummary {
 
 async function getAllStatus(): Promise<AllStatusSummary> {
 	statusLogger.debug?.('getAllStatus');
-	const statusRecords = getStatusTable().get([]);
+	const statusRecords = getStatusTable().search([]);
 
 	// Get aggregated component statuses from all threads
 	const aggregatedStatuses = await statusInternal.query.allThreads();
