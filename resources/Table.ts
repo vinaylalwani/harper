@@ -2567,19 +2567,24 @@ export function makeTable(options) {
 				thisId,
 				function (id: Id, auditRecord: any, localTime: number, beginTxn: boolean) {
 					try {
-						let value = auditRecord.getValue?.(primaryStore, getFullRecord);
 						let type = auditRecord.type;
-						if (!value && type === 'patch' && getFullRecord) {
-							// we don't have the full record, need to get it
-							const entry = primaryStore.getEntry(id);
-							// if the current record matches the timestamp, we can use that
-							if (entry?.version === auditRecord.version) {
+						let value;
+						if (type === 'message' || request.rawEvents) {
+							// we only send the full message, this are individual messages that can be sent out of order
+							// TODO: Do we want to have a limit to how far out-of-order we are willing to send?
+							value = auditRecord.getValue?.(primaryStore, getFullRecord);
+						} else {
+							// these are events that indicate that the primary record has changed. I believe we always want to simply
+							// send the latest value. Note that it is fine to synchronously access these records, they should have just
+							// been written, so are fresh in memory.
+							const entry: Entry = primaryStore.getEntry(id);
+							if (entry) {
+								if (entry.version !== auditRecord.version) return; // out of order event, with old update, don't send anything
 								value = entry.value;
+								type = entry.metadataFlags & INVALIDATED ? 'invalidate' : value ? 'put' : 'delete';
 							} else {
-								// otherwise try to go back in the audit log
-								value = auditRecord.getValue?.(primaryStore, true, localTime);
+								type = 'delete';
 							}
-							type = 'put';
 						}
 						const event = {
 							id,
