@@ -48,18 +48,8 @@ function addExitListeners() {
 	if (!skipExitListeners) {
 		const removeHdbPid = () => {
 			fs.removeSync(path.join(env.get(terms.CONFIG_PARAMS.ROOTPATH), terms.HDB_PID_FILE));
-			process.exit(0);
 		};
 		process.on('exit', () => {
-			removeHdbPid();
-		});
-		process.on('SIGINT', () => {
-			removeHdbPid();
-		});
-		process.on('SIGQUIT', () => {
-			removeHdbPid();
-		});
-		process.on('SIGTERM', () => {
 			removeHdbPid();
 		});
 	}

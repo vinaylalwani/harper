@@ -110,6 +110,7 @@ function runHarperCommand(args: string[], env: any, completionMessage?: string):
 		});
 
 		proc.stderr?.on('data', (data: Buffer) => {
+			console.error('error from', proc.pid, data.toString());
 			stderr += data.toString();
 		});
 		proc.on('error', (error) => {

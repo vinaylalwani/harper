@@ -65,9 +65,6 @@ function start(procConfig, noKill = false) {
 	if (childProcesses.length === 0) {
 		if (!noKill) {
 			process.on('exit', cleanupChildrenProcesses);
-			process.on('SIGINT', cleanupChildrenProcesses);
-			process.on('SIGQUIT', cleanupChildrenProcesses);
-			process.on('SIGTERM', cleanupChildrenProcesses);
 		}
 	}
 	childProcesses.push(subprocess);
