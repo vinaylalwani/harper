@@ -1,10 +1,10 @@
 'use strict';
 
-const test_utils = require('../../../../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../../../../testUtils.js');
+testUtils.preTestPrep();
 const path = require('path');
 const TRANSACTIONS_NAME = 'transactions';
-const BASE_PATH = test_utils.getMockLMDBPath();
+const BASE_PATH = testUtils.getMockLMDBPath();
 const BASE_TRANSACTIONS_PATH = path.join(BASE_PATH, TRANSACTIONS_NAME);
 
 const rewire = require('rewire');
@@ -80,12 +80,12 @@ describe('test lmdbWriteTransaction module', () => {
 	describe('test createTransactionObject function', () => {
 		before(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(testUtils.getMockLMDBPath());
 		});
 
 		after(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(testUtils.getMockLMDBPath());
 		});
 
 		it('test for insert operation no user on operation', async () => {
@@ -289,7 +289,7 @@ describe('test lmdbWriteTransaction module', () => {
 			let insert_txn_obj = {
 				...new LMDBInsertTransactionObject(INSERT_RECORDS, undefined, insert_response.txn_time, INSERT_HASHES),
 			};
-			let expected_timestamp_results = test_utils.assignObjecttoNullObject({
+			let expected_timestamp_results = testUtils.assignObjecttoNullObject({
 				[insert_response.txn_time]: [insert_txn_obj],
 			});
 
@@ -371,7 +371,7 @@ describe('test lmdbWriteTransaction module', () => {
 			let insert_txn_obj = {
 				...new LMDBInsertTransactionObject(INSERT_RECORDS, HDB_USER.username, insert_response.txn_time, INSERT_HASHES),
 			};
-			let expected_timestamp_results = test_utils.assignObjecttoNullObject({
+			let expected_timestamp_results = testUtils.assignObjecttoNullObject({
 				[insert_response.txn_time]: [insert_txn_obj],
 			});
 
@@ -431,7 +431,7 @@ describe('test lmdbWriteTransaction module', () => {
 					INSERT_HASHES
 				),
 			};
-			let expected_timestamp_results = test_utils.assignObjecttoNullObject({
+			let expected_timestamp_results = testUtils.assignObjecttoNullObject({
 				[update_response.txn_time]: [update_txn_obj],
 			});
 
@@ -490,7 +490,7 @@ describe('test lmdbWriteTransaction module', () => {
 					INSERT_HASHES
 				),
 			};
-			let expected_timestamp_results = test_utils.assignObjecttoNullObject({
+			let expected_timestamp_results = testUtils.assignObjecttoNullObject({
 				[upsert_response.txn_time]: [upsert_txn_obj],
 			});
 
@@ -544,7 +544,7 @@ describe('test lmdbWriteTransaction module', () => {
 			let delete_txn_obj = {
 				...new LMDBDeleteTransactionObject(INSERT_HASHES, UPDATE_RECORDS, HDB_USER.username, delete_response.txn_time),
 			};
-			let expected_timestamp_results = test_utils.assignObjecttoNullObject({
+			let expected_timestamp_results = testUtils.assignObjecttoNullObject({
 				[delete_response.txn_time]: [delete_txn_obj],
 			});
 

@@ -1,7 +1,7 @@
 'use strict';
 
-const test_utils = require('../../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../../testUtils.js');
+testUtils.preTestPrep();
 
 const assert = require('assert');
 const sinon = require('sinon');
@@ -107,7 +107,7 @@ describe('Test serverHandlers.js module ', () => {
 		});
 
 		it('Should send a response with custom error message and 400 code when included in error passed', () => {
-			const test_error = test_utils.deepClone(TEST_ERR);
+			const test_error = testUtils.deepClone(TEST_ERR);
 			test_error.statusCode = 400;
 			test_error.http_resp_msg = 'Custom error message!';
 
@@ -118,7 +118,7 @@ describe('Test serverHandlers.js module ', () => {
 		});
 
 		it('Should send a response with custom error message object and 400 code when included in error passed', () => {
-			const test_error = test_utils.deepClone(TEST_ERR);
+			const test_error = testUtils.deepClone(TEST_ERR);
 			test_error.statusCode = 400;
 			test_error.http_resp_msg = { blah: 'Custom error message!' };
 
@@ -129,7 +129,7 @@ describe('Test serverHandlers.js module ', () => {
 		});
 
 		it('Should send a response with custom error message object when included in standard error type passed', () => {
-			const test_error = test_utils.deepClone(TEST_ERR);
+			const test_error = testUtils.deepClone(TEST_ERR);
 			test_error.message = { blah: 'Custom error message!' };
 
 			const test_result = serverHandlers_rw.serverErrorHandler(test_error, {}, new TestMockResp());
@@ -290,7 +290,7 @@ describe('Test serverHandlers.js module ', () => {
 		});
 
 		it('Should pass auth for valid nominal request', () => {
-			const test_req = test_utils.deepClone(TEST_REQ);
+			const test_req = testUtils.deepClone(TEST_REQ);
 
 			serverHandlers_rw.authHandler(test_req, {}, (err, data) => {
 				assert.ok(data === undefined, 'Should not return anything for valid auth');
@@ -299,7 +299,7 @@ describe('Test serverHandlers.js module ', () => {
 		});
 
 		it('Should pass auth for valid request for create auth tokens operation', () => {
-			const test_req = test_utils.deepClone(TEST_AUTH_REQ);
+			const test_req = testUtils.deepClone(TEST_AUTH_REQ);
 			test_req.body.username = 'norm';
 			test_req.body.password = 'let-me-in';
 
@@ -312,7 +312,7 @@ describe('Test serverHandlers.js module ', () => {
 		it('Should throw error if thrown from auth', () => {
 			auth_stub.rejects(TEST_ERR);
 
-			const test_req = test_utils.deepClone(TEST_REQ);
+			const test_req = testUtils.deepClone(TEST_REQ);
 			test_req.socket = { remoteAddress: 'remote address' };
 
 			serverHandlers_rw.authHandler(test_req, {}, (err, data) => {
@@ -350,7 +350,7 @@ describe('Test serverHandlers.js module ', () => {
 		});
 
 		it('Should pass auth for valid nominal request', () => {
-			const test_req = test_utils.deepClone(TEST_REQ);
+			const test_req = testUtils.deepClone(TEST_REQ);
 
 			serverHandlers_rw.authAndEnsureUserOnRequest(test_req, {}, (err, data) => {
 				assert.ok(data === undefined, 'Should not return anything for valid auth');
@@ -359,7 +359,7 @@ describe('Test serverHandlers.js module ', () => {
 		});
 
 		it('Should pass auth for valid request for create auth tokens operation', () => {
-			const test_req = test_utils.deepClone(TEST_AUTH_REQ);
+			const test_req = testUtils.deepClone(TEST_AUTH_REQ);
 			test_req.body.username = 'norm';
 			test_req.body.password = 'let-me-in';
 
@@ -372,7 +372,7 @@ describe('Test serverHandlers.js module ', () => {
 		it('Should throw error if thrown from auth', () => {
 			auth_stub.rejects(TEST_ERR);
 
-			const test_req = test_utils.deepClone(TEST_REQ);
+			const test_req = testUtils.deepClone(TEST_REQ);
 			test_req.socket = { remoteAddress: 'remote address' };
 
 			serverHandlers_rw.authHandler(test_req, {}, (err, data) => {

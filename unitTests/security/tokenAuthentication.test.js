@@ -1,7 +1,7 @@
 'use strict';
 
-const test_util = require('../test_utils');
-test_util.preTestPrep();
+const testUtils = require('../testUtils.js');
+testUtils.preTestPrep();
 const fs = require('fs-extra');
 const jwt = require('jsonwebtoken');
 const path = require('path');
@@ -11,17 +11,10 @@ const sandbox = sinon.createSandbox();
 const rewire = require('rewire');
 const password_function = require('#src/utility/password');
 let token_auth = rewire('#js/security/tokenAuthentication');
-const hdb_error = require('#js/utility/errors/hdbError').handleHDBError;
-const env_mgr = require('#js/utility/environment/environmentManager');
-const hdb_terms = require('#src/utility/hdbTerms');
 const user = require('#src/security/user');
 const insert = require('#js/dataLayer/insert');
 const signalling = require('#js/utility/signalling');
 
-const KEYS_PATH = path.join(test_util.getMockTestPath(), 'keys');
-const PASSPHRASE_PATH = path.join(KEYS_PATH, '.jwtPass');
-const PRIVATE_KEY_PATH = path.join(KEYS_PATH, '.jwtPrivate.key');
-const PUBLIC_KEY_PATH = path.join(KEYS_PATH, '.jwtPublic.key');
 const PASSPHRASE_VALUE = '6340b357-55b2-4fc8-b359-cae7d90c8c01';
 const PRIVATE_KEY_VALUE =
 	'-----BEGIN ENCRYPTED PRIVATE KEY-----\n' +
@@ -106,28 +99,36 @@ class JWTRSAKeys {
 	}
 }
 
+let keysPath;
+let passphrasePath;
+let privateKeyPath;
+let publicKeyPath;
+
 describe('test getJWTRSAKeys function', () => {
-	//let get_hdb_base_path_stub;
 	let path_join_spy;
 	let fs_readfile_spy;
 	let get_jwt_keys_func;
 
 	before(() => {
-		env_mgr.setProperty(hdb_terms.HDB_SETTINGS_NAMES.HDB_ROOT_KEY, test_util.getMockTestPath());
+		const testPath = testUtils.getMockTestPath();
+		keysPath = path.join(testPath, 'keys');
+		passphrasePath = path.join(keysPath, '.jwtPass');
+		privateKeyPath = path.join(keysPath, '.jwtPrivate.key');
+		publicKeyPath = path.join(keysPath, '.jwtPublic.key');
 		get_jwt_keys_func = token_auth.__get__('getJWTRSAKeys');
 		fs_readfile_spy = sandbox.spy(fs, 'readFile');
 		path_join_spy = sandbox.spy(path, 'join');
 	});
 
 	beforeEach(() => {
-		fs.mkdirpSync(KEYS_PATH);
-		fs.writeFileSync(PASSPHRASE_PATH, PASSPHRASE_VALUE);
-		fs.writeFileSync(PRIVATE_KEY_PATH, PRIVATE_KEY_VALUE);
-		fs.writeFileSync(PUBLIC_KEY_PATH, PUBLIC_KEY_VALUE);
+		fs.mkdirpSync(keysPath);
+		fs.writeFileSync(passphrasePath, PASSPHRASE_VALUE);
+		fs.writeFileSync(privateKeyPath, PRIVATE_KEY_VALUE);
+		fs.writeFileSync(publicKeyPath, PUBLIC_KEY_VALUE);
 	});
 
 	afterEach(() => {
-		fs.removeSync(test_util.getMockTestPath());
+		fs.removeSync(keysPath);
 		path_join_spy.resetHistory();
 		fs_readfile_spy.resetHistory();
 	});
@@ -148,7 +149,7 @@ describe('test getJWTRSAKeys function', () => {
 
 	it('test rsa_keys is undefined, passphrase file does not exist', async () => {
 		let rw_rsa_keys = token_auth.__set__('rsaKeys', undefined);
-		fs.unlinkSync(PASSPHRASE_PATH);
+		fs.unlinkSync(passphrasePath);
 
 		let results = undefined;
 		let error = undefined;
@@ -176,7 +177,7 @@ describe('test getJWTRSAKeys function', () => {
 
 	it('test rsa_keys is undefined, private key file does not exist', async () => {
 		let rw_rsa_keys = token_auth.__set__('rsaKeys', undefined);
-		fs.unlinkSync(PRIVATE_KEY_PATH);
+		fs.unlinkSync(privateKeyPath);
 
 		let results = undefined;
 		let error = undefined;
@@ -204,7 +205,7 @@ describe('test getJWTRSAKeys function', () => {
 
 	it('test rsa_keys is undefined, public key file does not exist', async () => {
 		let rw_rsa_keys = token_auth.__set__('rsaKeys', undefined);
-		fs.unlinkSync(PUBLIC_KEY_PATH);
+		fs.unlinkSync(publicKeyPath);
 
 		let results = undefined;
 		let error = undefined;

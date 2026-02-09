@@ -4,8 +4,8 @@
  */
 const chai = require('chai');
 const { expect } = chai;
-const test_utils = require('../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../testUtils.js');
+testUtils.preTestPrep();
 const assert = require('assert');
 const _ = require('lodash');
 const rewire = require('rewire');
@@ -29,7 +29,7 @@ const initializeOperationFunctionMap_rw = serverUtilities_rw.__get__('initialize
 const OPERATION_MAP = initializeOperationFunctionMap_rw();
 rewire('#js/server/serverHelpers/serverUtilities');
 
-const test_terms = test_utils.COMMON_TEST_TERMS;
+const test_terms = testUtils.COMMON_TEST_TERMS;
 const crud_keys = test_terms.TEST_CRUD_PERM_KEYS;
 
 let EMPTY_PERMISSION = {
@@ -538,11 +538,11 @@ describe('Test operation_authorization', function () {
 			};
 			let temp_delete = new alasql.yy.Delete(ast_test);
 			let req_json = getRequestJson(TEST_JSON);
-			let expected_error = test_utils.generateHDBError(
+			let expected_error = testUtils.generateHDBError(
 				"The 'system' database, tables and records are used internally by Harper and cannot be updated or removed.",
 				403
 			);
-			test_utils.assertErrorSync(
+			testUtils.assertErrorSync(
 				op_auth_rewire.verifyPermsAst,
 				[temp_delete, req_json.hdb_user, 'delete'],
 				expected_error
@@ -823,11 +823,11 @@ describe('Test operation_authorization', function () {
 			let req_json = getRequestJson(TEST_JSON);
 			req_json.operation = 'drop_schema';
 			req_json.schema = 'system';
-			let expected_error = test_utils.generateHDBError(
+			let expected_error = testUtils.generateHDBError(
 				"The 'system' database, tables and records are used internally by Harper and cannot be updated or removed.",
 				403
 			);
-			test_utils.assertErrorSync(op_auth_rewire.verifyPerms, [req_json, 'dropSchema'], expected_error);
+			testUtils.assertErrorSync(op_auth_rewire.verifyPerms, [req_json, 'dropSchema'], expected_error);
 		});
 
 		it('Test error is thrown from trying to drop system table', () => {
@@ -835,11 +835,11 @@ describe('Test operation_authorization', function () {
 			req_json.operation = 'drop_table';
 			req_json.schema = 'system';
 			req_json.table = 'hdb_user';
-			let expected_error = test_utils.generateHDBError(
+			let expected_error = testUtils.generateHDBError(
 				"The 'system' database, tables and records are used internally by Harper and cannot be updated or removed.",
 				403
 			);
-			test_utils.assertErrorSync(op_auth_rewire.verifyPerms, [req_json, 'dropTable'], expected_error);
+			testUtils.assertErrorSync(op_auth_rewire.verifyPerms, [req_json, 'dropTable'], expected_error);
 		});
 
 		it('Test error is thrown from trying to drop system attribute', () => {
@@ -848,11 +848,11 @@ describe('Test operation_authorization', function () {
 			req_json.schema = 'system';
 			req_json.table = 'hdb_user';
 			req_json.attribute = 'username';
-			let expected_error = test_utils.generateHDBError(
+			let expected_error = testUtils.generateHDBError(
 				"The 'system' database, tables and records are used internally by Harper and cannot be updated or removed.",
 				403
 			);
-			test_utils.assertErrorSync(op_auth_rewire.verifyPerms, [req_json, 'dropAttribute'], expected_error);
+			testUtils.assertErrorSync(op_auth_rewire.verifyPerms, [req_json, 'dropAttribute'], expected_error);
 		});
 
 		it('Test create_schema with structure_user = true', () => {

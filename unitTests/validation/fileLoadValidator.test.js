@@ -1,6 +1,6 @@
 'use strict';
-const test_util = require('../test_utils');
-test_util.preTestPrep();
+const testUtils = require('../testUtils.js');
+testUtils.preTestPrep();
 
 const chai = require('chai');
 const sinon = require('sinon');
@@ -185,7 +185,7 @@ describe('Test fileLoadValidator module', () => {
 		});
 
 		it('should return s3 cant be blank error from s3FileObject', () => {
-			const test_obj = test_util.deepClone(s3_object);
+			const test_obj = testUtils.deepClone(s3_object);
 			delete test_obj.s3;
 			let result = file_load_validator.s3FileObject(test_obj);
 
@@ -196,7 +196,7 @@ describe('Test fileLoadValidator module', () => {
 		});
 
 		it('should return s3.aws_access_key_id must be a string error from s3FileObject', () => {
-			const test_obj = test_util.deepClone(s3_object);
+			const test_obj = testUtils.deepClone(s3_object);
 			test_obj.s3.aws_access_key_id = 123456;
 			let result = file_load_validator.s3FileObject(test_obj);
 
@@ -205,7 +205,7 @@ describe('Test fileLoadValidator module', () => {
 		});
 
 		it('should return s3.key cant be blank error from s3FileObject', () => {
-			const test_obj = test_util.deepClone(s3_object);
+			const test_obj = testUtils.deepClone(s3_object);
 			test_obj.s3.key = '';
 			let result = file_load_validator.s3FileObject(test_obj);
 
@@ -214,7 +214,7 @@ describe('Test fileLoadValidator module', () => {
 		});
 
 		it('should return s3.key must have valid ext error from s3FileObject', () => {
-			const test_obj = test_util.deepClone(s3_object);
+			const test_obj = testUtils.deepClone(s3_object);
 			test_obj.s3.key = 'test_file';
 			let result = file_load_validator.s3FileObject(test_obj);
 
@@ -228,7 +228,7 @@ describe('Test fileLoadValidator module', () => {
 			getDatabases().hats = {
 				fordogs: {},
 			};
-			const test_obj = test_util.deepClone(s3_object);
+			const test_obj = testUtils.deepClone(s3_object);
 			let result = file_load_validator.s3FileObject(test_obj);
 
 			expect(result).to.be.null;
@@ -240,7 +240,7 @@ describe('Test fileLoadValidator module', () => {
 					fordogs: {},
 				},
 			};
-			const test_obj = test_util.deepClone(s3_object);
+			const test_obj = testUtils.deepClone(s3_object);
 			delete test_obj.s3.aws_access_key_id;
 			let result = file_load_validator.s3FileObject(test_obj);
 

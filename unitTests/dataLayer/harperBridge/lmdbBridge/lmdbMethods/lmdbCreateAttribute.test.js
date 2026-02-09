@@ -1,12 +1,12 @@
 'use strict';
 
-const test_utils = require('../../../../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../../../../testUtils.js');
+testUtils.preTestPrep();
 
 const path = require('path');
 const LMDB_TEST_FOLDER_NAME = 'system';
 const SCHEMA_NAME = 'schema';
-const BASE_PATH = test_utils.getMockLMDBPath();
+const BASE_PATH = testUtils.getMockLMDBPath();
 const BASE_SCHEMA_PATH = path.join(BASE_PATH, SCHEMA_NAME);
 const BASE_TXN_PATH = path.join(BASE_PATH, 'transactions');
 const BASE_TEST_PATH = path.join(BASE_SCHEMA_PATH, LMDB_TEST_FOLDER_NAME);
@@ -85,7 +85,7 @@ describe('test lmdbCreateAttribute module', () => {
 		//uuid_stub = sandbox.stub(uuid, 'v4').returns(MOCK_UUID_VALUE);
 		global.hdb_schema = { system: systemSchema, dev: { catsdrool: {} } };
 		global.lmdb_map = undefined;
-		await fs.remove(test_utils.getMockLMDBPath());
+		await fs.remove(testUtils.getMockLMDBPath());
 		await fs.mkdirp(BASE_TEST_PATH);
 
 		hdb_schema_env = await environment_utility.createEnvironment(BASE_TEST_PATH, systemSchema.hdb_schema.name);
@@ -140,7 +140,7 @@ describe('test lmdbCreateAttribute module', () => {
 
 		delete global.hdb_schema;
 		global.lmdb_map = undefined;
-		await fs.remove(test_utils.getMockLMDBPath());
+		await fs.remove(testUtils.getMockLMDBPath());
 	});
 
 	it('Test that a datastore is created and system schema updated with new attribute', async () => {
@@ -151,7 +151,7 @@ describe('test lmdbCreateAttribute module', () => {
 			inserted_hashes: [MOCK_UUID_VALUE],
 		};
 
-		let expected_search_result = test_utils.assignObjecttoNullObject({
+		let expected_search_result = testUtils.assignObjecttoNullObject({
 			id: MOCK_UUID_VALUE,
 			schema: CREATE_ATTR_OBJ_TEST.schema,
 			table: CREATE_ATTR_OBJ_TEST.table,
@@ -159,18 +159,18 @@ describe('test lmdbCreateAttribute module', () => {
 			schema_table: `${CREATE_ATTR_OBJ_TEST.schema}.${CREATE_ATTR_OBJ_TEST.table}`,
 		});
 
-		let results = await test_utils.assertErrorAsync(lmdb_create_attribute, [test_create_attr_obj], undefined);
+		let results = await testUtils.assertErrorAsync(lmdb_create_attribute, [test_create_attr_obj], undefined);
 		assert.deepStrictEqual(results, expected_result);
 
-		let test_env = await test_utils.assertErrorAsync(
+		let test_env = await testUtils.assertErrorAsync(
 			environment_utility.openEnvironment,
 			[path.join(BASE_SCHEMA_PATH, CREATE_ATTR_OBJ_TEST.schema), CREATE_ATTR_OBJ_TEST.table],
 			undefined
 		);
-		let all_dbis = test_utils.assertErrorSync(environment_utility.listDBIs, [test_env], undefined);
+		let all_dbis = testUtils.assertErrorSync(environment_utility.listDBIs, [test_env], undefined);
 		assert(all_dbis.includes(CREATE_ATTR_OBJ_TEST.attribute) === true);
 
-		let attribute_record = test_utils.assertErrorSync(
+		let attribute_record = testUtils.assertErrorSync(
 			search_utility.searchByHash,
 			[hdb_attribute_env, systemSchema.hdb_attribute.hash_attribute, HDB_ATTRIBUTE_ATTRIBUTES, MOCK_UUID_VALUE],
 			undefined
@@ -229,7 +229,7 @@ describe('test lmdbCreateAttribute module', () => {
 
 	it('Test that datastore is not created because it already exists', async () => {
 		const test_create_attr_obj = { ...CREATE_ATTR_OBJ_TEST };
-		await test_utils.assertErrorAsync(
+		await testUtils.assertErrorAsync(
 			lmdb_create_attribute,
 			[test_create_attr_obj],
 			new Error("attribute 'another_attribute' already exists in dev.catsdrool")
@@ -237,40 +237,40 @@ describe('test lmdbCreateAttribute module', () => {
 	});
 
 	it('Test that validation error is thrown', async () => {
-		let attr_required = test_utils.generateHDBError('Attribute is required', 400);
-		let create_attr_obj = test_utils.deepClone(CREATE_ATTR_OBJ_TEST);
+		let attr_required = testUtils.generateHDBError('Attribute is required', 400);
+		let create_attr_obj = testUtils.deepClone(CREATE_ATTR_OBJ_TEST);
 		delete create_attr_obj.attribute;
-		await test_utils.assertErrorAsync(lmdb_create_attribute, [create_attr_obj], attr_required);
+		await testUtils.assertErrorAsync(lmdb_create_attribute, [create_attr_obj], attr_required);
 
-		create_attr_obj = test_utils.deepClone(CREATE_ATTR_OBJ_TEST);
+		create_attr_obj = testUtils.deepClone(CREATE_ATTR_OBJ_TEST);
 		create_attr_obj.attribute = null;
-		await test_utils.assertErrorAsync(lmdb_create_attribute, [create_attr_obj], attr_required);
+		await testUtils.assertErrorAsync(lmdb_create_attribute, [create_attr_obj], attr_required);
 
-		create_attr_obj = test_utils.deepClone(CREATE_ATTR_OBJ_TEST);
+		create_attr_obj = testUtils.deepClone(CREATE_ATTR_OBJ_TEST);
 		create_attr_obj.attribute = undefined;
-		await test_utils.assertErrorAsync(lmdb_create_attribute, [create_attr_obj], attr_required);
+		await testUtils.assertErrorAsync(lmdb_create_attribute, [create_attr_obj], attr_required);
 
-		create_attr_obj = test_utils.deepClone(CREATE_ATTR_OBJ_TEST);
+		create_attr_obj = testUtils.deepClone(CREATE_ATTR_OBJ_TEST);
 		create_attr_obj.attribute = '';
-		await test_utils.assertErrorAsync(
+		await testUtils.assertErrorAsync(
 			lmdb_create_attribute,
 			[create_attr_obj],
-			test_utils.generateHDBError('Attribute is too short (minimum is 1 characters)', 400)
+			testUtils.generateHDBError('Attribute is too short (minimum is 1 characters)', 400)
 		);
 
-		create_attr_obj = test_utils.deepClone(CREATE_ATTR_OBJ_TEST);
+		create_attr_obj = testUtils.deepClone(CREATE_ATTR_OBJ_TEST);
 		create_attr_obj.attribute = 'slash/er';
-		await test_utils.assertErrorAsync(
+		await testUtils.assertErrorAsync(
 			lmdb_create_attribute,
 			[create_attr_obj],
-			test_utils.generateHDBError('Attribute names cannot include backticks or forward slashes', 400)
+			testUtils.generateHDBError('Attribute names cannot include backticks or forward slashes', 400)
 		);
 
 		create_attr_obj = { operation: 'create_attribute' };
-		await test_utils.assertErrorAsync(
+		await testUtils.assertErrorAsync(
 			lmdb_create_attribute,
 			[create_attr_obj],
-			test_utils.generateHDBError('Schema is required,Table is required,Attribute is required', 400)
+			testUtils.generateHDBError('Schema is required,Table is required,Attribute is required', 400)
 		);
 	});
 });

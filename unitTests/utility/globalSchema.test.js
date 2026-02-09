@@ -1,7 +1,7 @@
 'use strict';
 
-const test_util = require('../test_utils');
-test_util.preTestPrep();
+const testUtils = require('../testUtils.js');
+testUtils.preTestPrep();
 const assert = require('assert');
 const system_schema = require('../../json/systemSchema.json');
 const rewire = require('rewire');
@@ -145,18 +145,18 @@ let test_env = [];
 describe.skip('Test getTableSchema function', function () {
 	beforeEach(async function () {
 		test_env.push(
-			...(await test_util.createMockDB(DOG_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, DOG_TABLE_NAME, TEST_DATA_DOG))
+			...(await testUtils.createMockDB(DOG_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, DOG_TABLE_NAME, TEST_DATA_DOG))
 		);
 		test_env.push(
-			...(await test_util.createMockDB(BIRD_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, CAT_TABLE_NAME, TEST_DATA_CAT))
+			...(await testUtils.createMockDB(BIRD_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, CAT_TABLE_NAME, TEST_DATA_CAT))
 		);
 		test_env.push(
-			...(await test_util.createMockDB(CAT_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, BIRD_TABLE_NAME, TEST_DATA_BIRD))
+			...(await testUtils.createMockDB(CAT_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, BIRD_TABLE_NAME, TEST_DATA_BIRD))
 		);
 	});
 
 	afterEach(async function () {
-		await test_util.tearDownMockDB(test_env);
+		await testUtils.tearDownMockDB(test_env);
 		test_env = [];
 	});
 
@@ -260,18 +260,18 @@ describe.skip('Test getTableSchema function', function () {
 describe.skip('Test if no table object', function () {
 	beforeEach(async function () {
 		test_env.push(
-			...(await test_util.createMockDB(DOG_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, DOG_TABLE_NAME, TEST_DATA_DOG))
+			...(await testUtils.createMockDB(DOG_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, DOG_TABLE_NAME, TEST_DATA_DOG))
 		);
 		test_env.push(
-			...(await test_util.createMockDB(BIRD_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, CAT_TABLE_NAME, TEST_DATA_CAT))
+			...(await testUtils.createMockDB(BIRD_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, CAT_TABLE_NAME, TEST_DATA_CAT))
 		);
 		test_env.push(
-			...(await test_util.createMockDB(CAT_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, BIRD_TABLE_NAME, TEST_DATA_BIRD))
+			...(await testUtils.createMockDB(CAT_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, BIRD_TABLE_NAME, TEST_DATA_BIRD))
 		);
 	});
 
 	afterEach(async function () {
-		await test_util.tearDownMockDB(test_env);
+		await testUtils.tearDownMockDB(test_env);
 		test_env = [];
 	});
 
@@ -287,18 +287,18 @@ describe.skip('Test if no table object', function () {
 describe.skip('Test if have dog table object', function () {
 	beforeEach(async function () {
 		test_env.push(
-			...(await test_util.createMockDB(DOG_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, DOG_TABLE_NAME, TEST_DATA_DOG))
+			...(await testUtils.createMockDB(DOG_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, DOG_TABLE_NAME, TEST_DATA_DOG))
 		);
 		test_env.push(
-			...(await test_util.createMockDB(BIRD_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, CAT_TABLE_NAME, TEST_DATA_CAT))
+			...(await testUtils.createMockDB(BIRD_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, CAT_TABLE_NAME, TEST_DATA_CAT))
 		);
 		test_env.push(
-			...(await test_util.createMockDB(CAT_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, BIRD_TABLE_NAME, TEST_DATA_BIRD))
+			...(await testUtils.createMockDB(CAT_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, BIRD_TABLE_NAME, TEST_DATA_BIRD))
 		);
 	});
 
 	afterEach(async function () {
-		await test_util.tearDownMockDB(test_env);
+		await testUtils.tearDownMockDB(test_env);
 		test_env = [];
 	});
 
@@ -332,18 +332,18 @@ describe.skip('Test if have dog table object', function () {
 describe.skip('Test if have cat table object', function () {
 	beforeEach(async function () {
 		test_env.push(
-			...(await test_util.createMockDB(DOG_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, DOG_TABLE_NAME, TEST_DATA_DOG))
+			...(await testUtils.createMockDB(DOG_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, DOG_TABLE_NAME, TEST_DATA_DOG))
 		);
 		test_env.push(
-			...(await test_util.createMockDB(BIRD_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, CAT_TABLE_NAME, TEST_DATA_CAT))
+			...(await testUtils.createMockDB(BIRD_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, CAT_TABLE_NAME, TEST_DATA_CAT))
 		);
 		test_env.push(
-			...(await test_util.createMockDB(CAT_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, BIRD_TABLE_NAME, TEST_DATA_BIRD))
+			...(await testUtils.createMockDB(CAT_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, BIRD_TABLE_NAME, TEST_DATA_BIRD))
 		);
 	});
 
 	afterEach(async function () {
-		await test_util.tearDownMockDB(test_env);
+		await testUtils.tearDownMockDB(test_env);
 		test_env = [];
 	});
 
@@ -379,18 +379,18 @@ describe.skip('Test if have bird table object', function () {
 
 	beforeEach(async function () {
 		test_env.push(
-			...(await test_util.createMockDB(DOG_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, DOG_TABLE_NAME, TEST_DATA_DOG))
+			...(await testUtils.createMockDB(DOG_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, DOG_TABLE_NAME, TEST_DATA_DOG))
 		);
 		test_env.push(
-			...(await test_util.createMockDB(BIRD_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, CAT_TABLE_NAME, TEST_DATA_CAT))
+			...(await testUtils.createMockDB(BIRD_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, CAT_TABLE_NAME, TEST_DATA_CAT))
 		);
 		test_env.push(
-			...(await test_util.createMockDB(CAT_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, BIRD_TABLE_NAME, TEST_DATA_BIRD))
+			...(await testUtils.createMockDB(CAT_TABLE_HASH_ATTRIBUTE, SCHEMA_NAME, BIRD_TABLE_NAME, TEST_DATA_BIRD))
 		);
 	});
 
 	afterEach(async function () {
-		await test_util.tearDownMockDB(test_env);
+		await testUtils.tearDownMockDB(test_env);
 		test_env = [];
 	});
 

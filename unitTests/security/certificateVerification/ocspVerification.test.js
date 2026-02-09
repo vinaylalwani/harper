@@ -1,8 +1,8 @@
 const assert = require('node:assert/strict');
 
 // First set up test environment
-const test_utils = require('../../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../../testUtils.js');
+testUtils.preTestPrep();
 
 describe('certificateVerification/ocspVerification.ts', function () {
 	let ocspModule;

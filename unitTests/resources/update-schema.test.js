@@ -1,4 +1,4 @@
-const { getMockLMDBPath } = require('../test_utils');
+const { getMockLMDBPath } = require('../testUtils.js');
 const { loadGQLSchema } = require('#src/resources/graphql');
 const assert = require('assert');
 const test_data = require('../testData');

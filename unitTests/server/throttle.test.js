@@ -1,4 +1,4 @@
-require('../test_utils');
+require('../testUtils.js');
 const assert = require('assert');
 const { throttle } = require('#src/server/throttle');
 const { setTimeout: delay } = require('node:timers/promises');

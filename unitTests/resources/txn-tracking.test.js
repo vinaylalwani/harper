@@ -1,6 +1,5 @@
-require('../test_utils');
 const assert = require('assert');
-const { getMockLMDBPath } = require('../test_utils');
+const { getMockLMDBPath } = require('../testUtils.js');
 const { setTxnExpiration } = require('#src/resources/DatabaseTransaction');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
 const { table } = require('#src/resources/databases');

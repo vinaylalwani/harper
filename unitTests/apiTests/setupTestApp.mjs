@@ -1,4 +1,4 @@
-import { getMockLMDBPath } from '../test_utils.js';
+import { getMockLMDBPath } from '../testUtils.js';
 import { fileURLToPath } from 'url';
 import { setProperty } from '#js/utility/environment/environmentManager';
 import hdbTerms from '#src/utility/hdbTerms';

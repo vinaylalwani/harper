@@ -1,7 +1,6 @@
-require('../test_utils');
 const assert = require('assert');
 const { Worker } = require('worker_threads');
-const { getMockLMDBPath } = require('../test_utils');
+const { getMockLMDBPath } = require('../testUtils.js');
 const { table } = require('#src/resources/databases');
 const { Resource } = require('#src/resources/Resource');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');

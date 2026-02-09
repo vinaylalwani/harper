@@ -1,7 +1,7 @@
 'use strict';
 
-const test_utils = require('../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../testUtils.js');
+testUtils.preTestPrep();
 const chai = require('chai');
 const { expect } = chai;
 const insertValidator = require('#js/validation/insertValidator');

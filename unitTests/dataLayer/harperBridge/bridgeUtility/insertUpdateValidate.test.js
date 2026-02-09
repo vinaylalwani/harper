@@ -1,7 +1,7 @@
 'use strict';
 
 const rewire = require('rewire');
-const test_utils = require('../../../test_utils');
+const testUtils = require('../../../testUtils.js');
 const insertUpdateValidate = rewire('#js/dataLayer/harperBridge/bridgeUtility/insertUpdateValidate');
 const log = require('#js/utility/logging/harper_logger');
 const chai = require('chai');
@@ -115,7 +115,7 @@ describe.skip('Tests for fsUtility function insertUpdateValidate', () => {
 	});
 
 	it('Test that valid hash must be provided error is thrown', () => {
-		let write_object_clone = test_utils.deepClone(WRITE_OBJECT_TEST);
+		let write_object_clone = testUtils.deepClone(WRITE_OBJECT_TEST);
 		write_object_clone.operation = 'update';
 		write_object_clone.records[0].id = '';
 		let error;
@@ -140,7 +140,7 @@ describe.skip('Tests for fsUtility function insertUpdateValidate', () => {
 	});
 
 	it('Test that insert with null string value for hash throws error', () => {
-		let write_object_clone = test_utils.deepClone(WRITE_OBJECT_TEST);
+		let write_object_clone = testUtils.deepClone(WRITE_OBJECT_TEST);
 		write_object_clone.operation = 'insert';
 		write_object_clone.records[0].id = 'null';
 		let error;
@@ -165,7 +165,7 @@ describe.skip('Tests for fsUtility function insertUpdateValidate', () => {
 	});
 
 	it('Test that insert with undefined string value for hash throws error', () => {
-		let write_object_clone = test_utils.deepClone(WRITE_OBJECT_TEST);
+		let write_object_clone = testUtils.deepClone(WRITE_OBJECT_TEST);
 		write_object_clone.operation = 'insert';
 		write_object_clone.records[0].id = 'undefined';
 		let error;
@@ -191,7 +191,7 @@ describe.skip('Tests for fsUtility function insertUpdateValidate', () => {
 	});
 
 	it('Test that update with null string value for hash throws error', () => {
-		let write_object_clone = test_utils.deepClone(WRITE_OBJECT_TEST);
+		let write_object_clone = testUtils.deepClone(WRITE_OBJECT_TEST);
 		write_object_clone.operation = 'update';
 		write_object_clone.records[0].id = 'null';
 		let error;
@@ -216,7 +216,7 @@ describe.skip('Tests for fsUtility function insertUpdateValidate', () => {
 	});
 
 	it('Test that update with undefined string value for hash throws error', () => {
-		let write_object_clone = test_utils.deepClone(WRITE_OBJECT_TEST);
+		let write_object_clone = testUtils.deepClone(WRITE_OBJECT_TEST);
 		write_object_clone.operation = 'update';
 		write_object_clone.records[0].id = 'undefined';
 		let error;

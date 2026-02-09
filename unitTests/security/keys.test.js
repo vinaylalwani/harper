@@ -1,6 +1,5 @@
 'use strict';
 
-require('../test_utils');
 const chai = require('chai');
 const sinon = require('sinon');
 const { expect } = chai;

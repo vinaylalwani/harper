@@ -1,4 +1,3 @@
-require('../test_utils');
 const assert = require('node:assert');
 const { table } = require('#src/resources/databases');
 const { HierarchicalNavigableSmallWorld } = require('#src/resources/indexes/HierarchicalNavigableSmallWorld');

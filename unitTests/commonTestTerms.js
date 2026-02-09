@@ -1,6 +1,6 @@
 'use strict';
 
-//NOTE - This file is imported to and exported from the test_utils file to make importing to test modules easier
+//NOTE - This file is imported to and exported from the testUtils file to make importing to test modules easier
 
 const TEST_CRUD_PERM_KEYS = {
 	READ: 'read',

@@ -1,6 +1,6 @@
 'use strict';
-const test_util = require('../test_utils');
-test_util.preTestPrep();
+const testUtils = require('../testUtils.js');
+testUtils.preTestPrep();
 
 const sinon = require('sinon');
 
@@ -59,7 +59,7 @@ let SEARCH_STUB_RESULTS = [
 	},
 ];
 
-const test_data = test_util.deepClone(TEST_DATA_DOG);
+const test_data = testUtils.deepClone(TEST_DATA_DOG);
 const TEST_SCHEMA = 'dev';
 const HASH_ATTRIBUTE = 'id';
 const TEST_TABLE_DOG = 'dog';
@@ -83,13 +83,13 @@ describe.skip('Test describeAll', function () {
 	let sandbox = undefined;
 
 	before(async function () {
-		test_envs = await test_util.createMockDB(HASH_ATTRIBUTE, TEST_SCHEMA, TEST_TABLE_DOG, test_data);
+		test_envs = await testUtils.createMockDB(HASH_ATTRIBUTE, TEST_SCHEMA, TEST_TABLE_DOG, test_data);
 		desc_table_orig = schema_describe.describeTable;
 		sandbox = sinon.createSandbox();
 	});
 
 	after(async function () {
-		await test_util.tearDownMockDB(test_envs);
+		await testUtils.tearDownMockDB(test_envs);
 		test_envs = [];
 		desc_table_orig = schema_describe.describeTable;
 	});
@@ -124,13 +124,13 @@ describe.skip('Test describeSchema', function () {
 	let desc_table_orig = undefined;
 	let sandbox = undefined;
 	before(async function () {
-		test_envs = await test_util.createMockDB(HASH_ATTRIBUTE, TEST_SCHEMA, TEST_TABLE_DOG, test_data);
+		test_envs = await testUtils.createMockDB(HASH_ATTRIBUTE, TEST_SCHEMA, TEST_TABLE_DOG, test_data);
 		desc_table_orig = schema_describe.describeTable;
 		sandbox = sinon.createSandbox();
 	});
 
 	after(async function () {
-		await test_util.tearDownMockDB(test_envs);
+		await testUtils.tearDownMockDB(test_envs);
 		test_envs = [];
 		sandbox.restore();
 	});
@@ -199,13 +199,13 @@ describe.skip('Test describeTable', function () {
 	let sandbox = undefined;
 
 	before(async function () {
-		test_envs = await test_util.createMockDB(HASH_ATTRIBUTE, TEST_SCHEMA, TEST_TABLE_DOG, test_data);
+		test_envs = await testUtils.createMockDB(HASH_ATTRIBUTE, TEST_SCHEMA, TEST_TABLE_DOG, test_data);
 		desc_table_orig = schema_describe.describeTable;
 		sandbox = sinon.createSandbox();
 	});
 
 	after(async function () {
-		await test_util.tearDownMockDB(test_envs);
+		await testUtils.tearDownMockDB(test_envs);
 		test_envs = [];
 		sandbox.restore();
 	});

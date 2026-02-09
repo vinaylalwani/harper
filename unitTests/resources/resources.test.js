@@ -1,7 +1,5 @@
-require('../test_utils');
 const assert = require('node:assert/strict');
 const resourcesComponent = require('#src/resources/Resources');
-const { resources } = require('#src/resources/Resources');
 
 // might want to enable an iteration with NATS being assigned as a source
 describe('Global resources map', () => {

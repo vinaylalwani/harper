@@ -1,12 +1,12 @@
 'use strict';
 
-const test_utils = require('../../../../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../../../../testUtils.js');
+testUtils.preTestPrep();
 const path = require('path');
 
 const SYSTEM_FOLDER_NAME = 'system';
 const SCHEMA_NAME = 'schema';
-const BASE_PATH = test_utils.getMockLMDBPath();
+const BASE_PATH = testUtils.getMockLMDBPath();
 const BASE_SCHEMA_PATH = path.join(BASE_PATH, SCHEMA_NAME);
 const SYSTEM_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, SYSTEM_FOLDER_NAME);
 const DEV_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, 'dev');
@@ -69,7 +69,7 @@ describe('test lmdbDropAttribute module', () => {
 	let date_stub;
 
 	before(async () => {
-		await fs.remove(test_utils.getMockLMDBPath());
+		await fs.remove(testUtils.getMockLMDBPath());
 		date_stub = sandbox.stub(Date, 'now').returns(TIMESTAMP);
 	});
 
@@ -83,7 +83,7 @@ describe('test lmdbDropAttribute module', () => {
 		let hdb_attribute_env;
 		before(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(testUtils.getMockLMDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 			await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -137,12 +137,12 @@ describe('test lmdbDropAttribute module', () => {
 			await hdb_attribute_env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(testUtils.getMockLMDBPath());
 		});
 
 		it('test attribute not found', async () => {
 			let drop_object = new DropAttributeObject('dev', 'test', 'faker');
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				drop_attribute_from_system,
 				[drop_object],
 				new Error(`Attribute '${drop_object.attribute}' was not found in '${drop_object.schema}.${drop_object.table}'`)
@@ -151,7 +151,7 @@ describe('test lmdbDropAttribute module', () => {
 
 		it('test drop temperature_str', async () => {
 			let drop_object = new DropAttributeObject('dev', 'test', 'temperature_str');
-			let drop_results = await test_utils.assertErrorAsync(drop_attribute_from_system, [drop_object], undefined);
+			let drop_results = await testUtils.assertErrorAsync(drop_attribute_from_system, [drop_object], undefined);
 			assert(drop_results.deleted_hashes.length === 1);
 			let search_obj = new SearchObject('system', 'hdb_attribute', 'schema_table', 'dev.test', undefined, ['*']);
 			let results = await search_by_value(search_obj);
@@ -168,7 +168,7 @@ describe('test lmdbDropAttribute module', () => {
 		let hdb_attribute_env;
 		before(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(testUtils.getMockLMDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 			await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -222,13 +222,13 @@ describe('test lmdbDropAttribute module', () => {
 			await hdb_attribute_env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(testUtils.getMockLMDBPath());
 		});
 
 		it('test removing temperature_str, pass invalid hash attribute', async () => {
 			let drop_object = new DropAttributeObject('dev', 'test', 'temperature_str');
 			let tbl_env = await environment_utility.openEnvironment(DEV_SCHEMA_PATH, 'test');
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				remove_attribute_from_all_objects,
 				[drop_object, tbl_env, 'faker'],
 				LMDB_ERRORS.DBI_DOES_NOT_EXIST
@@ -238,7 +238,7 @@ describe('test lmdbDropAttribute module', () => {
 		it('test removing temperature_str', async () => {
 			let drop_object = new DropAttributeObject('dev', 'test', 'temperature_str');
 			let tbl_env = await environment_utility.openEnvironment(DEV_SCHEMA_PATH, 'test');
-			await test_utils.assertErrorAsync(remove_attribute_from_all_objects, [drop_object, tbl_env, 'id'], undefined);
+			await testUtils.assertErrorAsync(remove_attribute_from_all_objects, [drop_object, tbl_env, 'id'], undefined);
 
 			let search_results = search_utility.searchAll(tbl_env, 'id', ['id', 'temperature_str']);
 			search_results.forEach((result) => {
@@ -255,7 +255,7 @@ describe('test lmdbDropAttribute module', () => {
 		let hdb_attribute_env;
 		before(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(testUtils.getMockLMDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 			await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -309,17 +309,17 @@ describe('test lmdbDropAttribute module', () => {
 			await hdb_attribute_env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(testUtils.getMockLMDBPath());
 		});
 
 		it('test removing temperature_str', async () => {
 			let tbl_env = await environment_utility.openEnvironment(DEV_SCHEMA_PATH, 'test');
-			let dbis = await test_utils.assertErrorAsync(environment_utility.listDBIs, [tbl_env], undefined);
+			let dbis = await testUtils.assertErrorAsync(environment_utility.listDBIs, [tbl_env], undefined);
 
 			assert(dbis.indexOf('temperature_str') >= 0);
 
 			let drop_object = new DropAttributeObject('dev', 'test', 'temperature_str');
-			await test_utils.assertErrorAsync(lmdb_drop_attribute, [drop_object], undefined);
+			await testUtils.assertErrorAsync(lmdb_drop_attribute, [drop_object], undefined);
 
 			let search_results = search_utility.searchAll(tbl_env, 'id', ['id', 'temperature_str']);
 			search_results.forEach((result) => {
@@ -327,7 +327,7 @@ describe('test lmdbDropAttribute module', () => {
 				assert.deepStrictEqual(result.temperature_str, null);
 			});
 
-			dbis = await test_utils.assertErrorAsync(environment_utility.listDBIs, [tbl_env], undefined);
+			dbis = await testUtils.assertErrorAsync(environment_utility.listDBIs, [tbl_env], undefined);
 
 			assert(dbis.indexOf('temperature_str') < 0);
 

@@ -1,11 +1,11 @@
 'use strict';
 
-const test_utils = require('../../../../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../../../../testUtils.js');
+testUtils.preTestPrep();
 const path = require('path');
 const SYSTEM_FOLDER_NAME = 'system';
 const SCHEMA_NAME = 'schema';
-const BASE_PATH = test_utils.getMockLMDBPath();
+const BASE_PATH = testUtils.getMockLMDBPath();
 const BASE_SCHEMA_PATH = path.join(BASE_PATH, SCHEMA_NAME);
 const SYSTEM_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, SYSTEM_FOLDER_NAME);
 const TRANSACTIONS_NAME = 'transactions';
@@ -123,7 +123,7 @@ describe('Test lmdbSearchDataByHash module', () => {
 			};
 
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(testUtils.getMockLMDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 
 			hdb_schema_env = await environment_utility.createEnvironment(SYSTEM_SCHEMA_PATH, systemSchema.hdb_schema.name);
@@ -142,7 +142,7 @@ describe('Test lmdbSearchDataByHash module', () => {
 
 			await lmdb_create_table(TABLE_SYSTEM_DATA_TEST_A, CREATE_TABLE_OBJ_TEST_A);
 
-			let insert_obj = test_utils.deepClone(INSERT_OBJECT_TEST);
+			let insert_obj = testUtils.deepClone(INSERT_OBJECT_TEST);
 			await lmdb_create_records(insert_obj);
 			resetDatabases();
 		});
@@ -166,7 +166,7 @@ describe('Test lmdbSearchDataByHash module', () => {
 			await hdb_attribute_env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.getMockLMDBPath());
+			await fs.remove(testUtils.getMockLMDBPath());
 			delete global.hdb_schema;
 		});
 
@@ -212,7 +212,7 @@ describe('Test lmdbSearchDataByHash module', () => {
 		});
 
 		it('test finding 1 row', async () => {
-			let exp_obj = test_utils.deepClone(INSERT_OBJECT_TEST.records[0]);
+			let exp_obj = testUtils.deepClone(INSERT_OBJECT_TEST.records[0]);
 			exp_obj.__updatedtime__ = TIMESTAMP;
 			exp_obj.__createdtime__ = TIMESTAMP;
 			exp_obj.height = null;
@@ -247,7 +247,7 @@ describe('Test lmdbSearchDataByHash module', () => {
 	});
 });
 async function toArrayWithAssertError(test_func, args, error_object, message) {
-	let response = await test_utils.assertErrorAsync(test_func, args, error_object, message);
+	let response = await testUtils.assertErrorAsync(test_func, args, error_object, message);
 	response = await response;
 	if (response && response[Symbol.asyncIterator] && !response[Symbol.iterator]) {
 		// requires async iteration to access elements

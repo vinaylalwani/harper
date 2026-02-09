@@ -1,6 +1,6 @@
 'use strict';
-const test_utils = require('../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../testUtils.js');
+testUtils.preTestPrep();
 const assert = require('assert');
 const rewire = require('rewire');
 const sinon = require('sinon');
@@ -197,7 +197,7 @@ describe('Test authorize function', function () {
 
 	it('Can authorize with correct username and password Basic authorization', function (done) {
 		auth.authorize(active_basic_request, null, function (err, user) {
-			let role_temp = test_utils.deepClone(VALID_ROLE);
+			let role_temp = testUtils.deepClone(VALID_ROLE);
 			assert.deepEqual(user, { username: 'nook', active: true, role: role_temp }, 'equal object');
 			assert.equal(err, null, 'no error');
 			done();
@@ -232,7 +232,7 @@ describe('Test authorize function', function () {
 
 	it('Can authorize with correct username and password Other authorization', function (done) {
 		auth.authorize(active_other_request, null, function (err, user) {
-			let role_temp = test_utils.deepClone(VALID_ROLE);
+			let role_temp = testUtils.deepClone(VALID_ROLE);
 			assert.deepEqual(user, { username: 'nook', active: true, role: role_temp }, 'equal object');
 			assert.equal(err, null, 'no error');
 			done();

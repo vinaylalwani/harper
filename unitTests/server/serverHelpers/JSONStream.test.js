@@ -1,8 +1,8 @@
 'use strict';
 
-const test_utils = require('../../test_utils');
+const testUtils = require('../../testUtils.js');
 const { streamAsJSON } = require('#src/server/serverHelpers/JSONStream');
-test_utils.preTestPrep();
+testUtils.preTestPrep();
 
 const assert = require('assert');
 const sinon = require('sinon');

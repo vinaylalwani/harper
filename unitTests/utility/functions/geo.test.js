@@ -6,9 +6,9 @@
 
 const assert = require('assert');
 const geo = require('#js/utility/functions/geo');
-const test_utils = require('../../test_utils');
+const testUtils = require('../../testUtils.js');
 // try to move to /bin directory so our properties reader doesn't explode.
-test_utils.changeProcessToBinDir();
+testUtils.changeProcessToBinDir();
 
 const GEO_JSON_MULTIPOLYGON_FIVE_POINTS = {
 	type: 'Feature',

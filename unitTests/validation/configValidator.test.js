@@ -7,7 +7,7 @@ const rewire = require('rewire');
 const config_val = rewire('#js/validation/configValidator');
 const { configValidator, routesValidator, doesPathExist } = config_val;
 const path = require('path');
-const test_utils = require('../test_utils');
+const testUtils = require('../testUtils.js');
 const hdb_utils = require('#js/utility/common_utils');
 const fs = require('fs-extra');
 const os = require('os');
@@ -149,7 +149,7 @@ describe('Test configValidator module', () => {
 		afterEach(() => {});
 
 		it('Test itc and localStudio in config_schema with bad values', () => {
-			let bad_config_obj = test_utils.deepClone(FAKE_CONFIG);
+			let bad_config_obj = testUtils.deepClone(FAKE_CONFIG);
 			bad_config_obj.itc.network.port = 'bad_port';
 			bad_config_obj.localStudio.enabled = 'spinach';
 
@@ -160,7 +160,7 @@ describe('Test configValidator module', () => {
 		});
 
 		it('Test logging in config_schema with bad values', () => {
-			let bad_config_obj = test_utils.deepClone(FAKE_CONFIG);
+			let bad_config_obj = testUtils.deepClone(FAKE_CONFIG);
 			bad_config_obj.logging.file = 'sassafrass';
 			bad_config_obj.logging.level = 'holla';
 			bad_config_obj.logging.rotation.enabled = 'please';
@@ -179,7 +179,7 @@ describe('Test configValidator module', () => {
 		});
 
 		it('Test operationsApi in config_schema with bad values', () => {
-			let bad_config_obj = test_utils.deepClone(FAKE_CONFIG);
+			let bad_config_obj = testUtils.deepClone(FAKE_CONFIG);
 			bad_config_obj.operationsApi.authentication.operationTokenTimeout = undefined;
 			bad_config_obj.operationsApi.authentication.refreshTokenTimeout = undefined;
 			bad_config_obj.operationsApi.foreground = 222;

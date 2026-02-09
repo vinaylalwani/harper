@@ -1,6 +1,5 @@
-require('../test_utils');
 const assert = require('assert');
-const { getMockLMDBPath } = require('../test_utils');
+const { getMockLMDBPath } = require('../testUtils.js');
 const { table, getDatabases } = require('#src/resources/databases');
 const { Readable, PassThrough } = require('node:stream');
 const { setAuditRetention } = require('#src/resources/auditStore');

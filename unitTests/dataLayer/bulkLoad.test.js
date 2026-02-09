@@ -1,8 +1,8 @@
 'use strict';
 
-const test_utils = require('../test_utils');
+const testUtils = require('../testUtils.js');
 // try to move to /bin directory so our properties reader doesn't explode.
-test_utils.preTestPrep();
+testUtils.preTestPrep();
 const assert = require('assert');
 const chai = require('chai');
 const { expect } = chai;
@@ -197,7 +197,7 @@ describe.skip('Test bulkLoad.js', () => {
 		});
 
 		beforeEach(function () {
-			test_msg = test_utils.deepClone(DATA_LOAD_MESSAGE);
+			test_msg = testUtils.deepClone(DATA_LOAD_MESSAGE);
 			test_msg.operation = hdb_terms.OPERATIONS_ENUM.csv_data_load;
 			test_msg.data = VALID_CSV_DATA;
 			sandbox.stub(validator, 'dataObject');
@@ -313,9 +313,9 @@ describe.skip('Test bulkLoad.js', () => {
 
 		it('Test bad URL throws validation error', async () => {
 			CSV_URL_MESSAGE.csv_url = 'breeds.csv';
-			await test_utils.testHDBError(
+			await testUtils.testHDBError(
 				bulkLoad_rewire.csvURLLoad(CSV_URL_MESSAGE),
-				test_utils.generateHDBError("'csv_url' must be a valid url", 400)
+				testUtils.generateHDBError("'csv_url' must be a valid url", 400)
 			);
 		});
 
@@ -394,7 +394,7 @@ describe.skip('Test bulkLoad.js', () => {
 			bulkLoad_rewire.__set__('needle', request_response_stub);
 			let error_msg = 'Error creating directory';
 			mk_dir_stub.throws(new Error(error_msg));
-			let test_err_result = await test_utils.testError(downloadCSVFile_rw({ csv_url: 'www.csv.com' }), error_msg);
+			let test_err_result = await testUtils.testError(downloadCSVFile_rw({ csv_url: 'www.csv.com' }), error_msg);
 
 			expect(test_err_result).to.be.true;
 		});
@@ -581,7 +581,7 @@ describe.skip('Test bulkLoad.js', () => {
 		});
 
 		beforeEach(() => {
-			test_S3_message_json = test_utils.deepClone(s3_message_fake);
+			test_S3_message_json = testUtils.deepClone(s3_message_fake);
 		});
 
 		afterEach(() => {
@@ -856,7 +856,7 @@ describe.skip('Test bulkLoad.js', () => {
 		it('Test error is logged and reject promise returned', async () => {
 			call_bulk_file_load_stub.throws(new Error('Bulk load error'));
 			let error;
-			let results_fake_clone = test_utils.deepClone(results_fake);
+			let results_fake_clone = testUtils.deepClone(results_fake);
 			results_fake_clone.data.push({ blah: 'blah' });
 			try {
 				await insert_chunk_rewire(json_message_fake, insert_results_fake, reject_fake, results_fake_clone, parser_fake);
@@ -948,7 +948,7 @@ describe.skip('Test bulkLoad.js', () => {
 		});
 
 		beforeEach(() => {
-			test_json_file_msg = test_utils.deepClone(json_file_msg_fake);
+			test_json_file_msg = testUtils.deepClone(json_file_msg_fake);
 		});
 
 		afterEach(() => {
@@ -1041,7 +1041,7 @@ describe.skip('Test bulkLoad.js', () => {
 
 		it('Test error is thrown if invalid action is passed', async () => {
 			const invalid_action = 'blaaaah';
-			const expected_error = test_utils.generateHDBError(
+			const expected_error = testUtils.generateHDBError(
 				TEST_BULK_LOAD_ERROR_MSGS.INVALID_ACTION_PARAM_ERR(invalid_action),
 				400
 			);

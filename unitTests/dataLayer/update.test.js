@@ -8,7 +8,7 @@ const rewire = require('rewire');
 const sql = require('#js/sqlTranslator/index');
 const update = rewire('#js/dataLayer/update');
 const insert = require('#js/dataLayer/insert');
-const test_utils = require('../test_utils');
+const testUtils = require('../testUtils.js');
 
 describe('Test update module', () => {
 	const sandbox = sinon.createSandbox();
@@ -323,7 +323,7 @@ describe('Test update module', () => {
 			const test_error = new Error('fake error');
 			p_get_table_schema_stub.throws(test_error);
 
-			await test_utils.assertErrorAsync(update.update, [{ statement: test_ast_statement, hdb_user }], test_error);
+			await testUtils.assertErrorAsync(update.update, [{ statement: test_ast_statement, hdb_user }], test_error);
 		});
 	});
 
@@ -351,14 +351,14 @@ describe('Test update module', () => {
 		});
 
 		it("NOMINAL - should assign value from column expression to record's columnid", () => {
-			let column_obj = test_utils.deepClone(fake_columns);
+			let column_obj = testUtils.deepClone(fake_columns);
 			column_obj[0].expression = { value: 'Hank' };
 			const result = create_update_record_rw(column_obj);
 			expect(result.dog_name).to.equal('Hank');
 		});
 
 		it('Tests that an error is thrown', () => {
-			test_utils.assertErrorSync(
+			testUtils.assertErrorSync(
 				create_update_record_rw,
 				[fake_columns],
 				new Error('There was a problem performing this update. Please check the logs and try again.')
