@@ -1,7 +1,7 @@
 'use strict';
 
-const test_util = require('../testUtils.js');
-test_util.preTestPrep();
+const testUtils = require('../testUtils.js');
+testUtils.preTestPrep();
 
 const Stream = require('stream');
 const assert = require('assert');
@@ -167,11 +167,11 @@ describe('Test export.js', () => {
 				operation: 'sql',
 				sql: 'SELECT * FROM dev.breed',
 			};
-			const expected_err = test_util.generateHDBError(
+			const expected_err = testUtils.generateHDBError(
 				'format invalid. must be one of the following values: json, csv',
 				400
 			);
-			await test_util.assertErrorAsync(export_local, [export_object], expected_err);
+			await testUtils.assertErrorAsync(export_local, [export_object], expected_err);
 		});
 	});
 
@@ -184,7 +184,7 @@ describe('Test export.js', () => {
 
 		it(
 			'Nominal case of confirmPath',
-			test_util.mochaAsyncWrapper(async function () {
+			testUtils.mochaAsyncWrapper(async function () {
 				let test_path = './';
 				let is_path_valid = await confirmPath(test_path);
 				assert.equal(is_path_valid, true, 'Expected valid path');
@@ -223,8 +223,8 @@ describe('Test export.js', () => {
 			err.code = 'EACCES';
 			sandbox.stub(fs, 'stat').throws(err);
 			let test_path = './';
-			let expected_err = test_util.generateHDBError("access to path './' is denied", 400);
-			await test_util.assertErrorAsync(confirmPath, [test_path], expected_err);
+			let expected_err = testUtils.generateHDBError("access to path './' is denied", 400);
+			await testUtils.assertErrorAsync(confirmPath, [test_path], expected_err);
 		});
 
 		it('Test access error message is handled', async () => {
@@ -232,8 +232,8 @@ describe('Test export.js', () => {
 			err.code = 'TROUBLE';
 			sandbox.stub(fs, 'stat').throws(err);
 			let test_path = './';
-			let expected_err = test_util.generateHDBError('Oh no an error', 400);
-			await test_util.assertErrorAsync(confirmPath, [test_path], expected_err);
+			let expected_err = testUtils.generateHDBError('Oh no an error', 400);
+			await testUtils.assertErrorAsync(confirmPath, [test_path], expected_err);
 		});
 	});
 
@@ -289,7 +289,7 @@ describe('Test export.js', () => {
 
 		it(
 			'Nominal case of saveToLocal with json',
-			test_util.mochaAsyncWrapper(async function () {
+			testUtils.mochaAsyncWrapper(async function () {
 				file_name = path.join(TMP_TEST_DIR, 'test_file.json');
 				let wrote_data = await saveToLocal(file_name, 'json', data_object);
 				assert.deepEqual(
@@ -308,7 +308,7 @@ describe('Test export.js', () => {
 
 		it(
 			'Nominal case of saveToLocal with csv',
-			test_util.mochaAsyncWrapper(async function () {
+			testUtils.mochaAsyncWrapper(async function () {
 				let expected_csv =
 					'"__createdtime__","only_one","object","array","id","__updatedtime__","address","object_array"' +
 					EOL +
@@ -331,24 +331,24 @@ describe('Test export.js', () => {
 		);
 
 		it('Test error is thrown if file_path invalid', async () => {
-			const expected_err = test_util.generateHDBError('file_path is invalid.', 400);
-			await test_util.assertErrorAsync(saveToLocal, [null, 'csv', data_object], expected_err);
+			const expected_err = testUtils.generateHDBError('file_path is invalid.', 400);
+			await testUtils.assertErrorAsync(saveToLocal, [null, 'csv', data_object], expected_err);
 		});
 
 		it('Test error is thrown if source format invalid', async () => {
-			const expected_err = test_util.generateHDBError('Source format is invalid.', 400);
-			await test_util.assertErrorAsync(saveToLocal, [TMP_TEST_DIR, null, data_object], expected_err);
+			const expected_err = testUtils.generateHDBError('Source format is invalid.', 400);
+			await testUtils.assertErrorAsync(saveToLocal, [TMP_TEST_DIR, null, data_object], expected_err);
 		});
 
 		it('Test error is thrown if data not found', async () => {
-			const expected_err = test_util.generateHDBError('Data not found.', 400);
-			await test_util.assertErrorAsync(saveToLocal, [TMP_TEST_DIR, 'json', null], expected_err);
+			const expected_err = testUtils.generateHDBError('Data not found.', 400);
+			await testUtils.assertErrorAsync(saveToLocal, [TMP_TEST_DIR, 'json', null], expected_err);
 		});
 
 		it('Test error is thrown if format invalid', async () => {
 			file_name = path.join(TMP_TEST_DIR, 'test_file.json');
-			const expected_err = test_util.generateHDBError('format is invalid.', 400);
-			await test_util.assertErrorAsync(saveToLocal, [file_name, 'txt', data_object], expected_err);
+			const expected_err = testUtils.generateHDBError('format is invalid.', 400);
+			await testUtils.assertErrorAsync(saveToLocal, [file_name, 'txt', data_object], expected_err);
 		});
 
 		it('Call saveToLocal with empty data, this is valid', async function () {
@@ -532,7 +532,7 @@ describe('Test export.js', () => {
 		it('Nominal call export JSON to S3', async () => {
 			const expected_body =
 				'[{"lastname":"Dog","object":null,"array":null,"firstname":"Harper","__createdtime__":1618335194929,"object_array":null,"__updatedtime__":1618335194929,"address":"1 North Street","id":"8d9cd1b2-3e38-40cb-a340-c5d33e66dbb7","one":"only one"},{"lastname":null,"object":{"name":"object","number":1,"array":[1,"two"]},"array":[1,2,"three"],"firstname":"Harper","__createdtime__":1618335194930,"object_array":null,"__updatedtime__":1618335194930,"address":null,"id":"bc56cf62-5ad1-4519-b1c6-26742b02e9d5","one":null},{"lastname":null,"object":null,"array":null,"firstname":null,"__createdtime__":1618335194930,"object_array":[{"number":1},{"number":"two","count":2}],"__updatedtime__":1618335194930,"address":null,"id":"dce07e2f-fa32-4ceb-b4a4-4270fefe51cf","one":null}]';
-			let export_object_clone = test_util.deepClone(export_obj_test);
+			let export_object_clone = testUtils.deepClone(export_obj_test);
 			export_object_clone.format = 'json';
 			const result = await hdb_export.export_to_s3(export_object_clone);
 
@@ -544,8 +544,8 @@ describe('Test export.js', () => {
 			const export_obj = {
 				s3: {},
 			};
-			const expected_err = test_util.generateHDBError('S3 object is missing.', 400);
-			await test_util.assertErrorAsync(hdb_export.export_to_s3, [export_obj], expected_err);
+			const expected_err = testUtils.generateHDBError('S3 object is missing.', 400);
+			await testUtils.assertErrorAsync(hdb_export.export_to_s3, [export_obj], expected_err);
 		});
 
 		it('Test missing aws_access_key_id error thrown', async () => {
@@ -556,8 +556,8 @@ describe('Test export.js', () => {
 					key: 'test_special',
 				},
 			};
-			const expected_err = test_util.generateHDBError('aws_access_key_id is missing.', 400);
-			await test_util.assertErrorAsync(hdb_export.export_to_s3, [export_obj], expected_err);
+			const expected_err = testUtils.generateHDBError('aws_access_key_id is missing.', 400);
+			await testUtils.assertErrorAsync(hdb_export.export_to_s3, [export_obj], expected_err);
 		});
 
 		it('Test missing aws_secret_access_key error thrown', async () => {
@@ -568,8 +568,8 @@ describe('Test export.js', () => {
 					key: 'test_special',
 				},
 			};
-			const expected_err = test_util.generateHDBError('aws_secret_access_key is missing.', 400);
-			await test_util.assertErrorAsync(hdb_export.export_to_s3, [export_obj], expected_err);
+			const expected_err = testUtils.generateHDBError('aws_secret_access_key is missing.', 400);
+			await testUtils.assertErrorAsync(hdb_export.export_to_s3, [export_obj], expected_err);
 		});
 
 		it('Test missing bucket error thrown', async () => {
@@ -580,8 +580,8 @@ describe('Test export.js', () => {
 					key: 'test_special',
 				},
 			};
-			const expected_err = test_util.generateHDBError('bucket is missing.', 400);
-			await test_util.assertErrorAsync(hdb_export.export_to_s3, [export_obj], expected_err);
+			const expected_err = testUtils.generateHDBError('bucket is missing.', 400);
+			await testUtils.assertErrorAsync(hdb_export.export_to_s3, [export_obj], expected_err);
 		});
 
 		it('Test missing key error thrown', async () => {
@@ -592,8 +592,8 @@ describe('Test export.js', () => {
 					bucket: 'harperdb-integration-test-data/non_public_folder',
 				},
 			};
-			const expected_err = test_util.generateHDBError('key is missing.', 400);
-			await test_util.assertErrorAsync(hdb_export.export_to_s3, [export_obj], expected_err);
+			const expected_err = testUtils.generateHDBError('key is missing.', 400);
+			await testUtils.assertErrorAsync(hdb_export.export_to_s3, [export_obj], expected_err);
 		});
 
 		it('Test bad format error thrown', async () => {
@@ -607,16 +607,16 @@ describe('Test export.js', () => {
 				},
 				format: 'txt',
 			};
-			const expected_err = test_util.generateHDBError(
+			const expected_err = testUtils.generateHDBError(
 				'format invalid. must be one of the following values: json, csv',
 				400
 			);
-			await test_util.assertErrorAsync(hdb_export.export_to_s3, [export_obj], expected_err);
+			await testUtils.assertErrorAsync(hdb_export.export_to_s3, [export_obj], expected_err);
 		});
 
 		it('Test error from getRecords is handled correctly', async () => {
 			get_records_stub.throws(new Error('Error getting records'));
-			await test_util.assertErrorAsync(hdb_export.export_to_s3, [export_obj_test], new Error('Error getting records'));
+			await testUtils.assertErrorAsync(hdb_export.export_to_s3, [export_obj_test], new Error('Error getting records'));
 		});
 	});
 
@@ -747,8 +747,8 @@ describe('Test export.js', () => {
 					operation: '',
 				},
 			};
-			const expected_err = test_util.generateHDBError('Search operation is invalid.', 400);
-			await test_util.assertErrorAsync(getRecords, [export_obj], expected_err);
+			const expected_err = testUtils.generateHDBError('Search operation is invalid.', 400);
+			await testUtils.assertErrorAsync(getRecords, [export_obj], expected_err);
 		});
 
 		it('Test search operation not supported error thrown', async () => {
@@ -759,8 +759,8 @@ describe('Test export.js', () => {
 					operation: 'range_search',
 				},
 			};
-			const expected_err = test_util.generateHDBError('Operation range_search is not support by export.', 400);
-			await test_util.assertErrorAsync(getRecords, [export_obj], expected_err);
+			const expected_err = testUtils.generateHDBError('Operation range_search is not support by export.', 400);
+			await testUtils.assertErrorAsync(getRecords, [export_obj], expected_err);
 		});
 	});
 });

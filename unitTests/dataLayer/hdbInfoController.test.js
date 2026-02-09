@@ -1,6 +1,6 @@
 'use strict';
-const test_util = require('../testUtils.js');
-test_util.preTestPrep();
+const testUtils = require('../testUtils.js');
+testUtils.preTestPrep();
 
 const sinon = require('sinon');
 const rewire = require('rewire');

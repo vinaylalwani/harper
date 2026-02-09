@@ -1,7 +1,7 @@
 'use strict';
 
-const test_util = require('../testUtils.js');
-test_util.preTestPrep();
+const testUtils = require('../testUtils.js');
+testUtils.preTestPrep();
 const fs = require('fs-extra');
 const jwt = require('jsonwebtoken');
 const path = require('path');
@@ -110,7 +110,7 @@ describe('test getJWTRSAKeys function', () => {
 	let get_jwt_keys_func;
 
 	before(() => {
-		const testPath = test_util.getMockTestPath();
+		const testPath = testUtils.getMockTestPath();
 		keysPath = path.join(testPath, 'keys');
 		passphrasePath = path.join(keysPath, '.jwtPass');
 		privateKeyPath = path.join(keysPath, '.jwtPrivate.key');

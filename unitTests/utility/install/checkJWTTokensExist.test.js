@@ -1,7 +1,7 @@
 'use strict';
 
-const test_util = require('../../testUtils.js');
-test_util.preTestPrep();
+const testUtils = require('../../testUtils.js');
+testUtils.preTestPrep();
 const fs = require('fs-extra');
 const path = require('path');
 const logger = require('#js/utility/logging/harper_logger');
@@ -19,7 +19,7 @@ describe('test checkJWTTokenExist function', () => {
 	let logger_error_spy;
 
 	before(() => {
-		const testPath = test_util.getMockTestPath();
+		const testPath = testUtils.getMockTestPath();
 		keysPath = path.join(testPath, 'keys');
 		fs_access_spy = sandbox.spy(fs, 'accessSync');
 		fs_writefile_spy = sandbox.spy(fs, 'writeFileSync');

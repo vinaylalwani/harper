@@ -1,6 +1,6 @@
 'use strict';
-const test_util = require('../../../../testUtils.js');
-test_util.preTestPrep();
+const testUtils = require('../../../../testUtils.js');
+testUtils.preTestPrep();
 
 const path = require('path');
 const assert = require('assert');
@@ -14,8 +14,8 @@ describe('Test getLMDBStats function', function () {
 	let env = undefined;
 	let txn_env;
 	const LMDB_TEST_FOLDER_NAME = 'lmdbTest';
-	const BASE_TEST_PATH = path.join(test_util.getMockLMDBPath(), LMDB_TEST_FOLDER_NAME);
-	const BASE_TXN_PATH = path.join(test_util.getMockLMDBPath(), 'transactions', LMDB_TEST_FOLDER_NAME);
+	const BASE_TEST_PATH = path.join(testUtils.getMockLMDBPath(), LMDB_TEST_FOLDER_NAME);
+	const BASE_TXN_PATH = path.join(testUtils.getMockLMDBPath(), 'transactions', LMDB_TEST_FOLDER_NAME);
 	const TEST_ENVIRONMENT_NAME = 'test';
 	const ID_DBI_NAME = 'id';
 	const TABLE_RESULT = {
@@ -26,7 +26,7 @@ describe('Test getLMDBStats function', function () {
 
 	before(async function () {
 		global.lmdb_map = undefined;
-		await fs.remove(test_util.getMockLMDBPath());
+		await fs.remove(testUtils.getMockLMDBPath());
 		await fs.mkdirp(BASE_TEST_PATH);
 		await fs.mkdirp(BASE_TXN_PATH);
 		env = await env_util.createEnvironment(BASE_TEST_PATH, TEST_ENVIRONMENT_NAME);
@@ -41,11 +41,11 @@ describe('Test getLMDBStats function', function () {
 		await txn_env.close();
 
 		global.lmdb_map = undefined;
-		await fs.remove(test_util.getMockLMDBPath());
+		await fs.remove(testUtils.getMockLMDBPath());
 	});
 
 	it('getLMDBStats, test nominal case', async function () {
-		let table = test_util.deepClone(TABLE_RESULT);
+		let table = testUtils.deepClone(TABLE_RESULT);
 		let results = await get_table_size(table);
 		assert(results.schema === table.schema);
 		assert(results.table === table.name);
