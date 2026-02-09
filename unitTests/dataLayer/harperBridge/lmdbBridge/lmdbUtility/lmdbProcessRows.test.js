@@ -13,7 +13,7 @@ const MOCK_UUID_VALUE = 'cool-uuid-value';
 const sandbox = sinon.createSandbox();
 
 const { TEST_WRITE_OPS_ERROR_MSGS } = require('../../../../commonTestErrors');
-const test_utils = require('../../../../test_utils');
+const testUtils = require('../../../../testUtils.js');
 const assert = require('assert');
 
 const HASH_ATTRIBUTE_NAME = 'id';
@@ -58,8 +58,8 @@ const INSERT_OBJECT_TEST = {
 
 const ATTRIBUTES_TEST = ['name', 'breed', 'id', 'age', 'height'];
 
-const NO_HASH_VALUE_ERROR = test_utils.generateHDBError(TEST_WRITE_OPS_ERROR_MSGS.RECORD_MISSING_HASH_ERR, 400);
-const EMPTY_ATTRIBUTE_NAME_ERROR = test_utils.generateHDBError(TEST_WRITE_OPS_ERROR_MSGS.ATTR_NAME_NULLISH_ERR, 400);
+const NO_HASH_VALUE_ERROR = testUtils.generateHDBError(TEST_WRITE_OPS_ERROR_MSGS.RECORD_MISSING_HASH_ERR, 400);
+const EMPTY_ATTRIBUTE_NAME_ERROR = testUtils.generateHDBError(TEST_WRITE_OPS_ERROR_MSGS.ATTR_NAME_NULLISH_ERR, 400);
 
 const LONG_CHAR_TEST =
 	'z2xFuWBiQgjAAAzgAK80e35FCuFzNHpicBWzsWZW055mFHwBxdU5yE5KlTQRzcZ04UlBTdhzDrVn1k1fuQCN9' +
@@ -82,36 +82,36 @@ describe('Test lmdbProcessRows module', () => {
 	});
 	describe('Test validateHash function', () => {
 		it('test record with no hash attribute value entry when updating', () => {
-			let test_record = test_utils.deepClone(RECORD);
+			let test_record = testUtils.deepClone(RECORD);
 			delete test_record[HASH_ATTRIBUTE_NAME];
-			test_utils.assertErrorSync(
+			testUtils.assertErrorSync(
 				validate_hash_function,
 				[test_record, HASH_ATTRIBUTE_NAME, hdb_terms.OPERATIONS_ENUM.UPDATE],
 				NO_HASH_VALUE_ERROR,
 				'test no id attribute'
 			);
 
-			let test_record2 = test_utils.deepClone(RECORD);
+			let test_record2 = testUtils.deepClone(RECORD);
 			test_record2[HASH_ATTRIBUTE_NAME] = null;
-			test_utils.assertErrorSync(
+			testUtils.assertErrorSync(
 				validate_hash_function,
 				[test_record2, HASH_ATTRIBUTE_NAME, hdb_terms.OPERATIONS_ENUM.UPDATE],
 				NO_HASH_VALUE_ERROR,
 				'test null id value'
 			);
 
-			let test_record3 = test_utils.deepClone(RECORD);
+			let test_record3 = testUtils.deepClone(RECORD);
 			test_record3[HASH_ATTRIBUTE_NAME] = undefined;
-			test_utils.assertErrorSync(
+			testUtils.assertErrorSync(
 				validate_hash_function,
 				[test_record3, HASH_ATTRIBUTE_NAME, hdb_terms.OPERATIONS_ENUM.UPDATE],
 				NO_HASH_VALUE_ERROR,
 				'test undefined id value'
 			);
 
-			let test_record4 = test_utils.deepClone(RECORD);
+			let test_record4 = testUtils.deepClone(RECORD);
 			test_record4[HASH_ATTRIBUTE_NAME] = '';
-			test_utils.assertErrorSync(
+			testUtils.assertErrorSync(
 				validate_hash_function,
 				[test_record4, HASH_ATTRIBUTE_NAME, hdb_terms.OPERATIONS_ENUM.UPDATE],
 				NO_HASH_VALUE_ERROR,
@@ -120,9 +120,9 @@ describe('Test lmdbProcessRows module', () => {
 		});
 
 		it('test record with no hash attribute entry when inserting', () => {
-			let test_record = test_utils.deepClone(RECORD);
+			let test_record = testUtils.deepClone(RECORD);
 			delete test_record[HASH_ATTRIBUTE_NAME];
-			test_utils.assertErrorSync(
+			testUtils.assertErrorSync(
 				validate_hash_function,
 				[test_record, HASH_ATTRIBUTE_NAME, hdb_terms.OPERATIONS_ENUM.INSERT],
 				undefined,
@@ -132,9 +132,9 @@ describe('Test lmdbProcessRows module', () => {
 			assert(test_record.hasOwnProperty(HASH_ATTRIBUTE_NAME) === true);
 			assert.deepStrictEqual(test_record[HASH_ATTRIBUTE_NAME], MOCK_UUID_VALUE);
 
-			let test_record2 = test_utils.deepClone(RECORD);
+			let test_record2 = testUtils.deepClone(RECORD);
 			test_record2[HASH_ATTRIBUTE_NAME] = null;
-			test_utils.assertErrorSync(
+			testUtils.assertErrorSync(
 				validate_hash_function,
 				[test_record2, HASH_ATTRIBUTE_NAME, hdb_terms.OPERATIONS_ENUM.INSERT],
 				undefined,
@@ -144,9 +144,9 @@ describe('Test lmdbProcessRows module', () => {
 			assert(test_record2.hasOwnProperty(HASH_ATTRIBUTE_NAME) === true);
 			assert.deepStrictEqual(test_record2[HASH_ATTRIBUTE_NAME], MOCK_UUID_VALUE);
 
-			let test_record3 = test_utils.deepClone(RECORD);
+			let test_record3 = testUtils.deepClone(RECORD);
 			test_record3[HASH_ATTRIBUTE_NAME] = undefined;
-			test_utils.assertErrorSync(
+			testUtils.assertErrorSync(
 				validate_hash_function,
 				[test_record3, HASH_ATTRIBUTE_NAME, hdb_terms.OPERATIONS_ENUM.INSERT],
 				undefined,
@@ -156,9 +156,9 @@ describe('Test lmdbProcessRows module', () => {
 			assert(test_record3.hasOwnProperty(HASH_ATTRIBUTE_NAME) === true);
 			assert.deepStrictEqual(test_record3[HASH_ATTRIBUTE_NAME], MOCK_UUID_VALUE);
 
-			let test_record4 = test_utils.deepClone(RECORD);
+			let test_record4 = testUtils.deepClone(RECORD);
 			test_record4[HASH_ATTRIBUTE_NAME] = undefined;
-			test_utils.assertErrorSync(
+			testUtils.assertErrorSync(
 				validate_hash_function,
 				[test_record4, HASH_ATTRIBUTE_NAME, hdb_terms.OPERATIONS_ENUM.INSERT],
 				undefined,
@@ -170,30 +170,30 @@ describe('Test lmdbProcessRows module', () => {
 		});
 
 		it('Test error is thrown if hash is over max size', () => {
-			let test_record = test_utils.deepClone(RECORD);
+			let test_record = testUtils.deepClone(RECORD);
 			test_record[HASH_ATTRIBUTE_NAME] = LONG_CHAR_TEST;
 
-			test_utils.assertErrorSync(
+			testUtils.assertErrorSync(
 				validate_hash_function,
 				[test_record, HASH_ATTRIBUTE_NAME, hdb_terms.OPERATIONS_ENUM.INSERT],
-				test_utils.generateHDBError(TEST_WRITE_OPS_ERROR_MSGS.HASH_VAL_LENGTH_ERR, 400),
+				testUtils.generateHDBError(TEST_WRITE_OPS_ERROR_MSGS.HASH_VAL_LENGTH_ERR, 400),
 				'test id value too long'
 			);
 		});
 
 		it('Test happy path', () => {
-			let test_record = test_utils.deepClone(RECORD);
+			let test_record = testUtils.deepClone(RECORD);
 
-			test_utils.assertErrorSync(
+			testUtils.assertErrorSync(
 				validate_hash_function,
 				[test_record, HASH_ATTRIBUTE_NAME, hdb_terms.OPERATIONS_ENUM.INSERT],
 				undefined,
 				'all good with insert'
 			);
 
-			let test_record2 = test_utils.deepClone(RECORD);
+			let test_record2 = testUtils.deepClone(RECORD);
 			test_record2[HASH_ATTRIBUTE_NAME] = 'coolid';
-			test_utils.assertErrorSync(
+			testUtils.assertErrorSync(
 				validate_hash_function,
 				[test_record2, HASH_ATTRIBUTE_NAME, hdb_terms.OPERATIONS_ENUM.INSERT],
 				undefined,
@@ -204,31 +204,31 @@ describe('Test lmdbProcessRows module', () => {
 
 	describe('test validateAttribute function', () => {
 		it('test attribute name too long', () => {
-			test_utils.assertErrorSync(
+			testUtils.assertErrorSync(
 				validate_attribute_function,
 				[LONG_CHAR_TEST],
-				test_utils.generateHDBError(TEST_WRITE_OPS_ERROR_MSGS.ATTR_NAME_LENGTH_ERR(LONG_CHAR_TEST), 400),
+				testUtils.generateHDBError(TEST_WRITE_OPS_ERROR_MSGS.ATTR_NAME_LENGTH_ERR(LONG_CHAR_TEST), 400),
 				'attribute name too long'
 			);
 		});
 
 		it('test empty attribute names', () => {
-			test_utils.assertErrorSync(validate_attribute_function, [], EMPTY_ATTRIBUTE_NAME_ERROR);
-			test_utils.assertErrorSync(validate_attribute_function, [null], EMPTY_ATTRIBUTE_NAME_ERROR);
-			test_utils.assertErrorSync(validate_attribute_function, [undefined], EMPTY_ATTRIBUTE_NAME_ERROR);
-			test_utils.assertErrorSync(validate_attribute_function, [''], EMPTY_ATTRIBUTE_NAME_ERROR);
+			testUtils.assertErrorSync(validate_attribute_function, [], EMPTY_ATTRIBUTE_NAME_ERROR);
+			testUtils.assertErrorSync(validate_attribute_function, [null], EMPTY_ATTRIBUTE_NAME_ERROR);
+			testUtils.assertErrorSync(validate_attribute_function, [undefined], EMPTY_ATTRIBUTE_NAME_ERROR);
+			testUtils.assertErrorSync(validate_attribute_function, [''], EMPTY_ATTRIBUTE_NAME_ERROR);
 		});
 
 		it('test happy path', () => {
-			test_utils.assertErrorSync(validate_attribute_function, [HASH_ATTRIBUTE_NAME], undefined);
+			testUtils.assertErrorSync(validate_attribute_function, [HASH_ATTRIBUTE_NAME], undefined);
 		});
 	});
 
 	describe('Test processRows', () => {
 		it('test happy path', () => {
-			let insert_obj = test_utils.deepClone(INSERT_OBJECT_TEST);
+			let insert_obj = testUtils.deepClone(INSERT_OBJECT_TEST);
 
-			test_utils.assertErrorSync(process_rows_function, [insert_obj, ATTRIBUTES_TEST, HASH_ATTRIBUTE_NAME], undefined);
+			testUtils.assertErrorSync(process_rows_function, [insert_obj, ATTRIBUTES_TEST, HASH_ATTRIBUTE_NAME], undefined);
 		});
 	});
 });

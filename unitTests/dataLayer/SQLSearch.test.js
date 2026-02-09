@@ -1,11 +1,11 @@
 'use strict';
 
-const test_utils = require('../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../testUtils.js');
+testUtils.preTestPrep();
 
-const sql_test_utils = require('../sqlTestUtils');
-const { createMockDB, tearDownMockDB, deepClone, mochaAsyncWrapper, sortAsc, sortDesc } = test_utils;
-const { setupCSVSqlData, generateMockAST, cleanupCSVData, sqlIntegrationData } = sql_test_utils;
+const sql_testUtils = require('../sqlTestUtils');
+const { setupCSVSqlData, generateMockAST, cleanupCSVData, sqlIntegrationData } = sql_testUtils;
+const { createMockDB, tearDownMockDB, deepClone, mochaAsyncWrapper, sortAsc, sortDesc } = testUtils;
 
 const chai = require('chai');
 const { expect } = chai;
@@ -1520,7 +1520,7 @@ describe('Test SQL Engine', function () {
 				Object.keys(test_merged_data).forEach((key) => {
 					expect(Object.keys(test_merged_data[key]).length).to.equal(4);
 				});
-				const attr_keys = test_utils.sortAttrKeyMap(Object.keys(TEST_DATA_DOG[0]));
+				const attr_keys = testUtils.sortAttrKeyMap(Object.keys(TEST_DATA_DOG[0]));
 				TEST_DATA_DOG.forEach((row) => {
 					const hash_id = row.id;
 					expect(Object.keys(test_merged_data[hash_id]).length).to.equal(attr_keys.length);
@@ -1597,7 +1597,7 @@ describe('Test SQL Engine', function () {
 					expect(Object.keys(test_merged_data[key]).length).to.equal(2);
 				});
 
-				const attr_keys = test_utils.sortAttrKeyMap(Object.keys(expected_results[0]));
+				const attr_keys = testUtils.sortAttrKeyMap(Object.keys(expected_results[0]));
 				expected_results.forEach((row) => {
 					const hash_id = row.id;
 					expect(Object.keys(test_merged_data[hash_id]).length).to.equal(attr_keys.length);

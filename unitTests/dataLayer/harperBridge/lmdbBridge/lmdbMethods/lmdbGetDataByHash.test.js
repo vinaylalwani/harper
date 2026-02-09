@@ -1,11 +1,11 @@
 'use strict';
 
-const test_utils = require('../../../../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../../../../testUtils');
+testUtils.preTestPrep();
 const path = require('path');
 const SYSTEM_FOLDER_NAME = 'system';
 const SCHEMA_NAME = 'schema';
-const BASE_PATH = test_utils.setupTestDBPath();
+const BASE_PATH = testUtils.setupTestDBPath();
 const BASE_SCHEMA_PATH = path.join(BASE_PATH, SCHEMA_NAME);
 const SYSTEM_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, SYSTEM_FOLDER_NAME);
 const TRANSACTIONS_NAME = 'transactions';
@@ -122,7 +122,7 @@ describe('Test lmdbGetDataByHash module', () => {
 			};
 
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.setupTestDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 
 			hdb_schema_env = await environment_utility.createEnvironment(SYSTEM_SCHEMA_PATH, systemSchema.hdb_schema.name);
@@ -141,7 +141,7 @@ describe('Test lmdbGetDataByHash module', () => {
 
 			await lmdb_create_table(TABLE_SYSTEM_DATA_TEST_A, CREATE_TABLE_OBJ_TEST_A);
 
-			let insert_obj = test_utils.deepClone(INSERT_OBJECT_TEST);
+			let insert_obj = testUtils.deepClone(INSERT_OBJECT_TEST);
 			await lmdb_create_records(insert_obj);
 		});
 
@@ -165,52 +165,52 @@ describe('Test lmdbGetDataByHash module', () => {
 
 			global.lmdb_map = undefined;
 			delete global.hdb_schema;
-			await fs.remove(test_utils.setupTestDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 		});
 
 		it('test validation', async () => {
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				lmdb_get_data_by_hash,
 				[{}],
 				new Error("'schema' is required. 'table' is required. 'hash_values' is required. 'get_attributes' is required")
 			);
 
 			let search_obj = new SearchByHashObject('dev');
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				lmdb_get_data_by_hash,
 				[search_obj],
 				new Error("'table' is required. 'hash_values' is required. 'get_attributes' is required")
 			);
 
 			search_obj = new SearchByHashObject('dev', 'dog');
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				lmdb_get_data_by_hash,
 				[search_obj],
 				new Error("'hash_values' is required. 'get_attributes' is required")
 			);
 
 			search_obj = new SearchByHashObject('dev', 'dog', [8]);
-			await test_utils.assertErrorAsync(lmdb_get_data_by_hash, [search_obj], new Error("'get_attributes' is required"));
+			await testUtils.assertErrorAsync(lmdb_get_data_by_hash, [search_obj], new Error("'get_attributes' is required"));
 
 			search_obj = new SearchByHashObject('dev', 'dog', [8], ALL_FETCH_ATTRIBUTES);
-			await test_utils.assertErrorAsync(lmdb_get_data_by_hash, [search_obj], undefined);
+			await testUtils.assertErrorAsync(lmdb_get_data_by_hash, [search_obj], undefined);
 
 			search_obj = new SearchByHashObject('dev', 'dog', 8, ALL_FETCH_ATTRIBUTES);
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				lmdb_get_data_by_hash,
 				[search_obj],
 				new Error("'hash_values' must be an array")
 			);
 
 			search_obj = new SearchByHashObject('dev', 'dog', [8], 'test');
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				lmdb_get_data_by_hash,
 				[search_obj],
 				new Error("'get_attributes' must be an array")
 			);
 
 			search_obj = new SearchByHashObject('dev', 'dog', [8], []);
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				lmdb_get_data_by_hash,
 				[search_obj],
 				new Error("'get_attributes' must contain at least 1 item")
@@ -218,39 +218,39 @@ describe('Test lmdbGetDataByHash module', () => {
 		});
 
 		it('test finding 1 row', async () => {
-			let exp_obj = test_utils.deepClone(INSERT_OBJECT_TEST.records[0]);
+			let exp_obj = testUtils.deepClone(INSERT_OBJECT_TEST.records[0]);
 			exp_obj.__updatedtime__ = TIMESTAMP;
 			exp_obj.__createdtime__ = TIMESTAMP;
 			exp_obj.height = null;
-			let expected_result = test_utils.assignObjectToMap({
+			let expected_result = testUtils.assignObjectToMap({
 				8: exp_obj,
 			});
 
 			let search_obj = new SearchByHashObject('dev', 'dog', [8], ALL_FETCH_ATTRIBUTES);
-			let results = await test_utils.assertErrorAsync(lmdb_get_data_by_hash, [search_obj], undefined);
+			let results = await testUtils.assertErrorAsync(lmdb_get_data_by_hash, [search_obj], undefined);
 
 			assert.deepStrictEqual(results, expected_result);
 		});
 
 		it('test finding 1 row some attributes', async () => {
-			let expected_result = test_utils.assignObjectToMap({
+			let expected_result = testUtils.assignObjectToMap({
 				8: { name: 'Harper' },
 			});
 
 			let search_obj = new SearchByHashObject('dev', 'dog', [8], ['name']);
-			let results = await test_utils.assertErrorAsync(lmdb_get_data_by_hash, [search_obj], undefined);
+			let results = await testUtils.assertErrorAsync(lmdb_get_data_by_hash, [search_obj], undefined);
 
 			assert.deepStrictEqual(results, expected_result);
 		});
 
 		it('test finding multiple rows row, some attributes', async () => {
-			let expected_result = test_utils.assignObjectToMap({
+			let expected_result = testUtils.assignObjectToMap({
 				8: { id: 8, height: null },
 				10: { id: 10, height: 145 },
 			});
 
 			let search_obj = new SearchByHashObject('dev', 'dog', [10, 8], ['id', 'height']);
-			let results = await test_utils.assertErrorAsync(lmdb_get_data_by_hash, [search_obj], undefined);
+			let results = await testUtils.assertErrorAsync(lmdb_get_data_by_hash, [search_obj], undefined);
 
 			assert.deepStrictEqual(results, expected_result);
 		});

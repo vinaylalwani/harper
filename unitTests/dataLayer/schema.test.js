@@ -1,6 +1,6 @@
 'use strict';
-const test_util = require('../test_utils');
-test_util.preTestPrep();
+const testUtils = require('../testUtils.js');
+testUtils.preTestPrep();
 
 // I temporarily change HDB_ROOT to the unit test folder for testing schema and table create/delete functions.
 // Afterwards root is set back to original value and temp test folder is deleted.
@@ -68,8 +68,8 @@ let global_schema_original = cloneDeep(global.hdb_schema);
  * Cleans up any leftover structure built by buildSchemaTableStruc.
  */
 function deleteSchemaTableStruc() {
-	test_util.cleanUpDirectories(`${HDB_ROOT_TEST}/schema`);
-	test_util.cleanUpDirectories(TRASH_PATH_TEST);
+	testUtils.cleanUpDirectories(`${HDB_ROOT_TEST}/schema`);
+	testUtils.cleanUpDirectories(TRASH_PATH_TEST);
 }
 
 /**
@@ -101,8 +101,8 @@ describe.skip('Test schema module', function () {
 	after(function () {
 		schema = rewire('#js/dataLayer/schema');
 		sinon.restore();
-		test_util.cleanUpDirectories(`${HDB_ROOT_TEST}/schema`);
-		test_util.cleanUpDirectories(TRASH_PATH_TEST);
+		testUtils.cleanUpDirectories(`${HDB_ROOT_TEST}/schema`);
+		testUtils.cleanUpDirectories(TRASH_PATH_TEST);
 		deleteSchemaTableStruc();
 		env.setProperty('HDB_ROOT', HDB_ROOT_ORIGINAL);
 		global.hdb_schema = global_schema_original;
@@ -398,7 +398,7 @@ describe.skip('Test schema module', function () {
 			global.hdb_schema = GLOBAL_SCHEMA_FAKE;
 			let error_msg = 'We have an error on the bridge';
 			bridge_drop_schema_stub.throws(new Error(error_msg));
-			let test_err_result = await test_util.testError(schema.dropSchema(DROP_SCHEMA_OBJECT_TEST), error_msg);
+			let test_err_result = await testUtils.testError(schema.dropSchema(DROP_SCHEMA_OBJECT_TEST), error_msg);
 
 			expect(test_err_result).to.be.true;
 		});
@@ -472,7 +472,7 @@ describe.skip('Test schema module', function () {
 		it('Test that an error from bridge method drop table is caught and logged', async () => {
 			let error_msg = 'Error dropping table';
 			bridge_drop_table_stub.throws(new Error(error_msg));
-			let test_err_result = await test_util.testError(schema.dropTable(DROP_TABLE_OBJECT_TEST), error_msg);
+			let test_err_result = await testUtils.testError(schema.dropTable(DROP_TABLE_OBJECT_TEST), error_msg);
 
 			expect(test_err_result).to.be.true;
 		});
@@ -480,8 +480,8 @@ describe.skip('Test schema module', function () {
 		it('Test table not found error thrown', async () => {
 			schema_describe_rw();
 			schema_val_stub.resolves('Table does not exist');
-			const expected_err = test_util.generateHDBError('Table does not exist', 404);
-			await test_util.assertErrorAsync(
+			const expected_err = testUtils.generateHDBError('Table does not exist', 404);
+			await testUtils.assertErrorAsync(
 				schema.dropTable,
 				[{ operation: 'drop_table', schema: 'dog', table: 'cat' }],
 				expected_err
@@ -578,17 +578,17 @@ describe.skip('Test schema module', function () {
 			bridge_drop_attr_stub.resolves();
 			global.hdb_schema = GLOBAL_SCHEMA_FAKE;
 			global.hdb_schema.dogsrule.catsdrool.hash_attribute = 'notid';
-			let test_obj = test_util.deepClone(DROP_ATTR_OBJECT_TEST);
+			let test_obj = testUtils.deepClone(DROP_ATTR_OBJECT_TEST);
 			test_obj.attribute = '__updatedtime__';
-			const expected_err = test_util.generateHDBError('cannot drop internal timestamp attribute: __updatedtime__', 400);
-			await test_util.assertErrorAsync(schema.dropAttribute, [test_obj], expected_err);
+			const expected_err = testUtils.generateHDBError('cannot drop internal timestamp attribute: __updatedtime__', 400);
+			await testUtils.assertErrorAsync(schema.dropAttribute, [test_obj], expected_err);
 		});
 
 		it('Test table not found error thrown', async () => {
 			schema_describe_rw();
 			schema_val_stub.resolves('Table does not exist');
-			const expected_err = test_util.generateHDBError('Table does not exist', 404);
-			await test_util.assertErrorAsync(schema.dropAttribute, [DROP_ATTR_OBJECT_TEST], expected_err);
+			const expected_err = testUtils.generateHDBError('Table does not exist', 404);
+			await testUtils.assertErrorAsync(schema.dropAttribute, [DROP_ATTR_OBJECT_TEST], expected_err);
 			schema_val_stub.restore();
 		});
 	});

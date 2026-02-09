@@ -1,4 +1,3 @@
-require('../../test_utils');
 const chai = require('chai');
 const expect = chai.expect;
 const { diffResourceUsage, calculateCPUUtilization } = require('#src/resources/analytics/write');

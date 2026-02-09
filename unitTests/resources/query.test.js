@@ -1,6 +1,6 @@
-require('../test_utils');
+require('../testUtils');
 const assert = require('assert');
-const { setupTestDBPath } = require('../test_utils');
+const { setupTestDBPath } = require('../testUtils');
 const { parseQuery } = require('#src/resources/search');
 const { table } = require('#src/resources/databases');
 const { transaction } = require('#src/resources/transaction');

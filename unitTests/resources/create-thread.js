@@ -1,6 +1,6 @@
-require('../test_utils');
+require('../testUtils');
 const { parentPort } = require('worker_threads');
-const { setupTestDBPath } = require('../test_utils');
+const { setupTestDBPath } = require('../testUtils');
 const { table } = require('#src/resources/databases');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
 // might want to enable an iteration with NATS being assigned as a source

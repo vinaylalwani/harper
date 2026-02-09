@@ -1,4 +1,3 @@
-require('../test_utils');
 const assert = require('assert');
 const { parseQuery } = require('#src/resources/search');
 const { RequestTarget } = require('#src/resources/RequestTarget');

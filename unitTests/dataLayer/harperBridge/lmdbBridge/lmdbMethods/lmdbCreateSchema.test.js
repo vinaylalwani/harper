@@ -1,12 +1,12 @@
 'use strict';
 
-const test_utils = require('../../../../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../../../../testUtils');
+testUtils.preTestPrep();
 const path = require('path');
 
 const LMDB_TEST_FOLDER_NAME = 'system';
 const SCHEMA_NAME = 'schema';
-const BASE_PATH = test_utils.setupTestDBPath();
+const BASE_PATH = testUtils.setupTestDBPath();
 const BASE_SCHEMA_PATH = path.join(BASE_PATH);
 const BASE_TEST_PATH = path.join(BASE_SCHEMA_PATH, LMDB_TEST_FOLDER_NAME);
 const TEST_ENVIRONMENT_NAME = 'hdb_schema';
@@ -36,7 +36,7 @@ describe('test lmdbCreateSchema module', () => {
 		global.hdb_schema = { system: systemSchema };
 		date_stub = sandbox.stub(Date, 'now').returns(TIMESTAMP);
 		global.lmdb_map = undefined;
-		await fs.remove(test_utils.setupTestDBPath());
+		await fs.remove(testUtils.setupTestDBPath());
 		await fs.mkdirp(BASE_TEST_PATH);
 
 		env = await environment_utility.createEnvironment(BASE_TEST_PATH, TEST_ENVIRONMENT_NAME);
@@ -49,22 +49,22 @@ describe('test lmdbCreateSchema module', () => {
 		delete global.hdb_schema;
 
 		global.lmdb_map = undefined;
-		await fs.remove(test_utils.setupTestDBPath());
+		await fs.remove(testUtils.setupTestDBPath());
 	});
 
 	it('Test that a new schema is added to the system datastore', async () => {
-		let expected_search_result = test_utils.assignObjecttoNullObject({ name: 'horses', createddate: TIMESTAMP });
+		let expected_search_result = testUtils.assignObjecttoNullObject({ name: 'horses', createddate: TIMESTAMP });
 
-		await test_utils.assertErrorAsync(lmdb_create_schema, [CREATE_SCHEMA_OBJ_TEST_A], undefined);
+		await testUtils.assertErrorAsync(lmdb_create_schema, [CREATE_SCHEMA_OBJ_TEST_A], undefined);
 
-		let result = test_utils.assertErrorSync(
+		let result = testUtils.assertErrorSync(
 			search_utility.searchByHash,
 			[env, HASH_ATTRIBUTE_NAME, ['name', 'createddate'], CREATE_SCHEMA_OBJ_TEST_A.schema],
 			undefined
 		);
 		assert.deepStrictEqual(result, expected_search_result);
 
-		await test_utils.assertErrorAsync(
+		await testUtils.assertErrorAsync(
 			fs.access,
 			[path.join(BASE_SCHEMA_PATH, CREATE_SCHEMA_OBJ_TEST_A.schema)],
 			undefined
@@ -76,7 +76,7 @@ describe('test lmdbCreateSchema module', () => {
 		let rw_create_records = lmdb_create_schema.__set__('lmdbCreateRecords', async () => {
 			throw error_msg;
 		});
-		await test_utils.assertErrorAsync(lmdb_create_schema, [CREATE_SCHEMA_OBJ_TEST_A], error_msg);
+		await testUtils.assertErrorAsync(lmdb_create_schema, [CREATE_SCHEMA_OBJ_TEST_A], error_msg);
 		rw_create_records();
 	});
 });

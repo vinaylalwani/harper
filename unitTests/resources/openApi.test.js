@@ -1,5 +1,4 @@
 const { expect } = require('chai');
-require('../test_utils');
 const { generateJsonApi } = require('#src/resources/openApi');
 
 describe('test openApi module', () => {

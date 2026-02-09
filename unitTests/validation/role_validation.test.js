@@ -1,7 +1,7 @@
 'use strict';
 
-const test_utils = require('../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../testUtils.js');
+testUtils.preTestPrep();
 
 const chai = require('chai');
 const { expect } = chai;
@@ -31,7 +31,7 @@ const TEST_SCHEMA_VALS = {
 
 function setGlobalTestSchema() {
 	Object.keys(TEST_SCHEMA_VALS.dev).forEach((table) => {
-		test_utils.setGlobalSchema(TEST_HASH, TEST_SCHEMA, table, TEST_SCHEMA_VALS[TEST_SCHEMA][table]);
+		testUtils.setGlobalSchema(TEST_HASH, TEST_SCHEMA, table, TEST_SCHEMA_VALS[TEST_SCHEMA][table]);
 	});
 }
 

@@ -1,7 +1,7 @@
 'use strict';
 
-const test_utils = require('../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../testUtils.js');
+testUtils.preTestPrep();
 
 let DeleteResponseObject = require('#js/dataLayer/DataLayerObjects').DeleteResponseObject;
 const rewire = require('rewire');
@@ -71,16 +71,16 @@ describe('Tests for delete.js', () => {
 		});
 
 		it('Test that validation error returned', async () => {
-			let delete_obj = test_utils.deepClone(DELETE_BEFORE_OBJ);
+			let delete_obj = testUtils.deepClone(DELETE_BEFORE_OBJ);
 			delete delete_obj.date;
-			let expected_error = test_utils.generateHDBError("'date' is required", 400);
-			await test_utils.assertErrorAsync(_delete.deleteFilesBefore, [delete_obj], expected_error);
+			let expected_error = testUtils.generateHDBError("'date' is required", 400);
+			await testUtils.assertErrorAsync(_delete.deleteFilesBefore, [delete_obj], expected_error);
 		});
 
 		it('Test that Invalid date format error returned', async () => {
-			let delete_obj = test_utils.deepClone(DELETE_BEFORE_OBJ);
+			let delete_obj = testUtils.deepClone(DELETE_BEFORE_OBJ);
 			delete_obj.date = '03-09-2023';
-			let test_err_result = await test_utils.testError(
+			let test_err_result = await testUtils.testError(
 				_delete.deleteFilesBefore(delete_obj),
 				"'date' must be in ISO 8601 date format"
 			);
@@ -107,32 +107,32 @@ describe('Tests for delete.js', () => {
 					[DELETE_RECORDS_TEST.table]: {},
 				},
 			};
-			let delete_obj_clone = test_utils.deepClone(DELETE_BEFORE_OBJ);
-			let expected_error = test_utils.generateHDBError("database 'imnotaschema' does not exist", 404);
+			let delete_obj_clone = testUtils.deepClone(DELETE_BEFORE_OBJ);
+			let expected_error = testUtils.generateHDBError("database 'imnotaschema' does not exist", 404);
 			delete_obj_clone.schema = 'imnotaschema';
-			await test_utils.assertErrorAsync(_delete.deleteFilesBefore, [delete_obj_clone], expected_error);
+			await testUtils.assertErrorAsync(_delete.deleteFilesBefore, [delete_obj_clone], expected_error);
 		});
 	});
 
 	context('test deleteAuditLogsBefore function', () => {
 		it('Test that validation error returned', async () => {
-			let delete_obj = test_utils.deepClone(DELETE_TXN_BEFORE_OBJ);
+			let delete_obj = testUtils.deepClone(DELETE_TXN_BEFORE_OBJ);
 			delete delete_obj.timestamp;
-			let expected_error = test_utils.generateHDBError("'timestamp' is required", 400);
-			await test_utils.assertErrorAsync(_delete.deleteAuditLogsBefore, [delete_obj], expected_error);
+			let expected_error = testUtils.generateHDBError("'timestamp' is required", 400);
+			await testUtils.assertErrorAsync(_delete.deleteAuditLogsBefore, [delete_obj], expected_error);
 		});
 
 		it('Test that date string is invalid', async () => {
-			let delete_obj = test_utils.deepClone(DELETE_TXN_BEFORE_OBJ);
+			let delete_obj = testUtils.deepClone(DELETE_TXN_BEFORE_OBJ);
 			delete_obj.timestamp = '03-09-2023';
-			let expected_error = test_utils.generateHDBError("'timestamp' is invalid", 400);
-			await test_utils.assertErrorAsync(_delete.deleteAuditLogsBefore, [delete_obj], expected_error);
+			let expected_error = testUtils.generateHDBError("'timestamp' is invalid", 400);
+			await testUtils.assertErrorAsync(_delete.deleteAuditLogsBefore, [delete_obj], expected_error);
 		});
 
 		it('Test that epoch value is valid', async () => {
-			let delete_obj = test_utils.deepClone(DELETE_TXN_BEFORE_OBJ);
+			let delete_obj = testUtils.deepClone(DELETE_TXN_BEFORE_OBJ);
 			delete_obj.timestamp = Date.now();
-			let test_err_result = await test_utils.testError(_delete.deleteAuditLogsBefore(delete_obj), 'Invalid timestamp.');
+			let test_err_result = await testUtils.testError(_delete.deleteAuditLogsBefore(delete_obj), 'Invalid timestamp.');
 
 			expect(test_err_result).to.be.false;
 		});
@@ -145,7 +145,7 @@ describe('Tests for delete.js', () => {
 					[DELETE_BEFORE_OBJ.table]: {},
 				},
 			};
-			let delete_obj = test_utils.deepClone(DELETE_TXN_BEFORE_OBJ);
+			let delete_obj = testUtils.deepClone(DELETE_TXN_BEFORE_OBJ);
 			await _delete.deleteAuditLogsBefore(delete_obj);
 
 			expect(bridge_delete_txns_stub).to.have.been.calledWith(DELETE_TXN_BEFORE_OBJ);
@@ -163,9 +163,9 @@ describe('Tests for delete.js', () => {
 		});
 
 		it('Test that validation error is thrown from bad delete object', async () => {
-			let delete_obj = test_utils.deepClone(DELETE_OBJ_TEST);
+			let delete_obj = testUtils.deepClone(DELETE_OBJ_TEST);
 			delete_obj.hash_values = 'id';
-			let test_err_result = await test_utils.testError(
+			let test_err_result = await testUtils.testError(
 				_delete.deleteRecord(delete_obj),
 				"'hash_values' must be an array"
 			);
@@ -194,7 +194,7 @@ describe('Tests for delete.js', () => {
 		it('Test that error from bridge is caught and thrown', async () => {
 			let error_msg = 'We have an error on the bridge';
 			bridge_delete_records_stub.throws(new Error(error_msg));
-			let test_err_result = await test_utils.testError(_delete.deleteRecord(DELETE_OBJ_TEST), error_msg);
+			let test_err_result = await testUtils.testError(_delete.deleteRecord(DELETE_OBJ_TEST), error_msg);
 
 			expect(test_err_result).to.be.true;
 		});
@@ -206,10 +206,10 @@ describe('Tests for delete.js', () => {
 					[DELETE_RECORDS_TEST.table]: {},
 				},
 			};
-			let delete_obj_clone = test_utils.deepClone(DELETE_RECORDS_TEST);
-			let expected_error = test_utils.generateHDBError("database 'imnotaschema' does not exist", 404);
+			let delete_obj_clone = testUtils.deepClone(DELETE_RECORDS_TEST);
+			let expected_error = testUtils.generateHDBError("database 'imnotaschema' does not exist", 404);
 			delete_obj_clone.schema = 'imnotaschema';
-			await test_utils.assertErrorAsync(_delete.deleteRecord, [delete_obj_clone], expected_error);
+			await testUtils.assertErrorAsync(_delete.deleteRecord, [delete_obj_clone], expected_error);
 		});
 	});
 });

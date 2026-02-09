@@ -1,7 +1,7 @@
 'use strict';
 
-const test_util = require('../../test_utils');
-test_util.preTestPrep();
+const testUtils = require('../../testUtils.js');
+testUtils.preTestPrep();
 
 const assert = require('assert');
 const rewire = require('rewire');
@@ -63,7 +63,7 @@ describe('Test jobs.js', () => {
 		});
 
 		it('nominal case, call handleGetJobsByStartDate if end_datetime', async function () {
-			let job_search_res = test_util.deepClone(JOB_SEARCH_RESULT);
+			let job_search_res = testUtils.deepClone(JOB_SEARCH_RESULT);
 			delete job_search_res.start_datetime;
 			job_search_res.end_datetime = 1527638663991;
 
@@ -131,7 +131,7 @@ describe('Test jobs.js', () => {
 		});
 
 		it('nominal case, call handleGetJob if end_datetime', async function () {
-			let job_search_res = test_util.deepClone(JOB_SEARCH_RESULT);
+			let job_search_res = testUtils.deepClone(JOB_SEARCH_RESULT);
 			delete job_search_res.start_datetime;
 			job_search_res.end_datetime = 1527638663991;
 
@@ -204,7 +204,7 @@ describe('Test jobs.js', () => {
 
 		it(
 			'nominal case, add a job to the schema.',
-			test_util.mochaAsyncWrapper(async function () {
+			testUtils.mochaAsyncWrapper(async function () {
 				// we are not testing insert or search so stub them.
 				insert_stub = sandbox.stub().returns(INSERT_RESULT);
 				search_stub = sandbox.stub().returns([]);
@@ -221,7 +221,7 @@ describe('Test jobs.js', () => {
 
 		it(
 			'test calling addJob, invalid job type, expect false.',
-			test_util.mochaAsyncWrapper(async function () {
+			testUtils.mochaAsyncWrapper(async function () {
 				insert_stub = sandbox.stub().returns(INSERT_RESULT);
 				search_stub = sandbox.stub().returns([]);
 				jobs.__set__('pSearchByValue', search_stub);
@@ -237,7 +237,7 @@ describe('Test jobs.js', () => {
 
 		it(
 			'test calling addJob with first search id collision, expect true ',
-			test_util.mochaAsyncWrapper(async function () {
+			testUtils.mochaAsyncWrapper(async function () {
 				insert_stub = sandbox.stub().returns(INSERT_RESULT);
 				search_stub = sandbox.stub().onFirstCall().returns({ id: '12345' }).onSecondCall().returns([]);
 
@@ -254,7 +254,7 @@ describe('Test jobs.js', () => {
 
 		it(
 			'test calling addJob with null job.',
-			test_util.mochaAsyncWrapper(async function () {
+			testUtils.mochaAsyncWrapper(async function () {
 				let test_job = null;
 
 				let add_result = await addJob(test_job);
@@ -269,8 +269,8 @@ describe('Test jobs.js', () => {
 			};
 			const validation_err_test = new Error('validation errors');
 			url_obj_stub.returns(validation_err_test);
-			const expected_err = test_util.generateHDBError(validation_err_test.message, 400);
-			await test_util.assertErrorAsync(addJob, [test_job], expected_err);
+			const expected_err = testUtils.generateHDBError(validation_err_test.message, 400);
+			await testUtils.assertErrorAsync(addJob, [test_job], expected_err);
 		});
 
 		it('test validation msg from CSV data load is handled as expected', async () => {
@@ -280,8 +280,8 @@ describe('Test jobs.js', () => {
 			};
 			const validation_err_test = new Error('validation errors');
 			data_obj_stub.returns(validation_err_test);
-			const expected_err = test_util.generateHDBError(validation_err_test.message, 400);
-			await test_util.assertErrorAsync(addJob, [test_job], expected_err);
+			const expected_err = testUtils.generateHDBError(validation_err_test.message, 400);
+			await testUtils.assertErrorAsync(addJob, [test_job], expected_err);
 		});
 
 		it('test validation msg from import S3 file is handled as expected', async () => {
@@ -291,8 +291,8 @@ describe('Test jobs.js', () => {
 			};
 			const validation_err_test = new Error('validation errors');
 			s3_file_obj_stub.returns(validation_err_test);
-			const expected_err = test_util.generateHDBError(validation_err_test.message, 400);
-			await test_util.assertErrorAsync(addJob, [test_job], expected_err);
+			const expected_err = testUtils.generateHDBError(validation_err_test.message, 400);
+			await testUtils.assertErrorAsync(addJob, [test_job], expected_err);
 		});
 
 		it('test error result is returned', async () => {
@@ -377,7 +377,7 @@ describe('Test jobs.js', () => {
 
 		it(
 			'nominal case, search in date ranges.',
-			test_util.mochaAsyncWrapper(async function () {
+			testUtils.mochaAsyncWrapper(async function () {
 				// we are not testing sql search so stub it.
 				sql_search_stub = sandbox.stub().returns([JOB_SEARCH_RESULT]);
 				jobs.__set__('pSqlEvaluate', sql_search_stub);
@@ -423,7 +423,7 @@ describe('Test jobs.js', () => {
 
 		it(
 			'Search valid input, no results expected.',
-			test_util.mochaAsyncWrapper(async function () {
+			testUtils.mochaAsyncWrapper(async function () {
 				sql_search_stub = sandbox.stub().returns([]);
 				jobs.__set__('pSqlEvaluate', sql_search_stub);
 				let test_job = {};
@@ -444,7 +444,7 @@ describe('Test jobs.js', () => {
 			test_job.hdb_user = 'test user';
 			test_job.from_date = '2017-02-01';
 			test_job.to_date = '2018-07-07';
-			await test_util.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				getJobsInDateRange,
 				[test_job],
 				new Error(`there was an error searching for jobs.  Please check the log for details.`)
@@ -465,7 +465,7 @@ describe('Test jobs.js', () => {
 
 		it(
 			'nominal case, find 1 job by ID.',
-			test_util.mochaAsyncWrapper(async function () {
+			testUtils.mochaAsyncWrapper(async function () {
 				// we are not testing search so stub it.
 				search_stub = sandbox.stub().returns([JOB_SEARCH_RESULT]);
 				jobs.__set__('pSearchSearchByHash', search_stub);
@@ -482,7 +482,7 @@ describe('Test jobs.js', () => {
 
 		it(
 			'Search with null id, expect error',
-			test_util.mochaAsyncWrapper(async function () {
+			testUtils.mochaAsyncWrapper(async function () {
 				search_stub = sandbox.stub().returns([JOB_SEARCH_RESULT]);
 				jobs.__set__('pSearchSearchByHash', search_stub);
 
@@ -521,7 +521,7 @@ describe('Test jobs.js', () => {
 
 		it(
 			'Nominal case of updateJob',
-			test_util.mochaAsyncWrapper(async function () {
+			testUtils.mochaAsyncWrapper(async function () {
 				update_stub = sandbox.stub().returns(UPDATE_RESULT);
 				jobs.__set__('pInsertUpdate', update_stub);
 				//
@@ -536,7 +536,7 @@ describe('Test jobs.js', () => {
 		);
 		it(
 			'Nominal case of updateJob, check end time updated',
-			test_util.mochaAsyncWrapper(async function () {
+			testUtils.mochaAsyncWrapper(async function () {
 				update_stub = sandbox.stub().returns(UPDATE_RESULT);
 				jobs.__set__('pInsertUpdate', update_stub);
 				//

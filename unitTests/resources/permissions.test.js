@@ -1,6 +1,6 @@
-require('../test_utils');
+require('../testUtils');
 const assert = require('assert');
-const { setupTestDBPath } = require('../test_utils');
+const { setupTestDBPath } = require('../testUtils');
 const { table } = require('#src/resources/databases');
 const { RequestTarget } = require('#src/resources/RequestTarget');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');

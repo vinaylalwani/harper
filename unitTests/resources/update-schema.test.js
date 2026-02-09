@@ -1,4 +1,4 @@
-const { setupTestDBPath } = require('../test_utils');
+const { setupTestDBPath } = require('../testUtils');
 const { loadGQLSchema } = require('#src/resources/graphql');
 const assert = require('assert');
 const test_data = require('../testData');

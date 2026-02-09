@@ -1,12 +1,12 @@
 'use strict';
 
-const test_utils = require('../../../../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../../../../testUtils');
+testUtils.preTestPrep();
 const path = require('path');
 const SYSTEM_FOLDER_NAME = 'system';
 const SCHEMA_NAME = 'schema';
 const TRANSACTIONS_NAME = 'transactions';
-const BASE_PATH = test_utils.setupTestDBPath();
+const BASE_PATH = testUtils.setupTestDBPath();
 const BASE_TXN_PATH = path.join(BASE_PATH, TRANSACTIONS_NAME);
 const BASE_SCHEMA_PATH = path.join(BASE_PATH, SCHEMA_NAME);
 const SYSTEM_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, SYSTEM_FOLDER_NAME);
@@ -168,7 +168,7 @@ describe('Test lmdbUpdateRecords module', () => {
 			};
 
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.setupTestDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 
 			hdb_schema_env = await environment_utility.createEnvironment(SYSTEM_SCHEMA_PATH, systemSchema.hdb_schema.name);
@@ -191,11 +191,11 @@ describe('Test lmdbUpdateRecords module', () => {
 			insert_m_time = m_time;
 			m_time_stub = sandbox.stub(lmdb_common, 'getNextMonotonicTime').returns(m_time);
 
-			let insert_obj = test_utils.deepClone(INSERT_OBJECT_TEST);
+			let insert_obj = testUtils.deepClone(INSERT_OBJECT_TEST);
 			await lmdb_create_records(insert_obj);
 
 			let insert_txn_obj = new LMDBInsertTransactionObject(insert_obj.records, undefined, m_time, INSERT_HASHES);
-			expected_timestamp_txn = test_utils.assignObjecttoNullObject({
+			expected_timestamp_txn = testUtils.assignObjecttoNullObject({
 				[m_time]: [insert_txn_obj],
 			});
 
@@ -233,7 +233,7 @@ describe('Test lmdbUpdateRecords module', () => {
 
 			global.lmdb_map = undefined;
 			delete global.hdb_schema;
-			await fs.remove(test_utils.setupTestDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 		});
 
 		it('Test updating 1 row', async () => {
@@ -274,7 +274,7 @@ describe('Test lmdbUpdateRecords module', () => {
 			for (let [key, value] of Object.entries(expected_timestamp_txn)) {
 				copy_expected_timestamp_txn[key] = [{ ...value[0] }];
 			}
-			let copy_expected_hashes_txn = test_utils.assignObjecttoNullObject(test_utils.deepClone(expected_hashes_txn));
+			let copy_expected_hashes_txn = testUtils.assignObjecttoNullObject(testUtils.deepClone(expected_hashes_txn));
 			await verify_txn(
 				TXN_SCHEMA_PATH,
 				INSERT_OBJECT_TEST.table,
@@ -282,15 +282,15 @@ describe('Test lmdbUpdateRecords module', () => {
 				copy_expected_hashes_txn
 			);
 
-			let expected_search = test_utils.assignObjecttoNullObject(update_obj.records[0]);
+			let expected_search = testUtils.assignObjecttoNullObject(update_obj.records[0]);
 			expected_search.__createdtime__ = m_time - 1;
 			expected_search.__updatedtime__ = m_time;
 			expected_search.height = null;
 
-			let results = await test_utils.assertErrorAsync(lmdb_update_records, [update_obj], undefined);
+			let results = await testUtils.assertErrorAsync(lmdb_update_records, [update_obj], undefined);
 			assert.deepStrictEqual(results, expected_return_result);
 
-			let dog_env = await test_utils.assertErrorAsync(
+			let dog_env = await testUtils.assertErrorAsync(
 				environment_utility.openEnvironment,
 				[path.join(BASE_SCHEMA_PATH, INSERT_OBJECT_TEST.schema), INSERT_OBJECT_TEST.table],
 				undefined
@@ -298,7 +298,7 @@ describe('Test lmdbUpdateRecords module', () => {
 			let transaction = dog_env.useReadTransaction();
 			transaction.database = dog_env;
 
-			let record = test_utils.assertErrorSync(
+			let record = testUtils.assertErrorSync(
 				search_utility.searchByHash,
 				[transaction, HASH_ATTRIBUTE_NAME, ALL_FETCH_ATTRIBUTES, 10],
 				undefined
@@ -306,7 +306,7 @@ describe('Test lmdbUpdateRecords module', () => {
 			assert.deepStrictEqual(record, expected_search);
 
 			//make sure the height index does not have an entry for id 10
-			let height_results = test_utils.assertErrorSync(search_utility.iterateDBI, [transaction, 'height'], undefined);
+			let height_results = testUtils.assertErrorSync(search_utility.iterateDBI, [transaction, 'height'], undefined);
 			Object.keys(height_results).forEach((result) => {
 				assert(result.indexOf(10) < 0);
 			});
@@ -377,7 +377,7 @@ describe('Test lmdbUpdateRecords module', () => {
 			for (let [key, value] of Object.entries(expected_timestamp_txn)) {
 				copy_expected_timestamp_txn[key] = [{ ...value[0] }];
 			}
-			let copy_expected_hashes_txn = test_utils.assignObjecttoNullObject(test_utils.deepClone(expected_hashes_txn));
+			let copy_expected_hashes_txn = testUtils.assignObjecttoNullObject(testUtils.deepClone(expected_hashes_txn));
 			await verify_txn(
 				TXN_SCHEMA_PATH,
 				INSERT_OBJECT_TEST.table,
@@ -385,15 +385,15 @@ describe('Test lmdbUpdateRecords module', () => {
 				copy_expected_hashes_txn
 			);
 
-			let expected_search = test_utils.assignObjecttoNullObject(update_obj.records[0]);
+			let expected_search = testUtils.assignObjecttoNullObject(update_obj.records[0]);
 			expected_search.__createdtime__ = TIMESTAMP;
 			expected_search.__updatedtime__ = TIMESTAMP + 2;
 			expected_search.height = null;
 
-			let results = await test_utils.assertErrorAsync(lmdb_update_records, [update_obj], undefined);
+			let results = await testUtils.assertErrorAsync(lmdb_update_records, [update_obj], undefined);
 			assert.deepStrictEqual(results, expected_return_result);
 
-			let dog_env = await test_utils.assertErrorAsync(
+			let dog_env = await testUtils.assertErrorAsync(
 				environment_utility.openEnvironment,
 				[path.join(BASE_SCHEMA_PATH, INSERT_OBJECT_TEST.schema), INSERT_OBJECT_TEST.table],
 				undefined
@@ -401,7 +401,7 @@ describe('Test lmdbUpdateRecords module', () => {
 			let transaction = dog_env.useReadTransaction();
 			transaction.database = dog_env;
 
-			let record = test_utils.assertErrorSync(
+			let record = testUtils.assertErrorSync(
 				search_utility.searchByHash,
 				[transaction, HASH_ATTRIBUTE_NAME, ALL_FETCH_ATTRIBUTES, 10],
 				undefined
@@ -409,7 +409,7 @@ describe('Test lmdbUpdateRecords module', () => {
 			assert.deepStrictEqual(record, expected_search);
 
 			//make sure the height index does not have an entry for id 10
-			let height_results = test_utils.assertErrorSync(search_utility.iterateDBI, [transaction, 'height'], undefined);
+			let height_results = testUtils.assertErrorSync(search_utility.iterateDBI, [transaction, 'height'], undefined);
 			Object.keys(height_results).forEach((result) => {
 				assert(result.indexOf(10) < 0);
 			});
@@ -463,7 +463,7 @@ describe('Test lmdbUpdateRecords module', () => {
 			for (let [key, value] of Object.entries(expected_timestamp_txn)) {
 				copy_expected_timestamp_txn[key] = [{ ...value[0] }];
 			}
-			let copy_expected_hashes_txn = test_utils.assignObjecttoNullObject(test_utils.deepClone(expected_hashes_txn));
+			let copy_expected_hashes_txn = testUtils.assignObjecttoNullObject(testUtils.deepClone(expected_hashes_txn));
 			await verify_txn(
 				TXN_SCHEMA_PATH,
 				INSERT_OBJECT_TEST.table,
@@ -471,20 +471,20 @@ describe('Test lmdbUpdateRecords module', () => {
 				copy_expected_hashes_txn
 			);
 
-			let update1 = test_utils.deepClone(update_obj);
-			await test_utils.assertErrorAsync(lmdb_update_records, [update1], no_hash_error);
+			let update1 = testUtils.deepClone(update_obj);
+			await testUtils.assertErrorAsync(lmdb_update_records, [update1], no_hash_error);
 
-			let update2 = test_utils.deepClone(update_obj);
+			let update2 = testUtils.deepClone(update_obj);
 			update2.id = null;
-			await test_utils.assertErrorAsync(lmdb_update_records, [update2], no_hash_error);
+			await testUtils.assertErrorAsync(lmdb_update_records, [update2], no_hash_error);
 
-			let update3 = test_utils.deepClone(update_obj);
+			let update3 = testUtils.deepClone(update_obj);
 			update3.id = undefined;
-			await test_utils.assertErrorAsync(lmdb_update_records, [update3], no_hash_error);
+			await testUtils.assertErrorAsync(lmdb_update_records, [update3], no_hash_error);
 
-			let update4 = test_utils.deepClone(update_obj);
+			let update4 = testUtils.deepClone(update_obj);
 			update4.id = '';
-			await test_utils.assertErrorAsync(lmdb_update_records, [update4], no_hash_error);
+			await testUtils.assertErrorAsync(lmdb_update_records, [update4], no_hash_error);
 
 			//verify inserted txn
 			await verify_txn(
@@ -528,7 +528,7 @@ describe('Test lmdbUpdateRecords module', () => {
 			for (let [key, value] of Object.entries(expected_timestamp_txn)) {
 				copy_expected_timestamp_txn[key] = [{ ...value[0] }];
 			}
-			let copy_expected_hashes_txn = test_utils.assignObjecttoNullObject(test_utils.deepClone(expected_hashes_txn));
+			let copy_expected_hashes_txn = testUtils.assignObjecttoNullObject(testUtils.deepClone(expected_hashes_txn));
 			await verify_txn(
 				TXN_SCHEMA_PATH,
 				INSERT_OBJECT_TEST.table,
@@ -536,7 +536,7 @@ describe('Test lmdbUpdateRecords module', () => {
 				copy_expected_hashes_txn
 			);
 
-			let results = await test_utils.assertErrorAsync(lmdb_update_records, [update_obj], undefined);
+			let results = await testUtils.assertErrorAsync(lmdb_update_records, [update_obj], undefined);
 			assert.deepStrictEqual(results.written_hashes, expected_result.written_hashes);
 			assert.deepStrictEqual(results.skipped_hashes, expected_result.skipped_hashes);
 		});

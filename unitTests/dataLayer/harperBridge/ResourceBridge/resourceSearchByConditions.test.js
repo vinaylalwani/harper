@@ -1,12 +1,12 @@
 'use strict';
 
-const test_utils = require('../../../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../../../testUtils');
+testUtils.preTestPrep();
 const path = require('path');
 
 const SYSTEM_FOLDER_NAME = 'system';
 const SCHEMA_NAME = 'schema';
-const BASE_PATH = test_utils.setupTestDBPath();
+const BASE_PATH = testUtils.setupTestDBPath();
 const BASE_SCHEMA_PATH = path.join(BASE_PATH, SCHEMA_NAME);
 const SYSTEM_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, SYSTEM_FOLDER_NAME);
 const DEV_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, 'dev');
@@ -31,7 +31,7 @@ const TIMESTAMP = Date.now();
 
 const sandbox = sinon.createSandbox();
 function assertionsAsArray(test_func, args, error) {
-	return test_utils.assertErrorAsync(
+	return testUtils.assertErrorAsync(
 		async () => {
 			let results = await test_func.apply(this, args);
 			return Array.from(results);
@@ -56,7 +56,7 @@ describe('test lmdbSearchByConditions module', () => {
 		before(async function () {
 			this.timeout(10000);
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.setupTestDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 			await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -95,14 +95,14 @@ describe('test lmdbSearchByConditions module', () => {
 			await env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.setupTestDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 		});
 
 		it('test validation', async () => {
 			await assertionsAsArray(
 				search_by_conditions,
 				[{}],
-				test_utils.generateHDBError(
+				testUtils.generateHDBError(
 					"'schema' is required. 'table' is required. 'get_attributes' is required. 'conditions' is required",
 					400
 				)
@@ -110,22 +110,22 @@ describe('test lmdbSearchByConditions module', () => {
 			await assertionsAsArray(
 				search_by_conditions,
 				[{ schema: 'dev' }],
-				test_utils.generateHDBError("'table' is required. 'get_attributes' is required. 'conditions' is required", 400)
+				testUtils.generateHDBError("'table' is required. 'get_attributes' is required. 'conditions' is required", 400)
 			);
 			await assertionsAsArray(
 				search_by_conditions,
 				[{ schema: 'dev', table: 'test' }],
-				test_utils.generateHDBError("'get_attributes' is required. 'conditions' is required", 400)
+				testUtils.generateHDBError("'get_attributes' is required. 'conditions' is required", 400)
 			);
 			await assertionsAsArray(
 				search_by_conditions,
 				[{ schema: 'dev', table: 'test', get_attributes: ['*'] }],
-				test_utils.generateHDBError("'conditions' is required", 400)
+				testUtils.generateHDBError("'conditions' is required", 400)
 			);
 			await assertionsAsArray(
 				search_by_conditions,
 				[{ schema: 'dev', table: 'test', get_attributes: ['*'], conditions: [{}] }],
-				test_utils.generateHDBError(
+				testUtils.generateHDBError(
 					"'conditions[0].search_attribute' is required. 'conditions[0].search_type' is required. 'conditions[0].search_value' is required",
 					400
 				)
@@ -133,7 +133,7 @@ describe('test lmdbSearchByConditions module', () => {
 			await assertionsAsArray(
 				search_by_conditions,
 				[{ schema: 'dev', table: 'test', get_attributes: ['*'], conditions: [{ search_attribute: 'city' }] }],
-				test_utils.generateHDBError(
+				testUtils.generateHDBError(
 					"'conditions[0].search_type' is required. 'conditions[0].search_value' is required",
 					400
 				)
@@ -148,7 +148,7 @@ describe('test lmdbSearchByConditions module', () => {
 						conditions: [{ search_attribute: 'city', search_type: 'equals' }],
 					},
 				],
-				test_utils.generateHDBError("'conditions[0].search_value' is required", 400)
+				testUtils.generateHDBError("'conditions[0].search_value' is required", 400)
 			);
 			await assertionsAsArray(
 				search_by_conditions,
@@ -173,7 +173,7 @@ describe('test lmdbSearchByConditions module', () => {
 						conditions: [{ search_attribute: 'ci`/ty', search_type: 'equals', search_value: 'test' }],
 					},
 				],
-				test_utils.generateHDBError(
+				testUtils.generateHDBError(
 					"'schema' names cannot include backticks or forward slashes. 'table' names cannot include backticks or forward slashes. 'get_attributes[1]' names cannot include backticks or forward slashes. " +
 						"'conditions[0].search_attribute' names cannot include backticks or forward slashes",
 					400
@@ -190,7 +190,7 @@ describe('test lmdbSearchByConditions module', () => {
 						conditions: [{ search_attribute: 'city', search_type: 'dddd', search_value: 'test' }],
 					},
 				],
-				test_utils.generateHDBError(
+				testUtils.generateHDBError(
 					"'conditions[0].search_type' must be one of [equals, contains, starts_with, ends_with, greater_than, greater_than_equal, less_than, less_than_equal, between]",
 					400
 				)
@@ -232,7 +232,7 @@ describe('test lmdbSearchByConditions module', () => {
 						conditions: [{ search_attribute: 'cityz', search_type: 'equals', search_value: 'Denver' }],
 					},
 				],
-				test_utils.generateHDBError("unknown attribute 'cityz'", 400)
+				testUtils.generateHDBError("unknown attribute 'cityz'", 400)
 			);
 
 			//test operator validation
@@ -251,7 +251,7 @@ describe('test lmdbSearchByConditions module', () => {
 			await assertionsAsArray(
 				search_by_conditions,
 				[search_object],
-				test_utils.generateHDBError("'operator' must be one of [and, or]", 400)
+				testUtils.generateHDBError("'operator' must be one of [and, or]", 400)
 			);
 			search_object.operator = 'AND';
 			await assertionsAsArray(search_by_conditions, [search_object], undefined);
@@ -264,7 +264,7 @@ describe('test lmdbSearchByConditions module', () => {
 			await assertionsAsArray(
 				search_by_conditions,
 				[search_object],
-				test_utils.generateHDBError("'offset' must be a number. 'limit' must be a number", 400)
+				testUtils.generateHDBError("'offset' must be a number. 'limit' must be a number", 400)
 			);
 
 			search_object.limit = 1.1;
@@ -272,7 +272,7 @@ describe('test lmdbSearchByConditions module', () => {
 			await assertionsAsArray(
 				search_by_conditions,
 				[search_object],
-				test_utils.generateHDBError("'offset' must be an integer. 'limit' must be an integer", 400)
+				testUtils.generateHDBError("'offset' must be an integer. 'limit' must be an integer", 400)
 			);
 
 			search_object.limit = 0;
@@ -280,7 +280,7 @@ describe('test lmdbSearchByConditions module', () => {
 			await assertionsAsArray(
 				search_by_conditions,
 				[search_object],
-				test_utils.generateHDBError(
+				testUtils.generateHDBError(
 					"'offset' must be greater than or equal to 0. 'limit' must be greater than or equal to 1",
 					400
 				)

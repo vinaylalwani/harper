@@ -1,15 +1,15 @@
 'use strict';
 
-const test_utils = require('../../../../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../../../../testUtils');
+testUtils.preTestPrep();
 const path = require('path');
 const SYSTEM_FOLDER_NAME = 'system';
 const SCHEMA_NAME = 'schema';
-const BASE_PATH = test_utils.setupTestDBPath();
+const BASE_PATH = testUtils.setupTestDBPath();
 const BASE_SCHEMA_PATH = path.join(BASE_PATH, SCHEMA_NAME);
 const SYSTEM_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, SYSTEM_FOLDER_NAME);
 const DEV_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, 'dev');
-const { orderedArray } = test_utils;
+const { orderedArray } = testUtils;
 const test_data = require('../../../../testData');
 
 const rewire = require('rewire');
@@ -55,7 +55,7 @@ describe('test lmdbGetDataByValue module', () => {
 		let env;
 		before(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.setupTestDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 			await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -99,51 +99,51 @@ describe('test lmdbGetDataByValue module', () => {
 			await env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.setupTestDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 		});
 
 		it('test validation', async () => {
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				lmdb_search,
 				[{}],
 				new Error(
 					"'schema' is required. 'table' is required. 'search_attribute' is required. 'search_value' is required. 'get_attributes' is required"
 				)
 			);
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				lmdb_search,
 				[{ schema: 'dev' }],
 				new Error(
 					"'table' is required. 'search_attribute' is required. 'search_value' is required. 'get_attributes' is required"
 				)
 			);
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				lmdb_search,
 				[{ schema: 'dev', table: 'test' }],
 				new Error("'search_attribute' is required. 'search_value' is required. 'get_attributes' is required")
 			);
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				lmdb_search,
 				[{ schema: 'dev', table: 'test', search_attribute: 'city' }],
 				new Error("'search_value' is required. 'get_attributes' is required")
 			);
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				lmdb_search,
 				[{ schema: 'dev', table: 'test', search_attribute: 'city', search_value: '*' }],
 				new Error("'get_attributes' is required")
 			);
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				lmdb_search,
 				[{ schema: 'dev/sss', table: 'test', search_attribute: 'city', search_value: '*', get_attributes: ['*'] }],
 				new Error("'schema' names cannot include backticks or forward slashes")
 			);
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				lmdb_search,
 				[{ schema: 'dev', table: 'test`er`', search_attribute: 'city', search_value: '*', get_attributes: ['*'] }],
 				new Error("'table' names cannot include backticks or forward slashes")
 			);
 
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				lmdb_search,
 				[{ schema: 'dev', table: 'test', search_attribute: 'city', search_value: '*', get_attributes: ['*'] }, '$$'],
 				new Error('Value search comparator - $$ - is not valid')
@@ -151,7 +151,7 @@ describe('test lmdbGetDataByValue module', () => {
 		});
 
 		it('test schema validation', async () => {
-			test_utils.assertErrorAsync(
+			testUtils.assertErrorAsync(
 				lmdb_search,
 				[
 					{
@@ -162,9 +162,9 @@ describe('test lmdbGetDataByValue module', () => {
 						get_attributes: ['*'],
 					},
 				],
-				test_utils.generateHDBError("Schema 'dev2' does not exist", 404)
+				testUtils.generateHDBError("Schema 'dev2' does not exist", 404)
 			);
-			test_utils.assertErrorAsync(
+			testUtils.assertErrorAsync(
 				lmdb_search,
 				[
 					{
@@ -175,14 +175,14 @@ describe('test lmdbGetDataByValue module', () => {
 						get_attributes: ['*'],
 					},
 				],
-				test_utils.generateHDBError("Table 'dev.fake' does not exist", 404)
+				testUtils.generateHDBError("Table 'dev.fake' does not exist", 404)
 			);
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				lmdb_search,
 				[{ schema: 'dev', table: 'test', search_attribute: 'fake_city', search_value: '*', get_attributes: ['*'] }],
 				new Error("unknown attribute 'fake_city'")
 			);
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				lmdb_search,
 				[{ schema: 'dev', table: 'test', search_attribute: 'city', search_value: '*', get_attributes: ['id', 'fake'] }],
 				new Error("unknown attribute 'fake'")
@@ -193,12 +193,12 @@ describe('test lmdbGetDataByValue module', () => {
 			let expected = [];
 			test_data.forEach((data) => {
 				if (data.state === 'CO') {
-					expected.push([data.id, test_utils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
+					expected.push([data.id, testUtils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
 				}
 			});
 
 			let search_object = new SearchObject('dev', 'test', 'state', 'CO', 'id', ['*']);
-			let results = orderedArray(await test_utils.assertErrorAsync(lmdb_search, [search_object], undefined));
+			let results = orderedArray(await testUtils.assertErrorAsync(lmdb_search, [search_object], undefined));
 			assert.deepStrictEqual(results, expected);
 		});
 
@@ -206,12 +206,12 @@ describe('test lmdbGetDataByValue module', () => {
 			let expected = [];
 			test_data.forEach((data) => {
 				if (parseInt(data.temperature) === 10) {
-					expected.push([data.id, test_utils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
+					expected.push([data.id, testUtils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
 				}
 			});
 
 			let search_object = new SearchObject('dev', 'test', 'temperature', 10, 'id', ['*']);
-			let results = orderedArray(await test_utils.assertErrorAsync(lmdb_search, [search_object], undefined));
+			let results = orderedArray(await testUtils.assertErrorAsync(lmdb_search, [search_object], undefined));
 			assert.deepStrictEqual(results, expected);
 		});
 
@@ -219,12 +219,12 @@ describe('test lmdbGetDataByValue module', () => {
 			let expected = [];
 			test_data.forEach((data) => {
 				if (parseInt(data.id) === 10) {
-					expected.push([data.id, test_utils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
+					expected.push([data.id, testUtils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
 				}
 			});
 
 			let search_object = new SearchObject('dev', 'test', 'id', 10, 'id', ['*']);
-			let results = orderedArray(await test_utils.assertErrorAsync(lmdb_search, [search_object], undefined));
+			let results = orderedArray(await testUtils.assertErrorAsync(lmdb_search, [search_object], undefined));
 			assert.deepStrictEqual(results, expected);
 		});
 
@@ -232,12 +232,12 @@ describe('test lmdbGetDataByValue module', () => {
 			let expected = [];
 			test_data.forEach((data) => {
 				if (data.city.includes('bert') === true) {
-					expected.push([data.id, test_utils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
+					expected.push([data.id, testUtils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
 				}
 			});
 
 			let search_object = new SearchObject('dev', 'test', 'city', '*bert*', 'id', ['*']);
-			let results = orderedArray(await test_utils.assertErrorAsync(lmdb_search, [search_object], undefined));
+			let results = orderedArray(await testUtils.assertErrorAsync(lmdb_search, [search_object], undefined));
 			assert.deepStrictEqual(results, expected);
 		});
 
@@ -245,12 +245,12 @@ describe('test lmdbGetDataByValue module', () => {
 			let expected = [];
 			test_data.forEach((data) => {
 				if (data.temperature.toString().includes(0)) {
-					expected.push([data.id, test_utils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
+					expected.push([data.id, testUtils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
 				}
 			});
 
 			let search_object = new SearchObject('dev', 'test', 'temperature', '*0*', 'id', ['*']);
-			let results = orderedArray(await test_utils.assertErrorAsync(lmdb_search, [search_object], undefined));
+			let results = orderedArray(await testUtils.assertErrorAsync(lmdb_search, [search_object], undefined));
 			assert.deepStrictEqual(results, expected);
 		});
 
@@ -258,12 +258,12 @@ describe('test lmdbGetDataByValue module', () => {
 			let expected = [];
 			test_data.forEach((data) => {
 				if (data.city.endsWith('land')) {
-					expected.push([data.id, test_utils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
+					expected.push([data.id, testUtils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
 				}
 			});
 
 			let search_object = new SearchObject('dev', 'test', 'city', '*land', 'id', ['*']);
-			let results = orderedArray(await test_utils.assertErrorAsync(lmdb_search, [search_object], undefined));
+			let results = orderedArray(await testUtils.assertErrorAsync(lmdb_search, [search_object], undefined));
 			assert.deepStrictEqual(results, expected);
 		});
 
@@ -271,12 +271,12 @@ describe('test lmdbGetDataByValue module', () => {
 			let expected = [];
 			test_data.forEach((data) => {
 				if (data.temperature.toString().endsWith(2)) {
-					expected.push([data.id, test_utils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
+					expected.push([data.id, testUtils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
 				}
 			});
 
 			let search_object = new SearchObject('dev', 'test', 'temperature', '%2', 'id', ['*']);
-			let results = orderedArray(await test_utils.assertErrorAsync(lmdb_search, [search_object], undefined));
+			let results = orderedArray(await testUtils.assertErrorAsync(lmdb_search, [search_object], undefined));
 			assert.deepStrictEqual(results, expected);
 		});
 
@@ -284,23 +284,23 @@ describe('test lmdbGetDataByValue module', () => {
 			let expected = [];
 			test_data.forEach((data) => {
 				if (data.city.startsWith('South')) {
-					expected.push([data.id, test_utils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
+					expected.push([data.id, testUtils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
 				}
 			});
 
 			let search_object = new SearchObject('dev', 'test', 'city', 'South*', 'id', ['*']);
-			let results = orderedArray(await test_utils.assertErrorAsync(lmdb_search, [search_object], undefined));
+			let results = orderedArray(await testUtils.assertErrorAsync(lmdb_search, [search_object], undefined));
 			assert.deepStrictEqual(results, expected);
 		});
 
 		it('test searchall', async () => {
 			let expected = [];
 			test_data.forEach((data) => {
-				expected.push([data.id, test_utils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
+				expected.push([data.id, testUtils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
 			});
 
 			let search_object = new SearchObject('dev', 'test', 'temperature', '*', 'id', ['*']);
-			let results = orderedArray(await test_utils.assertErrorAsync(lmdb_search, [search_object], undefined));
+			let results = orderedArray(await testUtils.assertErrorAsync(lmdb_search, [search_object], undefined));
 			assert.deepStrictEqual(results, expected);
 		});
 
@@ -308,13 +308,13 @@ describe('test lmdbGetDataByValue module', () => {
 			let expected = [];
 			test_data.forEach((data) => {
 				if (data.temperature > 25) {
-					expected.push([data.id, test_utils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
+					expected.push([data.id, testUtils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
 				}
 			});
 
 			let search_object = new SearchObject('dev', 'test', 'temperature', 25, 'id', ['*']);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search,
 					[search_object, hdb_terms.VALUE_SEARCH_COMPARATORS.GREATER],
 					undefined
@@ -327,13 +327,13 @@ describe('test lmdbGetDataByValue module', () => {
 			let expected = [];
 			test_data.forEach((data) => {
 				if (data.temperature >= 40) {
-					expected.push([data.id, test_utils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
+					expected.push([data.id, testUtils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
 				}
 			});
 
 			let search_object = new SearchObject('dev', 'test', 'temperature', 40, 'id', ['*']);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search,
 					[search_object, hdb_terms.VALUE_SEARCH_COMPARATORS.GREATER_OR_EQ],
 					undefined
@@ -346,13 +346,13 @@ describe('test lmdbGetDataByValue module', () => {
 			let expected = [];
 			test_data.forEach((data) => {
 				if (data.temperature < 25) {
-					expected.push([data.id, test_utils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
+					expected.push([data.id, testUtils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
 				}
 			});
 
 			let search_object = new SearchObject('dev', 'test', 'temperature', 25, 'id', ['*']);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search,
 					[search_object, hdb_terms.VALUE_SEARCH_COMPARATORS.LESS],
 					undefined
@@ -365,13 +365,13 @@ describe('test lmdbGetDataByValue module', () => {
 			let expected = [];
 			test_data.forEach((data) => {
 				if (data.temperature <= 40) {
-					expected.push([data.id, test_utils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
+					expected.push([data.id, testUtils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
 				}
 			});
 
 			let search_object = new SearchObject('dev', 'test', 'temperature', 40, 'id', ['*']);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search,
 					[search_object, hdb_terms.VALUE_SEARCH_COMPARATORS.LESS_OR_EQ],
 					undefined
@@ -384,13 +384,13 @@ describe('test lmdbGetDataByValue module', () => {
 			let expected = [];
 			test_data.forEach((data) => {
 				if (data.temperature >= 40 && data.temperature <= 66) {
-					expected.push([data.id, test_utils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
+					expected.push([data.id, testUtils.assignObjecttoNullObject(data, TIMESTAMP_OBJECT)]);
 				}
 			});
 
 			let search_object = new SearchObject('dev', 'test', 'temperature', 40, 'id', ['*'], 66);
 			let results = orderedArray(
-				await test_utils.assertErrorAsync(
+				await testUtils.assertErrorAsync(
 					lmdb_search,
 					[search_object, hdb_terms.VALUE_SEARCH_COMPARATORS.BETWEEN],
 					undefined

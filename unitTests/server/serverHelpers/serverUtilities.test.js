@@ -1,7 +1,7 @@
 'use strict';
 
-const test_utils = require('../../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../../testUtils.js');
+testUtils.preTestPrep();
 
 const assert = require('assert');
 const sinon = require('sinon');
@@ -41,7 +41,7 @@ describe('Test serverUtilities.js module ', () => {
 			assert.ok(test_result === undefined);
 		});
 		it('Invalid operation specified in json.', function () {
-			let test_copy = test_utils.deepClone(TEST_JSON_NON_SU);
+			let test_copy = testUtils.deepClone(TEST_JSON_NON_SU);
 			test_copy.operation = 'blah';
 			let test_result;
 			try {

@@ -16,7 +16,7 @@ describe('secureImport', () => {
 		} catch (e) {
 			expect(e).to.be.instanceOf(SyntaxError);
 			expect(e.toString()).to.match(/SyntaxError: Unexpected identifier( 'is')?/);
-			// note: `rewire` (called from `test_utils`) is wrapping commonjs modules
+			// note: `rewire` (called from `testUtils`) is wrapping commonjs modules
 			expect(e.stack).to.match(
 				/invalid1\.cjs:1\n(?:\(function \(exports, require, module, __filename, __dirname\) \{ )?This is not a valid module.\n +\^\^\n+SyntaxError: Unexpected identifier(?: 'is')?/
 			);
@@ -29,7 +29,7 @@ describe('secureImport', () => {
 		} catch (e) {
 			expect(e).to.be.instanceOf(SyntaxError);
 			expect(e.toString()).to.equal("SyntaxError: Unexpected token '='");
-			// note: `rewire` (called from `test_utils`) is wrapping commonjs modules
+			// note: `rewire` (called from `testUtils`) is wrapping commonjs modules
 			expect(e.stack).to.match(
 				/libbad\.cjs:1\n(?:\(function \(exports, require, module, __filename, __dirname\) \{ )?module.exports.baz ====\n +\^\n+SyntaxError: Unexpected token '='/
 			);

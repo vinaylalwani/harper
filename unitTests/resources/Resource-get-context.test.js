@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const sinon = require('sinon');
-const { setupTestDBPath } = require('../test_utils');
+const { setupTestDBPath } = require('../testUtils');
 const { table } = require('#src/resources/databases');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
 const { transaction } = require('#src/resources/transaction');

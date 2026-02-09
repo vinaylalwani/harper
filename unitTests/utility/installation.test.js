@@ -4,7 +4,7 @@ const { expect } = require('chai');
 const fs = require('node:fs');
 const path = require('path');
 const envMangr = require('#js/utility/environment/environmentManager');
-const testUtils = require('../test_utils');
+const testUtils = require('../testUtils.js');
 const terms = require('#src/utility/hdbTerms');
 
 describe('Test isHdbInstalled function', () => {

@@ -1,4 +1,4 @@
-import { setupTestDBPath } from '../test_utils.js';
+import { setupTestDBPath } from '../testUtils.js';
 import { fileURLToPath } from 'url';
 import { setProperty } from '#js/utility/environment/environmentManager';
 import hdbTerms from '#src/utility/hdbTerms';

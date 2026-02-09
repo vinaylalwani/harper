@@ -8,7 +8,7 @@ const expect = chai.expect;
 const path = require('path');
 const fs = require('fs-extra');
 const rewire = require('rewire');
-const test_utils = require('../../test_utils');
+const testUtils = require('../../testUtils.js');
 const read_log = rewire('#js/utility/logging/readLog');
 const hdb_terms = require('#src/utility/hdbTerms');
 const harper_logger = require('#js/utility/logging/harper_logger');
@@ -106,10 +106,7 @@ describe('Test readLog module', () => {
 				start: 'pancake',
 			};
 
-			await test_utils.testHDBError(
-				read_log(test_request),
-				test_utils.generateHDBError("'start' must be a number", 400)
-			);
+			await testUtils.testHDBError(read_log(test_request), testUtils.generateHDBError("'start' must be a number", 400));
 		});
 
 		it('Test no filter with correct number of logs returned', async () => {

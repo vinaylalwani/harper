@@ -1,7 +1,7 @@
 'use strict';
 
-const test_util = require('../../test_utils');
-test_util.preTestPrep();
+const testUtils = require('../../testUtils.js');
+testUtils.preTestPrep();
 
 const assert = require('assert');
 const rewire = require('rewire');
@@ -50,7 +50,7 @@ describe('Test parseMessage', function () {
 
 	it(
 		'Nominal case, parse with no errors',
-		test_util.mochaAsyncWrapper(async function () {
+		testUtils.mochaAsyncWrapper(async function () {
 			let runner_message = new jobs_runner.RunnerMessage();
 			let job_object = new JobObject();
 			runner_message.json = DATA_LOAD_MESSAGE;
@@ -70,7 +70,7 @@ describe('Test parseMessage', function () {
 	it('Invalid message json', async function () {
 		let runner_message = new jobs_runner.RunnerMessage();
 		let job_object = new JobObject();
-		let data_load_msg_temp = test_util.deepClone(DATA_LOAD_MESSAGE);
+		let data_load_msg_temp = testUtils.deepClone(DATA_LOAD_MESSAGE);
 		data_load_msg_temp.operation = undefined;
 		runner_message.json = data_load_msg_temp;
 		runner_message.job = job_object;
@@ -84,7 +84,7 @@ describe('Test parseMessage', function () {
 	it('Invalid operation specified', async function () {
 		let runner_message = new jobs_runner.RunnerMessage();
 		let job_object = new JobObject();
-		let data_load_msg_temp = test_util.deepClone(DATA_LOAD_MESSAGE);
+		let data_load_msg_temp = testUtils.deepClone(DATA_LOAD_MESSAGE);
 		data_load_msg_temp.operation = 'GoatBoy';
 		runner_message.json = data_load_msg_temp;
 		runner_message.job = job_object;
@@ -258,7 +258,7 @@ describe('Test runJob', function () {
 	it('Invalid message json', async function () {
 		let runner_message = new jobs_runner.RunnerMessage();
 		let job_object = new JobObject();
-		let data_load_msg_temp = test_util.deepClone(DATA_LOAD_MESSAGE);
+		let data_load_msg_temp = testUtils.deepClone(DATA_LOAD_MESSAGE);
 		data_load_msg_temp.operation = undefined;
 		runner_message.json = data_load_msg_temp;
 		runner_message.job = job_object;

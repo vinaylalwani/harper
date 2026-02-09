@@ -1,10 +1,10 @@
 'use strict';
 
-const test_utils = require('../../../../test_utils');
-test_utils.preTestPrep();
+const testUtils = require('../../../../testUtils');
+testUtils.preTestPrep();
 const path = require('path');
 const SYSTEM_FOLDER_NAME = 'system';
-const BASE_PATH = test_utils.setupTestDBPath();
+const BASE_PATH = testUtils.setupTestDBPath();
 const SYSTEM_SCHEMA_PATH = path.join(BASE_PATH, SYSTEM_FOLDER_NAME);
 const DEV_SCHEMA_PATH = path.join(BASE_PATH, 'dev');
 const TRANSACTIONS_NAME = 'transactions';
@@ -64,7 +64,7 @@ const INSERT_OBJECT_TEST = {
 describe('test lmdbDropTable module', () => {
 	let date_stub;
 	before(async () => {
-		await fs.remove(test_utils.setupTestDBPath());
+		await fs.remove(testUtils.setupTestDBPath());
 		date_stub = sandbox.stub(Date, 'now').returns(TIMESTAMP);
 	});
 
@@ -78,7 +78,7 @@ describe('test lmdbDropTable module', () => {
 		let hdb_attribute_env;
 		before(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.setupTestDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 			await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -147,12 +147,12 @@ describe('test lmdbDropTable module', () => {
 			await hdb_table_env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.setupTestDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 		});
 
 		it('test invalid schema', async () => {
 			let drop_object = new DropAttributeObject('faker', 'test');
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				drop_table_from_system,
 				[drop_object],
 				new Error(`${drop_object.schema}.${drop_object.table} was not found`)
@@ -161,7 +161,7 @@ describe('test lmdbDropTable module', () => {
 
 		it('test invalid table', async () => {
 			let drop_object = new DropAttributeObject('dev', 'fake');
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				drop_table_from_system,
 				[drop_object],
 				new Error(`${drop_object.schema}.${drop_object.table} was not found`)
@@ -180,7 +180,7 @@ describe('test lmdbDropTable module', () => {
 			assert.deepStrictEqual(`${found_tbl.schema}.${found_tbl.name}`, 'dev.test');
 
 			let drop_object = new DropAttributeObject('dev', 'test');
-			await test_utils.assertErrorAsync(drop_table_from_system, [drop_object], undefined);
+			await testUtils.assertErrorAsync(drop_table_from_system, [drop_object], undefined);
 
 			search_table_results = Array.from(await search_by_value(search_obj));
 			found_tbl = undefined;
@@ -200,7 +200,7 @@ describe('test lmdbDropTable module', () => {
 		let hdb_attribute_env;
 		before(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.setupTestDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 			await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -257,12 +257,12 @@ describe('test lmdbDropTable module', () => {
 			await hdb_table_env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(test_utils.setupTestDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 		});
 
 		it('test invalid schema', async () => {
 			let drop_object = new DropAttributeObject('faker', 'test');
-			await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(
 				lmdb_drop_table,
 				[drop_object],
 				new Error(`unknown schema:faker and table test`)
@@ -271,7 +271,7 @@ describe('test lmdbDropTable module', () => {
 
 		it('test invalid table', async () => {
 			let drop_object = new DropAttributeObject('dev', 'fake');
-			await test_utils.assertErrorAsync(lmdb_drop_table, [drop_object], new Error(`unknown schema:dev and table fake`));
+			await testUtils.assertErrorAsync(lmdb_drop_table, [drop_object], new Error(`unknown schema:dev and table fake`));
 		});
 
 		it('test delete table', async () => {
@@ -302,24 +302,24 @@ describe('test lmdbDropTable module', () => {
 				assert.deepEqual(actual, expected);
 			}
 
-			await test_utils.assertErrorAsync(fs.access, [path.join(DEV_SCHEMA_PATH, 'test.mdb')], undefined);
+			await testUtils.assertErrorAsync(fs.access, [path.join(DEV_SCHEMA_PATH, 'test.mdb')], undefined);
 
 			//validate the transactions environments
 			let transaction_path = path.join(BASE_PATH, 'transactions', 'dev');
 			let table_transaction_path = path.join(transaction_path, 'test.mdb');
 			let expected_txn_dbis = ['hash_value', 'timestamp', 'user_name'];
-			await test_utils.assertErrorAsync(fs.access, [table_transaction_path], undefined);
-			let txn_env = await test_utils.assertErrorAsync(
+			await testUtils.assertErrorAsync(fs.access, [table_transaction_path], undefined);
+			let txn_env = await testUtils.assertErrorAsync(
 				environment_utility.openEnvironment,
 				[transaction_path, 'test', true],
 				undefined
 			);
-			let txn_dbis = test_utils.assertErrorSync(environment_utility.listDBIs, [txn_env], undefined);
+			let txn_dbis = testUtils.assertErrorSync(environment_utility.listDBIs, [txn_env], undefined);
 
 			assert.deepStrictEqual(txn_dbis, expected_txn_dbis);
 
 			let drop_object = new DropAttributeObject('dev', 'test');
-			await test_utils.assertErrorAsync(lmdb_drop_table, [drop_object], undefined);
+			await testUtils.assertErrorAsync(lmdb_drop_table, [drop_object], undefined);
 
 			search_table_results = Array.from(await search_by_value(search_obj));
 			found_tbl = undefined;
@@ -377,7 +377,7 @@ describe('test deleteAttributesFromSystem function', () => {
 		delete_attributes_from_system = lmdb_drop_table.__get__('deleteAttributesFromSystem');
 
 		global.lmdb_map = undefined;
-		await fs.remove(test_utils.setupTestDBPath());
+		await fs.remove(testUtils.setupTestDBPath());
 		await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 		await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -451,7 +451,7 @@ describe('test deleteAttributesFromSystem function', () => {
 		hdb_attribute_env.close();
 
 		global.lmdb_map = undefined;
-		await fs.remove(test_utils.setupTestDBPath());
+		await fs.remove(testUtils.setupTestDBPath());
 	});
 
 	it('test removing all attributes', async () => {
@@ -460,15 +460,15 @@ describe('test deleteAttributesFromSystem function', () => {
 		let delete_records_spy = sandbox.spy(lmdb_drop_table.__get__('deleteRecords'));
 
 		let search_obj = new SearchObject('system', 'hdb_attribute', 'schema_table', 'dev.test', undefined, ['*']);
-		let results = await test_utils.assertErrorAsync(search_by_value, [search_obj], undefined);
+		let results = await testUtils.assertErrorAsync(search_by_value, [search_obj], undefined);
 		assert.notDeepStrictEqual(results.length, 0);
 
 		let drop_obj = {
 			schema: 'dev',
 			table: 'test',
 		};
-		await test_utils.assertErrorAsync(delete_attributes_from_system, [drop_obj], undefined);
-		let new_results = Array.from(await test_utils.assertErrorAsync(search_by_value, [search_obj], undefined));
+		await testUtils.assertErrorAsync(delete_attributes_from_system, [drop_obj], undefined);
+		let new_results = Array.from(await testUtils.assertErrorAsync(search_by_value, [search_obj], undefined));
 		assert.deepStrictEqual(new_results.length, 0);
 	});
 });
