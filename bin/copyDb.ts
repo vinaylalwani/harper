@@ -9,7 +9,7 @@ import { INTERNAL_DBIS_NAME, AUDIT_STORE_NAME } from '../utility/lmdb/terms.js';
 import { CONFIG_PARAMS, DATABASES_DIR_NAME } from '../utility/hdbTerms.ts';
 import { AUDIT_STORE_OPTIONS } from '../resources/auditStore.ts';
 import { describeSchema } from '../dataLayer/schemaDescribe.js';
-import { updateConfigValue } from '../config/configUtils.js';
+import { updateConfigValue } from '../config/configUtils.ts';
 import * as hdbLogger from '../utility/logging/harper_logger.js';
 
 export async function compactOnStart() {

@@ -6,7 +6,7 @@ const expect = chai.expect;
 const rewire = require('rewire');
 const path = require('path');
 const fs = require('fs-extra');
-const config_utils_rw = rewire('#js/config/configUtils');
+const config_utils_rw = rewire('#src/config/configUtils');
 const YAML = require('yaml');
 const logger = require('#js/utility/logging/harper_logger');
 const common_utils = require('#js/utility/common_utils');
@@ -1204,9 +1204,9 @@ describe('Test configUtils module', () => {
 
 			// Reset parseYamlDoc in case previous tests stubbed it
 			// Re-require the module to get a fresh copy
-			delete require.cache[require.resolve('#js/config/configUtils')];
-			require('#js/config/configUtils');
-			const freshRewire = rewire('#js/config/configUtils');
+			delete require.cache[require.resolve('#src/config/configUtils')];
+			require('#src/config/configUtils');
+			const freshRewire = rewire('#src/config/configUtils');
 			// Copy the fresh parseYamlDoc to our rewired module
 			const parseYamlDoc = freshRewire.__get__('parseYamlDoc');
 			config_utils_rw.__set__('parseYamlDoc', parseYamlDoc);

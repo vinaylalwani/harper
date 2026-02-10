@@ -11,7 +11,7 @@ const chaiAsPromised = require('chai-as-promised').default;
 chai.use(chaiAsPromised);
 const { expect } = chai;
 const sinon = require('sinon');
-const configUtils = require('#js/config/configUtils');
+const configUtils = require('#src/config/configUtils');
 const env_mgr = require('#js/utility/environment/environmentManager');
 const { CONFIG_PARAMS } = require('#src/utility/hdbTerms');
 const { databases } = require('#src/resources/databases');

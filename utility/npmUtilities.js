@@ -14,7 +14,7 @@ module.exports = {
 };
 
 const { CONFIG_PARAMS } = require('./hdbTerms.ts');
-const { getConfigValue } = require('../config/configUtils.js');
+const { getConfigValue } = require('../config/configUtils.ts');
 const { nonInteractiveSpawn } = require('../components/Application.ts');
 
 /**

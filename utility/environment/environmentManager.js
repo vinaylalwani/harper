@@ -7,7 +7,7 @@ const PropertiesReader = require('properties-reader');
 const log = require('../logging/harper_logger.js');
 const commonUtils = require('../common_utils.js');
 const hdbTerms = require('../hdbTerms.ts');
-const configUtils = require('../../config/configUtils.js');
+const configUtils = require('../../config/configUtils.ts');
 const { mkdirSync } = require('node:fs');
 
 const INIT_ERR = 'Error initializing environment manager';

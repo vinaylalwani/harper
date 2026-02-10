@@ -1,7 +1,7 @@
 'use strict';
 
 const hdbUtil = require('../utility/common_utils.js');
-const configUtils = require('../config/configUtils.js');
+const configUtils = require('../config/configUtils.ts');
 
 module.exports = {
 	getOldPropsValue,

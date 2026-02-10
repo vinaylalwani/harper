@@ -10,7 +10,7 @@ const YAML = require('yaml');
 const { packageDirectory } = require('../components/packageComponent.ts');
 const { encode } = require('cbor-x');
 const { getHdbPid } = require('../utility/processManagement/processManagement.js');
-const { initConfig } = require('../config/configUtils.js');
+const { initConfig } = require('../config/configUtils.ts');
 
 const SUPPORTED_OPS = [
 	'describe_table',

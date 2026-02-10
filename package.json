@@ -99,9 +99,12 @@
 	},
 	"devDependencies": {
 		"@harperdb/code-guidelines": "^0.0.6",
+		"@types/fs-extra": "^11.0.4",
 		"@types/gunzip-maybe": "^1.4.3",
+		"@types/is-number": "^7.0.5",
 		"@types/micromatch": "^4.0.9",
 		"@types/mocha": "^10.0.10",
+		"@types/properties-reader": "^2.1.3",
 		"@types/sinon": "^17.0.4",
 		"@types/tar-fs": "^2.0.4",
 		"@typescript-eslint/parser": "^8.48.1",

@@ -1,4 +1,4 @@
-import { getConfigObj, getConfigValue } from '../config/configUtils.js';
+import { getConfigObj, getConfigValue } from '../config/configUtils.ts';
 import { CONFIG_PARAMS } from '../utility/hdbTerms.js';
 import logger from '../utility/logging/harper_logger.js';
 

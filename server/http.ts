@@ -8,7 +8,7 @@ import harperLogger from '../utility/logging/harper_logger.js';
 import { parentPort } from 'node:worker_threads';
 import env from '../utility/environment/environmentManager.js';
 import * as terms from '../utility/hdbTerms.ts';
-import { resolvePath } from '../config/configUtils.js';
+import { resolvePath } from '../config/configUtils.ts';
 import { getTicketKeys } from './threads/manageThreads.js';
 import { createTLSSelector } from '../security/keys.js';
 import { createSecureServer } from 'node:http2';

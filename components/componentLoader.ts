@@ -26,7 +26,7 @@ import { getHdbBasePath } from '../utility/environment/environmentManager.js';
 import * as operationsServer from '../server/operationsServer.ts';
 import * as auth from '../security/auth.ts';
 import * as mqtt from '../server/mqtt.ts';
-import { getConfigObj, resolvePath } from '../config/configUtils.js';
+import { getConfigObj, resolvePath } from '../config/configUtils.ts';
 import { createReuseportFd } from '../server/serverHelpers/Request.ts';
 import { ErrorResource } from '../resources/ErrorResource.ts';
 import { Scope } from './Scope.ts';
