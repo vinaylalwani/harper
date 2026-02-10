@@ -288,6 +288,10 @@ export class DatabaseTransaction implements Transaction {
 		this.writes = [];
 		if (this.#context?.resourceCache) this.#context.resourceCache = null;
 	}
+	directCommitSync(): void {
+		trackedTxns.delete(this);
+		this.transaction?.commitSync();
+	}
 	getContext() {
 		return this.#context;
 	}

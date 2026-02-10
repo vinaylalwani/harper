@@ -7,6 +7,7 @@ import { RocksTransactionLogStore } from './RocksTransactionLogStore.ts';
 import { isMainThread } from 'node:worker_threads';
 import { RequestTarget } from './RequestTarget.ts';
 
+let warnedReplayHappening = false;
 export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void> {
 	if (!isMainThread) return; // ideally we don't do it like this, but for now this is predictable
 	return new Promise((resolve, reject) => {
@@ -22,6 +23,7 @@ export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void>
 		// replay all the logs
 		let transaction: DatabaseTransaction;
 		let lastTimestamp = 0;
+		let writes = 0;
 		const txnLog: RocksTransactionLogStore = rootStore.auditStore;
 		for (const auditRecord of txnLog.getRange({ startFromLastFlushed: true, readUncommitted: true })) {
 			const { type, tableId, nodeId, recordId, version, residencyId, expiresAt, originatingOperation, username } =
@@ -36,13 +38,16 @@ export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void>
 				const tableInstance = Table.getResource(target, context, {});
 				// TODO: If this throws an error due to being unable to access structures, we need to iterate through
 				// other transaction logs to get the latest structure. Ultimately we may have to skip records
-				console.error('replaying', Table.name, recordId);
+				if (!warnedReplayHappening) {
+					warnedReplayHappening = true;
+					console.warn('Harper was not properly shutdown, replaying transaction logs to synchronize database');
+				}
 				const record = auditRecord.getValue(primaryStore);
 				if (lastTimestamp !== version) {
 					lastTimestamp = version;
 					try {
 						// commit the last transaction since we are starting a new one
-						transaction?.transaction?.commitSync();
+						transaction?.directCommitSync();
 					} catch (error) {
 						logger.error('Error committing replay transaction', error);
 					}
@@ -54,7 +59,7 @@ export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void>
 				}
 				context.transaction = transaction;
 				const options = { context, residencyId, nodeId, originatingOperation };
-
+				writes++;
 				switch (type) {
 					case 'put':
 						tableInstance._writeUpdate(recordId, record, true, options);
@@ -117,11 +122,11 @@ export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void>
 			}
 		}
 		try {
-			transaction?.transaction?.commitSync();
+			transaction?.directCommitSync();
 		} catch (error) {
 			logger.error('Error committing replay transaction', error);
 		}
-		console.log('Replay complete');
+		if (writes > 0) logger.warn(`Replayed ${writes} records in ${rootStore.databaseName} database`);
 		// we never actually release the lock because we only want to ever run one time
 		// rootStore.unlock('replayLogs');
 	});
