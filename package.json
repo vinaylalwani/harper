@@ -95,7 +95,19 @@
 	"exports": {
 		".": "./index.js",
 		"./v1": "./v1.js",
-		"./v2": "./index.js"
+		"./v2": "./index.js",
+		"./*.ts": {
+			"internal": "./dist/*.js",
+			"default": null
+		},
+		"./*.js": {
+			"internal": "./dist/*.js",
+			"default": null
+		},
+		"./*": {
+			"internal": "./dist/*.js",
+			"default": null
+		}
 	},
 	"devDependencies": {
 		"@harperdb/code-guidelines": "^0.0.6",
