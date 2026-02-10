@@ -10,7 +10,7 @@ import { RequestTarget } from './RequestTarget.ts';
 let warnedReplayHappening = false;
 export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void> {
 	if (!isMainThread) return; // ideally we don't do it like this, but for now this is predictable
-	return new Promise((resolve, reject) => {
+	return new Promise((resolve) => {
 		const acquired = rootStore.tryLock('replayLogs', async () => {
 			resolve();
 		});
@@ -32,7 +32,7 @@ export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void>
 				const Table = tableById.get(tableId);
 				if (!Table) continue;
 				const context: Context = { nodeId, alreadyLogged: true, version, expiresAt, user: { name: username } };
-				const { primaryStore, auditStore } = Table;
+				const { primaryStore } = Table;
 				const target = new RequestTarget();
 				target.id = null;
 				const tableInstance = Table.getResource(target, context, {});

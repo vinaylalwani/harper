@@ -7,7 +7,7 @@ import { convertToMS } from '../utility/common_utils.js';
 import { PREVIOUS_TIMESTAMP_PLACEHOLDER, LAST_TIMESTAMP_PLACEHOLDER } from './RecordEncoder.ts';
 import * as harperLogger from '../utility/logging/harper_logger.js';
 import { getRecordAtTime } from './crdt.ts';
-import { decodeFromDatabase, deleteBlobsInObject } from './blob.ts';
+import { decodeFromDatabase } from './blob.ts';
 import { onStorageReclamation } from '../server/storageReclamation.ts';
 import { RocksDatabase } from '@harperfast/rocksdb-js';
 import { RocksTransactionLogStore } from './RocksTransactionLogStore.ts';
@@ -391,28 +391,6 @@ export function createAuditEntry(auditRecord: AuditRecord, start = 0) {
 }
 
 /**
- * Reads an action from an audit entry binary data, quickly
- * @param buffer
- */
-function readAction(buffer: Buffer) {
-	let position = 0;
-	if (buffer[0] == 66) {
-		// 66 is the first byte in a date double, so we need to skip it
-		position = 8;
-	}
-	const action = buffer[position];
-	if (action < 0x80) {
-		// simple case of a single byte
-		return action;
-	}
-	// otherwise, we need to decode the number
-	const decoder =
-		buffer.dataView || (buffer.dataView = new Decoder(buffer.buffer, buffer.byteOffset, buffer.byteLength));
-	decoder.position = position;
-	return decoder.readInt();
-}
-
-/**
  * Reads a audit entry from binary data
  * @param buffer
  * @param start
@@ -543,6 +521,7 @@ export class Decoder extends DataView {
 }
 
 export class AuditEntryEncoder {
+	// eslint-disable-next-line no-unused-vars
 	encode(entry) {
 		return createAuditEntry({});
 	}

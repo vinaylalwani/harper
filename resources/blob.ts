@@ -40,7 +40,7 @@ import { join, dirname } from 'path';
 import logger from '../utility/logging/logger.js';
 import type { LMDBStore } from 'lmdb';
 import { asyncSerialization, hasAsyncSerialization } from '../server/serverHelpers/contentTypes.ts';
-import { HAS_BLOBS, readAuditEntry } from './auditStore.ts';
+import { HAS_BLOBS } from './auditStore.ts';
 import { getHeapStatistics } from 'node:v8';
 import { setTimeout as delay, setImmediate as rest } from 'node:timers/promises';
 import { RocksDatabase } from '@harperfast/rocksdb-js';
@@ -87,7 +87,6 @@ const FILE_READ_TIMEOUT = 60000;
 function InstanceOfBlobWithNoConstructor() {}
 InstanceOfBlobWithNoConstructor.prototype = Blob.prototype;
 
-let warnedSaveDeprecation = false;
 // @ts-ignore
 /**
  * A blob that is backed by a file, and can be saved to the database as a reference

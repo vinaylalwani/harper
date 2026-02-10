@@ -64,7 +64,7 @@ describe('test MQTT connections and commands', function () {
 				if (err) reject(err);
 			});
 			const onMessage = (topic, payload) => {
-				let record = decode(payload);
+				decode(payload);
 				reject(new Error('Should not receive any retained messages'));
 			};
 			client2.once('message', onMessage);
@@ -335,7 +335,7 @@ describe('test MQTT connections and commands', function () {
 				}
 			});
 			client.once('message', (topic, payload) => {
-				let record = JSON.parse(payload);
+				JSON.parse(payload);
 				resolve();
 			});
 			callOperation({

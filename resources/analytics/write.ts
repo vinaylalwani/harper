@@ -357,7 +357,6 @@ function storeDBSizeMetrics(analyticsTable: Table, databases: Databases) {
 				};
 				storeMetric(analyticsTable, metric);
 			}
-			log.trace?.(`database ${db} size metric: ${JSON.stringify(metric)}`);
 		} catch (error) {
 			// a table or db was deleted, could get an error here
 			log.warn?.(`Error getting DB size metrics`, error);

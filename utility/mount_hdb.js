@@ -7,7 +7,6 @@ const hdbLogger = require('../utility/logging/harper_logger.js');
 const bridge = require('../dataLayer/harperBridge/harperBridge.js');
 const systemSchema = require('../json/systemSchema.json');
 const initPaths = require('../dataLayer/harperBridge/lmdbBridge/lmdbUtility/initializePaths.js');
-const { NON_REPLICATING_SYSTEM_TABLES } = require('../resources/databases.ts');
 const { PACKAGE_ROOT } = require('../utility/packageUtils');
 
 module.exports = mountHdb;

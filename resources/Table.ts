@@ -6,7 +6,7 @@
 
 import { CONFIG_PARAMS, OPERATIONS_ENUM, SYSTEM_TABLE_NAMES, SYSTEM_SCHEMA_NAME } from '../utility/hdbTerms.ts';
 import { type Database } from 'lmdb';
-import { getIndexedValues, getNextMonotonicTime } from '../utility/lmdb/commonUtility.js';
+import { getIndexedValues } from '../utility/lmdb/commonUtility.js';
 import lodash from 'lodash';
 import { ExtendedIterable, SKIP } from '@harperfast/extended-iterable';
 import type {
@@ -86,8 +86,6 @@ const RECORD_PRUNING_INTERVAL = 60000; // one minute
 envMngr.initSync();
 const LMDB_PREFETCH_WRITES = envMngr.get(CONFIG_PARAMS.STORAGE_PREFETCHWRITES);
 const LOCK_TIMEOUT = 10000;
-const SAVING_FULL_UPDATE = 1;
-const SAVING_CRDT_UPDATE = 2;
 export const INVALIDATED = 1;
 export const EVICTED = 8; // note that 2 is reserved for timestamps
 const TEST_WRITE_KEY_BUFFER = Buffer.allocUnsafeSlow(8192);
@@ -3940,7 +3938,7 @@ export function makeTable(options) {
 			// and let the transaction commit in the background
 			let resolved;
 			when(
-				transaction(sourceContext, async (txn) => {
+				transaction(sourceContext, async (_txn) => {
 					const start = performance.now();
 					let updatedRecord;
 					let hasChanges, invalidated;

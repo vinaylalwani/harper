@@ -1043,7 +1043,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 						hasChanges = true;
 						if (attribute.indexNulls === undefined) attribute.indexNulls = true;
 						let hasExistingData = false;
-						for (let entry of Table.primaryStore.getRange({ start: true })) {
+						for (let _entry of Table.primaryStore.getRange({ start: true })) {
 							hasExistingData = true;
 							break;
 						}
@@ -1142,7 +1142,7 @@ async function runIndexing(Table, attributes, indicesToRemove) {
 			}
 			let outstanding = 0;
 			// this means that a new attribute has been introduced that needs to be indexed
-			for (const { key, value: record, version } of Table.primaryStore.getRange({
+			for (const { key, value: record } of Table.primaryStore.getRange({
 				start,
 				lazy: attributesLength < 4,
 				versions: true,

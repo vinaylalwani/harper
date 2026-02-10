@@ -1,9 +1,7 @@
 import { info } from '../utility/logging/harper_logger.js';
 import { IterableEventQueue } from './IterableEventQueue.ts';
 import { keyArrayToString } from './Resources.ts';
-import { readAuditEntry } from './auditStore.ts';
 import type { Id } from './ResourceInterface.ts';
-import { RocksDatabase } from '@harperfast/rocksdb-js';
 
 const allSubscriptions = Object.create(null); // using it as a map that doesn't change much
 const allSameThreadSubscriptions = Object.create(null); // using it as a map that doesn't change much

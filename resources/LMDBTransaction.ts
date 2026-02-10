@@ -7,11 +7,8 @@ import {
 } from './DatabaseTransaction';
 import { getNextMonotonicTime } from '../utility/lmdb/commonUtility.js';
 import * as harperLogger from '../utility/logging/harper_logger.js';
-import type { Context, Id } from './ResourceInterface.ts';
-import * as envMngr from '../utility/environment/environmentManager.js';
-import { CONFIG_PARAMS } from '../utility/hdbTerms.ts';
-import { convertToMS } from '../utility/common_utils.js';
-import { RocksDatabase, Transaction as RocksTransaction } from '@harperfast/rocksdb-js';
+import type { Context } from './ResourceInterface.ts';
+import { Transaction as RocksTransaction } from '@harperfast/rocksdb-js';
 import type { RootDatabaseKind } from './databases.ts';
 
 const MAX_OPTIMISTIC_SIZE = 100;
@@ -21,7 +18,7 @@ export const TRANSACTION_STATE = {
 	OPEN: 1, // the transaction is open and can be used for reads and writes
 	LINGERING: 2, // the transaction has completed a read, but can be used for immediate writes
 };
-let outstandingCommit, outstandingCommitStart;
+let outstandingCommit;
 let confirmReplication;
 export function replicationConfirmation(callback) {
 	confirmReplication = callback;
@@ -228,7 +225,6 @@ export class LMDBTransaction extends DatabaseTransaction {
 		if (resolution) {
 			if (!outstandingCommit) {
 				outstandingCommit = resolution;
-				outstandingCommitStart = performance.now();
 				outstandingCommit.then(() => {
 					outstandingCommit = null;
 				});
@@ -307,7 +303,7 @@ export class ImmediateTransaction extends LMDBTransaction {
 		super();
 		this.db = db;
 	}
-	save(transaction: ImmediateTransaction, isRetry = false) {
+	save(_transaction: ImmediateTransaction, _isRetry = false) {
 		return this.commit();
 	}
 	get timestamp() {
