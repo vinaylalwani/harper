@@ -2650,7 +2650,7 @@ export function makeTable(options) {
 							}
 							// TODO: Would like to do this asynchronously, but would need to catch up on anything published during iteration
 							//await rest(); // yield for fairness
-							subscription.startTime = key; // update so don't double send
+							subscription.startTime = auditRecord.localTime; // update so we don't double send
 						}
 					} else if (count) {
 						const history = [];
@@ -2671,7 +2671,7 @@ export function makeTable(options) {
 									if (--count <= 0) break;
 								}
 							} catch (error) {
-								logger.error('Error getting history entry', key, error);
+								logger.error('Error getting history entry', auditRecord.localTime, error);
 							}
 							// TODO: Would like to do this asynchronously, but would need to catch up on anything published during iteration
 							//await rest(); // yield for fairness

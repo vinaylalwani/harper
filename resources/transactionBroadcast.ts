@@ -17,7 +17,7 @@ const allSameThreadSubscriptions = Object.create(null); // using it as a map tha
  * @param startTime
  * @param options
  */
-export function addSubscription(table, key, listener?: (key) => any, startTime: number, options) {
+export function addSubscription(table, key, listener?: (key) => any, startTime?: number, options?: any) {
 	const path = table.primaryStore.path ?? table.primaryStore.env.path;
 	const tableId = table.primaryStore.tableId;
 	// set up the subscriptions map. We want to just use a single map (per table) for efficient delegation

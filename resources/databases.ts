@@ -123,7 +123,6 @@ function openRocksDatabase(path: string, options: RocksDatabaseOptions & { dupSo
 	}
 	db.env = {};
 	return db;
-
 }
 
 const lmdbDatabaseEnvs = new Map<string, LMDBRootDatabase>();
@@ -774,7 +773,14 @@ function openIndex(dbiKey: string, rootStore: LMDBRootDatabase | RocksRootDataba
 	const objectStorage =
 		attribute.is_hash_attribute || (attribute.indexed.type && CUSTOM_INDEXES[attribute.indexed.type]?.useObjectStore);
 	const dbiInit = createOpenDBIObject(!objectStorage, objectStorage);
-	let dbi: LMDBDatabase | (RocksDatabase & { customIndex?: any; isIndexing?: boolean; indexNulls?: boolean; rootStore?: RocksRootDatabase });
+	let dbi:
+		| LMDBDatabase
+		| (RocksDatabase & {
+				customIndex?: any;
+				isIndexing?: boolean;
+				indexNulls?: boolean;
+				rootStore?: RocksRootDatabase;
+		  });
 	if (rootStore instanceof RocksDatabase) {
 		dbi = openRocksDatabase(rootStore.path, { ...dbiInit, name: dbiKey });
 		dbi.rootStore = rootStore;

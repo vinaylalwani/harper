@@ -87,7 +87,7 @@ export function getRecordAtTime(currentEntry, timestamp, store, tableId: number,
 	const unknowns = new Set<string>();
 	while (auditTime > timestamp) {
 		const auditEntry = auditStore.get(auditTime, tableId, recordId);
-		// TODO: Caching of audit entries
+		if (!auditEntry) break;
 		switch (auditEntry.type) {
 			case 'put':
 				record = auditEntry.getValue(store);

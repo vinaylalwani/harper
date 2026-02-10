@@ -114,16 +114,16 @@ async function initialize(calledByInstall = false, calledByMain = false) {
 		const prevProcessPid = parseInt(process.env.HARPER_PARENT_PROCESS_PID);
 		delete process.env.HARPER_PARENT_PROCESS_PID;
 		if (isProcessRunning(prevProcessPid)) {
-			logger.info(`Previous process ${prevProcessPid} is still running, waiting up to 15 seconds...`);
+			hdbLogger.info(`Previous process ${prevProcessPid} is still running, waiting up to 15 seconds...`);
 			// check if the previous process is still running, and if so, wait up to 15 seconds before timing out
 			const timeout = setTimeout(() => {
 				console.error(`Previous process ${prevProcessPid} is still running, exiting.`);
 				process.exit(1);
 			}, 15000);
 			while (isProcessRunning(prevProcessPid)) {
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
-			logger.info(`Previous process ${prevProcessPid} has exited`);
+			hdbLogger.info(`Previous process ${prevProcessPid} has exited`);
 			clearTimeout(timeout);
 		}
 	}
