@@ -1,4 +1,4 @@
-import { type TransactionLog, RocksDatabase, shutdown, type TransactionEntry } from '@harperfast/rocksdb-js';
+import { TransactionLog, RocksDatabase, shutdown, type TransactionEntry } from '@harperfast/rocksdb-js';
 import { ExtendedIterable } from '@harperfast/extended-iterable';
 import { Decoder, readAuditEntry, ENTRY_DATAVIEW, AuditRecord, createAuditEntry } from './auditStore.ts';
 import logger from '../utility/logging/harper_logger.js';
@@ -15,6 +15,13 @@ if (!process.env.HARPER_NO_FLUSH_ON_EXIT && isMainThread) {
 const HAS_32_BIT_FLAG = 0x80000000; // for future use if we need a bigger section for flags
 const HAS_PREVIOUS_RESIDENCY_ID = 0x40000000;
 const HAS_PREVIOUS_VERSION = 0x20000000;
+
+/**
+ * Represents a transaction log store backed by RocksDB.
+ * This class provides methods that conform to a standard store interface
+ * to manage and interact with transaction logs, including querying logs,
+ * adding entries, and loading logs for multiple nodes or purposes.
+ */
 export class RocksTransactionLogStore {
 	log: TransactionLog;
 	nodeLogs?: TransactionLog[]; // whatever the type of the read logger
@@ -68,17 +75,17 @@ export class RocksTransactionLogStore {
 			this.put(suggestedKey, value, options);
 		}
 	}
-	get(key: any, tableId: number, recordId: any) {
-		return this.getSync(key, tableId, recordId);
+	get(key: any, tableId: number, recordId: any, nodeId: number) {
+		return this.getSync(key, tableId, recordId, nodeId);
 	}
-	getSync(key: any, tableId: number, recordId: any) {
+	getSync(key: any, tableId: number, recordId: any, nodeId: number) {
 		if (typeof key === 'number') {
 			if (typeof tableId !== 'number') throw new Error('tableId must be a number');
 			if (recordId === undefined) {
 				throw new Error('recordId must be provided');
 			}
 			// this a request for a transaction log entry by a timestamp
-			for (const entry of this.getRange({ start: key, exactStart: true })) {
+			for (const entry of this.getRange({ start: key, exactStart: true, log: nodeId })) {
 				if (entry.recordId === recordId && entry.tableId === tableId) {
 					return entry;
 				}
@@ -110,14 +117,17 @@ export class RocksTransactionLogStore {
 		start?: number;
 		exactStart?: boolean;
 		end?: number;
-		log?: string;
+		log?: string | number;
 		onlyKeys?: boolean;
 		startFromLastFlushed?: boolean;
 		readUncommitted?: boolean;
 	}): Iterable<AuditRecord> {
 		let iterable = new ExtendedIterable<TransactionEntry>();
-		if (options.log) {
-			let log = this.logByName.get(options.log);
+		if (options.log !== undefined) {
+			let log =
+				typeof options.log === 'number'
+					? (this.nodeLogs?.[options.log] ?? this.loadLogs()[options.log])
+					: this.logByName.get(options.log);
 			if (!log) {
 				this.loadLogs();
 				log = this.logByName.get(options.log);

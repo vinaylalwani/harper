@@ -1710,9 +1710,10 @@ export function makeTable(options) {
 								new Date(localTime)
 							);
 
+							let nodeId = existingEntry.nodeId;
 							const succeedingUpdates = []; // record the "future" updates, as we need to apply the updates in reverse order
 							while (localTime > txnTime || (auditedVersion >= txnTime && localTime > 0)) {
-								const auditRecord = auditStore.get(localTime, tableId, id);
+								const auditRecord = auditStore.get(localTime, tableId, id, nodeId);
 								if (!auditRecord) break;
 								auditedVersion = auditRecord.version;
 								if (auditedVersion >= txnTime) {
@@ -1741,6 +1742,7 @@ export function makeTable(options) {
 									}
 								}
 								localTime = auditRecord.previousVersion;
+								nodeId = auditRecord.previousNodeId;
 							}
 							if (!localTime) {
 								// if we reached the end of the audit trail, we can just apply the update
@@ -2713,10 +2715,11 @@ export function makeTable(options) {
 						// start time specified, get the audit history for this record
 						const history = [];
 						let nextTime = localTime;
+						let nodeId = entry?.nodeId;
 						do {
 							//TODO: Would like to do this asynchronously, but we will need to run catch after this to ensure we didn't miss anything
 							//await auditStore.prefetch([key]); // do it asynchronously for better fairness/concurrency and avoid page faults
-							const auditRecord = auditStore.getSync(nextTime, tableId, thisId);
+							const auditRecord = auditStore.getSync(nextTime, tableId, thisId, nodeId);
 							if (auditRecord) {
 								if (startTime < nextTime) {
 									request.omitCurrent = true; // we are sending the current version from history, so don't double send
@@ -2730,6 +2733,7 @@ export function makeTable(options) {
 									});
 								}
 								nextTime = auditRecord.previousVersion;
+								nodeId = auditRecord.previousNodeId;
 							} else break;
 							if (count) count--;
 						} while (nextTime > startTime && count !== 0);
@@ -3851,20 +3855,16 @@ export function makeTable(options) {
 				// if we have a timestamp tie, we break the tie by comparing the node name of the
 				// existing entry to the node name of the update
 				const nodeNameToId = server.replication?.exportIdMapping(auditStore);
-				const localTime = existingEntry.localTime;
-				const auditRecord = localTime && auditStore.get(localTime, tableId, existingEntry.key);
-				if (auditRecord) {
-					// existing node id comes from the audit log
-					let updatedNodeName, existingNodeName;
-					for (const node_name in nodeNameToId) {
-						if (nodeNameToId[node_name] === nodeId) updatedNodeName = node_name;
-						if (nodeNameToId[node_name] === auditRecord.nodeId) existingNodeName = node_name;
-					}
-					if (updatedNodeName > existingNodeName)
-						// if the updated node name is greater (alphabetically), it wins (it doesn't precede the existing version)
-						return 1;
-					if (updatedNodeName === existingNodeName) return 0; // a tie
+				let existingNodeId = existingEntry.nodeId;
+				let updatedNodeName, existingNodeName;
+				for (const node_name in nodeNameToId) {
+					if (nodeNameToId[node_name] === nodeId) updatedNodeName = node_name;
+					if (nodeNameToId[node_name] === existingNodeId) existingNodeName = node_name;
 				}
+				if (updatedNodeName > existingNodeName)
+					// if the updated node name is greater (alphabetically), it wins (it doesn't precede the existing version)
+					return 1;
+				if (updatedNodeName === existingNodeName) return 0; // a tie
 			}
 			// transaction time is older than existing version, so we treat that as an update that loses to the existing record version
 			return -1;

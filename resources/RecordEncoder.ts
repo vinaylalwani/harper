@@ -27,6 +27,7 @@ export type Entry = {
 	localTime: number;
 	expiresAt: number;
 	metadataFlags: number;
+	nodeId: number;
 	deref?: () => any;
 };
 
@@ -48,6 +49,7 @@ export const TIMESTAMP_ASSIGN_PREVIOUS = 3;
 export const TIMESTAMP_RECORD_PREVIOUS = 4;
 export const HAS_EXPIRATION = 16;
 export const HAS_RESIDENCY_ID = 32;
+export const HAS_NODE_ID = 64;
 export const PENDING_LOCAL_TIME = 1;
 export const HAS_STRUCTURE_UPDATE = 0x100;
 
@@ -61,7 +63,8 @@ let lastEncoding,
 	timestampNextEncoding = 0,
 	metadataInNextEncoding = -1,
 	expiresAtNextEncoding = -1,
-	residencyIdAtNextEncoding = 0;
+	residencyIdAtNextEncoding = 0,
+	nodeIdAtNextEncoding = -1;
 // tracking metadata with a singleton works better than trying to alter response of getEntry/get and coordinating that across caching layers
 export let lastMetadata: Entry | null = null;
 export class RecordEncoder extends Encoder {
@@ -100,6 +103,7 @@ export class RecordEncoder extends Encoder {
 				let metadata = metadataInNextEncoding;
 				const expiresAt = expiresAtNextEncoding;
 				const residencyId = residencyIdAtNextEncoding;
+				const nodeId = nodeIdAtNextEncoding;
 				if (metadata >= 0) {
 					valueStart += 4; // make room for metadata bytes
 					metadataInNextEncoding = -1; // reset indicator to mean no metadata
@@ -110,6 +114,10 @@ export class RecordEncoder extends Encoder {
 					if (residencyId) {
 						valueStart += 4; // make room for residency id
 						residencyIdAtNextEncoding = 0; // reset indicator to mean no residency id
+					}
+					if (nodeId >= 0) {
+						valueStart += 4; // make room for node id
+						nodeIdAtNextEncoding = -1; // reset indicator to mean no node id
 					}
 				}
 				const encoded = (lastEncoding = superEncode.call(this, record, options | 2048 | valueStart)); // encode with 8 bytes reserved space for txnId
@@ -139,6 +147,10 @@ export class RecordEncoder extends Encoder {
 					}
 					if (residencyId) {
 						dataView.setUint32(position, residencyId);
+						position += 4;
+					}
+					if (nodeId >= 0) {
+						dataView.setUint32(position, nodeId);
 					}
 				}
 				return encoded;
@@ -213,7 +225,7 @@ export class RecordEncoder extends Encoder {
 					localTime = getTimestamp();
 					nextByte = buffer[position];
 				}
-				let expiresAt, residencyId;
+				let expiresAt, residencyId, nodeId;
 				if (nextByte < 32) {
 					if (nextByte === ACTION_32_BIT) {
 						const dataView =
@@ -237,6 +249,13 @@ export class RecordEncoder extends Encoder {
 						residencyId = dataView.getUint32(position);
 						position += 4;
 					}
+					if (metadataFlags & HAS_NODE_ID) {
+						// we need to read the node id
+						const dataView =
+							buffer.dataView || (buffer.dataView = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength));
+						nodeId = dataView.getUint32(position);
+						position += 4;
+					}
 				}
 
 				const value = decodeFromDatabase(
@@ -252,6 +271,7 @@ export class RecordEncoder extends Encoder {
 					[METADATA]: metadataFlags,
 					expiresAt,
 					residencyId,
+					nodeId,
 					size: end - start,
 				};
 				return value;
@@ -293,6 +313,7 @@ export function handleLocalTimeForGets(store, rootStore) {
 				entry.metadataFlags = lastMetadata[METADATA];
 				entry.localTime = lastMetadata.localTime;
 				entry.residencyId = lastMetadata.residencyId;
+				entry.nodeId = lastMetadata.nodeId;
 				entry.size = lastMetadata.size;
 				if (lastMetadata.expiresAt >= 0) {
 					entry.expiresAt = lastMetadata.expiresAt;
@@ -343,6 +364,7 @@ export function handleLocalTimeForGets(store, rootStore) {
 				entry.localTime = lastMetadata.localTime;
 				if (isRocksDB) entry.version = lastMetadata.localTime;
 				entry.residencyId = lastMetadata.residencyId;
+				entry.nodeId = lastMetadata.nodeId;
 				if (lastMetadata.expiresAt >= 0) entry.expiresAt = lastMetadata.expiresAt;
 				lastMetadata = null;
 			}
@@ -469,6 +491,11 @@ export function recordUpdater(store, tableId, auditStore) {
 				metadataInNextEncoding |= HAS_RESIDENCY_ID;
 				extendedType |= HAS_CURRENT_RESIDENCY_ID;
 			} // else residencyIdAtNextEncoding = 0;
+			const nodeId = options?.nodeId;
+			if (nodeId >= 0) {
+				nodeIdAtNextEncoding = nodeId;
+				metadataInNextEncoding |= HAS_NODE_ID;
+			} // else nodeIdAtNextEncoding = -1;
 			if (previousResidencyId !== residencyId) {
 				extendedType |= HAS_PREVIOUS_RESIDENCY_ID;
 				if (!previousResidencyId) previousResidencyId = 0;
