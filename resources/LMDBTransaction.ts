@@ -297,6 +297,9 @@ export class LMDBTransaction extends DatabaseTransaction {
 		// reset the transaction
 		this.writes = [];
 	}
+	save() {
+		// noop for LMDB
+	}
 }
 
 export class ImmediateTransaction extends LMDBTransaction {

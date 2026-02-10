@@ -3459,14 +3459,14 @@ export function makeTable(options) {
 				continue;
 			}
 			if (index.customIndex) {
-				index.customIndex.index(id, value, existingValue);
+				index.customIndex.index(id, value, existingValue, options);
 				continue;
 			}
 			hasChanges = true;
 			const indexNulls = index.indexNulls;
 			// determine what index values need to be removed and added
-			let valuesToAdd = getIndexedValues(value, indexNulls);
-			let valuesToRemove = getIndexedValues(existingValue, indexNulls);
+			let valuesToAdd = getIndexedValues(value, indexNulls) as any[];
+			let valuesToRemove = getIndexedValues(existingValue, indexNulls) as any[];
 			if (valuesToRemove?.length > 0) {
 				// put this in a conditional so we can do a faster version for new records
 				// determine the changes/diff from new values and old values
