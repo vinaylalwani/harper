@@ -326,6 +326,7 @@ function storeDBSizeMetrics(analyticsTable: Table, databases: Databases) {
 			if (!dbAuditSize) {
 				return;
 			}
+			let metric;
 			if (firstTable.primaryStore instanceof RocksDatabase) {
 				const dbPath = firstTable.primaryStore.store.path;
 				let dbSize = 0;
@@ -334,7 +335,7 @@ function storeDBSizeMetrics(analyticsTable: Table, databases: Databases) {
 						dbSize += fs.statSync(join(dbPath, filename)).size;
 					}
 				}
-				const metric = {
+				metric = {
 					metric: METRIC.DATABASE_SIZE,
 					database: db,
 					size: dbSize,
@@ -345,7 +346,7 @@ function storeDBSizeMetrics(analyticsTable: Table, databases: Databases) {
 				const dbTotalSize = fs.statSync(firstTable.primaryStore.env.path).size;
 				const dbUsedSize = storeTableSizeMetrics(analyticsTable, db, tables);
 				const dbFree = dbTotalSize - dbUsedSize;
-				const metric = {
+				metric = {
 					metric: METRIC.DATABASE_SIZE,
 					database: db,
 					size: dbTotalSize,

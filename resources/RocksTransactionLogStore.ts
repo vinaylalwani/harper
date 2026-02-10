@@ -7,9 +7,7 @@ import { isMainThread } from 'node:worker_threads';
 if (!process.env.HARPER_NO_FLUSH_ON_EXIT && isMainThread) {
 	// we want to be able to test log replay
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-	process.on('exit', () => {
-		shutdown();
-	});
+	process.on('exit', () => shutdown());
 }
 
 const HAS_32_BIT_FLAG = 0x80000000; // for future use if we need a bigger section for flags
@@ -240,5 +238,10 @@ export class RocksTransactionLogStore {
 	}
 	unlock(key: any): void {
 		this.rootStore.unlock(key);
+	}
+
+	async remove() {
+		// TODO: this function can likely be removed once the call to purgeLogs()
+		// is added in `resources/Table.ts`
 	}
 }

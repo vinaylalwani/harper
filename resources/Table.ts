@@ -3069,6 +3069,9 @@ export function makeTable(options) {
 		 * @param options
 		 */
 		static getSize() {
+			if (primaryStore instanceof RocksDatabase) {
+				return primaryStore.getDBIntProperty('rocksdb.estimate-live-data-size') ?? 0;
+			}
 			const stats = primaryStore.getStats();
 			return (stats.treeBranchPageCount + stats.treeLeafPageCount + stats.overflowPages) * stats.pageSize;
 		}

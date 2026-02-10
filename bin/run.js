@@ -25,7 +25,7 @@ const keys = require('../security/keys.js');
 const { startHTTPThreads } = require('../server/threads/socketRouter.ts');
 const hdbInfoController = require('../dataLayer/hdbInfoController.js');
 const hdbTerms = require('../utility/hdbTerms.ts');
-const { getHdbPid } = require('../utility/processManagement/processManagement.js');
+const { getHdbPid, isProcessRunning } = require('../utility/processManagement/processManagement.js');
 const { PACKAGE_ROOT } = require('../utility/packageUtils');
 
 let pmUtils;
@@ -105,6 +105,26 @@ async function initialize(calledByInstall = false, calledByMain = false) {
 
 		if (!hdbUtils.isEmpty(parsedArgs) && !hdbUtils.isEmptyOrZeroLength(Object.keys(parsedArgs))) {
 			configUtils.updateConfigValue(undefined, undefined, parsedArgs, true, true);
+		}
+	}
+
+	// if this process is Harper restarting, the parent could still be compacting RocksDB on exit,
+	// so we need to wait for the parent to exit
+	if (process.env.HARPER_PARENT_PROCESS_PID) {
+		const prevProcessPid = parseInt(process.env.HARPER_PARENT_PROCESS_PID);
+		delete process.env.HARPER_PARENT_PROCESS_PID;
+		if (isProcessRunning(prevProcessPid)) {
+			logger.info(`Previous process ${prevProcessPid} is still running, waiting up to 15 seconds...`);
+			// check if the previous process is still running, and if so, wait up to 15 seconds before timing out
+			const timeout = setTimeout(() => {
+				console.error(`Previous process ${prevProcessPid} is still running, exiting.`);
+				process.exit(1);
+			}, 15000);
+			while (isProcessRunning(prevProcessPid)) {
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+			logger.info(`Previous process ${prevProcessPid} has exited`);
+			clearTimeout(timeout);
 		}
 	}
 

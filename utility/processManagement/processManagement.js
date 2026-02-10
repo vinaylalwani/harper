@@ -17,6 +17,7 @@ module.exports = {
 	kill,
 	startService,
 	getHdbPid,
+	isProcessRunning,
 	cleanupChildrenProcesses,
 	expectedRestartOfChildren,
 };
@@ -37,6 +38,10 @@ function start(procConfig, noKill = false) {
 	const args = typeof procConfig.args === 'string' ? procConfig.args.split(' ') : procConfig.args;
 	procConfig.silent = true;
 	procConfig.detached = true;
+	procConfig.env = {
+		...procConfig.env,
+		HARPER_PARENT_PROCESS_PID: process.pid.toString(),
+	};
 	const subprocess = procConfig.script
 		? fork(procConfig.script, args, procConfig)
 		: execFile(procConfig.binFile, args, procConfig);

@@ -1,51 +1,26 @@
-import { RocksDatabase, type IteratorOptions } from '@harperfast/rocksdb-js';
+import {
+	DBI,
+	Store,
+	type StoreContext,
+	type StoreIteratorOptions,
+	type StorePutOptions,
+	type StoreRemoveOptions,
+} from '@harperfast/rocksdb-js';
 import { Id } from './ResourceInterface.ts';
 import { MAXIMUM_KEY } from 'ordered-binary';
-export class RocksIndexStore {
-	#store: RocksDatabase;
-	constructor(store: RocksDatabase) {
-		this.#store = store;
-	}
 
-	/**
-	 * Translate a put with indexed value and primary key to an underlying put
-	 * @param indexedValue - ignored, only used by LMDB
-	 * @param primaryKey
-	 * @param txnId
-	 */
-	put(indexedValue: any, primaryKey: Id, options: any) {
-		return this.#store.putSync([indexedValue, primaryKey], null, options);
+declare module '@harperfast/rocksdb-js' {
+	interface DBI<T> {
+		getValuesCount(indexedValue: any): number;
 	}
+}
 
-	putSync(indexedValue: any, primaryKey: Id, options: any) {
-		return this.#store.putSync([indexedValue, primaryKey], null, options);
-	}
-
-	remove(indexedValue: any, primaryKey: Id, options: any) {
-		return this.#store.removeSync([indexedValue, primaryKey], options);
-	}
-
-	removeSync(indexedValue: any, primaryKey: Id, options: any) {
-		return this.#store.removeSync([indexedValue, primaryKey], options);
-	}
-
-	getKeys(options: any): Iterable<any> {
-		return this.#store.getKeys(options);
-	}
-
-	getValuesCount(indexedValue: any) {
-		return this.#store.getKeysCount({ start: indexedValue, end: [indexedValue, MAXIMUM_KEY] });
-	}
-
-	getKeysCount() {
-		return this.#store.getKeysCount();
-	}
-
+export class RocksIndexStore extends Store {
 	/**
 	 * Get all entries matching the range
 	 * @param options
 	 */
-	getRange(options: IteratorOptions): Iterable<any> {
+	getRange(context: StoreContext, options: StoreIteratorOptions): Iterable<any> {
 		let { start, end, exclusiveStart, inclusiveEnd, reverse } = options;
 		if ((reverse ? !exclusiveStart : exclusiveStart) && start !== undefined) {
 			start = [start, MAXIMUM_KEY];
@@ -54,15 +29,41 @@ export class RocksIndexStore {
 			end = [end, MAXIMUM_KEY];
 		}
 		const translatedOptions = { ...options, start, end };
-		return this.#store.getRange(translatedOptions).map(({ key }) => {
+		return super.getRange(context, translatedOptions).map(({ key }) => {
 			return { key: key[0], value: key.length > 2 ? key.slice(1) : key[1] };
 		});
 	}
-	drop() {
-		return this.#store.drop();
+
+	/**
+	 * Translate a put with indexed value and primary key to an underlying put
+	 * @param indexedValue - ignored, only used by LMDB
+	 * @param primaryKey
+	 * @param txnId
+	 */
+	put(context: StoreContext, indexedValue: any, primaryKey: Id, options: StorePutOptions) {
+		return super.putSync(context, [indexedValue, primaryKey], null, options);
 	}
 
-	clear() {
-		return this.#store.clear();
+	putSync(context: StoreContext, indexedValue: any, primaryKey: Id, options: StorePutOptions) {
+		return super.putSync(context, [indexedValue, primaryKey], null, options);
+	}
+
+	remove(context: StoreContext, indexedValue: any, primaryKey: Id, options?: StoreRemoveOptions) {
+		return super.removeSync(context, [indexedValue, primaryKey], options);
+	}
+
+	removeSync(context: StoreContext, indexedValue: any, primaryKey: Id, options?: StoreRemoveOptions) {
+		super.removeSync(context, [indexedValue, primaryKey], options);
 	}
 }
+
+/**
+ * Add `getValuesCount` to the DBI prototype which is used by the `RocksDatabase` and `Transaction`
+ * classes.
+ */
+DBI.prototype.getValuesCount = function getValuesCount(indexedValue: any) {
+	if (this.store instanceof RocksIndexStore) {
+		return this.store.getCount(this.context, { start: indexedValue, end: [indexedValue, MAXIMUM_KEY] });
+	}
+	throw new Error('getValuesCount is only supported if dupSort=true');
+};

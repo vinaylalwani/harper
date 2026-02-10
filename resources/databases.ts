@@ -24,17 +24,21 @@ import { handleLocalTimeForGets } from './RecordEncoder.ts';
 import { deleteRootBlobPathsForDB } from './blob.ts';
 import { CUSTOM_INDEXES } from './indexes/customIndexes.ts';
 import * as OpenDBIObjectModule from '../utility/lmdb/OpenDBIObject.js';
-import { RocksDatabase, Store as RocksStore, type RocksDatabaseOptions } from '@harperfast/rocksdb-js';
+import { RocksDatabase, type RocksDatabaseOptions } from '@harperfast/rocksdb-js';
 import { replayLogs } from './replayLogs.ts';
 import { totalmem } from 'node:os';
 import { RocksIndexStore } from './RocksIndexStore.ts';
-import type { Id } from './ResourceInterface.ts';
 import { mkdirSync } from 'node:fs';
 import { when } from './Resource.ts';
+import { isProcessRunning } from '../utility/processManagement/processManagement.js';
 
-function OpenDBIObject(dupSort, isPrimary) {
+function createOpenDBIObject(dupSort = false, isPrimary = false) {
 	// what is going on with esbuild, it suddenly is randomly flip-flopping the module record for OpenDBIObject, sometimes return the correct exports object and sometimes returning the exports as the `default`.
-	const OpenDBIObject = OpenDBIObjectModule.OpenDBIObject ?? OpenDBIObjectModule.default.OpenDBIObject;
+	const module = OpenDBIObjectModule as any;
+	const OpenDBIObject = module.OpenDBIObject ?? ('default' in module ? module.default?.OpenDBIObject : null);
+	if (!OpenDBIObject) {
+		throw new Error('OpenDBIObject not found');
+	}
 	return new OpenDBIObject(dupSort, isPrimary);
 }
 const logger = forComponent('storage');
@@ -96,7 +100,6 @@ interface RocksRootDatabase extends RocksDatabaseEx {
 	auditStore?: RocksDatabaseEx;
 	databaseName?: string;
 	dbisDb?: RocksDatabaseEx;
-	status?: 'open' | 'closed';
 }
 
 export type RootDatabaseKind = LMDBRootDatabase | RocksRootDatabase;
@@ -106,19 +109,21 @@ export const databases: Databases = Object.create(null);
 
 const MEMORY_FOR_ROCKS_DB = (process.constrainedMemory?.() || totalmem()) * 0.25; // 25% of available memory
 
-function openRocksDatabase(path: string, options: RocksDatabaseOptions) {
+function openRocksDatabase(path: string, options: RocksDatabaseOptions & { dupSort?: boolean }) {
 	options.disableWAL ??= true;
 	RocksDatabase.config({ blockCacheSize: MEMORY_FOR_ROCKS_DB });
 	if (!existsSync(path)) {
 		mkdirSync(path, { recursive: true });
 	}
-	let db = RocksDatabase.open(path, options) as RocksRootDatabase;
+	let db: RocksRootDatabase;
 	if (options.dupSort) {
-		db = new RocksIndexStore(db, options);
+		db = RocksDatabase.open(new RocksIndexStore(path, options)) as RocksDatabaseEx;
 	} else {
-		db.env = {};
+		db = RocksDatabase.open(path, options) as RocksDatabaseEx;
 	}
+	db.env = {};
 	return db;
+
 }
 
 const lmdbDatabaseEnvs = new Map<string, LMDBRootDatabase>();
@@ -350,11 +355,19 @@ export function readMetaDb(
 function readRocksMetaDb(path: string, defaultTable?: string, databaseName: string = DEFAULT_DATABASE_NAME) {
 	try {
 		logger.trace(`loading rocksdb database: ${path}`);
-		let rootStore = rocksdbDatabaseEnvs.get(path);
+
+		if (process.env.HARPER_PARENT_PROCESS_PID) {
+			const parentProcessPid = parseInt(process.env.HARPER_PARENT_PROCESS_PID);
+			if (isProcessRunning(parentProcessPid)) {
+				logger.info(`Parent process ${parentProcessPid} is still running!`);
+			}
+		}
+
+		let rootStore: RocksDatabaseEx | undefined = rocksdbDatabaseEnvs.get(path);
 		if (rootStore) {
 			initStores(path, rootStore, databaseName, defaultTable);
 		} else {
-			rootStore = openRocksDatabase(path, { disableWAL: false });
+			rootStore = openRocksDatabase(path, { disableWAL: false }) as RocksDatabaseEx;
 			rocksdbDatabaseEnvs.set(path, rootStore);
 			initStores(path, rootStore, databaseName, defaultTable);
 			replayLogs(rootStore, databases[databaseName]);
@@ -375,7 +388,7 @@ function initStores(
 	isLegacy?: boolean
 ) {
 	const envInit = new OpenEnvironmentObject(path, false);
-	const internalDbiInit = new OpenDBIObject(false);
+	const internalDbiInit = createOpenDBIObject(false);
 	let dbisStore = rootStore.dbisDb;
 	if (!dbisStore) {
 		if (rootStore instanceof RocksDatabase) {
@@ -383,7 +396,7 @@ function initStores(
 				...internalDbiInit,
 				disableWAL: false,
 				name: INTERNAL_DBIS_NAME,
-			});
+			}) as RocksDatabaseEx;
 		} else {
 			dbisStore = rootStore.openDB(INTERNAL_DBIS_NAME, internalDbiInit);
 		}
@@ -489,7 +502,7 @@ function initStores(
 				dbisStore.putSync(NEXT_TABLE_ID, tableId + 1);
 				dbisStore.putSync(primaryAttribute.key, primaryAttribute);
 			}
-			const dbiInit = new OpenDBIObject(!primaryAttribute.is_hash_attribute, primaryAttribute.is_hash_attribute);
+			const dbiInit = createOpenDBIObject(!primaryAttribute.is_hash_attribute, primaryAttribute.is_hash_attribute);
 			dbiInit.compression = primaryAttribute.compression;
 			if (dbiInit.compression) {
 				const compressionThreshold =
@@ -760,8 +773,8 @@ export async function dropDatabase(databaseName) {
 function openIndex(dbiKey: string, rootStore: LMDBRootDatabase | RocksRootDatabase, attribute: any) {
 	const objectStorage =
 		attribute.is_hash_attribute || (attribute.indexed.type && CUSTOM_INDEXES[attribute.indexed.type]?.useObjectStore);
-	const dbiInit = new OpenDBIObject(!objectStorage, objectStorage);
-	let dbi: LMDBDatabase | (RocksDatabase & { customIndex?: any; isIndexing?: boolean; indexNulls?: boolean });
+	const dbiInit = createOpenDBIObject(!objectStorage, objectStorage);
+	let dbi: LMDBDatabase | (RocksDatabase & { customIndex?: any; isIndexing?: boolean; indexNulls?: boolean; rootStore?: RocksRootDatabase });
 	if (rootStore instanceof RocksDatabase) {
 		dbi = openRocksDatabase(rootStore.path, { ...dbiInit, name: dbiKey });
 		dbi.rootStore = rootStore;
@@ -821,7 +834,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 	let primaryKeyAttribute;
 	let attributesDbi;
 	if (schemaDefined == undefined) schemaDefined = true;
-	const internalDbiInit = new OpenDBIObject(false);
+	const internalDbiInit = createOpenDBIObject(false);
 
 	for (const attribute of attributes) {
 		if (attribute.attribute && !attribute.name) {
@@ -862,7 +875,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 			else if (!primaryKeyAttribute.origins.includes(origin)) primaryKeyAttribute.origins.push(origin);
 		}
 		logger.trace(`${tableName} table loading, opening primary store`);
-		const dbiInit = new OpenDBIObject(false, true);
+		const dbiInit = createOpenDBIObject(false, true);
 		dbiInit.compression = primaryKeyAttribute.compression;
 		const dbiName = tableName + '/';
 
