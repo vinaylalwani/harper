@@ -121,7 +121,7 @@ export class RecordEncoder extends Encoder {
 						nodeIdAtNextEncoding = -1; // reset indicator to mean no node id
 					}
 				}
-				const encoded = (superEncode.call(this, record, options | 2048 | valueStart)); // encode with 8 bytes reserved space for txnId
+				const encoded = superEncode.call(this, record, options | 2048 | valueStart); // encode with 8 bytes reserved space for txnId
 				lastValueEncoding = encoded.subarray((encoded.start || 0) + valueStart, encoded.end);
 				let position = encoded.start || 0;
 				const dataView =

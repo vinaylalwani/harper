@@ -634,7 +634,7 @@ function printStd(
 	command: string,
 	stdString: string,
 	stdStreamLabel: 'stdout' | 'stderr',
-	level: 'debug' | 'warn' | 'error' = 'debug',
+	level: 'debug' | 'warn' | 'error' = 'debug'
 ) {
 	const stdLogger = logger.loggerWithTag(`${applicationName}:spawn:${command}:${stdStreamLabel}`);
 	for (const line of stdString.split('\n')) {

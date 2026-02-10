@@ -363,7 +363,8 @@ describe('test createTokens', () => {
 			throw Error('update failed');
 		});
 
-		token_auth.__set__('getJWTRSAKeys',
+		token_auth.__set__(
+			'getJWTRSAKeys',
 			async () => new JWTRSAKeys(PUBLIC_KEY_VALUE, PRIVATE_KEY_VALUE, PASSPHRASE_VALUE)
 		);
 		let result;
@@ -383,7 +384,8 @@ describe('test createTokens', () => {
 			return { message: 'updated 0 of 1', update_hashes: [], skipped_hashes: ['1'] };
 		});
 
-		token_auth.__set__('getJWTRSAKeys',
+		token_auth.__set__(
+			'getJWTRSAKeys',
 			async () => new JWTRSAKeys(PUBLIC_KEY_VALUE, PRIVATE_KEY_VALUE, PASSPHRASE_VALUE)
 		);
 		let result;

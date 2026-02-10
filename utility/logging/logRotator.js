@@ -9,7 +9,7 @@ const path = require('path');
 const envMgr = require('../environment/environmentManager.js');
 envMgr.initSync();
 const hdbLogger = require('./harper_logger.js');
-const { CONFIG_PARAMS} = require('../hdbTerms.ts');
+const { CONFIG_PARAMS } = require('../hdbTerms.ts');
 const { convertToMS } = require('../common_utils.js');
 const { onStorageReclamation } = require('../../server/storageReclamation.ts');
 

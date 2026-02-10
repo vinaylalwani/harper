@@ -313,7 +313,8 @@ describe('Blob test', () => {
 			eventError = err;
 		});
 		try {
-			for await (let _entry of record.blob.stream()) {}
+			for await (let _entry of record.blob.stream()) {
+			}
 		} catch (err) {
 			thrownError = err;
 		}
@@ -332,7 +333,8 @@ describe('Blob test', () => {
 		});
 
 		try {
-			for await (let _entry of blob.stream()) {}
+			for await (let _entry of blob.stream()) {
+			}
 		} catch (err) {
 			thrownError = err;
 		}
@@ -346,7 +348,8 @@ describe('Blob test', () => {
 			eventError = err;
 		});
 		try {
-			for await (let _entry of record.blob.stream()) {}
+			for await (let _entry of record.blob.stream()) {
+			}
 		} catch (err) {
 			thrownError = err;
 		}
