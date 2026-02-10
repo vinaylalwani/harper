@@ -10,6 +10,7 @@ if (HARPER_LOOPBACK_POOL_COUNT < 1 || HARPER_LOOPBACK_POOL_COUNT > 255) {
 	throw new Error('HARPER_INTEGRATION_TEST_LOOPBACK_POOL_COUNT must be between 1 and 255');
 }
 const HARPER_LOOPBACK_POOL_PATH = join(tmpdir(), 'harper-integration-test-loopback-pool.json');
+console.log('loop-file', HARPER_LOOPBACK_POOL_PATH);
 const HARPER_LOOPBACK_POOL_LOCK_PATH = join(tmpdir(), 'harper-integration-test-loopback-pool.lock');
 
 // Constants for timeouts and retries
@@ -199,6 +200,7 @@ function parseLoopbackAddress(address: string): number {
  * @throws An error with the loopbackAddress property if binding fails
  */
 function validateLoopbackAddress(loopbackAddress: string): Promise<string> {
+	console.log('Validating address', loopbackAddress);
 	return new Promise((resolve, reject) => {
 		const server = createServer();
 		server.once('error', (error) => {

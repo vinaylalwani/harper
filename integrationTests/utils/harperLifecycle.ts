@@ -9,9 +9,9 @@ import { getNextAvailableLoopbackAddress, releaseLoopbackAddress } from './loopb
 
 // Constants
 const HTTP_PORT = 9926;
-const OPERATIONS_API_PORT = 9925;
-const DEFAULT_ADMIN_USERNAME = 'admin';
-const DEFAULT_ADMIN_PASSWORD = 'Abc1234!';
+export const OPERATIONS_API_PORT = 9925;
+export const DEFAULT_ADMIN_USERNAME = 'admin';
+export const DEFAULT_ADMIN_PASSWORD = 'Abc1234!';
 const DEFAULT_STARTUP_TIMEOUT_MS = parseInt(process.env.HARPER_INTEGRATION_TEST_STARTUP_TIMEOUT_MS, 10) || 30000;
 
 /**

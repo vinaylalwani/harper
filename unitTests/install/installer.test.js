@@ -295,7 +295,7 @@ describe('Test installer module', () => {
 		expect(prompts_schema[2].when).to.be.true;
 		expect(prompts_schema[3].name).to.equal('DEFAULTS_MODE');
 		expect(prompts_schema[3].when).to.be.false;
-		expect(prompts_schema[4].name).to.equal('REPLICATION_HOSTNAME');
+		expect(prompts_schema[4].name).to.equal('NODE_HOSTNAME');
 		expect(prompts_schema[4].when).to.be.true;
 		expect(prompts_schema[5].name).to.equal('CLUSTERING_NODENAME');
 		expect(prompts_schema[5].when).to.be.false;
