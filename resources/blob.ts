@@ -196,8 +196,6 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 					return new Promise((resolve, reject) => {
 						const callback = () => {
 							writeFinished = true;
-							// TODO: We shouldn't be unlocking here, right?
-							store.unlock(lockKey, 0);
 							return resolve(readContents());
 						};
 						const lockAcquired = store.tryLock(lockKey, callback);
@@ -523,7 +521,7 @@ export function saveBlob(blob: FileBackedBlob, deleteOnFailure = false) {
 	storageInfo.deleteOnFailure = deleteOnFailure;
 	if (blob.saveInRecord) {
 		if (!storageInfo.contentBuffer) {
-			// TODO: Add support for this
+			// TODO: Add support for this: https://github.com/HarperFast/harper/issues/141
 			throw new Error('Cannot publish a message with a streamed blob');
 		}
 		return storageInfo; // nothing more to do if it supposed to be saved in the record

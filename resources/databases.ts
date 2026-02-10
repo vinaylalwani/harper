@@ -104,72 +104,11 @@ export type RootDatabaseKind = LMDBRootDatabase | RocksRootDatabase;
 export const tables: Tables = Object.create(null);
 export const databases: Databases = Object.create(null);
 
-class HarperStore extends RocksStore {
-	SPECIAL_WRITE = 0x10101n;
-	REPLACE_WITH_TIMESTAMP_FLAG = 0x1000000n;
-	// REPLACE_WITH_TIMESTAMP = 0x1010101n;
-	DIRECT_WRITE = 0x2000000n;
-	// SET_VERSION = 0x200;
-
-	timestampBuffer = new DataView(new ArrayBuffer(8));
-
-	putSync(context, key, value, options) {
-		if (!this.db.opened) {
-			throw new Error('Database not open');
-		}
-
-		const valueBuffer = this.encodeValue(value);
-		const dataView = new DataView(
-			valueBuffer.buffer || valueBuffer,
-			valueBuffer.byteOffset || 0,
-			valueBuffer.byteLength || valueBuffer.length
-		);
-		const firstWord = dataView.getBigUint64(0, true);
-
-		if ((firstWord & 0xffffffn) === this.SPECIAL_WRITE) {
-			if (firstWord & this.REPLACE_WITH_TIMESTAMP_FLAG) {
-				const next32 = firstWord >> 32n;
-				if (next32 & 4n) {
-					// preserve last timestamp
-					throw new Error('Recording previous timestamp is not supported');
-				}
-
-				let timestamp = 0n;
-				if (next32 & 1n) {
-					if (next32 & 2n) {
-						// use previous timestamp
-					} else {
-						// use last timestamp
-					}
-					throw new Error('Use of previous timestamp is not supported');
-				} else {
-					// use current timestamp
-					const now = performance.timeOrigin + performance.now();
-					const float64Array = new Float64Array([now]);
-					const bigUint64Array = new BigUint64Array(float64Array.buffer);
-					this.timestampBuffer.setBigUint64(0, bigUint64Array[0], false);
-					// setFloat64()
-					timestamp = this.timestampBuffer.getBigUint64(0, true);
-				}
-
-				if (firstWord & this.DIRECT_WRITE) {
-					// unsupported
-					throw new Error('Use of direct write is not supported');
-				} else {
-					// store the big integer timestamp in the value buffer
-					dataView.setBigUint64(0, timestamp ^ (next32 >> 8n), true);
-				}
-			}
-		}
-
-		context.putSync(this.encodeKey(key), valueBuffer, this.getTxnId(options));
-	}
-}
+const MEMORY_FOR_ROCKS_DB = (process.constrainedMemory?.() || totalmem()) * 0.25; // 25% of available memory
 
 function openRocksDatabase(path: string, options: RocksDatabaseOptions) {
 	options.disableWAL ??= true;
-	const availableMemory = process.constrainedMemory?.() || totalmem();
-	RocksDatabase.config({ blockCacheSize: availableMemory * 0.25 });
+	RocksDatabase.config({ blockCacheSize: MEMORY_FOR_ROCKS_DB });
 	if (!existsSync(path)) {
 		mkdirSync(path, { recursive: true });
 	}
