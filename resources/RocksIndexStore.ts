@@ -63,7 +63,7 @@ export class RocksIndexStore extends Store {
  */
 DBI.prototype.getValuesCount = function getValuesCount(indexedValue: any) {
 	if (this.store instanceof RocksIndexStore) {
-		return this.store.getCount(this.context, { start: indexedValue, end: [indexedValue, MAXIMUM_KEY] });
+		return this.store.getCount(this._context, { start: indexedValue, end: [indexedValue, MAXIMUM_KEY] });
 	}
 	throw new Error('getValuesCount is only supported if dupSort=true');
 };
