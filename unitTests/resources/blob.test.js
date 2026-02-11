@@ -70,9 +70,9 @@ describe('Blob test', () => {
 		assert.equal(record.blob.type, 'text/plain');
 		assert.equal(record.blob.extraProperty, 'this is an extra property');
 		testString += testString; // modify the string
-		assert.throws(() => {
+		await assert.rejects(async () => {
 			// should not be able to use the blob in a different record
-			BlobTest.put({ id: 2, blob });
+			await BlobTest.put({ id: 2, blob });
 		});
 		blob = await createBlob(Readable.from(testString), { flush: true }); // create a new blob with flush
 		await BlobTest.put({ id: 1, blob });
@@ -362,8 +362,8 @@ describe('Blob test', () => {
 		assert.throws(() => {
 			createBlob(undefined);
 		});
-		assert.throws(() => {
-			BlobTest.put({ id: 1, blob: { name: 'not actually a blob' } });
+		await assert.rejects(async () => {
+			await BlobTest.put({ id: 1, blob: { name: 'not actually a blob' } });
 		});
 	});
 	it('sequential embedded blob reads', async () => {

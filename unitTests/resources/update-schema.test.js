@@ -15,7 +15,7 @@ describe('Update Schema', () => {
 	});
 	it('Add some records and then index them', async function () {
 		await transaction((context) => {
-			test_data.map((record) => tables.SchemaChanges.put(record, context));
+			return Promise.all(test_data.map((record) => tables.SchemaChanges.put(record, context)));
 		});
 		let caught_error;
 		try {

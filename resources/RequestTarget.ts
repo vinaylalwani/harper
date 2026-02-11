@@ -14,6 +14,9 @@ export class RequestTarget extends URLSearchParams {
 	/** Request a specific property from the identified record */
 	declare property?: string;
 
+	/** Request best effort and returning synchronously */
+	declare sync?: boolean;
+
 	/** Indicates that this is a request to query for collection of records */
 	isCollection?: boolean;
 	// these are query parameters

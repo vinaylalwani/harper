@@ -114,7 +114,7 @@ describe('Permissions through Resource API', () => {
 	it('Can not get without permission', async function () {
 		let caught_error, result;
 		try {
-			result = TestTable.get('id-2', {
+			result = await TestTable.get('id-2', {
 				user: restricted_user,
 				authorize: true,
 			});
@@ -126,7 +126,7 @@ describe('Permissions through Resource API', () => {
 	it('Can not write without permission', async function () {
 		let caught_error, result;
 		try {
-			result = TestTable.put(
+			result = await TestTable.put(
 				'id-2',
 				{ name: 'new record' },
 				{
@@ -140,7 +140,7 @@ describe('Permissions through Resource API', () => {
 		assert(caught_error.message.includes('Unauthorized access'));
 		caught_error = null;
 		try {
-			result = TestTable.delete('id-2', {
+			result = await TestTable.delete('id-2', {
 				user: restricted_user,
 				authorize: true,
 			});
@@ -166,7 +166,7 @@ describe('Permissions through Resource API', () => {
 			authorize: true,
 			id: 'id-2',
 		};
-		let result = TestTable.get(request, request);
+		let result = await TestTable.get(request, request);
 		assert.equal(result.name, 'name-2');
 		assert.equal(result.prop1, undefined);
 		assert.equal(result.related, undefined);
@@ -202,7 +202,7 @@ describe('Permissions through Resource API', () => {
 		assert.equal(results[0].related.name, undefined);
 	});
 	it('Can write with permission', async function () {
-		let result = TestTable.put(
+		let result = await TestTable.put(
 			'id-2',
 			{ name: 'new record' },
 			{
@@ -218,7 +218,7 @@ describe('Permissions through Resource API', () => {
 	it('Can not write with restricted attribute', async function () {
 		let caught_error, result;
 		try {
-			result = TestTable.put(
+			result = await TestTable.put(
 				'id-2',
 				{ name: 'new record', prop1: 'change' },
 				{

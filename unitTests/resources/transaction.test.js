@@ -45,7 +45,7 @@ describe('Transactions', () => {
 	it('Can run txn', async function () {
 		const context = {};
 		await transaction(context, () => {
-			TxnTest.put(42, { name: 'the answer' }, context);
+			return TxnTest.put(42, { name: 'the answer' }, context);
 		});
 		let answer = await TxnTest.get(42);
 		assert.equal(answer.name, 'the answer');
@@ -54,10 +54,10 @@ describe('Transactions', () => {
 	it('Can run txn with three tables and two databases', async function () {
 		const context = {};
 		let start = Date.now();
-		await transaction(context, () => {
-			TxnTest.put(7, { name: 'a prime' }, context);
-			TxnTest2.put(13, { name: 'a bigger prime' }, context);
-			TxnTest3.put(14, { name: 'not a prime' }, context);
+		await transaction(context, async () => {
+			await TxnTest.put(7, { name: 'a prime' }, context);
+			await TxnTest2.put(13, { name: 'a bigger prime' }, context);
+			await TxnTest3.put(14, { name: 'not a prime' }, context);
 		});
 		assert.equal((await TxnTest.get(7)).name, 'a prime');
 		assert.equal((await TxnTest2.get(13)).name, 'a bigger prime');
@@ -78,8 +78,8 @@ describe('Transactions', () => {
 		const context = {};
 		let start = Date.now();
 		await transaction(context, async () => {
-			TxnTest.put(7, { name: 'seven' }, context);
-			TxnTest2.put(13, { name: 'thirteen' }, context);
+			await TxnTest.put(7, { name: 'seven' }, context);
+			await TxnTest2.put(13, { name: 'thirteen' }, context);
 			await context.transaction.commit();
 			assert.equal((await TxnTest.get(7, context)).name, 'seven');
 			assert.equal((await TxnTest2.get(13, context)).name, 'thirteen');
@@ -89,7 +89,7 @@ describe('Transactions', () => {
 				entries.push(entry);
 			}
 			assert.equal(entries[0].name, 'thirteen');
-			TxnTest3.put(14, { name: 'fourteen' }, context);
+			await TxnTest3.put(14, { name: 'fourteen' }, context);
 			await context.transaction.commit();
 			assert.equal((await TxnTest.get(7, context)).name, 'SEVEN');
 			assert.equal((await TxnTest2.get(13, context)).name, 'thirteen');
@@ -105,7 +105,11 @@ describe('Transactions', () => {
 		it('Can update with addTo and set', async function () {
 			const context = {};
 			await transaction(context, () => {
-				TxnTest.put(45, { name: 'a counter', count: 1, countInt: 100, countBigInt: 4611686018427388000n }, context);
+				return TxnTest.put(
+					45,
+					{ name: 'a counter', count: 1, countInt: 100, countBigInt: 4611686018427388000n },
+					context
+				);
 			});
 			assert.equal((await TxnTest.get(45)).name, 'a counter');
 			await transaction(async (txn) => {
@@ -146,8 +150,8 @@ describe('Transactions', () => {
 		});
 		it('Can update with patch', async function () {
 			const context = {};
-			await transaction(context, () => {
-				TxnTest.put(45, { name: 'a counter', count: 1 }, context);
+			await transaction(context, async () => {
+				await TxnTest.put(45, { name: 'a counter', count: 1 }, context);
 			});
 			let entity = await TxnTest.get(45);
 			assert.equal(entity.name, 'a counter');
@@ -211,8 +215,8 @@ describe('Transactions', () => {
 
 		it('Can merge replication updates', async function () {
 			const context = {};
-			await transaction(context, () => {
-				TxnTest.put(45, { name: 'a counter', count: 1 }, context);
+			await transaction(context, async () => {
+				await TxnTest.put(45, { name: 'a counter', count: 1 }, context);
 			});
 			let entity = await TxnTest.get(45);
 			assert.equal(entity.name, 'a counter');

@@ -48,7 +48,7 @@ describe('Types Validation', () => {
 				name: 'inside',
 			},
 		});
-		let result = ValidationTest.get(42);
+		let result = await ValidationTest.get(42);
 		assert.equal(result.computed, 'hello computed');
 		await ValidationTest.put(42, {
 			str: null,
@@ -60,89 +60,103 @@ describe('Types Validation', () => {
 		});
 	});
 	it('Rejects without primary key', async function () {
-		assert.throws(() =>
-			ValidationTest.put({
-				str: 'hello',
-				num: 3.14,
-				int: 2147483640,
-				long: 12147483648,
-				bool: true,
-				bytes: Buffer.from([1, 2, 3]),
-				arrayOfStrings: ['hi', 'there'],
-				subObject: {
-					name: 'inside',
-				},
-			})
+		await assert.rejects(
+			async () =>
+				await ValidationTest.put({
+					str: 'hello',
+					num: 3.14,
+					int: 2147483640,
+					long: 12147483648,
+					bool: true,
+					bytes: Buffer.from([1, 2, 3]),
+					arrayOfStrings: ['hi', 'there'],
+					subObject: {
+						name: 'inside',
+					},
+				})
 		);
 	});
 	it('Rejects incorrect types', async function () {
-		assert.throws(() =>
-			ValidationTest.put(42, {
-				str: 444,
-			})
+		await assert.rejects(
+			async () =>
+				await ValidationTest.put(42, {
+					str: 444,
+				})
 		);
-		assert.throws(() =>
-			ValidationTest.put(42, {
-				num: 'wrong type',
-			})
+		await assert.rejects(
+			async () =>
+				await ValidationTest.put(42, {
+					num: 'wrong type',
+				})
 		);
-		assert.throws(() =>
-			ValidationTest.put(42, {
-				bool: 'wrong type',
-			})
+		await assert.rejects(
+			async () =>
+				await ValidationTest.put(42, {
+					bool: 'wrong type',
+				})
 		);
-		assert.throws(() =>
-			ValidationTest.put(42, {
-				bytes: { name: 'wrong type' },
-			})
+		await assert.rejects(
+			async () =>
+				await ValidationTest.put(42, {
+					bytes: { name: 'wrong type' },
+				})
 		);
-		assert.throws(() =>
-			ValidationTest.put(42, {
-				int: 2147483658,
-			})
+		await assert.rejects(
+			async () =>
+				await ValidationTest.put(42, {
+					int: 2147483658,
+				})
 		);
-		assert.throws(() =>
-			ValidationTest.put(42, {
-				long: 9007199254740999,
-			})
+		await assert.rejects(
+			async () =>
+				await ValidationTest.put(42, {
+					long: 9007199254740999,
+				})
 		);
-		assert.throws(() =>
-			ValidationTest.put(42, {
-				subObject: 'wrong type',
-			})
+		await assert.rejects(
+			async () =>
+				await ValidationTest.put(42, {
+					subObject: 'wrong type',
+				})
 		);
-		assert.throws(() =>
-			ValidationTest.put(42, {
-				subObject: { name: 32 },
-			})
+		await assert.rejects(
+			async () =>
+				await ValidationTest.put(42, {
+					subObject: { name: 32 },
+				})
 		);
-		assert.throws(() =>
-			ValidationTest.put(42, {
-				subObject: { name: null },
-			})
+		await assert.rejects(
+			async () =>
+				await ValidationTest.put(42, {
+					subObject: { name: null },
+				})
 		);
-		assert.throws(() =>
-			ValidationTest.put(42, {
-				subObject: {},
-			})
+		await assert.rejects(
+			async () =>
+				await ValidationTest.put(42, {
+					subObject: {},
+				})
 		);
-		assert.throws(() =>
-			ValidationTest.put(42, {
-				arrayOfStrings: [32],
-			})
+		await assert.rejects(
+			async () =>
+				await ValidationTest.put(42, {
+					arrayOfStrings: [32],
+				})
 		);
-		assert.throws(() =>
-			ValidationTest.put(42, {
-				undeclaredProperty: 33, // not allowed because it is sealed
-			})
+		await assert.rejects(
+			async () =>
+				await ValidationTest.put(42, {
+					undeclaredProperty: 33, // not allowed because it is sealed
+				})
 		);
-		assert.throws(() =>
-			ValidationTest.put(42, {
-				subObject: {
-					name: 'valid',
-					undeclaredSubProperty: 33, // not allowed because it is sealed
-				},
-			})
+		await assert.rejects(
+			async () =>
+				await ValidationTest.put(42, {
+					subObject: {
+						name: 'valid',
+						undeclaredSubProperty: 33, // not allowed because it is sealed
+					},
+				})
 		);
 	});
 });

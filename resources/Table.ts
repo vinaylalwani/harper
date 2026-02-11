@@ -618,7 +618,7 @@ export function makeTable(options) {
 				if (typeof id === 'object' && id && !Array.isArray(id)) {
 					throw new Error(`Invalid id ${JSON.stringify(id)}`);
 				}
-				const sync = !resourceOptions?.async || primaryStore.cache?.get?.(id);
+				const sync = target?.sync || primaryStore.cache?.get?.(id);
 				const txn = txnForContext(request);
 				const readTxn = txn.getReadTxn();
 				if (readTxn?.isDone) {
