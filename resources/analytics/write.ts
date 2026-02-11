@@ -3,6 +3,7 @@ import { setChildListenerByType } from '../../server/threads/manageThreads.js';
 import { getDatabases, table } from '../databases.ts';
 import type { Databases, Table, Tables } from '../databases.ts';
 import harperLogger from '../../utility/logging/harper_logger.js';
+import { stat } from 'node:fs/promises';
 const { getLogFilePath, forComponent } = harperLogger;
 import { dirname, join } from 'path';
 import { open } from 'fs/promises';
@@ -389,26 +390,16 @@ function storeVolumeMetrics(analyticsTable: Table, databases: Databases) {
 async function aggregation(fromPeriod, toPeriod = 60000) {
 	const rawAnalyticsTable = getRawAnalyticsTable();
 	const analyticsTable = getAnalyticsTable();
-	const taskQueueLatency = new Promise((resolve) => {
-		let start = performance.now();
-		setImmediate(() => {
-			const now = performance.now();
-			if (now - start > 5000)
-				log.warn?.('Unusually high event queue latency on the main thread of ' + Math.round(now - start) + 'ms');
-			start = performance.now(); // We use this start time to measure the time it actually takes to on the task queue, minus the time on the event queu
-		});
-		if (analyticsTable.primaryStore instanceof RocksDatabase) {
-			// TOOD: Implement this for RocksDB
-			resolve(0);
-		} else {
-			analyticsTable.primaryStore.prefetch([1], () => {
-				const now = performance.now();
-				if (now - start > 5000)
-					log.warn?.('Unusually high task queue latency on the main thread of ' + Math.round(now - start) + 'ms');
-				resolve(now - start);
-			});
+	const taskQueueLatency = (async () => {
+		const start = performance.now();
+		// measure how long it task to enqueue and get a callback from a simple/fast task:
+		await stat(getLogFilePath());
+		const delay = performance.now() - start;
+		if (delay > 5000) {
+			log.warn?.('Unusually high task queue latency on the main thread of ' + Math.round(now - start) + 'ms');
 		}
-	});
+		return delay;
+	})();
 	let lastForPeriod;
 	const localNodeId = getHostNodeId(server.hostname);
 	// find the last entry for this period for the local node only
