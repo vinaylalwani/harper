@@ -304,7 +304,7 @@ export function handleLocalTimeForGets(store, rootStore) {
 		store.readCount++;
 		lastMetadata = null;
 		if (isRocksDB) {
-			return when(options?.async ? Promise.resolve(store.get(id, options)) : store.getSync(id, options), (value) => {
+			return when(options?.async ? store.get(id, options) : store.getSync(id, options), (value) => {
 				let entry = value === undefined ? undefined : ({ value } as Entry);
 				return entry && withEntry(entry);
 			});
@@ -343,15 +343,24 @@ export function handleLocalTimeForGets(store, rootStore) {
 		}
 	};
 
+	const storeGetSync = store.getSync;
+	store.getSync = function (id, options) {
+		lastMetadata = null;
+		const value = storeGetSync.call(this, id, options);
+		if (lastMetadata && value) {
+			entryMap.set(value, lastMetadata);
+		}
+		return value;
+	};
 	const storeGet = store.get;
 	store.get = function (id, options) {
 		lastMetadata = null;
-		const value = storeGet.call(this, id, options);
-		if (lastMetadata && value) {
-			entryMap.set(value, lastMetadata);
-			lastMetadata = null;
-		}
-		return value;
+		return when(storeGet.call(this, id, options), (value) => {
+			if (lastMetadata && value) {
+				entryMap.set(value, lastMetadata);
+			}
+			return value;
+		});
 	};
 
 	//store.pendingTimestampUpdates = new Map();

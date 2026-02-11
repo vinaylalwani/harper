@@ -2385,10 +2385,10 @@ export function makeTable(options) {
 				if (context?.transaction?.stale) context.transaction.stale = false;
 				if (entry != undefined) {
 					record = entry.deref ? entry.deref() : entry.value;
-					if ((!record && (entry.key === undefined || entry.deref)) || entry.metadataFlags & INVALIDATED) {
-						if (entry.metadataFlags & INVALIDATED && context.replicateFrom === false && canSkip && entry.residencyId) {
-							return SKIP;
-						}
+					if (entry.metadataFlags & INVALIDATED && context.replicateFrom === false && canSkip && entry.residencyId) {
+						return SKIP;
+					}
+					if (!record && (entry.key === undefined || entry.deref)) {
 						// if the record is not loaded, either due to the entry actually be a key, or the entry's value
 						// being GC'ed, we need to load it now
 						entry = loadLocalRecord(
@@ -3564,8 +3564,14 @@ export function makeTable(options) {
 			// if the transaction was closed, which can happen if we are iterating
 			// through query results and the iterator ends (abruptly)
 			if (options.transaction?.isDone) return withEntry(null, id);
-			let entry = primaryStore.getEntry(id, options);
-
+			if (!sync && options) {
+				options.async = true;
+				return when(primaryStore.getEntry(id, options), withLocalEntry);
+			} else {
+				return withLocalEntry(primaryStore.getEntry(id, options));
+			}
+		};
+		function withLocalEntry(entry) {
 			// skip recording reads for most system tables except hdb_analytics
 			// we want to track analytics reads in licensing, etc.
 			if (databaseName !== 'system' || tableName === 'hdb_analytics') {
@@ -3598,7 +3604,7 @@ export function makeTable(options) {
 				if (entry?.localTime && !context.lastRefreshed) context.lastRefreshed = entry.localTime;
 			}
 			return withEntry(entry, id);
-		};
+		}
 		// To prefetch or not to prefetch is one of the biggest questions Harper has to make.
 		// Prefetching has important benefits as it allows any page fault to be executed asynchronously
 		// in the work threads, and it provides event turn yielding, allowing other async functions
