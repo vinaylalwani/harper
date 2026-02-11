@@ -71,9 +71,6 @@ describe('test REST calls', () => {
 		assert(data[3].id);
 	});
 	it('PUT with CBOR', async () => {
-		setTimeout(() => {
-			//why_is_node_running.whyIsNodeStillRunning();
-		}, 4000).unref();
 		const headers = {
 			//authorization,
 			'content-type': 'application/cbor',

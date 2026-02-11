@@ -1,5 +1,4 @@
 import { Transaction as LMDBTransaction } from 'lmdb';
-import { LMDBTransaction as HarperLMDBTransaction } from './LMDBTransaction.ts';
 import { getNextMonotonicTime } from '../utility/lmdb/commonUtility.js';
 import { ServerError } from '../utility/errors/hdbError.js';
 import * as harperLogger from '../utility/logging/harper_logger.js';
@@ -7,7 +6,8 @@ import type { Context, Id } from './ResourceInterface.ts';
 import * as envMngr from '../utility/environment/environmentManager.js';
 import { CONFIG_PARAMS } from '../utility/hdbTerms.ts';
 import { convertToMS } from '../utility/common_utils.js';
-import { RocksDatabase, Transaction as RocksTransaction, type Store as RocksStore } from '@harperfast/rocksdb-js';
+import { when } from '../utility/when.ts';
+import { Transaction as RocksTransaction, type Store as RocksStore } from '@harperfast/rocksdb-js';
 import type { RootDatabaseKind } from './databases.ts';
 import type { Entry } from './RecordEncoder.ts';
 
@@ -369,9 +369,4 @@ export function setTxnExpiration(ms) {
 	txnExpiration = ms;
 	startMonitoringTxns();
 	return trackedTxns;
-}
-// wait for a promise or plain object to resolve
-function when<T, R>(value: T | Promise<T>, callback: (value: T) => R, reject?: (error: any) => R): R | Promise<R> {
-	if ((value as Promise<T>)?.then) return (value as Promise<T>).then(callback, reject);
-	return callback(value as T);
 }

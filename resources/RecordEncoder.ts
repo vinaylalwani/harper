@@ -19,7 +19,8 @@ import * as harperLogger from '../utility/logging/harper_logger.js';
 import './blob.ts';
 import { blobsWereEncoded, decodeFromDatabase, deleteBlobsInObject, encodeBlobsWithFilePath } from './blob.ts';
 import { recordAction } from './analytics/write.ts';
-import { RocksDatabase, Transaction as RocksTransaction } from '@harperfast/rocksdb-js';
+import { RocksDatabase } from '@harperfast/rocksdb-js';
+import { when } from '../utility/when.ts';
 export type Entry = {
 	key: any;
 	value: any;
@@ -28,6 +29,8 @@ export type Entry = {
 	expiresAt: number;
 	metadataFlags: number;
 	nodeId: number;
+	residencyId: number;
+	size: number;
 	deref?: () => any;
 };
 
@@ -300,15 +303,17 @@ export function handleLocalTimeForGets(store, rootStore) {
 	store.getEntry = function (id, options) {
 		store.readCount++;
 		lastMetadata = null;
-		let entry: Entry;
 		if (isRocksDB) {
-			let value = store.getSync(id, options);
-			entry = value === undefined ? undefined : ({ value } as Entry);
+			return when(options?.async ? Promise.resolve(store.get(id, options)) : store.getSync(id, options), (value) => {
+				let entry = value === undefined ? undefined : ({ value } as Entry);
+				return entry && withEntry(entry);
+			});
 		} else {
-			entry = storeGetEntry.call(this, id, options);
+			let entry: Entry = storeGetEntry.call(this, id, options);
+			return entry && withEntry(entry);
 		}
 		// if we have decoded with metadata, we want to pull it out and assign to this entry
-		if (entry) {
+		function withEntry(entry) {
 			if (lastMetadata) {
 				entry.metadataFlags = lastMetadata[METADATA];
 				entry.localTime = lastMetadata.localTime;
@@ -334,8 +339,8 @@ export function handleLocalTimeForGets(store, rootStore) {
 				entryMap.set(entry.value, entry); // allow the record to access the entry
 			}
 			entry.key = id;
+			return entry;
 		}
-		return entry;
 	};
 
 	const storeGet = store.get;

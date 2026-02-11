@@ -29,7 +29,7 @@ import { replayLogs } from './replayLogs.ts';
 import { totalmem } from 'node:os';
 import { RocksIndexStore } from './RocksIndexStore.ts';
 import { mkdirSync } from 'node:fs';
-import { when } from './Resource.ts';
+import { when } from '../utility/when.ts';
 import { isProcessRunning } from '../utility/processManagement/processManagement.js';
 
 function createOpenDBIObject(dupSort = false, isPrimary = false) {

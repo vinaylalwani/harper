@@ -17,7 +17,7 @@ import { ClientError, AccessViolation } from '../utility/errors/hdbError.js';
 import { transaction, contextStorage } from './transaction.ts';
 import { parseQuery } from './search.ts';
 import { RequestTarget } from './RequestTarget.ts';
-import logger from '../utility/logging/logger.js';
+import { when } from '../utility/when.ts';
 
 const EXTENSION_TYPES = {
 	json: 'application/json',
@@ -821,9 +821,4 @@ export function transformForSelect(select, resource) {
 			} else return property;
 		};
 	}
-}
-// wait for a promise or plain object to resolve
-export function when<T, R>(value: T | Promise<T>, callback: (value: T) => R, reject?: (error: any) => void): R {
-	if (value?.then) return value.then(callback, reject);
-	return callback(value as T);
 }
