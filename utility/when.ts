@@ -9,3 +9,10 @@ export function when<T, R>(
 	}
 	return callback(value as T);
 }
+
+export function promiseNormalize<T>(returnValue: T | Promise<T>, target: RequestTargetOrId): T | Promise<T> {
+	if (!returnValue?.then && !target?.syncAllowed) {
+		return Promise.resolve(returnValue);
+	}
+	return returnValue;
+}

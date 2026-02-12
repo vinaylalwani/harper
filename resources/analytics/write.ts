@@ -392,7 +392,7 @@ async function aggregation(fromPeriod, toPeriod = 60000) {
 	const analyticsTable = getAnalyticsTable();
 	const taskQueueLatency = (async () => {
 		const start = performance.now();
-		// measure how long it task to enqueue and get a callback from a simple/fast task:
+		// measure how long it takes to enqueue and get a callback from a simple/fast task:
 		await stat(getLogFilePath());
 		const delay = performance.now() - start;
 		if (delay > 5000) {

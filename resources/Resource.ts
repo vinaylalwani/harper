@@ -17,7 +17,7 @@ import { ClientError, AccessViolation } from '../utility/errors/hdbError.js';
 import { transaction, contextStorage } from './transaction.ts';
 import { parseQuery } from './search.ts';
 import { RequestTarget } from './RequestTarget.ts';
-import { when } from '../utility/when.ts';
+import { when, promiseNormalize } from '../utility/when.ts';
 
 const EXTENSION_TYPES = {
 	json: 'application/json',
@@ -226,7 +226,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
 			return resource.subscribe ? resource.subscribe(query) : missingMethod(resource, 'subscribe');
 		},
-		{ type: 'read', method: 'subscribe' }
+		{ type: 'read', method: 'subscribe', syncAllowed: true }
 	);
 
 	static publish = transactional(
@@ -251,7 +251,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 			}
 			return result;
 		},
-		{ type: 'read', method: 'search' }
+		{ type: 'read', method: 'search', hasContent: false, syncAllowed: true }
 	);
 
 	static query = transactional(
@@ -645,29 +645,33 @@ function transactional(
 		if (query.ensureLoaded != null || query.async || isCollection) {
 			resourceOptions = { ...options };
 			if (query.ensureLoaded != null) resourceOptions.ensureLoaded = query.ensureLoaded;
-			if (query.async) resourceOptions.async = query.async;
+			if (query.syncAllowed) resourceOptions.syncAllowed = query.syncAllowed;
 			if (isCollection) resourceOptions.isCollection = true;
 		} else resourceOptions = options;
 		const loadAsInstance = this.loadAsInstance;
-		let runAction = authorizeActionOnResource;
 		if (context?.transaction) {
 			// we are already in a transaction, proceed
 			const resource = this.getResource(query, context, resourceOptions);
-			return resource.then ? resource.then(runAction) : runAction(resource);
+			return resource.then
+				? resource.then(authorizeActionOnResource)
+				: promiseNormalize(authorizeActionOnResource(resource), resourceOptions);
 		} else {
 			// start a transaction
-			return transaction(
-				context,
-				() => {
-					// record what transaction we are starting from, so that if it times out, we can have an indication of the cause
-					context.transaction.startedFrom = {
-						resourceName: this.name,
-						method: options.method,
-					};
-					const resource = this.getResource(query, context, resourceOptions);
-					return resource.then ? resource.then(runAction) : runAction(resource);
-				}
-				// resourceOptions // this is unused
+			return promiseNormalize(
+				transaction(
+					context,
+					() => {
+						// record what transaction we are starting from, so that if it times out, we can have an indication of the cause
+						context.transaction.startedFrom = {
+							resourceName: this.name,
+							method: options.method,
+						};
+						const resource = this.getResource(query, context, resourceOptions);
+						return resource.then ? resource.then(authorizeActionOnResource) : authorizeActionOnResource(resource);
+					}
+					// resourceOptions // this is unused
+				),
+				resourceOptions
 			);
 		}
 		function authorizeActionOnResource(resource: ResourceInterface) {

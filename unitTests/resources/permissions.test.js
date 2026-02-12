@@ -178,7 +178,7 @@ describe('Permissions through Resource API', () => {
 		const target = new RequestTarget('?id=id-2&select(name,related)');
 		target.checkPermission = true;
 		let results = [];
-		for await (let result of TestTable.get(target, request)) {
+		for await (let result of TestTable.search(target, request)) {
 			results.push(result);
 		}
 		assert.equal(results[0].name, 'name-2');
@@ -193,7 +193,7 @@ describe('Permissions through Resource API', () => {
 		const target = new RequestTarget('?id=id-2&select(name,prop1,related{name})');
 		target.checkPermission = true;
 		let results = [];
-		for await (let result of TestTable.get(target, request)) {
+		for await (let result of TestTable.search(target, request)) {
 			results.push(result);
 		}
 		assert.equal(results[0].name, 'name-2');

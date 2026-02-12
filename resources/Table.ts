@@ -22,7 +22,7 @@ import type {
 import type { User } from '../security/user.ts';
 import lmdbProcessRows from '../dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbProcessRows.js';
 import { Resource, transformForSelect } from './Resource.ts';
-import { when } from '../utility/when.ts';
+import { when, promiseNormalize } from '../utility/when.ts';
 import { DatabaseTransaction, ImmediateTransaction } from './DatabaseTransaction.ts';
 import * as envMngr from '../utility/environment/environmentManager.js';
 import { addSubscription } from './transactionBroadcast.ts';
@@ -1027,40 +1027,43 @@ export function makeTable(options) {
 					// requesting authorization verification
 					allowed = this.allowRead(context.user, target, context);
 				}
-				return when(
-					when(allowed, (allowed: boolean) => {
-						if (!allowed) {
-							throw new AccessViolation(context.user);
-						}
-						const ensureLoaded = true;
-						return loadLocalRecord(id, context, { transaction: readTxn, ensureLoaded }, false, (entry) => {
-							if (context.onlyIfCached) {
-								// don't go into the loading from source condition, but HTTP spec says to
-								// return 504 (rather than 404) if there is no content and the cache-control header
-								// dictates not to go to source
-								if (!entry?.value) throw new ServerError('Entry is not cached', 504);
-							} else if (ensureLoaded) {
-								const loadingFromSource = ensureLoadedFromSource(id, entry, context, this);
-								if (loadingFromSource) {
-									txn?.disregardReadTxn(); // this could take some time, so don't keep the transaction open if possible
-									target.loadedFromSource = true;
-									return loadingFromSource.then((entry) => entry?.value);
-								}
+				return promiseNormalize(
+					when(
+						when(allowed, (allowed: boolean) => {
+							if (!allowed) {
+								throw new AccessViolation(context.user);
 							}
-							return entry?.value;
-						});
-					}),
-					(record) => {
-						const select = target?.select;
-						if (select && record != null) {
-							const transform = transformForSelect(select, this.constructor);
-							return transform(record);
+							const ensureLoaded = true;
+							return loadLocalRecord(id, context, { transaction: readTxn, ensureLoaded }, false, (entry) => {
+								if (context.onlyIfCached) {
+									// don't go into the loading from source condition, but HTTP spec says to
+									// return 504 (rather than 404) if there is no content and the cache-control header
+									// dictates not to go to source
+									if (!entry?.value) throw new ServerError('Entry is not cached', 504);
+								} else if (ensureLoaded) {
+									const loadingFromSource = ensureLoadedFromSource(id, entry, context, this);
+									if (loadingFromSource) {
+										txn?.disregardReadTxn(); // this could take some time, so don't keep the transaction open if possible
+										target.loadedFromSource = true;
+										return loadingFromSource.then((entry) => entry?.value);
+									}
+								}
+								return entry?.value;
+							});
+						}),
+						(record) => {
+							const select = target?.select;
+							if (select && record != null) {
+								const transform = transformForSelect(select, this.constructor);
+								return transform(record);
+							}
+							if (target?.property) {
+								return record[target?.property];
+							}
+							return record;
 						}
-						if (target?.property) {
-							return record[target?.property];
-						}
-						return record;
-					}
+					),
+					target
 				);
 			}
 			if (target?.property) return this.getProperty(target.property);
@@ -1070,9 +1073,9 @@ export function makeTable(options) {
 				const select = target?.select;
 				if (select && record != null) {
 					const transform = transformForSelect(select, this.constructor);
-					return transform(record);
+					return promiseNormalize(transform(record), target);
 				}
-				return record;
+				return promiseNormalize(record, target);
 			}
 			if (this.doesExist() || target?.ensureLoaded === false || this.getContext()?.returnNonexistent) {
 				return this;
