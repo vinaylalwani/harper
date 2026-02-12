@@ -43,7 +43,7 @@ import { Addition, assignTrackedAccessors, updateAndFreeze, hasChanges, GenericT
 import { transaction, contextStorage } from './transaction.ts';
 import { MAXIMUM_KEY, writeKey, compareKeys } from 'ordered-binary';
 import { getWorkerIndex, getWorkerCount } from '../server/threads/manageThreads.js';
-import { HAS_BLOBS, readAuditEntry, removeAuditEntry } from './auditStore.ts';
+import { HAS_BLOBS, auditRetention, removeAuditEntry } from './auditStore.ts';
 import { autoCast, convertToMS, autoCastBooleanStrict } from '../utility/common_utils.js';
 import {
 	recordUpdater,
@@ -81,7 +81,6 @@ const NULL_WITH_TIMESTAMP = new Uint8Array(9);
 NULL_WITH_TIMESTAMP[8] = 0xc0; // null
 const UNCACHEABLE_TIMESTAMP = Infinity; // we use this when dynamic content is accessed that we can't safely cache, and this prevents earlier timestamps from change the "last" modification
 const RECORD_PRUNING_INTERVAL = 60000; // one minute
-const DELETED_RECORD_EXPIRATION = 86400000; // one day for non-audit records that have been deleted
 envMngr.initSync();
 const LMDB_PREFETCH_WRITES = envMngr.get(CONFIG_PARAMS.STORAGE_PREFETCHWRITES);
 const LOCK_TIMEOUT = 10000;
@@ -1575,7 +1574,7 @@ export function makeTable(options) {
 					id = this.constructor.getNewId();
 					record[primaryKey] = id; // make this immediately available
 				} else {
-					const existing = primaryStore instanceof RocksDatabase ? primaryStore.getSync(id) : primaryStore.get(id);
+					const existing = primaryStore.getSync(id);
 					if (existing) {
 						throw new ClientError('Record already exists', 409);
 					}
@@ -1939,7 +1938,7 @@ export function makeTable(options) {
 							{ user: context?.user, nodeId: options?.nodeId, transaction, tableToTrack: tableName },
 							'delete'
 						);
-						if (!audit) scheduleCleanup();
+						if (!audit || primaryStore instanceof RocksDatabase) scheduleCleanup();
 					} else {
 						removeEntry(primaryStore, existingEntry);
 					}
@@ -4201,6 +4200,7 @@ export function makeTable(options) {
 
 								try {
 									let count = 0;
+									let removeDeletedRecords = !audit || primaryStore instanceof RocksDatabase;
 									// iterate through all entries to find expired records and deleted records
 									for (const entry of primaryStore.getRange({
 										start: false,
@@ -4209,10 +4209,10 @@ export function makeTable(options) {
 										lazy: true, // only want to access metadata most of the time
 									})) {
 										const { key, value: record, version, expiresAt, metadataFlags } = entry;
-										// if there is no auditing and we are tracking deletion, need to do cleanup of
-										// these deletion entries (audit has its own scheduled job for this)
+										// if there is no auditing cleanup and we are tracking deletion, need to do cleanup of
+										// these deletion entries (LMDB audit cleanup has its own scheduled job for this)
 										let resolution: Promise<void>;
-										if (record === null && !audit && version + DELETED_RECORD_EXPIRATION < Date.now()) {
+										if (record === null && removeDeletedRecords && version + auditRetention < Date.now()) {
 											// make sure it is still deleted when we do the removal
 											resolution = removeEntry(primaryStore, entry, version);
 										} else if (expiresAt != undefined && shouldEvict(expiresAt, version, metadataFlags, record)) {

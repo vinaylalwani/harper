@@ -88,7 +88,7 @@ export const AUDIT_STORE_OPTIONS = {
 	keyEncoder: transactionKeyEncoder,
 };
 
-let auditRetention = convertToMS(envGet(CONFIG_PARAMS.LOGGING_AUDITRETENTION)) || 86400 * 3;
+export let auditRetention = convertToMS(envGet(CONFIG_PARAMS.LOGGING_AUDITRETENTION)) || 86400 * 1000;
 const MAX_DELETES_PER_CLEANUP = 1000;
 const FLOAT_TARGET = new Float64Array(1);
 const FLOAT_BUFFER = new Uint8Array(FLOAT_TARGET.buffer);
