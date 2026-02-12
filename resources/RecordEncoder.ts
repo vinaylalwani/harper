@@ -276,7 +276,9 @@ export class RecordEncoder extends Encoder {
 					residencyId,
 					nodeId,
 					size: end - start,
+					value,
 				};
+				if (this.isRocksDB) return lastMetadata;
 				return value;
 			} // else a normal entry
 			return options?.valueAsBuffer ? buffer : decodeFromDatabase(() => super.decode(buffer, options), this.rootStore);
@@ -300,20 +302,26 @@ export function handleLocalTimeForGets(store, rootStore) {
 	store.encoder.isRocksDB = isRocksDB;
 	store.decoder = store.encoder;
 	const storeGetEntry = store.getEntry;
+	const storeGetSync = store.getSync;
+	const storeGet = store.get;
+
 	store.getEntry = function (id, options) {
 		store.readCount++;
 		lastMetadata = null;
 		if (isRocksDB) {
-			return when(options?.async ? store.get(id, options) : store.getSync(id, options), (value) => {
-				let entry = value === undefined ? undefined : ({ value } as Entry);
-				return entry && withEntry(entry);
-			});
+			return when(
+				options?.async ? storeGet.call(store, id, options) : storeGetSync.call(store, id, options),
+				(entry) => {
+					if (entry) {
+						if (entry[METADATA]) {
+							entry.metadataFlags = entry[METADATA];
+							return withEntry(entry);
+						} else return { value: entry };
+					} else return entry;
+				}
+			);
 		} else {
 			let entry: Entry = storeGetEntry.call(this, id, options);
-			return entry && withEntry(entry);
-		}
-		// if we have decoded with metadata, we want to pull it out and assign to this entry
-		function withEntry(entry) {
 			if (lastMetadata) {
 				entry.metadataFlags = lastMetadata[METADATA];
 				entry.localTime = lastMetadata.localTime;
@@ -329,6 +337,10 @@ export function handleLocalTimeForGets(store, rootStore) {
 				}
 				entry.key = id;
 			}
+			return entry && withEntry(entry);
+		}
+		// if we have decoded with metadata, we want to pull it out and assign to this entry
+		function withEntry(entry) {
 			if (entry.value) {
 				if (entry.value.constructor === Object) {
 					// if an object was deserialized as a plain object, give it the right prototype for computed properties to be accessible
@@ -343,21 +355,19 @@ export function handleLocalTimeForGets(store, rootStore) {
 		}
 	};
 
-	const storeGetSync = store.getSync;
 	store.getSync = function (id, options) {
-		lastMetadata = null;
-		const value = storeGetSync.call(this, id, options);
-		if (lastMetadata && value) {
-			entryMap.set(value, lastMetadata);
+		const entry = store.getEntry(id, options);
+		const value = entry?.value;
+		if (value) {
+			entryMap.set(value, entry);
 		}
 		return value;
 	};
-	const storeGet = store.get;
 	store.get = function (id, options) {
-		lastMetadata = null;
-		return when(storeGet.call(this, id, options), (value) => {
-			if (lastMetadata && value) {
-				entryMap.set(value, lastMetadata);
+		return when(store.getEntry(id, { ...options, async: true }), (entry) => {
+			const value = entry?.value;
+			if (value) {
+				entryMap.set(value, entry);
 			}
 			return value;
 		});
@@ -373,7 +383,12 @@ export function handleLocalTimeForGets(store, rootStore) {
 		if (options.values === false || options.onlyCount) return iterable;
 		return iterable.map((entry) => {
 			// if we have metadata, move the metadata to the entry
-			if (lastMetadata) {
+			if (isRocksDB) {
+				if (entry.value?.[METADATA]) {
+					entry.metadataFlags = entry.value[METADATA];
+					Object.assign(entry, entry.value);
+				}
+			} else if (lastMetadata) {
 				entry.metadataFlags = lastMetadata[METADATA];
 				entry.localTime = lastMetadata.localTime;
 				if (isRocksDB) entry.version = lastMetadata.localTime;
