@@ -2,7 +2,8 @@ import { initSync, getHdbBasePath, get as envGet } from '../utility/environment/
 import { INTERNAL_DBIS_NAME } from '../utility/lmdb/terms.js';
 import { open, compareKeys, type Database, type RootDatabase } from 'lmdb';
 import { join, extname, basename } from 'path';
-import { existsSync, readdirSync } from 'fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { unlink } from 'node:fs/promises';
 import {
 	getBaseSchemaPath,
 	getTransactionAuditStoreBasePath,
@@ -10,7 +11,6 @@ import {
 import { makeTable } from './Table.ts';
 import OpenEnvironmentObject from '../utility/lmdb/OpenEnvironmentObject.js';
 import { CONFIG_PARAMS, LEGACY_DATABASES_DIR_NAME, DATABASES_DIR_NAME } from '../utility/hdbTerms.ts';
-import * as fs from 'fs-extra';
 import { _assignPackageExport } from '../globals.js';
 import { getIndexedValues } from '../utility/lmdb/commonUtility.js';
 import * as signalling from '../utility/signalling.js';
@@ -23,7 +23,7 @@ import { openAuditStore, readAuditEntry, createAuditEntry, type AuditRecord } fr
 import { handleLocalTimeForGets } from './RecordEncoder.ts';
 import { deleteRootBlobPathsForDB } from './blob.ts';
 import { CUSTOM_INDEXES } from './indexes/customIndexes.ts';
-import * as OpenDBIObjectModule from '../utility/lmdb/OpenDBIObject.js';
+import { OpenDBIObject } from '../utility/lmdb/OpenDBIObject.js';
 import { RocksDatabase, type RocksDatabaseOptions } from '@harperfast/rocksdb-js';
 import { replayLogs } from './replayLogs.ts';
 import { totalmem } from 'node:os';
@@ -33,12 +33,6 @@ import { when } from '../utility/when.ts';
 import { isProcessRunning } from '../utility/processManagement/processManagement.js';
 
 function createOpenDBIObject(dupSort = false, isPrimary = false) {
-	// what is going on with esbuild, it suddenly is randomly flip-flopping the module record for OpenDBIObject, sometimes return the correct exports object and sometimes returning the exports as the `default`.
-	const module = OpenDBIObjectModule as any;
-	const OpenDBIObject = module.OpenDBIObject ?? ('default' in module ? module.default?.OpenDBIObject : null);
-	if (!OpenDBIObject) {
-		throw new Error('OpenDBIObject not found');
-	}
 	return new OpenDBIObject(dupSort, isPrimary);
 }
 const logger = forComponent('storage');
@@ -195,22 +189,19 @@ export function getDatabases(): Databases {
 				readMetaDb(dbPath, null, dbName);
 				continue;
 			}
-			const useRocksdb = envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb';
-			if (useRocksdb) {
-				try {
-					const files = readdirSync(dbPath, { withFileTypes: true });
-					if (
-						files.find((file) => file.name === 'CURRENT')?.isFile() &&
-						files.some((file) => file.name.startsWith('MANIFEST-')) &&
-						!schemaConfigs[dbName]?.path
-					) {
-						readRocksMetaDb(dbPath, null, dbName);
-						continue;
-					}
-				} catch (err) {
-					if (!('code' in err && (err.code === 'ENOENT' || err.code === 'ENOTDIR'))) {
-						throw err;
-					}
+			try {
+				const files = readdirSync(dbPath, { withFileTypes: true });
+				if (
+					files.find((file) => file.name === 'CURRENT')?.isFile() &&
+					files.some((file) => file.name.startsWith('MANIFEST-')) &&
+					!schemaConfigs[dbName]?.path
+				) {
+					readRocksMetaDb(dbPath, null, dbName);
+					continue;
+				}
+			} catch (err) {
+				if (!('code' in err && (err.code === 'ENOENT' || err.code === 'ENOTDIR'))) {
+					throw err;
 				}
 			}
 		}
@@ -741,11 +732,12 @@ export async function dropDatabase(databaseName) {
 		rocksdbDatabaseEnvs.delete(rootStore.path);
 
 		if (rootStore.status === 'open') {
-			await rootStore.close();
 			if (rootStore instanceof RocksDatabase) {
+				rootStore.close();
 				rootStore.destroy();
 			} else if (rootStore.status === 'open') {
-				await fs.remove(rootStore.path);
+				await rootStore.close();
+				await unlink(rootStore.path);
 			}
 		}
 	}
@@ -755,7 +747,7 @@ export async function dropDatabase(databaseName) {
 			rootStore.destroy();
 		} else if (rootStore.status === 'open') {
 			await rootStore.close();
-			await fs.remove(rootStore.path);
+			await unlink(rootStore.path);
 		}
 	}
 	if (databaseName === 'data') {
@@ -1179,11 +1171,6 @@ async function runIndexing(Table, attributes, indicesToRemove) {
 						}
 						const values = getIndexedValues(value, index.indexNulls);
 						if (values) {
-							/*					if (LMDB_PREFETCH_WRITES)
-													index.prefetch(
-														values.map((v) => ({ key: v, value: id })),
-														noop
-													);*/
 							for (let i = 0, l = values.length; i < l; i++) {
 								lastResolution = index.put(values[i], key);
 							}
@@ -1278,7 +1265,7 @@ export function getDefaultCompression() {
 		envGet(CONFIG_PARAMS.STORAGE_COMPRESSION_THRESHOLD) || DEFAULT_COMPRESSION_THRESHOLD;
 	const LMDB_COMPRESSION_OPTS = { startingOffset: 32 };
 	if (STORAGE_COMPRESSION_DICTIONARY)
-		LMDB_COMPRESSION_OPTS['dictionary'] = fs.readFileSync(STORAGE_COMPRESSION_DICTIONARY);
+		LMDB_COMPRESSION_OPTS['dictionary'] = readFileSync(STORAGE_COMPRESSION_DICTIONARY);
 	if (STORAGE_COMPRESSION_THRESHOLD) LMDB_COMPRESSION_OPTS['threshold'] = STORAGE_COMPRESSION_THRESHOLD;
 	return LMDB_COMPRESSION && LMDB_COMPRESSION_OPTS;
 }
