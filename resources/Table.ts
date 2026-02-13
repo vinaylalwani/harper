@@ -3416,6 +3416,7 @@ export function makeTable(options) {
 							type: auditRecord.type,
 							value: auditRecord.getValue(primaryStore, true, nextVersion),
 							user: auditRecord.user,
+							operation: auditRecord.originatingOperation,
 						});
 						if (auditRecord.previousVersion > highestPreviousVersion && auditRecord.previousVersion < start) {
 							highestPreviousVersion = auditRecord.previousVersion;
