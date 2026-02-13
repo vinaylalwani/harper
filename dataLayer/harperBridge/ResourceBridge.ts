@@ -244,13 +244,7 @@ export class ResourceBridge extends LMDBBridge {
 						}
 					}
 				}
-				if (existingRecord) {
-					for (const key in existingRecord) {
-						// if the record is missing any properties, fill them in from the existing record
-						if (!Object.prototype.hasOwnProperty.call(record, key)) record[key] = existingRecord[key];
-					}
-				}
-				await (id == undefined ? Table.create(record, context) : Table.put(record, context));
+				await (id == undefined ? Table.create(record, context) : Table.patch(record, context));
 				keys.push(record[Table.primaryKey]);
 			}
 			return {
