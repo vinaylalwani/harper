@@ -56,23 +56,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	 */
 	static get = transactional(
 		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
-			const result = resource.get?.(query);
-			// for the new API we always apply select in the instance method
-			if (!resource.constructor.loadAsInstance) return result;
-			if (result?.then) return result.then(handleSelect);
-			return handleSelect(result);
-			function handleSelect(result) {
-				let select;
-				if ((select = query?.select) && result != null && !result.selectApplied) {
-					const transform = transformForSelect(select, resource.constructor);
-					if (typeof result?.map === 'function') {
-						return result.map(transform);
-					} else {
-						return transform(result);
-					}
-				}
-				return result;
-			}
+			return resource.get?.(query);
 		},
 		{
 			type: 'read',
