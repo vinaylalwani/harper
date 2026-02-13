@@ -77,6 +77,8 @@ export type Attribute = {
 	isPrimaryKey?: boolean;
 };
 
+type MaybePromise<T> = T | Promise<T>;
+
 const NULL_WITH_TIMESTAMP = new Uint8Array(9);
 NULL_WITH_TIMESTAMP[8] = 0xc0; // null
 const UNCACHEABLE_TIMESTAMP = Infinity; // we use this when dynamic content is accessed that we can't safely cache, and this prevents earlier timestamps from change the "last" modification
@@ -608,7 +610,7 @@ export function makeTable(options) {
 			target: RequestTarget,
 			request: Context,
 			resourceOptions?: any
-		): Promise<TableResource<Record>> | TableResource<Record> {
+		): MaybePromise<TableResource<Record>> {
 			const id = target && typeof target === 'object' ? target.id : target;
 			if (id == null) return this;
 			checkValidId(id);

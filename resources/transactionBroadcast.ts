@@ -113,8 +113,6 @@ function notifyFromTransactionData(subscriptions) {
 	auditStore.resetReadTxn?.();
 	nextTransaction(subscriptions.auditStore);
 	let subscribersWithTxns;
-	if (auditStore.reusableIterable) {
-	}
 	const getIterator = () =>
 		auditStore.getRange({
 			start: subscriptions.lastTxnTime,
