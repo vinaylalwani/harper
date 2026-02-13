@@ -69,6 +69,7 @@ describe('Multi-threaded cache updates', () => {
 		assert(history_of_24.length > 100);
 		assert(history_of_24[0].type === 'put');
 		let last_local_time = 0;
+		// TODO: Eventually if we have support for more strictly ordered transaction logs, we should re-enable this
 		/*for (let entry of history_of_24) {
 			assert(entry.localTime > last_local_time);
 			last_local_time = entry.localTime;
