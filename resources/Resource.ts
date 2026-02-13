@@ -642,19 +642,15 @@ function transactional(
 		} else {
 			// start a transaction
 			return promiseNormalize(
-				transaction(
-					context,
-					() => {
-						// record what transaction we are starting from, so that if it times out, we can have an indication of the cause
-						context.transaction.startedFrom = {
-							resourceName: this.name,
-							method: options.method,
-						};
-						const resource = this.getResource(query, context, resourceOptions);
-						return resource.then ? resource.then(authorizeActionOnResource) : authorizeActionOnResource(resource);
-					}
-					// resourceOptions // this is unused
-				),
+				transaction(context, () => {
+					// record what transaction we are starting from, so that if it times out, we can have an indication of the cause
+					context.transaction.startedFrom = {
+						resourceName: this.name,
+						method: options.method,
+					};
+					const resource = this.getResource(query, context, resourceOptions);
+					return resource.then ? resource.then(authorizeActionOnResource) : authorizeActionOnResource(resource);
+				}),
 				resourceOptions
 			);
 		}

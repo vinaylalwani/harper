@@ -2,7 +2,7 @@ import { initSync, getHdbBasePath, get as envGet } from '../utility/environment/
 import { INTERNAL_DBIS_NAME } from '../utility/lmdb/terms.js';
 import { open, compareKeys, type Database, type RootDatabase } from 'lmdb';
 import { join, extname, basename } from 'path';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, mkdirSync } from 'node:fs';
 import { unlink } from 'node:fs/promises';
 import {
 	getBaseSchemaPath,
@@ -28,7 +28,6 @@ import { RocksDatabase, type RocksDatabaseOptions } from '@harperfast/rocksdb-js
 import { replayLogs } from './replayLogs.ts';
 import { totalmem } from 'node:os';
 import { RocksIndexStore } from './RocksIndexStore.ts';
-import { mkdirSync } from 'node:fs';
 import { when } from '../utility/when.ts';
 import { isProcessRunning } from '../utility/processManagement/processManagement.js';
 

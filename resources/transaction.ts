@@ -9,7 +9,7 @@ export const contextStorage = new AsyncLocalStorage<Context>();
 
 /**
  * Start and run a new transaction. This can be called with a request to hold the transaction, or a new request object will be created
- * @param context
+ * @param ctx
  * @param callback
  * @returns
  */
