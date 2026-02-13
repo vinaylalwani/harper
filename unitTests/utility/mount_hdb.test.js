@@ -9,7 +9,7 @@ const bridge = require('#js/dataLayer/harperBridge/harperBridge');
 const mount_hdb = rewire('#js/utility/mount_hdb');
 const path = require('path');
 const { get: envGet } = require('#js/utility/environment/environmentManager');
-const { CONFIG_PARAMS } = require('#js/utility/hdbTerms');
+const { CONFIG_PARAMS } = require('#src/utility/hdbTerms');
 const SEP = path.sep;
 
 describe('test mount_hdb module', () => {

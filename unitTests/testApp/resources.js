@@ -170,7 +170,8 @@ export class FourPropWithHistory extends tables.FourProp {
 		assert(context.session?.subscriptions);
 		assert(context.user);
 		assert(context.socket);
-		//options.previousCount = 10;
+		// TODO: At some point we may want to re-enable this functionality for RocksDB
+		// options.previousCount = 10;
 		const subscription = await super.subscribe(options);
 		for (let update of subscription.queue || []) {
 			update.acknowledge = () => {

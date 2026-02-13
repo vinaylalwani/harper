@@ -1,6 +1,6 @@
 'use strict';
-const test_util = require('../../../../testUtils');
-test_util.preTestPrep();
+const testUtils = require('../../../../testUtils.js');
+testUtils.preTestPrep();
 
 const path = require('path');
 const assert = require('assert');
