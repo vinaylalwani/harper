@@ -1,9 +1,14 @@
 import { Scope } from '../components/Scope.ts';
-import { secureImport } from '../security/jsLoader.ts';
 import { dirname } from 'path';
 
-function isResource(value: unknown) {
-	return typeof value === 'function' && ('get' in value || 'put' in value || 'post' in value || 'delete' in value);
+function isResource(value: any) {
+	return (
+		value &&
+		(typeof value.get === 'function' ||
+			typeof value.put === 'function' ||
+			typeof value.post === 'function' ||
+			typeof value.delete === 'function')
+	);
 }
 
 /**
@@ -50,7 +55,7 @@ export async function handleApplication(scope: Scope) {
 		}
 
 		try {
-			const resourceModule = await secureImport(entryEvent.absolutePath);
+			const resourceModule: any = await scope.import(entryEvent.absolutePath);
 			const root = dirname(entryEvent.urlPath).replace(/\\/g, '/').replace(/^\/$/, '');
 			if (isResource(resourceModule.default)) {
 				// register the resource
