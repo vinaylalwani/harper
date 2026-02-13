@@ -329,7 +329,7 @@ function storeDBSizeMetrics(analyticsTable: Table, databases: Databases) {
 			}
 			let metric;
 			if (firstTable.primaryStore instanceof RocksDatabase) {
-				const dbPath = firstTable.primaryStore.store.path;
+				const dbPath = firstTable.primaryStore.path;
 				let dbSize = 0;
 				for (const filename of fs.readdirSync(dbPath)) {
 					if (filename.endsWith('.sst')) {
