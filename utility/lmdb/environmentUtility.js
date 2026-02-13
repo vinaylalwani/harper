@@ -34,7 +34,7 @@ class TransactionCursor {
 	constructor(env, attribute, writeCursor = false) {
 		this.dbi = openDBI(env, attribute);
 		this.key_type = this.dbi[lmdbTerms.DBI_DEFINITION_NAME].key_type;
-		this.is_hash_attribute = this.dbi[lmdbTerms.DBI_DEFINITION_NAME].is_hash_attribute;
+		this.isPrimaryKey = this.dbi[lmdbTerms.DBI_DEFINITION_NAME].isPrimaryKey;
 		this.txn = env.beginTxn({ readOnly: writeCursor === false });
 		this.cursor = new lmdb.Cursor(this.txn, this.dbi);
 	}
@@ -449,7 +449,7 @@ function statDBI(env, dbiName) {
 	let dbi = openDBI(env, dbiName);
 
 	let stats = dbi.getStats();
-	if (dbi[lmdbTerms.DBI_DEFINITION_NAME].is_hash_attribute && stats.entryCount > 0) {
+	if (dbi[lmdbTerms.DBI_DEFINITION_NAME].isPrimaryKey && stats.entryCount > 0) {
 		stats.entryCount--;
 	}
 

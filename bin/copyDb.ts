@@ -165,7 +165,7 @@ export async function copyDb(sourceDatabase: string, targetDatabasePath: string)
 	const transaction = sourceDbisDb.useReadTransaction();
 	try {
 		for (const { key, value: attribute } of sourceDbisDb.getRange({ transaction })) {
-			const isPrimary = attribute.is_hash_attribute || attribute.isPrimaryKey;
+			const isPrimary = attribute.isPrimaryKey;
 			let existingCompression, newCompression;
 			if (isPrimary) {
 				existingCompression = attribute.compression;

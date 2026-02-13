@@ -431,13 +431,13 @@ function initStores(
 			if (!value.name) {
 				// legacy attribute
 				value.name = attribute_name;
-				value.indexed = !value.is_hash_attribute;
+				value.indexed = !value.isPrimaryKey;
 			}
 		}
 		definedTables?.add(tableName);
 		let tableDef = tablesToLoad.get(tableName);
 		if (!tableDef) tablesToLoad.set(tableName, (tableDef = { attributes: [] }));
-		if (attribute_name == null || value.is_hash_attribute) tableDef.primary = value;
+		if (attribute_name == null || value.isPrimaryKey) tableDef.primary = value;
 		if (attribute_name != null) tableDef.attributes.push(value);
 		Object.defineProperty(value, 'key', { value: key, configurable: true });
 	}
@@ -447,7 +447,7 @@ function initStores(
 		if (!primaryAttribute) {
 			// this isn't defined, find it in the attributes
 			for (const attribute of attributes) {
-				if (attribute.is_hash_attribute || attribute.isPrimaryKey) {
+				if (attribute.isPrimaryKey) {
 					primaryAttribute = attribute;
 					break;
 				}
@@ -491,7 +491,7 @@ function initStores(
 				dbisStore.putSync(NEXT_TABLE_ID, tableId + 1);
 				dbisStore.putSync(primaryAttribute.key, primaryAttribute);
 			}
-			const dbiInit = createOpenDBIObject(!primaryAttribute.is_hash_attribute, primaryAttribute.is_hash_attribute);
+			const dbiInit = createOpenDBIObject(!primaryAttribute.isPrimaryKey, primaryAttribute.isPrimaryKey);
 			dbiInit.compression = primaryAttribute.compression;
 			if (dbiInit.compression) {
 				const compressionThreshold =
@@ -514,7 +514,7 @@ function initStores(
 			attribute.attribute = attribute.name;
 			try {
 				// now load the non-primary keys, opening the dbs as necessary for indices
-				if (!attribute.is_hash_attribute && (attribute.indexed || (attribute.attribute && !attribute.name))) {
+				if (!attribute.isPrimaryKey && (attribute.indexed || (attribute.attribute && !attribute.name))) {
 					if (!indices[attribute.name]) {
 						const dbi = openIndex(attribute.key, rootStore, attribute);
 						indices[attribute.name] = dbi;
@@ -534,7 +534,7 @@ function initStores(
 		for (const existingAttribute of existingAttributes) {
 			const attribute = attributes.find((attribute) => attribute.name === existingAttribute.name);
 			if (!attribute) {
-				if (existingAttribute.is_hash_attribute) {
+				if (existingAttribute.isPrimaryKey) {
 					logger.error('Unable to remove existing primary key attribute', existingAttribute);
 					continue;
 				}
@@ -762,7 +762,7 @@ export async function dropDatabase(databaseName) {
 // opens an index, consulting with custom indexes that may use alternate store configuration
 function openIndex(dbiKey: string, rootStore: LMDBRootDatabase | RocksRootDatabase, attribute: any) {
 	const objectStorage =
-		attribute.is_hash_attribute || (attribute.indexed.type && CUSTOM_INDEXES[attribute.indexed.type]?.useObjectStore);
+		attribute.isPrimaryKey || (attribute.indexed.type && CUSTOM_INDEXES[attribute.indexed.type]?.useObjectStore);
 	const dbiInit = createOpenDBIObject(!objectStorage, objectStorage);
 	let dbi:
 		| LMDBDatabase
@@ -855,7 +855,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 		const auditStore = rootStore.auditStore;
 		primaryKeyAttribute = attributes.find((attribute) => attribute.isPrimaryKey) || {};
 		primaryKey = primaryKeyAttribute.name;
-		primaryKeyAttribute.is_hash_attribute = primaryKeyAttribute.isPrimaryKey = true;
+		primaryKeyAttribute.isPrimaryKey = true;
 		primaryKeyAttribute.schemaDefined = schemaDefined;
 		// can't change compression after the fact (except threshold), so save only when we create the table
 		primaryKeyAttribute.compression = getDefaultCompression();

@@ -35,6 +35,9 @@ describe('Caching', () => {
 		});
 		Source = class extends Resource {
 			get() {
+				let expiresAt = Date.now() + 2;
+				console.log('Expiration at: ' + expiresAt);
+				this.getContext().expiresAt = expiresAt;
 				return new Promise((resolve, reject) => {
 					setTimeout(() => {
 						sourceRequests++;
@@ -318,6 +321,8 @@ describe('Caching', () => {
 		assert.equal(result.name, 'name ' + 23);
 		assert.equal(sourceRequests, 3);
 		assert.equal(events.length, 0);
+		result = await IndexedCachingTable.get(23);
+		console.log(result.getExpiresAt());
 	});
 
 	it('Bigger stampede is handled', async function () {
