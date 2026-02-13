@@ -1645,18 +1645,27 @@ export function makeTable(options) {
 											? new Date(txnTime).toISOString()
 											: txnTime;
 							}
-							if (fullUpdate) {
-								if (primaryKey && recordUpdate[primaryKey] !== id) recordUpdate[primaryKey] = id;
-								if (createdTimeProperty) {
-									if (entry?.value) recordUpdate[createdTimeProperty.name] = entry?.value[createdTimeProperty.name];
-									else
-										recordUpdate[createdTimeProperty.name] =
-											createdTimeProperty.type === 'Date'
-												? new Date(txnTime)
-												: createdTimeProperty.type === 'String'
-													? new Date(txnTime).toISOString()
-													: txnTime;
+							if (createdTimeProperty) {
+								if (entry?.value) {
+									if (fullUpdate || recordUpdate[createdTimeProperty.name]) {
+										// make sure to retain original created time
+										recordUpdate[createdTimeProperty.name] = entry?.value[createdTimeProperty.name];
+									}
+								} else {
+									// new entry, set created time
+									recordUpdate[createdTimeProperty.name] =
+										createdTimeProperty.type === 'Date'
+											? new Date(txnTime)
+											: createdTimeProperty.type === 'String'
+												? new Date(txnTime).toISOString()
+												: txnTime;
 								}
+							}
+							if (primaryKey && recordUpdate[primaryKey] !== id && (fullUpdate || primaryKey in recordUpdate)) {
+								// ensure that the primary key is correct, if there is supposed to be one
+								recordUpdate[primaryKey] = id;
+							}
+							if (fullUpdate) {
 								recordUpdate = updateAndFreeze(recordUpdate); // this flatten and freeze the record
 							}
 							// TODO: else freeze after we have applied the changes
