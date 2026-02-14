@@ -244,7 +244,11 @@ export class ResourceBridge extends LMDBBridge {
 						}
 					}
 				}
-				await (id == undefined ? Table.create(record, context) : Table.patch(record, context));
+				await (id == undefined
+					? Table.create(record, context)
+					: existingRecord
+						? Table.patch(record, context)
+						: Table.put(record, context));
 				keys.push(record[Table.primaryKey]);
 			}
 			return {
