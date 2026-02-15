@@ -40,9 +40,12 @@ export async function scopedImport(filePath: string | URL, scope?: Scope) {
 			});
 		} else {
 			preventFunctionConstructor();
-			overridableProperty(Object.prototype, 'toString');
-			overridableProperty(Object.prototype, 'hasOwnProperty');
+			for (let name of Object.getOwnPropertyNames(Object.prototype)) {
+				if (name === '__proto__') continue;
+				overridableProperty(Object.prototype, name);
+			}
 			overridableProperty(Promise.prototype, 'then');
+			overridableProperty(Date, 'now');
 			for (let Intrinsic of [
 				Object,
 				Array,
