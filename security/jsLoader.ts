@@ -14,9 +14,10 @@ import { CONFIG_PARAMS } from '../utility/hdbTerms.ts';
 import type { CompartmentOptions } from 'ses';
 
 type ContainmentMode = 'none' | 'vm' | 'compartment';
+type Lockdown = 'none' | 'freeze' | 'ses';
 const APPLICATIONS_CONTAINMENT: ContainmentMode = env.get(CONFIG_PARAMS.APPLICATIONS_CONTAINMENT);
 const APPLICATIONS_DEPENDENCYCONTAINMENT: boolean = env.get(CONFIG_PARAMS.APPLICATIONS_DEPENDENCYCONTAINMENT);
-const APPLICATIONS_LOCKDOWN: boolean = env.get(CONFIG_PARAMS.APPLICATIONS_LOCKDOWN);
+const APPLICATIONS_LOCKDOWN: Lockdown = env.get(CONFIG_PARAMS.APPLICATIONS_LOCKDOWN);
 
 let lockedDown = false;
 /**
@@ -26,17 +27,50 @@ let lockedDown = false;
  * @param scope
  */
 export async function scopedImport(filePath: string | URL, scope?: Scope) {
-	preventFunctionConstructor();
-	if (APPLICATIONS_LOCKDOWN && !lockedDown) {
-		require('ses');
+	if (!lockedDown && APPLICATIONS_LOCKDOWN && APPLICATIONS_LOCKDOWN !== 'none') {
 		lockedDown = true;
-		lockdown({
-			domainTaming: 'unsafe',
-			consoleTaming: 'unsafe',
-			errorTaming: 'unsafe',
-			errorTrapping: 'none',
-			stackFiltering: 'verbose',
-		});
+		if (APPLICATIONS_LOCKDOWN === 'ses') {
+			require('ses'); // load the lockdown function
+			lockdown({
+				domainTaming: 'unsafe',
+				consoleTaming: 'unsafe',
+				errorTaming: 'unsafe',
+				errorTrapping: 'none',
+				stackFiltering: 'verbose',
+			});
+		} else {
+			preventFunctionConstructor();
+			overridableProperty(Object.prototype, 'toString');
+			overridableProperty(Object.prototype, 'hasOwnProperty');
+			overridableProperty(Promise.prototype, 'then');
+			for (let Intrinsic of [
+				Object,
+				Array,
+				Promise,
+				BigInt,
+				String,
+				Number,
+				Boolean,
+				Symbol,
+				RegExp,
+				Date,
+				Map,
+				Set,
+				WeakMap,
+				WeakSet,
+				Math,
+				JSON,
+				Reflect,
+				Atomics,
+				SharedArrayBuffer,
+				WeakRef,
+				FinalizationRegistry,
+			]) {
+				Object.freeze(Intrinsic);
+				Object.freeze(Intrinsic.prototype);
+			}
+			Object.freeze(Function);
+		}
 	}
 	const moduleUrl = (filePath instanceof URL ? filePath : pathToFileURL(filePath)).toString();
 	try {
@@ -434,4 +468,27 @@ function getContext() {
 
 export function preventFunctionConstructor() {
 	Function.prototype.constructor = function () {}; // prevent this from being used to eval data in a parent context
+}
+
+/**
+ * This can redefine a property into a getter/setter that will allow derivatives of a prototype to assign
+ * a value to the property without incurring an error from the property being frozen and readonly.
+ * @param target
+ * @param name
+ * @param value
+ */
+function overridableProperty(target, name, value = target[name]) {
+	Object.defineProperty(target, name, {
+		get() {
+			return value;
+		},
+		set(value) {
+			Object.defineProperty(this, name, {
+				value,
+				configurable: true,
+				enumerable: true,
+				writable: true,
+			});
+		},
+	});
 }
