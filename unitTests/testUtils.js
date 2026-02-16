@@ -374,19 +374,15 @@ function setupTestDBPath() {
 	return lmdb_path;
 }
 
-function makeTheDir(path_value) {
-	if (!fs.existsSync(path_value)) {
-		fs.mkdirSync(path_value, { recursive: true });
-	}
-}
-
 /**
  * Returns the path to the test root path that will be used for testing
  * @returns String representing the path value to the mock lmdb system directory
  */
 function setupTestDBPath() {
 	let dbPath = path.join(UNIT_TEST_DIR, ENV_DIR_NAME, process.pid.toString());
-	makeTheDir(dbPath);
+	if (!fs.existsSync(dbPath)) {
+		fs.mkdirSync(dbPath, { recursive: true });
+	}
 	env.setProperty(terms.HDB_SETTINGS_NAMES.HDB_ROOT_KEY, dbPath);
 	env.setProperty(terms.CONFIG_PARAMS.DATABASES, {
 		data: { path: dbPath },

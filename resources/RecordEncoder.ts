@@ -167,9 +167,6 @@ export class RecordEncoder extends Encoder {
 		this.saveStructures = function (structures, isCompatible): boolean | undefined {
 			if (this.isRocksDB) {
 				return this.rootStore.transactionSync((txn) => {
-					if (options.name?.startsWith?.('hdb_node'))
-						harperLogger.warn('Saving structures', structures, JSON.stringify(structures.get?.('named')));
-					// TODO: Do we have access to name?
 					const sharedStructuresKey = [Symbol.for('structures'), this.name];
 					const existingStructuresBuffer = txn.getBinarySync(sharedStructuresKey);
 					const existingStructures = existingStructuresBuffer ? this.decode(existingStructuresBuffer) : undefined;

@@ -10,7 +10,7 @@ if (!process.env.HARPER_NO_FLUSH_ON_EXIT && isMainThread) {
 	process.on('exit', () => shutdown());
 }
 
-const HAS_32_BIT_FLAG = 0x80000000; // for future use if we need a bigger section for flags
+// reserving 0x80000000 for future use if we need a flag to indicate 64-bits of flag bits for more flags
 const HAS_PREVIOUS_RESIDENCY_ID = 0x40000000;
 const HAS_PREVIOUS_VERSION = 0x20000000;
 
@@ -34,8 +34,8 @@ export class RocksTransactionLogStore {
 	/**
 	 * Translate a put to an addEntry
 	 * @param suggestedKey - ignored, only used by LMDB
-	 * @param entry
-	 * @param txnId
+	 * @param auditRecord - Audit record to save
+	 * @param options - Options for save
 	 */
 	put(suggestedKey: any, auditRecord: AuditRecord | Uint8Array, options: any) {
 		if (options.transaction.isRetry) {

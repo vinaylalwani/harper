@@ -43,7 +43,7 @@ async function lmdbCreateAttribute(createAttributeObj) {
 	}
 
 	//the validator strings everything so we need to recast the booleans on createAttributeObj
-	createAttributeObj.is_hash_attribute = createAttributeObj.is_hash_attribute == 'true';
+	createAttributeObj.isPrimaryKey = createAttributeObj.isPrimaryKey == 'true';
 	createAttributeObj.dup_sort = hdbUtils.isEmpty(createAttributeObj.dup_sort) || createAttributeObj.dup_sort == 'true';
 
 	let attributesObjArray = [];
@@ -87,7 +87,7 @@ async function lmdbCreateAttribute(createAttributeObj) {
 			env,
 			createAttributeObj.attribute,
 			createAttributeObj.dup_sort,
-			createAttributeObj.is_hash_attribute
+			createAttributeObj.isPrimaryKey
 		);
 
 		let hdbAttributeEnv = await environmentUtility.openEnvironment(

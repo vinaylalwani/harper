@@ -140,6 +140,7 @@ function startWorker(path, options = {}) {
 
 	const execArgv = [
 		'--enable-source-maps',
+		'--experimental-vm-modules',
 		'--expose-internals', // expose Node.js internal utils so jsLoader can use `decorateErrorStack()`
 	];
 	if (envMgr.get(hdbTerms.CONFIG_PARAMS.THREADS_HEAPSNAPSHOTNEARLIMIT))
@@ -167,7 +168,7 @@ function startWorker(path, options = {}) {
 	});
 	// now that we have the new thread ids, we can finishing connecting the channel and notify the existing
 	// worker of the new port with thread id.
-	for (let { port1, existingPort: existingPort } of channelsToConnect) {
+	for (let { port1, existingPort } of channelsToConnect) {
 		existingPort.postMessage(
 			{
 				type: ADDED_PORT,

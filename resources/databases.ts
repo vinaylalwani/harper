@@ -2,7 +2,8 @@ import { initSync, getHdbBasePath, get as envGet } from '../utility/environment/
 import { INTERNAL_DBIS_NAME } from '../utility/lmdb/terms.js';
 import { open, compareKeys, type Database, type RootDatabase } from 'lmdb';
 import { join, extname, basename } from 'path';
-import { existsSync, readdirSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, mkdirSync } from 'node:fs';
+import { unlink } from 'node:fs/promises';
 import {
 	getBaseSchemaPath,
 	getTransactionAuditStoreBasePath,
@@ -10,7 +11,6 @@ import {
 import { makeTable } from './Table.ts';
 import OpenEnvironmentObject from '../utility/lmdb/OpenEnvironmentObject.js';
 import { CONFIG_PARAMS, LEGACY_DATABASES_DIR_NAME, DATABASES_DIR_NAME } from '../utility/hdbTerms.ts';
-import * as fs from 'fs-extra';
 import { _assignPackageExport } from '../globals.js';
 import { getIndexedValues } from '../utility/lmdb/commonUtility.js';
 import * as signalling from '../utility/signalling.js';
@@ -23,22 +23,15 @@ import { openAuditStore, readAuditEntry, createAuditEntry, type AuditRecord } fr
 import { handleLocalTimeForGets } from './RecordEncoder.ts';
 import { deleteRootBlobPathsForDB } from './blob.ts';
 import { CUSTOM_INDEXES } from './indexes/customIndexes.ts';
-import * as OpenDBIObjectModule from '../utility/lmdb/OpenDBIObject.js';
+import { OpenDBIObject } from '../utility/lmdb/OpenDBIObject.js';
 import { RocksDatabase, type RocksDatabaseOptions } from '@harperfast/rocksdb-js';
 import { replayLogs } from './replayLogs.ts';
 import { totalmem } from 'node:os';
 import { RocksIndexStore } from './RocksIndexStore.ts';
-import { mkdirSync } from 'node:fs';
 import { when } from '../utility/when.ts';
 import { isProcessRunning } from '../utility/processManagement/processManagement.js';
 
 function createOpenDBIObject(dupSort = false, isPrimary = false) {
-	// what is going on with esbuild, it suddenly is randomly flip-flopping the module record for OpenDBIObject, sometimes return the correct exports object and sometimes returning the exports as the `default`.
-	const module = OpenDBIObjectModule as any;
-	const OpenDBIObject = module.OpenDBIObject ?? ('default' in module ? module.default?.OpenDBIObject : null);
-	if (!OpenDBIObject) {
-		throw new Error('OpenDBIObject not found');
-	}
 	return new OpenDBIObject(dupSort, isPrimary);
 }
 const logger = forComponent('storage');
@@ -195,22 +188,19 @@ export function getDatabases(): Databases {
 				readMetaDb(dbPath, null, dbName);
 				continue;
 			}
-			const useRocksdb = envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb';
-			if (useRocksdb) {
-				try {
-					const files = readdirSync(dbPath, { withFileTypes: true });
-					if (
-						files.find((file) => file.name === 'CURRENT')?.isFile() &&
-						files.some((file) => file.name.startsWith('MANIFEST-')) &&
-						!schemaConfigs[dbName]?.path
-					) {
-						readRocksMetaDb(dbPath, null, dbName);
-						continue;
-					}
-				} catch (err) {
-					if (!('code' in err && (err.code === 'ENOENT' || err.code === 'ENOTDIR'))) {
-						throw err;
-					}
+			try {
+				const files = readdirSync(dbPath, { withFileTypes: true });
+				if (
+					files.find((file) => file.name === 'CURRENT')?.isFile() &&
+					files.some((file) => file.name.startsWith('MANIFEST-')) &&
+					!schemaConfigs[dbName]?.path
+				) {
+					readRocksMetaDb(dbPath, null, dbName);
+					continue;
+				}
+			} catch (err) {
+				if (!('code' in err && (err.code === 'ENOENT' || err.code === 'ENOTDIR'))) {
+					throw err;
 				}
 			}
 		}
@@ -441,13 +431,13 @@ function initStores(
 			if (!value.name) {
 				// legacy attribute
 				value.name = attribute_name;
-				value.indexed = !value.is_hash_attribute;
+				value.indexed = !value.isPrimaryKey;
 			}
 		}
 		definedTables?.add(tableName);
 		let tableDef = tablesToLoad.get(tableName);
 		if (!tableDef) tablesToLoad.set(tableName, (tableDef = { attributes: [] }));
-		if (attribute_name == null || value.is_hash_attribute) tableDef.primary = value;
+		if (attribute_name == null || value.isPrimaryKey) tableDef.primary = value;
 		if (attribute_name != null) tableDef.attributes.push(value);
 		Object.defineProperty(value, 'key', { value: key, configurable: true });
 	}
@@ -457,7 +447,7 @@ function initStores(
 		if (!primaryAttribute) {
 			// this isn't defined, find it in the attributes
 			for (const attribute of attributes) {
-				if (attribute.is_hash_attribute || attribute.isPrimaryKey) {
+				if (attribute.isPrimaryKey) {
 					primaryAttribute = attribute;
 					break;
 				}
@@ -501,7 +491,7 @@ function initStores(
 				dbisStore.putSync(NEXT_TABLE_ID, tableId + 1);
 				dbisStore.putSync(primaryAttribute.key, primaryAttribute);
 			}
-			const dbiInit = createOpenDBIObject(!primaryAttribute.is_hash_attribute, primaryAttribute.is_hash_attribute);
+			const dbiInit = createOpenDBIObject(!primaryAttribute.isPrimaryKey, primaryAttribute.isPrimaryKey);
 			dbiInit.compression = primaryAttribute.compression;
 			if (dbiInit.compression) {
 				const compressionThreshold =
@@ -524,7 +514,7 @@ function initStores(
 			attribute.attribute = attribute.name;
 			try {
 				// now load the non-primary keys, opening the dbs as necessary for indices
-				if (!attribute.is_hash_attribute && (attribute.indexed || (attribute.attribute && !attribute.name))) {
+				if (!attribute.isPrimaryKey && (attribute.indexed || (attribute.attribute && !attribute.name))) {
 					if (!indices[attribute.name]) {
 						const dbi = openIndex(attribute.key, rootStore, attribute);
 						indices[attribute.name] = dbi;
@@ -544,7 +534,7 @@ function initStores(
 		for (const existingAttribute of existingAttributes) {
 			const attribute = attributes.find((attribute) => attribute.name === existingAttribute.name);
 			if (!attribute) {
-				if (existingAttribute.is_hash_attribute) {
+				if (existingAttribute.isPrimaryKey) {
 					logger.error('Unable to remove existing primary key attribute', existingAttribute);
 					continue;
 				}
@@ -741,11 +731,12 @@ export async function dropDatabase(databaseName) {
 		rocksdbDatabaseEnvs.delete(rootStore.path);
 
 		if (rootStore.status === 'open') {
-			await rootStore.close();
 			if (rootStore instanceof RocksDatabase) {
+				rootStore.close();
 				rootStore.destroy();
 			} else if (rootStore.status === 'open') {
-				await fs.remove(rootStore.path);
+				await rootStore.close();
+				await unlink(rootStore.path);
 			}
 		}
 	}
@@ -755,7 +746,7 @@ export async function dropDatabase(databaseName) {
 			rootStore.destroy();
 		} else if (rootStore.status === 'open') {
 			await rootStore.close();
-			await fs.remove(rootStore.path);
+			await unlink(rootStore.path);
 		}
 	}
 	if (databaseName === 'data') {
@@ -771,7 +762,7 @@ export async function dropDatabase(databaseName) {
 // opens an index, consulting with custom indexes that may use alternate store configuration
 function openIndex(dbiKey: string, rootStore: LMDBRootDatabase | RocksRootDatabase, attribute: any) {
 	const objectStorage =
-		attribute.is_hash_attribute || (attribute.indexed.type && CUSTOM_INDEXES[attribute.indexed.type]?.useObjectStore);
+		attribute.isPrimaryKey || (attribute.indexed.type && CUSTOM_INDEXES[attribute.indexed.type]?.useObjectStore);
 	const dbiInit = createOpenDBIObject(!objectStorage, objectStorage);
 	let dbi:
 		| LMDBDatabase
@@ -864,7 +855,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 		const auditStore = rootStore.auditStore;
 		primaryKeyAttribute = attributes.find((attribute) => attribute.isPrimaryKey) || {};
 		primaryKey = primaryKeyAttribute.name;
-		primaryKeyAttribute.is_hash_attribute = primaryKeyAttribute.isPrimaryKey = true;
+		primaryKeyAttribute.isPrimaryKey = true;
 		primaryKeyAttribute.schemaDefined = schemaDefined;
 		// can't change compression after the fact (except threshold), so save only when we create the table
 		primaryKeyAttribute.compression = getDefaultCompression();
@@ -1179,11 +1170,6 @@ async function runIndexing(Table, attributes, indicesToRemove) {
 						}
 						const values = getIndexedValues(value, index.indexNulls);
 						if (values) {
-							/*					if (LMDB_PREFETCH_WRITES)
-													index.prefetch(
-														values.map((v) => ({ key: v, value: id })),
-														noop
-													);*/
 							for (let i = 0, l = values.length; i < l; i++) {
 								lastResolution = index.put(values[i], key);
 							}
@@ -1278,7 +1264,7 @@ export function getDefaultCompression() {
 		envGet(CONFIG_PARAMS.STORAGE_COMPRESSION_THRESHOLD) || DEFAULT_COMPRESSION_THRESHOLD;
 	const LMDB_COMPRESSION_OPTS = { startingOffset: 32 };
 	if (STORAGE_COMPRESSION_DICTIONARY)
-		LMDB_COMPRESSION_OPTS['dictionary'] = fs.readFileSync(STORAGE_COMPRESSION_DICTIONARY);
+		LMDB_COMPRESSION_OPTS['dictionary'] = readFileSync(STORAGE_COMPRESSION_DICTIONARY);
 	if (STORAGE_COMPRESSION_THRESHOLD) LMDB_COMPRESSION_OPTS['threshold'] = STORAGE_COMPRESSION_THRESHOLD;
 	return LMDB_COMPRESSION && LMDB_COMPRESSION_OPTS;
 }

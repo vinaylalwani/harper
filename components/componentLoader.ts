@@ -17,7 +17,7 @@ import * as loadEnv from '../resources/loadEnv.ts';
 import harperLogger from '../utility/logging/harper_logger.js';
 import * as dataLoader from '../resources/dataLoader.ts';
 import { watchDir, getWorkerIndex } from '../server/threads/manageThreads.js';
-import { secureImport } from '../security/jsLoader.ts';
+import { scopedImport } from '../security/jsLoader.ts';
 import { server } from '../server/Server.ts';
 import { Resources } from '../resources/Resources.ts';
 import { table } from '../resources/databases.ts';
@@ -29,7 +29,7 @@ import * as mqtt from '../server/mqtt.ts';
 import { getConfigObj, resolvePath } from '../config/configUtils.js';
 import { createReuseportFd } from '../server/serverHelpers/Request.ts';
 import { ErrorResource } from '../resources/ErrorResource.ts';
-import { Scope } from './Scope.ts';
+import { Scope, type ApplicationContainment } from './Scope.ts';
 import { ComponentV1, processResourceExtensionComponent } from './ComponentV1.ts';
 import * as httpComponent from '../server/http.ts';
 import { Status } from '../server/status/index.ts';
@@ -61,14 +61,12 @@ export function loadComponentDirectories(loadedPluginModules?: Map<any, any>, lo
 			if (!appEntry.isDirectory() && !appEntry.isSymbolicLink()) continue;
 			const appName = appEntry.name;
 			const appFolder = join(CF_ROUTES_DIR, appName);
-			cfsLoaded.push(loadComponent(appFolder, resources, HDB_ROOT_DIR_NAME, false));
+			cfsLoaded.push(loadComponent(appFolder, resources, HDB_ROOT_DIR_NAME));
 		}
 	}
 	const hdbAppFolder = process.env.RUN_HDB_APP;
 	if (hdbAppFolder) {
-		cfsLoaded.push(
-			loadComponent(hdbAppFolder, resources, hdbAppFolder, false, undefined, Boolean(process.env.DEV_MODE))
-		);
+		cfsLoaded.push(loadComponent(hdbAppFolder, resources, hdbAppFolder, { autoReload: Boolean(process.env.DEV_MODE) }));
 	}
 	return Promise.all(cfsLoaded).then(() => {
 		watchesSetup = true;
@@ -104,7 +102,7 @@ for (const { name, packageIdentifier } of getEnvBuiltInComponents()) {
 }
 
 const portsStarted = [];
-const loadedPaths = new Map();
+export const loadedPaths = new Map();
 let errorReporter;
 export function setErrorReporter(reporter) {
 	errorReporter = reporter;
@@ -219,6 +217,13 @@ function sequentiallyHandleApplication(scope: Scope, plugin: PluginModule) {
 	});
 }
 
+export interface LoadComponentOptions {
+	isRoot?: boolean;
+	autoReload?: boolean;
+	applicationContainment?: ApplicationContainment;
+	providedLoadedComponents?: Map<any, any>;
+}
+
 /**
  * Load a component from the specified directory
  * @param componentPath
@@ -231,13 +236,12 @@ export async function loadComponent(
 	componentDirectory: string,
 	resources: Resources,
 	origin: string,
-	isRoot?: boolean,
-	providedLoadedComponents?: Map<any, any>,
-	autoReload?: boolean
+	options: LoadComponentOptions = {}
 ) {
 	const resolvedFolder = realpathSync(componentDirectory);
 	if (loadedPaths.has(resolvedFolder)) return loadedPaths.get(resolvedFolder);
 	loadedPaths.set(resolvedFolder, true);
+	const { providedLoadedComponents, isRoot, autoReload } = options;
 	if (providedLoadedComponents) loadedComponents = providedLoadedComponents;
 	try {
 		let config;
@@ -300,7 +304,7 @@ export async function loadComponent(
 					}
 					if (componentPath) {
 						if (!process.env.HARPER_SAFE_MODE) {
-							extensionModule = await loadComponent(componentPath, resources, origin, false);
+							extensionModule = await loadComponent(componentPath, resources, origin);
 							componentFunctionality[componentName] = true;
 						}
 					} else {
@@ -310,7 +314,7 @@ export async function loadComponent(
 					const plugin = TRUSTED_RESOURCE_PLUGINS[componentName];
 					extensionModule =
 						typeof plugin === 'string'
-							? await secureImport(plugin.startsWith('@/') ? join(PACKAGE_ROOT, plugin.slice(1)) : plugin)
+							? await scopedImport(plugin.startsWith('@/') ? join(PACKAGE_ROOT, plugin.slice(1)) : plugin)
 							: plugin;
 				}
 
@@ -356,6 +360,7 @@ export async function loadComponent(
 					}
 
 					const scope = new Scope(componentName, componentDirectory, configPath, resources, server);
+					if (options.applicationContainment) scope.applicationContainment = options.applicationContainment;
 
 					await sequentiallyHandleApplication(scope, extensionModule);
 
@@ -446,9 +451,7 @@ export async function loadComponent(
 			});
 		}
 		if (config.extensionModule || config.pluginModule) {
-			const extensionModule = await secureImport(
-				join(componentDirectory, config.extensionModule || config.pluginModule)
-			);
+			const extensionModule = await import(join(componentDirectory, config.extensionModule || config.pluginModule));
 			loadedPaths.set(resolvedFolder, extensionModule);
 			return extensionModule;
 		}

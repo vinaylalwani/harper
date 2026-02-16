@@ -154,7 +154,7 @@ function setupTransaction(transactionOrEnv, hash_attribute, attribute, callback)
 	let env = transactionOrEnv.database || transactionOrEnv;
 	// make sure all DBIs have been opened prior to starting any new persistent read transaction
 	let attrDbi = environmentUtility.openDBI(env, attribute);
-	if (attrDbi[lmdbTerms.DBI_DEFINITION_NAME].is_hash_attribute) {
+	if (attrDbi[lmdbTerms.DBI_DEFINITION_NAME].isPrimaryKey) {
 		hash_attribute = attribute;
 	} else if (hash_attribute) {
 		environmentUtility.openDBI(env, hash_attribute);
@@ -193,7 +193,7 @@ function getOverflowCheck(env, transaction, hash_attribute, attribute) {
 					let dbis = environmentUtility.listDBIs(env);
 					for (let i = 0, l = dbis.length; i < l; i++) {
 						primaryDbi = environmentUtility.openDBI(env, dbis[i]);
-						if (primaryDbi[lmdbTerms.DBI_DEFINITION_NAME].is_hash_attribute) break;
+						if (primaryDbi[lmdbTerms.DBI_DEFINITION_NAME].isPrimaryKey) break;
 					}
 				}
 			}
@@ -527,7 +527,7 @@ function contains(
 						})
 						.filter((v) => v);
 				} else if (ends_with ? foundStr.endsWith(searchValue) : foundStr.includes(searchValue)) {
-					if (attrDbi[lmdbTerms.DBI_DEFINITION_NAME].is_hash_attribute) return { key, value: key };
+					if (attrDbi[lmdbTerms.DBI_DEFINITION_NAME].isPrimaryKey) return { key, value: key };
 					else {
 						return attrDbi.getValues(key, { transaction }).map((primaryKey) => {
 							return { key, value: primaryKey };

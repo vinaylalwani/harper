@@ -192,8 +192,7 @@ async function descTable(describeTableObject, attrPerms) {
 	let tableResult = {
 		schema,
 		name: tableObj.tableName,
-		hash_attribute: tableObj.attributes.find((attribute) => attribute.isPrimaryKey || attribute.is_hash_attribute)
-			?.name,
+		hash_attribute: tableObj.attributes.find((attribute) => attribute.isPrimaryKey || attribute.isPrimaryKey)?.name,
 		audit: tableObj.audit,
 		schema_defined: tableObj.schemaDefined,
 		attributes,
