@@ -1,4 +1,4 @@
-import { getMockLMDBPath } from '../testUtils.js';
+import { setupTestDBPath } from '../testUtils.js';
 import { fileURLToPath } from 'url';
 import { setProperty } from '#js/utility/environment/environmentManager';
 import hdbTerms from '#src/utility/hdbTerms';
@@ -32,7 +32,8 @@ function makeString() {
 	}
 	return str;
 }
-let created_records;
+let createdRecords;
+let serverStarted;
 export async function setupTestApp() {
 	analytics.setAnalyticsEnabled(false);
 	bypassAuth();
@@ -59,8 +60,8 @@ export async function setupTestApp() {
 	};
 
 	// exit if it is already setup or we are running in the browser
-	if (created_records || typeof process === 'undefined') return created_records;
-	let path = getMockLMDBPath();
+	if (typeof process === 'undefined') return createdRecords;
+	let path = setupTestDBPath();
 	setProperty(hdbTerms.CONFIG_PARAMS.OPERATIONSAPI_NETWORK_DOMAINSOCKET, join(path, 'operations-server'));
 	setProperty(hdbTerms.CONFIG_PARAMS.HTTP_SECUREPORT, null);
 	setProperty(hdbTerms.CONFIG_PARAMS.HTTP_PORT, 9926);
@@ -72,11 +73,20 @@ export async function setupTestApp() {
 	process.env.RUN_HDB_APP = fileURLToPath(new URL('../testApp', import.meta.url));
 	process.env._UNREF_SERVER = true; // unref the server so when we are done nothing should block us from exiting
 	process.env._DISABLE_NATS = true;
-	created_records = [];
+	createdRecords = [];
 
-	const { startHTTPThreads } = require('#src/server/threads/socketRouter');
-	await startHTTPThreads(config.threads || 0);
+	if (serverStarted) {
+		// if already started, clear out any previous records and recreate them
+		tables.VariedProps.clear();
+		tables.FourProp.clear();
+		tables.Related.clear();
+		tables.SubObject.clear();
+	} else {
+		const { startHTTPThreads } = require('#src/server/threads/socketRouter');
+		serverStarted = await startHTTPThreads(config.threads || 0);
+	}
 	try {
+		seed = 0; // reset the seed to make sure we are deterministic here
 		for (let i = 0; i < 20; i++) {
 			let object = { id: Math.round(random() * 1000000).toString(36) };
 			for (let i = 0; i < 20; i++) {
@@ -99,7 +109,7 @@ export async function setupTestApp() {
 				responseType: 'arraybuffer',
 				headers,
 			});
-			created_records.push(object.id);
+			createdRecords.push(object.id);
 		}
 
 		for (let i = 0; i < 15; i++) {
@@ -126,7 +136,7 @@ export async function setupTestApp() {
 		error.message += ': ' + error.response?.data.toString();
 		throw error;
 	}
-	return created_records;
+	return createdRecords;
 }
 
 export async function addThreads() {

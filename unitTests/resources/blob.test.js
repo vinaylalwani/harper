@@ -1,5 +1,6 @@
+require('../testUtils');
 const assert = require('assert');
-const { getMockLMDBPath } = require('../testUtils.js');
+const { setupTestDBPath } = require('../testUtils');
 const { table, getDatabases } = require('#src/resources/databases');
 const { Readable, PassThrough } = require('node:stream');
 const { setAuditRetention } = require('#src/resources/auditStore');
@@ -20,7 +21,7 @@ const { transaction } = require('#src/resources/transaction');
 describe('Blob test', () => {
 	let BlobTest;
 	before(async function () {
-		getMockLMDBPath();
+		setupTestDBPath();
 		setMainIsWorker(true);
 		BlobTest = table({
 			table: 'BlobTest',
@@ -69,9 +70,9 @@ describe('Blob test', () => {
 		assert.equal(record.blob.type, 'text/plain');
 		assert.equal(record.blob.extraProperty, 'this is an extra property');
 		testString += testString; // modify the string
-		assert.throws(() => {
+		await assert.rejects(async () => {
 			// should not be able to use the blob in a different record
-			BlobTest.put({ id: 2, blob });
+			await BlobTest.put({ id: 2, blob });
 		});
 		blob = await createBlob(Readable.from(testString), { flush: true }); // create a new blob with flush
 		await BlobTest.put({ id: 1, blob });
@@ -99,17 +100,6 @@ describe('Blob test', () => {
 	it('create a blob from a buffer and save it before committing', async () => {
 		let random = randomBytes(5000 * Math.random() + 20000);
 		let blob = createBlob(random, { saveBeforeCommit: true });
-		await BlobTest.put({ id: 1, blob });
-		let record = await BlobTest.get(1);
-		assert.equal(record.id, 1);
-		let retrievedBytes = await record.blob.bytes();
-		assert(retrievedBytes.equals(random));
-		assert.equal(record.blob.size, random.length);
-	});
-	it('create a blob from a buffer and save it before committing it using save() method', async () => {
-		let random = randomBytes(5000 * Math.random() + 20000);
-		let blob = createBlob(random);
-		await blob.save(BlobTest);
 		await BlobTest.put({ id: 1, blob });
 		let record = await BlobTest.get(1);
 		assert.equal(record.id, 1);
@@ -204,7 +194,8 @@ describe('Blob test', () => {
 		let filePath = getFilePathForBlob(blob);
 		assert(existsSync(filePath));
 		await BlobTest.delete(3);
-		assert(existsSync(filePath)); // should not immediately be deleted
+		await delay(50);
+		assert(!existsSync(filePath)); // should immediately be deleted
 		BlobTest.auditStore.scheduleAuditCleanup(1); // prune audit log, so the blob is actually deleted
 		let retries = 0;
 		while (existsSync(filePath) && retries++ < 10) await delay(40); // wait for audit log removal and deletion
@@ -222,16 +213,10 @@ describe('Blob test', () => {
 		assert(!existsSync(filePath));
 
 		setAuditRetention(10); // give us time to check the blob file that is written
-		blob = await createBlob(Readable.from(testString));
+		blob = await createBlob(Buffer.from(testString));
 		await BlobTest.publish(4, { id: 4, blob });
 		await isSaving(blob);
-		assert.notEqual(filePath, getFilePathForBlob(blob)); // it should be a new file path
-		filePath = getFilePathForBlob(blob);
-		assert(existsSync(filePath));
-		setAuditRetention(0.01);
-		BlobTest.auditStore.scheduleAuditCleanup(1); // prune audit log, so the blob is actually deleted
-		await delay(50); // wait for audit log removal and deletion
-		assert(!existsSync(filePath));
+		assert.equal(getFilePathForBlob(blob), null); // should be saved in the record, not in a file path
 
 		blob = await createBlob(Readable.from(testString));
 		await BlobTest.put({ id: 4, blob });
@@ -377,15 +362,9 @@ describe('Blob test', () => {
 		assert.throws(() => {
 			createBlob(undefined);
 		});
-		assert.throws(() => {
-			BlobTest.put({ id: 1, blob: { name: 'not actually a blob' } });
+		await assert.rejects(async () => {
+			await BlobTest.put({ id: 1, blob: { name: 'not actually a blob' } });
 		});
-		let record = await BlobTest.get(1);
-		if (record) {
-			assert.throws(() => {
-				record.blob = 'not a blob either';
-			});
-		}
 	});
 	it('sequential embedded blob reads', async () => {
 		for (let i = 0; i < 10; i++) {

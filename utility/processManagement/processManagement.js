@@ -7,7 +7,6 @@ const hdbLogger = require('../../utility/logging/harper_logger.js');
 const { onMessageFromWorkers } = require('../../server/threads/manageThreads.js');
 const fs = require('fs');
 const path = require('node:path');
-const terms = require('../hdbTerms');
 const { setTimeout: delay } = require('node:timers/promises');
 const { execFile, fork } = require('node:child_process');
 
@@ -17,6 +16,7 @@ module.exports = {
 	kill,
 	startService,
 	getHdbPid,
+	isProcessRunning,
 	cleanupChildrenProcesses,
 	expectedRestartOfChildren,
 };
@@ -37,6 +37,10 @@ function start(procConfig, noKill = false) {
 	const args = typeof procConfig.args === 'string' ? procConfig.args.split(' ') : procConfig.args;
 	procConfig.silent = true;
 	procConfig.detached = true;
+	procConfig.env = {
+		...procConfig.env,
+		HARPER_PARENT_PROCESS_PID: process.pid.toString(),
+	};
 	const subprocess = procConfig.script
 		? fork(procConfig.script, args, procConfig)
 		: execFile(procConfig.binFile, args, procConfig);

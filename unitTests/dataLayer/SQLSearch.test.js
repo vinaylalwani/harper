@@ -3,8 +3,8 @@
 const testUtils = require('../testUtils.js');
 testUtils.preTestPrep();
 
-const sql_test_utils = require('../sqlTestUtils');
-const { setupCSVSqlData, generateMockAST, cleanupCSVData, sqlIntegrationData } = sql_test_utils;
+const sql_testUtils = require('../sqlTestUtils');
+const { setupCSVSqlData, generateMockAST, cleanupCSVData, sqlIntegrationData } = sql_testUtils;
 const { createMockDB, tearDownMockDB, deepClone, mochaAsyncWrapper, sortAsc, sortDesc } = testUtils;
 
 const chai = require('chai');

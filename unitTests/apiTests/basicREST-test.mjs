@@ -71,9 +71,6 @@ describe('test REST calls', () => {
 		assert(data[3].id);
 	});
 	it('PUT with CBOR', async () => {
-		setTimeout(() => {
-			//why_is_node_running.whyIsNodeStillRunning();
-		}, 4000).unref();
 		const headers = {
 			//authorization,
 			'content-type': 'application/cbor',
@@ -271,7 +268,6 @@ describe('test REST calls', () => {
 			// this test also tests to ensure deleted values are not reachable
 			let response = await axios('http://localhost:9926/VariedProps/?id=sw=8');
 			assert.equal(response.status, 200);
-			if (response.data.length > 2) console.log('Record starting with 8', response.data);
 			assert.equal(response.data.length, 2);
 			assert.equal(response.data[0].id[0], '8');
 		});

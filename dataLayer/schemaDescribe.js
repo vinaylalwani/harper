@@ -185,15 +185,14 @@ async function descTable(describeTableObject, attrPerms) {
 	}
 	let db_size;
 	try {
-		db_size = (await fs.stat(tableObj.primaryStore.env.path)).size;
+		db_size = (await fs.stat(tableObj.primaryStore.path)).size;
 	} catch (error) {
 		logger.warn(`unable to get database size`, error);
 	}
 	let tableResult = {
 		schema,
 		name: tableObj.tableName,
-		hash_attribute: tableObj.attributes.find((attribute) => attribute.isPrimaryKey || attribute.is_hash_attribute)
-			?.name,
+		hash_attribute: tableObj.attributes.find((attribute) => attribute.isPrimaryKey || attribute.isPrimaryKey)?.name,
 		audit: tableObj.audit,
 		schema_defined: tableObj.schemaDefined,
 		attributes,

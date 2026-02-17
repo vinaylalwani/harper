@@ -1,6 +1,7 @@
+require('../testUtils');
 const assert = require('assert');
 const { Worker } = require('worker_threads');
-const { getMockLMDBPath } = require('../testUtils.js');
+const { setupTestDBPath } = require('../testUtils');
 const { table } = require('#src/resources/databases');
 const { Resource } = require('#src/resources/Resource');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
@@ -9,7 +10,7 @@ const { transaction } = require('#src/resources/transaction');
 describe('Create records', () => {
 	let CreateTest, test_thread;
 	before(async function () {
-		getMockLMDBPath();
+		setupTestDBPath();
 		setMainIsWorker(true);
 		CreateTest = table({
 			table: 'CreateTest',
@@ -27,7 +28,7 @@ describe('Create records', () => {
 		let results = [];
 		results.push(await CreateTest.create({ str: 'hello' }));
 		results.push(await CreateTest.create({ str: 'hello' }));
-		assert.equal(results[0].getId() + 1, results[1].getId());
+		assert.equal(results[0].id + 1, results[1].id);
 	});
 	it('It increments along with other thread', async function () {
 		let id_before = CreateTest.getNewId();

@@ -1,10 +1,10 @@
 'use strict';
 
-const testUtils = require('../../../../testUtils.js');
+const testUtils = require('../../../../testUtils');
 testUtils.preTestPrep();
 const path = require('path');
 const TRANSACTIONS_NAME = 'transactions';
-const BASE_PATH = testUtils.getMockLMDBPath();
+const BASE_PATH = testUtils.setupTestDBPath();
 const BASE_TRANSACTIONS_PATH = path.join(BASE_PATH, TRANSACTIONS_NAME);
 
 const rewire = require('rewire');
@@ -80,12 +80,12 @@ describe('test lmdbWriteTransaction module', () => {
 	describe('test createTransactionObject function', () => {
 		before(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 		});
 
 		after(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 		});
 
 		it('test for insert operation no user on operation', async () => {

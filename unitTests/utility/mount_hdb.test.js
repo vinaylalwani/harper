@@ -8,6 +8,8 @@ const init_paths = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/in
 const bridge = require('#js/dataLayer/harperBridge/harperBridge');
 const mount_hdb = rewire('#js/utility/mount_hdb');
 const path = require('path');
+const { get: envGet } = require('#js/utility/environment/environmentManager');
+const { CONFIG_PARAMS } = require('#src/utility/hdbTerms');
 const SEP = path.sep;
 
 describe('test mount_hdb module', () => {
@@ -68,7 +70,7 @@ describe('test mount_hdb module', () => {
 		expect(mk_dirp_sync_stub.getCall(4).args[0]).to.equal(`mount${SEP}test${SEP}hdb${SEP}database`);
 		expect(mk_dirp_sync_stub.getCall(5).args[0]).to.equal(`mount${SEP}test${SEP}hdb${SEP}components`);
 	});
-
+	if (envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb') return;
 	it('Test createLMDBTables happy path', async () => {
 		const createLMDBTables = mount_hdb.__get__('createLMDBTables');
 		await createLMDBTables();

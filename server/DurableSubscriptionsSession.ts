@@ -7,6 +7,7 @@ import { getWorkerIndex } from '../server/threads/manageThreads.js';
 import { whenComponentsLoaded } from '../server/threads/threadServer.js';
 import { server } from '../server/Server.ts';
 import { RequestTarget } from '../resources/RequestTarget';
+import { cloneDeep } from 'lodash';
 
 const AWAITING_ACKS_HIGH_WATER_MARK = 100;
 const DurableSession = table({
@@ -102,7 +103,7 @@ export async function getSession({
 		if (sessionId) {
 			// connecting with a clean session and session id is how durable sessions are deleted
 			const sessionResource = await DurableSession.get(sessionId);
-			if (sessionResource) sessionResource.delete();
+			if (sessionResource) DurableSession.delete(sessionId);
 		}
 		session = new SubscriptionsSession(sessionId, user);
 	}
@@ -243,11 +244,11 @@ class SubscriptionsSession {
 		});
 		const resourcePath = entry.path;
 		const resource = entry.Resource;
-		const subscription = await transaction(request, async () => {
-			const context = this.createContext();
-			context.topic = topic;
-			context.retainHandling = retainHandling;
-			context.isCollection = request.isCollection;
+		const context = this.createContext();
+		context.topic = topic;
+		context.retainHandling = retainHandling;
+		context.isCollection = request.isCollection;
+		const subscription = await transaction(context, async () => {
 			const subscription = await resource.subscribe(request, context);
 			if (!subscription) {
 				return; // if no subscription, nothing to return
@@ -358,7 +359,7 @@ class SubscriptionsSession {
 			try {
 				if (!clientTerminated) {
 					const will = await LastWill.get(this.sessionId);
-					if (will?.doesExist()) {
+					if (will) {
 						await publish(will, will.data, context);
 					}
 				}
@@ -386,8 +387,7 @@ class SubscriptionsSession {
 }
 function publish(message, data, context) {
 	const { topic, retain } = message;
-	message.data = data;
-	message.async = true;
+	message = { ...message, data, async: true };
 	context.authorize = true;
 	const entry = resources.getMatch(topic, 'mqtt');
 	if (!entry)
@@ -412,7 +412,7 @@ export class DurableSubscriptionsSession extends SubscriptionsSession {
 	sessionRecord: any;
 	constructor(sessionId, user, record?) {
 		super(sessionId, user);
-		this.sessionRecord = record || { id: sessionId, subscriptions: [] };
+		this.sessionRecord = cloneDeep(record) || { id: sessionId, subscriptions: [] };
 	}
 	async resume() {
 		// resuming a session, we need to resume each subscription
@@ -459,7 +459,7 @@ export class DurableSubscriptionsSession extends SubscriptionsSession {
 							}
 							subscription.acks.push(update.timestamp);
 							trace('Received ack', topic, update.timestamp);
-							this.sessionRecord.update();
+							DurableSession.put(this.sessionRecord);
 							return;
 						}
 					}
@@ -472,7 +472,7 @@ export class DurableSubscriptionsSession extends SubscriptionsSession {
 				subscription.startTime = update.timestamp;
 			}
 		}
-		this.sessionRecord.update();
+		DurableSession.put(this.sessionRecord);
 		// TODO: Increment the timestamp for the corresponding subscription, possibly recording any interim unacked messages
 	}
 

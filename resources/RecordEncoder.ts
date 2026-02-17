@@ -7,7 +7,6 @@
 
 import { Encoder } from 'msgpackr';
 import {
-	createAuditEntry,
 	readAuditEntry,
 	HAS_PREVIOUS_RESIDENCY_ID,
 	HAS_CURRENT_RESIDENCY_ID,
@@ -20,6 +19,8 @@ import * as harperLogger from '../utility/logging/harper_logger.js';
 import './blob.ts';
 import { blobsWereEncoded, decodeFromDatabase, deleteBlobsInObject, encodeBlobsWithFilePath } from './blob.ts';
 import { recordAction } from './analytics/write.ts';
+import { RocksDatabase } from '@harperfast/rocksdb-js';
+import { when } from '../utility/when.ts';
 export type Entry = {
 	key: any;
 	value: any;
@@ -27,6 +28,9 @@ export type Entry = {
 	localTime: number;
 	expiresAt: number;
 	metadataFlags: number;
+	nodeId: number;
+	residencyId: number;
+	size: number;
 	deref?: () => any;
 };
 
@@ -48,6 +52,7 @@ export const TIMESTAMP_ASSIGN_PREVIOUS = 3;
 export const TIMESTAMP_RECORD_PREVIOUS = 4;
 export const HAS_EXPIRATION = 16;
 export const HAS_RESIDENCY_ID = 32;
+export const HAS_NODE_ID = 64;
 export const PENDING_LOCAL_TIME = 1;
 export const HAS_STRUCTURE_UPDATE = 0x100;
 
@@ -61,10 +66,13 @@ let lastEncoding,
 	timestampNextEncoding = 0,
 	metadataInNextEncoding = -1,
 	expiresAtNextEncoding = -1,
-	residencyIdAtNextEncoding = 0;
+	residencyIdAtNextEncoding = 0,
+	nodeIdAtNextEncoding = -1;
 // tracking metadata with a singleton works better than trying to alter response of getEntry/get and coordinating that across caching layers
 export let lastMetadata: Entry | null = null;
 export class RecordEncoder extends Encoder {
+	structureUpdate?: any;
+	isRocksDB: boolean;
 	constructor(options) {
 		options.useBigIntExtension = true;
 		/**
@@ -98,6 +106,7 @@ export class RecordEncoder extends Encoder {
 				let metadata = metadataInNextEncoding;
 				const expiresAt = expiresAtNextEncoding;
 				const residencyId = residencyIdAtNextEncoding;
+				const nodeId = nodeIdAtNextEncoding;
 				if (metadata >= 0) {
 					valueStart += 4; // make room for metadata bytes
 					metadataInNextEncoding = -1; // reset indicator to mean no metadata
@@ -109,36 +118,42 @@ export class RecordEncoder extends Encoder {
 						valueStart += 4; // make room for residency id
 						residencyIdAtNextEncoding = 0; // reset indicator to mean no residency id
 					}
+					if (nodeId >= 0) {
+						valueStart += 4; // make room for node id
+						nodeIdAtNextEncoding = -1; // reset indicator to mean no node id
+					}
 				}
 				const encoded = (lastEncoding = superEncode.call(this, record, options | 2048 | valueStart)); // encode with 8 bytes reserved space for txnId
 				lastValueEncoding = encoded.subarray((encoded.start || 0) + valueStart, encoded.end);
 				let position = encoded.start || 0;
+				const dataView =
+					encoded.dataView || (encoded.dataView = new DataView(encoded.buffer, encoded.byteOffset, encoded.byteLength));
 				if (timestamp) {
-					// we apply the special instruction bytes that tell lmdb-js how to assign the timestamp
-					TIMESTAMP_PLACEHOLDER[4] = timestamp;
-					TIMESTAMP_PLACEHOLDER[5] = timestamp >> 8;
-					encoded.set(TIMESTAMP_PLACEHOLDER, position);
+					if (this.isRocksDB) {
+						// rocksdb, just store the version directly as the timestamp
+						dataView.setFloat64(position, timestamp);
+					} else {
+						// we apply the special instruction bytes that tell lmdb-js how to assign the timestamp
+						TIMESTAMP_PLACEHOLDER[4] = timestamp;
+						TIMESTAMP_PLACEHOLDER[5] = timestamp >> 8;
+						encoded.set(TIMESTAMP_PLACEHOLDER, position);
+					}
 					position += 8;
 				}
 				if (blobsWereEncoded) metadata |= HAS_BLOBS;
 				if (metadata >= 0) {
-					const dataView =
-						encoded.dataView ||
-						(encoded.dataView = new DataView(encoded.buffer, encoded.byteOffset, encoded.byteLength));
 					dataView.setUint32(position, metadata | (ACTION_32_BIT << 24)); // use the extended action byte
 					position += 4;
 					if (expiresAt >= 0) {
-						const dataView =
-							encoded.dataView ||
-							(encoded.dataView = new DataView(encoded.buffer, encoded.byteOffset, encoded.byteLength));
 						dataView.setFloat64(position, expiresAt);
 						position += 8;
 					}
 					if (residencyId) {
-						const dataView =
-							encoded.dataView ||
-							(encoded.dataView = new DataView(encoded.buffer, encoded.byteOffset, encoded.byteLength));
 						dataView.setUint32(position, residencyId);
+						position += 4;
+					}
+					if (nodeId >= 0) {
+						dataView.setUint32(position, nodeId);
 					}
 				}
 				return encoded;
@@ -148,10 +163,37 @@ export class RecordEncoder extends Encoder {
 			}
 		};
 		const superSaveStructures = this.saveStructures;
-		this.saveStructures = function (structures, isCompatible) {
-			const result = superSaveStructures.call(this, structures, isCompatible);
-			this.hasStructureUpdate = true;
-			return result;
+		const superGetStructures = this.getStructures;
+		this.saveStructures = function (structures, isCompatible): boolean | undefined {
+			if (this.isRocksDB) {
+				return this.rootStore.transactionSync((txn) => {
+					const sharedStructuresKey = [Symbol.for('structures'), this.name];
+					const existingStructuresBuffer = txn.getBinarySync(sharedStructuresKey);
+					const existingStructures = existingStructuresBuffer ? this.decode(existingStructuresBuffer) : undefined;
+					if (typeof isCompatible == 'function') {
+						if (!isCompatible(existingStructures)) {
+							return false;
+						}
+					} else if (existingStructures && existingStructures.length !== isCompatible) {
+						return false;
+					}
+					txn.putSync(sharedStructuresKey, structures);
+					this.structureUpdate = structures;
+				});
+			} else {
+				const result = superSaveStructures.call(this, structures, isCompatible);
+				this.structureUpdate = structures;
+				return result;
+			}
+		};
+		this.getStructures = function (): any {
+			if (this.isRocksDB) {
+				const sharedStructuresKey = [Symbol.for('structures'), this.name];
+				const buffer = this.rootStore.getBinarySync(sharedStructuresKey);
+				return buffer ? this.decode(buffer) : undefined;
+			} else {
+				return superGetStructures.call(this);
+			}
 		};
 	}
 	decode(buffer, options) {
@@ -161,14 +203,19 @@ export class RecordEncoder extends Encoder {
 		let nextByte = buffer[start];
 		let metadataFlags = 0;
 		try {
-			if (nextByte < 32 && end > 2) {
+			if ((this.isRocksDB && nextByte === 66) || (nextByte < 32 && end > 2)) {
 				// record with metadata
 				// this means that the record starts with a local timestamp (that was assigned by lmdb-js).
 				// we copy it so we can decode it as float-64; we need to do it first because if structural data
 				// is loaded during decoding the buffer can actually mutate
 				let position = start;
 				let localTime;
-				if (nextByte === 2) {
+				if (this.isRocksDB) {
+					buffer.copy(TIMESTAMP_HOLDER, 0, position);
+					position += 8;
+					localTime = TIMESTAMP_VIEW.getFloat64(0);
+					nextByte = buffer[position];
+				} else if (nextByte === 2) {
 					if (buffer.copy) {
 						buffer.copy(TIMESTAMP_HOLDER, 0, position);
 						position += 8;
@@ -178,7 +225,7 @@ export class RecordEncoder extends Encoder {
 					localTime = getTimestamp();
 					nextByte = buffer[position];
 				}
-				let expiresAt, residencyId;
+				let expiresAt, residencyId, nodeId;
 				if (nextByte < 32) {
 					if (nextByte === ACTION_32_BIT) {
 						const dataView =
@@ -202,6 +249,13 @@ export class RecordEncoder extends Encoder {
 						residencyId = dataView.getUint32(position);
 						position += 4;
 					}
+					if (metadataFlags & HAS_NODE_ID) {
+						// we need to read the node id
+						const dataView =
+							buffer.dataView || (buffer.dataView = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength));
+						nodeId = dataView.getUint32(position);
+						position += 4;
+					}
 				}
 
 				const value = decodeFromDatabase(
@@ -213,11 +267,15 @@ export class RecordEncoder extends Encoder {
 				);
 				lastMetadata = {
 					localTime,
+					version: localTime,
 					[METADATA]: metadataFlags,
 					expiresAt,
 					residencyId,
+					nodeId,
 					size: end - start,
+					value,
 				};
+				if (this.isRocksDB) return lastMetadata;
 				return value;
 			} // else a normal entry
 			return options?.valueAsBuffer ? buffer : decodeFromDatabase(() => super.decode(buffer, options), this.rootStore);
@@ -233,27 +291,53 @@ function getTimestamp() {
 }
 
 export function handleLocalTimeForGets(store, rootStore) {
-	const storeGetEntry = store.getEntry;
+	const isRocksDB = store instanceof RocksDatabase;
 	store.readCount = 0;
 	store.cachePuts = false;
 	store.rootStore = rootStore;
 	store.encoder.rootStore = rootStore;
+	store.encoder.isRocksDB = isRocksDB;
+	store.decoder = store.encoder;
+	const storeGetEntry = store.getEntry;
+	const storeGetSync = store.getSync;
+	const storeGet = store.get;
+
 	store.getEntry = function (id, options) {
 		store.readCount++;
 		lastMetadata = null;
-		const entry = storeGetEntry.call(this, id, options);
-		// if we have decoded with metadata, we want to pull it out and assign to this entry
-		if (entry) {
+		if (isRocksDB) {
+			return when(
+				options?.async ? storeGet.call(store, id, options) : storeGetSync.call(store, id, options),
+				(entry) => {
+					if (entry) {
+						if (entry[METADATA]) {
+							entry.metadataFlags = entry[METADATA];
+							return withEntry(entry);
+						} else return { value: entry };
+					} else return entry;
+				}
+			);
+		} else {
+			let entry: Entry = storeGetEntry.call(this, id, options);
 			if (lastMetadata) {
 				entry.metadataFlags = lastMetadata[METADATA];
 				entry.localTime = lastMetadata.localTime;
 				entry.residencyId = lastMetadata.residencyId;
+				entry.nodeId = lastMetadata.nodeId;
 				entry.size = lastMetadata.size;
 				if (lastMetadata.expiresAt >= 0) {
 					entry.expiresAt = lastMetadata.expiresAt;
 				}
-				lastMetadata = null;
+				if (isRocksDB) entry.version = lastMetadata.localTime;
+				if (entry.value) {
+					entryMap.set(entry.value, entry); // allow the record to access the entry
+				}
+				entry.key = id;
 			}
+			return entry && withEntry(entry);
+		}
+		// if we have decoded with metadata, we want to pull it out and assign to this entry
+		function withEntry(entry) {
 			if (entry.value) {
 				if (entry.value.constructor === Object) {
 					// if an object was deserialized as a plain object, give it the right prototype for computed properties to be accessible
@@ -264,19 +348,28 @@ export function handleLocalTimeForGets(store, rootStore) {
 				entryMap.set(entry.value, entry); // allow the record to access the entry
 			}
 			entry.key = id;
+			return entry;
 		}
-		return entry;
 	};
-	const storeGet = store.get;
-	store.get = function (id, options) {
-		lastMetadata = null;
-		const value = storeGet.call(this, id, options);
-		if (lastMetadata && value) {
-			entryMap.set(value, lastMetadata);
-			lastMetadata = null;
+
+	store.getSync = function (id, options) {
+		const entry = store.getEntry(id, options);
+		const value = entry?.value;
+		if (value) {
+			entryMap.set(value, entry);
 		}
 		return value;
 	};
+	store.get = function (id, options) {
+		return when(store.getEntry(id, { ...options, async: true }), (entry) => {
+			const value = entry?.value;
+			if (value) {
+				entryMap.set(value, entry);
+			}
+			return value;
+		});
+	};
+
 	//store.pendingTimestampUpdates = new Map();
 	const storeGetRange = store.getRange;
 	store.getRange = function (options) {
@@ -287,10 +380,17 @@ export function handleLocalTimeForGets(store, rootStore) {
 		if (options.values === false || options.onlyCount) return iterable;
 		return iterable.map((entry) => {
 			// if we have metadata, move the metadata to the entry
-			if (lastMetadata) {
+			if (isRocksDB) {
+				if (entry.value?.[METADATA]) {
+					entry.metadataFlags = entry.value[METADATA];
+					Object.assign(entry, entry.value);
+				}
+			} else if (lastMetadata) {
 				entry.metadataFlags = lastMetadata[METADATA];
 				entry.localTime = lastMetadata.localTime;
+				if (isRocksDB) entry.version = lastMetadata.localTime;
 				entry.residencyId = lastMetadata.residencyId;
+				entry.nodeId = lastMetadata.nodeId;
 				if (lastMetadata.expiresAt >= 0) entry.expiresAt = lastMetadata.expiresAt;
 				lastMetadata = null;
 			}
@@ -305,32 +405,35 @@ export function handleLocalTimeForGets(store, rootStore) {
 			return entry;
 		});
 	};
-	// add read transaction tracking
-	const txn = store.useReadTransaction();
-	txn.done();
-	if (!txn.done.isTracked) {
-		const Txn = txn.constructor;
-		const use = txn.use;
-		const done = txn.done;
-		Txn.prototype.use = function () {
-			if (!this.timerTracked) {
-				this.timerTracked = true;
-				trackedTxns.push(new WeakRef(this));
-			}
-			use.call(this);
-		};
-		Txn.prototype.done = function () {
-			done.call(this);
-			if (this.isDone) {
-				for (let i = 0; i < trackedTxns.length; i++) {
-					const txn = trackedTxns[i].deref();
-					if (!txn || txn.isDone || txn.isCommitted) {
-						trackedTxns.splice(i--, 1);
+
+	if (!isRocksDB) {
+		// add read transaction tracking
+		const txn = store.useReadTransaction();
+		txn.done();
+		if (!txn.done.isTracked) {
+			const Txn = txn.constructor;
+			const use = txn.use;
+			const done = txn.done;
+			Txn.prototype.use = function () {
+				if (!this.timerTracked) {
+					this.timerTracked = true;
+					trackedTxns.push(new WeakRef(this));
+				}
+				use.call(this);
+			};
+			Txn.prototype.done = function () {
+				done.call(this);
+				if (this.isDone) {
+					for (let i = 0; i < trackedTxns.length; i++) {
+						const txn = trackedTxns[i].deref();
+						if (!txn || txn.isDone || txn.isCommitted) {
+							trackedTxns.splice(i--, 1);
+						}
 					}
 				}
-			}
-		};
-		Txn.prototype.done.isTracked = true;
+			};
+			Txn.prototype.done.isTracked = true;
+		}
 	}
 
 	return store;
@@ -374,7 +477,10 @@ export function recordUpdater(store, tableId, auditStore) {
 		auditRecord?: any
 	) {
 		// determine if and how we apply the local timestamp
-		if (audit == null)
+		if (store instanceof RocksDatabase) {
+			// with rocksdb, we simplify to just storing the singular version/timestamp
+			timestampNextEncoding = newVersion;
+		} else if (audit == null)
 			// if not auditing, there is no local timestamp to reference
 			timestampNextEncoding = NO_TIMESTAMP;
 		else if (resolveRecord)
@@ -392,11 +498,14 @@ export function recordUpdater(store, tableId, auditStore) {
 		if (expiresAt >= 0) assignMetadata |= HAS_EXPIRATION;
 		metadataInNextEncoding = assignMetadata;
 		expiresAtNextEncoding = expiresAt;
-		if (existingEntry?.version === newVersion && audit === false)
-			throw new Error('Must retain local time if version is not changed');
-		const putOptions = {
+		const putOptions: {
+			version: number;
+			instructedWrite?: boolean;
+			ifVersion?: number;
+		} = {
 			version: newVersion,
 			instructedWrite: timestampNextEncoding > 0,
+			transaction: options?.transaction,
 		};
 		let ifVersion;
 		let extendedType = 0;
@@ -408,6 +517,11 @@ export function recordUpdater(store, tableId, auditStore) {
 				metadataInNextEncoding |= HAS_RESIDENCY_ID;
 				extendedType |= HAS_CURRENT_RESIDENCY_ID;
 			} // else residencyIdAtNextEncoding = 0;
+			const nodeId = options?.nodeId;
+			if (nodeId >= 0) {
+				nodeIdAtNextEncoding = nodeId;
+				metadataInNextEncoding |= HAS_NODE_ID;
+			} // else nodeIdAtNextEncoding = -1;
 			if (previousResidencyId !== residencyId) {
 				extendedType |= HAS_PREVIOUS_RESIDENCY_ID;
 				if (!previousResidencyId) previousResidencyId = 0;
@@ -417,78 +531,80 @@ export function recordUpdater(store, tableId, auditStore) {
 			// we use resolveRecord outside of transaction, so must explicitly make it conditional
 			if (resolveRecord) putOptions.ifVersion = ifVersion = existingEntry?.version ?? null;
 			if (existingEntry && existingEntry.value && type !== 'message' && existingEntry.metadataFlags & HAS_BLOBS) {
-				if (!existingEntry.localTime || !auditStore.getBinaryFast(existingEntry.localTime)) {
-					// if it used to have blobs, and it doesn't exist in the audit store, we need to delete the old blobs
-					deleteBlobsInObject(existingEntry.value);
-				}
+				// delete the old blobs
+				deleteBlobsInObject(existingEntry.value);
 			}
 			let result: Promise<void>;
 			if (record !== undefined) {
-				result = encodeBlobsWithFilePath(() => store.put(id, record, putOptions), id, store.rootStore);
+				result = encodeBlobsWithFilePath(() => store.putSync(id, record, putOptions), id, store.rootStore);
 				if (blobsWereEncoded) {
 					extendedType |= HAS_BLOBS;
 				}
 			}
 			if (audit) {
-				const username = options?.user?.username;
+				const username = typeof options?.user === 'string' ? options.user : options?.user?.username;
 				if (auditRecord) {
 					encodeBlobsWithFilePath(() => store.encoder.encode(auditRecord), id, store.rootStore);
 					if (blobsWereEncoded) {
 						extendedType |= HAS_BLOBS;
 					}
 				}
-				if (store.encoder.hasStructureUpdate) {
+				if (store.encoder?.structureUpdate) {
 					extendedType |= HAS_STRUCTURE_UPDATE;
-					store.encoder.hasStructureUpdate = false;
+					store.encoder.structureUpdate = null;
 				}
+				const structureVersion = store.encoder.structures.length + (store.encoder.typedStructs?.length ?? 0);
 				if (resolveRecord && existingEntry?.localTime) {
 					const replacingId = existingEntry?.localTime;
-					const replacingEntry = auditStore.get(replacingId);
+					const replacingEntry = auditStore.get(replacingId, tableId, id);
 					if (replacingEntry) {
-						const previousLocalTime = readAuditEntry(replacingEntry).previousLocalTime;
-						result = auditStore.put(
+						const previousVersion = replacingEntry.previousVersion;
+						result = auditStore.putSync(
 							replacingId,
-							createAuditEntry(
-								newVersion,
+							{
+								version: newVersion,
 								tableId,
-								id,
-								previousLocalTime,
-								options?.nodeId ?? server.replication.getThisNodeId(auditStore) ?? 0,
-								username,
+								recordId: id,
+								previousVersion,
+								nodeId: options?.nodeId ?? server.replication.getThisNodeId(auditStore) ?? 0,
+								user: username,
 								type,
-								lastValueEncoding,
+								encodedRecord: lastValueEncoding,
 								extendedType,
 								residencyId,
 								previousResidencyId,
-								expiresAt
-							),
-							{ ifVersion: ifVersion }
+								expiresAt,
+								structureVersion,
+							},
+							{ ifVersion: ifVersion, transaction: options.transaction }
 						);
 						return result;
 					}
 				}
-				result = auditStore.put(
+				result = auditStore.putSync(
 					record === undefined ? NEW_TIMESTAMP_PLACEHOLDER : LAST_TIMESTAMP_PLACEHOLDER,
-					createAuditEntry(
-						newVersion,
+					{
+						version: newVersion,
 						tableId,
-						id,
-						existingEntry?.localTime ? 1 : 0,
-						options?.nodeId ?? server.replication?.getThisNodeId(auditStore) ?? 0,
-						username,
+						recordId: id,
+						previousVersion: store instanceof RocksDatabase ? existingEntry?.version : existingEntry?.localTime ? 1 : 0,
+						nodeId: options?.nodeId ?? server.replication?.getThisNodeId(auditStore) ?? 0,
+						user: username,
 						type,
-						lastValueEncoding,
+						encodedRecord: lastValueEncoding,
 						extendedType,
 						residencyId,
 						previousResidencyId,
 						expiresAt,
-						options?.originatingOperation
-					),
+						structureVersion,
+						originatingOperation: options?.originatingOperation,
+					},
 					{
 						// turn off append flag, as we are concerned this may be related to db corruption issues
 						// append: type !== 'invalidate', // for invalidation, we expect the record to be rewritten, so we don't want to necessarily expect pure sequential writes that create full pages
 						instructedWrite: true,
 						ifVersion,
+						transaction: options.transaction,
 					}
 				);
 			}
@@ -505,8 +621,8 @@ export function recordUpdater(store, tableId, auditStore) {
 }
 export function removeEntry(store: any, entry: any, existingVersion?: number) {
 	if (!entry) return;
-	if (entry.value && entry.metadataFlags & HAS_BLOBS && !store.auditStore?.getBinaryFast(entry.localTime)) {
-		// if it used to have blobs, and it doesn't exist in the audit store, we need to delete the old blobs
+	if (entry.value && entry.metadataFlags & HAS_BLOBS) {
+		// if it used to have blobs, we need to delete the old blobs
 		deleteBlobsInObject(entry.value);
 	}
 	return store.remove(entry.key, existingVersion);

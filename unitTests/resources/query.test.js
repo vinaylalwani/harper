@@ -1,10 +1,12 @@
+require('../testUtils');
 const assert = require('assert');
-const { getMockLMDBPath } = require('../testUtils.js');
+const { setupTestDBPath } = require('../testUtils');
 const { parseQuery } = require('#src/resources/search');
 const { table } = require('#src/resources/databases');
 const { transaction } = require('#src/resources/transaction');
 const { RequestTarget } = require('#src/resources/RequestTarget');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
+const { RocksDatabase } = require('@harperfast/rocksdb-js');
 let x = 532532;
 function random(max) {
 	x = (x * 16843009 + 3014898611) >>> 0;
@@ -19,7 +21,7 @@ describe('Querying through Resource API', () => {
 		long_str += 'testing';
 	}
 	before(async function () {
-		getMockLMDBPath();
+		setupTestDBPath();
 		setMainIsWorker(true); // TODO: Should be default until changed
 		let relationship_attribute = {
 			name: 'related',
@@ -150,7 +152,7 @@ describe('Querying through Resource API', () => {
 		await last;
 		// rewrite one of them to ensure the prototype doesn't get messed up
 		const id12 = await QueryTable.get('id-12');
-		await QueryTable.put(id12.toJSON());
+		await QueryTable.put(id12);
 	});
 	// This test should be working. My local reproduction works fine with the code changes. I'm sure this has to do with how I created the tables and records in the `before()` maybe?
 	it('should properly evaluate an `and` operation', async function () {
@@ -1652,6 +1654,7 @@ describe('Querying through Resource API', () => {
 		assert.equal(results.length, 2);
 	});
 	it('Too many read transactions should fail, but work afterwards', async function () {
+		if (QueryTable.primaryStore instanceof RocksDatabase) return; // not valid for Rocks
 		this.timeout(10000);
 		let resolvers = [];
 		await assert.rejects(async () => {

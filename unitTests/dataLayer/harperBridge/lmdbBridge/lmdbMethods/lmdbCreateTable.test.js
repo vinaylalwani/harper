@@ -1,11 +1,11 @@
 'use strict';
 
-const testUtils = require('../../../../testUtils.js');
+const testUtils = require('../../../../testUtils');
 testUtils.preTestPrep();
 const path = require('path');
 
 const LMDB_TEST_FOLDER_NAME = 'system';
-const BASE_PATH = testUtils.getMockLMDBPath();
+const BASE_PATH = testUtils.setupTestDBPath();
 const BASE_TEST_PATH = path.join(BASE_PATH, LMDB_TEST_FOLDER_NAME);
 
 const rewire = require('rewire');
@@ -92,7 +92,7 @@ describe('test lmdbCreateTable module', () => {
 		global.lmdb_map = undefined;
 		global.hdb_schema = { system: systemSchema };
 		date_stub = sandbox.stub(Date, 'now').returns(TIMESTAMP);
-		await fs.remove(testUtils.getMockLMDBPath());
+		await fs.remove(testUtils.setupTestDBPath());
 		await fs.mkdirp(BASE_TEST_PATH);
 		env.setProperty(hdb_terms.CONFIG_PARAMS.DATABASES, {
 			prod: {

@@ -1,12 +1,12 @@
 'use strict';
 
-const testUtils = require('../../../../testUtils.js');
+const testUtils = require('../../../../testUtils');
 testUtils.preTestPrep();
 const path = require('path');
 const SYSTEM_FOLDER_NAME = 'system';
 const SCHEMA_NAME = 'schema';
 const TRANSACTIONS_NAME = 'transactions';
-const BASE_PATH = testUtils.getMockLMDBPath();
+const BASE_PATH = testUtils.setupTestDBPath();
 const BASE_TXN_PATH = path.join(BASE_PATH, TRANSACTIONS_NAME);
 const BASE_SCHEMA_PATH = path.join(BASE_PATH, SCHEMA_NAME);
 const SYSTEM_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, SYSTEM_FOLDER_NAME);
@@ -168,7 +168,7 @@ describe('Test lmdbUpdateRecords module', () => {
 			};
 
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 
 			hdb_schema_env = await environment_utility.createEnvironment(SYSTEM_SCHEMA_PATH, systemSchema.hdb_schema.name);
@@ -233,7 +233,7 @@ describe('Test lmdbUpdateRecords module', () => {
 
 			global.lmdb_map = undefined;
 			delete global.hdb_schema;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 		});
 
 		it('Test updating 1 row', async () => {

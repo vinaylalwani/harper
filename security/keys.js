@@ -27,6 +27,7 @@ const { getThisNodeName, getThisNodeUrl, urlToNodeName, clearThisNodeName } = re
 exports.generateKeys = generateKeys;
 exports.updateConfigCert = updateConfigCert;
 exports.setCertTable = setCertTable;
+exports.getCertTable = getCertTable;
 exports.loadCertificates = loadCertificates;
 exports.reviewSelfSignedCert = reviewSelfSignedCert;
 exports.createTLSSelector = createTLSSelector;
@@ -39,6 +40,10 @@ exports.hostnamesFromCert = hostnamesFromCert;
 exports.getHostnamesFromCertificate = getHostnamesFromCertificate;
 exports.getPrimaryHostName = getPrimaryHostName;
 exports.generateSerialNumber = generateSerialNumber;
+exports.getPrivateKeys = () => privateKeys;
+exports.getCertAuthority = getCertAuthority;
+exports.certExtensions = certExtensions;
+exports.getCommonName = getCommonName;
 
 const { readFileSync, statSync } = require('node:fs');
 const { getTicketKeys, onMessageFromWorkers } = require('../server/threads/manageThreads.js');
@@ -53,6 +58,7 @@ const CERT_ATTRIBUTES = [
 	{ name: 'localityName', value: 'Denver' },
 	{ name: 'organizationName', value: 'HarperDB, Inc.' },
 ];
+exports.CERT_ATTRIBUTES = CERT_ATTRIBUTES;
 
 /**
  * Generates a cryptographically secure serial number for X.509 certificates.

@@ -150,8 +150,10 @@ export const INSTALL_PROMPTS = {
 	OPERATIONSAPI_ROOT: 'OPERATIONSAPI_ROOT',
 	ROOTPATH: 'ROOTPATH',
 	NODE_HOSTNAME: 'NODE_HOSTNAME',
+	REPLICATION_HOSTNAME: 'REPLICATION_HOSTNAME',
 	HDB_CONFIG: 'HDB_CONFIG',
 	DEFAULTS_MODE: 'DEFAULTS_MODE',
+	STORAGE_ENGINE: 'STORAGE_ENGINE',
 } as const;
 
 /** Insert operation max character size */
@@ -536,7 +538,7 @@ export const CONFIG_PARAMS = {
 		'replication_mtls_certificateVerification_ocsp_failureMode',
 	REPLICATION_SHARD: 'replication_shard',
 	REPLICATION_BLOBTIMEOUT: 'replication_blobTimeout',
-	REPLICATION_FAILOVER: 'replication_failOver',
+	REPLICATION_FAILOVER: 'replication_failover',
 	ROOTPATH: 'rootPath',
 	SERIALIZATION_BIGINT: 'serialization_bigInt',
 	STORAGE_WRITEASYNC: 'storage_writeAsync',
@@ -563,6 +565,7 @@ export const CONFIG_PARAMS = {
 	STORAGE_RECLAMATION_THRESHOLD: 'storage_reclamation_threshold',
 	STORAGE_RECLAMATION_INTERVAL: 'storage_reclamation_interval',
 	STORAGE_RECLAMATION_EVICTIONFACTOR: 'storage_reclamation_evictionFactor',
+	STORAGE_ENGINE: 'storage_engine',
 	DATABASES: 'databases',
 	IGNORE_SCRIPTS: 'ignoreScripts',
 	MQTT_NETWORK_PORT: 'mqtt_network_port',

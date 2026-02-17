@@ -3,6 +3,8 @@ import { IterableEventQueue } from './IterableEventQueue.ts';
 import { keyArrayToString } from './Resources.ts';
 import { readAuditEntry } from './auditStore.ts';
 import type { Id } from './ResourceInterface.ts';
+import { RocksDatabase } from '@harperfast/rocksdb-js';
+
 const allSubscriptions = Object.create(null); // using it as a map that doesn't change much
 const allSameThreadSubscriptions = Object.create(null); // using it as a map that doesn't change much
 /**
@@ -15,8 +17,8 @@ const allSameThreadSubscriptions = Object.create(null); // using it as a map tha
  * @param startTime
  * @param options
  */
-export function addSubscription(table, key, listener?: (key) => any, startTime?: number, options?) {
-	const path = table.primaryStore.env.path;
+export function addSubscription(table, key, listener?: (key) => any, startTime?: number, options?: any) {
+	const path = table.primaryStore.path;
 	const tableId = table.primaryStore.tableId;
 	// set up the subscriptions map. We want to just use a single map (per table) for efficient delegation
 	// (rather than having every subscriber filter every transaction)
@@ -104,21 +106,32 @@ class Subscription extends IterableEventQueue {
 		return { name: 'subscription' };
 	}
 }
+const ACTIONS_OF_INTEREST = ['put', 'patch', 'delete', 'message', 'invalidate'];
 function notifyFromTransactionData(subscriptions) {
 	if (!subscriptions) return; // if no subscriptions to this env path, don't need to read anything
 	const auditStore = subscriptions.auditStore;
-	auditStore.resetReadTxn();
+	auditStore.resetReadTxn?.();
 	nextTransaction(subscriptions.auditStore);
 	let subscribersWithTxns;
-	for (const { key: localTime, value: auditEntryEncoded } of auditStore.getRange({
-		start: subscriptions.lastTxnTime,
-		exclusiveStart: true,
-	})) {
-		subscriptions.lastTxnTime = localTime;
-		const auditEntry = readAuditEntry(auditEntryEncoded);
-		const tableSubscriptions = subscriptions[auditEntry.tableId];
+	const getIterator = () =>
+		auditStore.getRange({
+			start: subscriptions.lastTxnTime,
+			exclusiveStart: true,
+		});
+	let auditLogIterator;
+	if (auditStore.reusableIterable) {
+		auditLogIterator = subscriptions.auditLogIterator;
+		if (!auditLogIterator) {
+			auditLogIterator = subscriptions.auditLogIterator = getIterator();
+		}
+	} else auditLogIterator = getIterator();
+	for (const auditRecord of auditLogIterator) {
+		const timestamp: number = auditRecord.localTime ?? auditRecord.version;
+		subscriptions.lastTxnTime = timestamp;
+		if (!ACTIONS_OF_INTEREST.includes(auditRecord.type)) continue;
+		const tableSubscriptions = subscriptions[auditRecord.tableId];
 		if (!tableSubscriptions) continue;
-		const recordId = auditEntry.recordId;
+		const recordId = auditRecord.recordId;
 		// TODO: How to handle invalidation
 		let matchingKey = keyArrayToString(recordId);
 		let ancestorLevel = 0;
@@ -134,13 +147,13 @@ function notifyFromTransactionData(subscriptions) {
 						!(subscription.includeDescendants && !(subscription.onlyChildren && ancestorLevel > 1))
 					)
 						continue;
-					if (subscription.startTime >= localTime) {
-						info('omitting', recordId, subscription.startTime, localTime);
+					if (subscription.startTime >= timestamp) {
+						info('omitting', recordId, subscription.startTime, timestamp);
 						continue;
 					}
 					try {
 						let beginTxn;
-						if (subscription.supportsTransactions && subscription.txnInProgress !== auditEntry.version) {
+						if (subscription.supportsTransactions && subscription.txnInProgress !== auditRecord.version) {
 							// if the subscriber supports transactions, we mark this as the beginning of a new transaction
 							// tracking the subscription so that we can delimit the transaction on next transaction
 							// (with a beginTxn flag, which may be on an endTxn event)
@@ -153,9 +166,9 @@ function notifyFromTransactionData(subscriptions) {
 							// the version defines the extent of a transaction, all audit records with the same version
 							// are part of the same transaction, and when the version changes, we know it is a new
 							// transaction
-							subscription.txnInProgress = auditEntry.version;
+							subscription.txnInProgress = auditRecord.version;
 						}
-						subscription.listener(recordId, auditEntry, localTime, beginTxn);
+						subscription.listener(recordId, auditRecord, timestamp, beginTxn);
 					} catch (error) {
 						console.error(error);
 						info(error);
@@ -186,10 +199,10 @@ function notifyFromTransactionData(subscriptions) {
  */
 export function listenToCommits(primaryStore, auditStore) {
 	const store = auditStore || primaryStore;
+	const path = primaryStore.path;
 	const lmdbEnv = store.env;
 	if (!lmdbEnv.hasAfterCommitListener) {
 		lmdbEnv.hasAfterCommitListener = true;
-		const path = lmdbEnv.path;
 		store.on('aftercommit', ({ next, last, txnId }) => {
 			const subscriptions = allSameThreadSubscriptions[path]; // there is a different set of subscribers for same-thread subscriptions
 			if (!subscriptions) return;
@@ -206,11 +219,11 @@ export function listenToCommits(primaryStore, auditStore) {
 					notifyFromTransactionData(subscriptions);
 				} finally {
 					store.threadLocalWrites[0] = subscriptions.lastTxnTime; // update shared buffer
-					store.unlock('thread-local-writes', 0); // and release the lock
+					store.unlock('thread-local-writes'); // and release the lock
 				}
 			};
 			// try to get lock or wait for it
-			if (!store.attemptLock('thread-local-writes', 0, acquiredLock)) return;
+			if (!store.tryLock('thread-local-writes', acquiredLock)) return;
 			acquiredLock();
 		});
 	}

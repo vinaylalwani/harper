@@ -1,5 +1,6 @@
+require('../testUtils');
 const assert = require('assert');
-const { getMockLMDBPath } = require('../testUtils.js');
+const { setupTestDBPath } = require('../testUtils');
 const { table, databases } = require('#src/resources/databases');
 const { transaction } = require('#src/resources/transaction');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
@@ -14,7 +15,7 @@ describe('CRUD operations with the Resource API', () => {
 		long_str += 'testing';
 	}
 	before(async function () {
-		getMockLMDBPath();
+		setupTestDBPath();
 		setMainIsWorker(true);
 		let relationship_attribute = {
 			name: 'related',
@@ -100,6 +101,9 @@ describe('CRUD operations with the Resource API', () => {
 		}
 		await last;
 	});
+	describe('CRUD operations with no loadAsInstance', () => {
+		registerTests();
+	});
 	describe('CRUD operations with loadAsInstance = false', () => {
 		before(async function () {
 			CRUDTable.loadAsInstance = false;
@@ -162,16 +166,18 @@ describe('CRUD operations with the Resource API', () => {
 			assert(analyticRecorded.mean > 20, 'db-read bytes count were recorded in analytics');
 		});
 		it('gets', async function () {
-			if (CRUDTable.loadAsInstance === false) {
-				const context = {};
-				let record = await CRUDTable.get('one', context);
+			const context = {};
+			let record = await CRUDTable.get('one', context);
+			if (!CRUDTable.loadAsInstance) {
 				assert(Object.isFrozen(record));
 				assert(Object.isFrozen(record.nestedData));
 				assert(Object.isFrozen(record.related));
-				const jsonCopy = JSON.parse(JSON.stringify(record));
-				assert(Object.keys(jsonCopy).includes('computed')); // verify that this computed attribute was marked as enumerable
-				assert.equal(record.name, 'One');
-				for await (let record of CRUDTable.search([])) {
+			}
+			const jsonCopy = JSON.parse(JSON.stringify(record));
+			assert(Object.keys(jsonCopy).includes('computed')); // verify that this computed attribute was marked as enumerable
+			assert.equal(record.name, 'One');
+			for await (let record of CRUDTable.search([])) {
+				if (!CRUDTable.loadAsInstance) {
 					assert(Object.isFrozen(record));
 					assert(Object.isFrozen(record.nestedData));
 					assert(Object.isFrozen(record.related));
@@ -233,12 +239,11 @@ describe('CRUD operations with the Resource API', () => {
 			let retrieved = await CRUDTable.get(createdId);
 			assert.equal(retrieved.name, 'constructed via post with auto-id');
 		});
-		it('create with instance', async function () {
+		it('create in transaction', async function () {
 			let context = {};
 			let created;
-			await transaction(context, () => {
-				let crud = CRUDTable.getResource(null, context);
-				created = crud.create({ relatedId: 1, name: 'constructed with auto-id' });
+			await transaction(context, async () => {
+				created = await CRUDTable.create({ relatedId: 1, name: 'constructed with auto-id' });
 			});
 			let retrieved = await CRUDTable.get(created.id);
 			assert.equal(retrieved.name, 'constructed with auto-id');

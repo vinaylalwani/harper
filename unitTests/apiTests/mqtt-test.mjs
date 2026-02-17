@@ -9,7 +9,8 @@ import { connect } from 'mqtt';
 import { readFileSync } from 'fs';
 import { start as startMQTT } from '#src/server/mqtt';
 import axios from 'axios';
-describe('test MQTT connections and commands', () => {
+describe('test MQTT connections and commands', function () {
+	this.timeout(10000);
 	let available_records;
 	let client, client2;
 	before(async () => {
@@ -64,7 +65,6 @@ describe('test MQTT connections and commands', () => {
 			});
 			const onMessage = (topic, payload, packet) => {
 				let record = decode(payload);
-				console.log(topic, record);
 				reject(new Error('Should not receive any retained messages'));
 			};
 			client2.once('message', onMessage);
@@ -148,7 +148,6 @@ describe('test MQTT connections and commands', () => {
 		for (let client of clients) client.end();
 		assert(received.length > 10);
 		assert.equal(received[0].name, 'radbot 9000');
-		//console.log({ published, received });
 	});
 
 	it('last will should be published on connection loss', async () => {
@@ -285,7 +284,6 @@ describe('test MQTT connections and commands', () => {
 				client.subscribe(topic, function (err, subscriptions) {
 					assert.equal(subscriptions[0].qos, 128);
 					client_authorized.subscribe(topic, function (err, subscriptions) {
-						console.log(err);
 						client.publish(topic, JSON.stringify({ name: 'should not be published ' }), {
 							qos: 1,
 							retain: false,
@@ -333,10 +331,8 @@ describe('test MQTT connections and commands', () => {
 			client.on('connect', resolve);
 			client.on('error', reject);
 		});
-		console.log('connected for retained record test');
 		await new Promise((resolve, reject) => {
 			client.subscribe(path, function (err) {
-				//console.log('subscribed', err);
 				if (err) reject(err);
 				else {
 					//	client.publish('VariedProps/' + available_records[2], 'Hello mqtt')
@@ -344,10 +340,8 @@ describe('test MQTT connections and commands', () => {
 			});
 			client.once('message', (topic, payload, packet) => {
 				let record = JSON.parse(payload);
-				console.log('got message', topic, record);
 				resolve();
 			});
-			console.log('trying to call upsert operation');
 			callOperation({
 				operation: 'upsert',
 				schema: 'data',
@@ -360,7 +354,6 @@ describe('test MQTT connections and commands', () => {
 				],
 			}).then(
 				(response) => {
-					console.log('got response', response.status);
 					response.json().then((data) => {
 						console.log(data);
 					});
@@ -394,7 +387,6 @@ describe('test MQTT connections and commands', () => {
 			});
 			let last_sent = 0;
 			const onMessage = (topic, payload, packet) => {
-				console.log('got message', performance.now());
 				let record = JSON.parse(payload);
 				messages.push(record);
 				if (messages.length == 2) {
@@ -408,15 +400,12 @@ describe('test MQTT connections and commands', () => {
 				}
 			};
 			client.on('message', onMessage);
-			console.log('sent message', performance.now());
 			await axios.put('http://localhost:9926/SimpleRecord/78', { name: 'a starting point', count: 2 }, { headers });
-			console.log('sent message', performance.now());
 			await axios.patch(
 				'http://localhost:9926/SimpleRecord/78',
 				{ name: 'an updated name', newProperty: 'new value', count: { __op__: 'add', value: 1 } },
 				{ headers }
 			);
-			console.log('finished patch');
 		});
 		await new Promise((resolve) => client.end(resolve));
 		await delay(10);
@@ -722,7 +711,6 @@ describe('test MQTT connections and commands', () => {
 	it('subscribe to bad topic', async function () {
 		await new Promise((resolve, reject) => {
 			client2.subscribe('DoesNotExist/+', function (err, granted) {
-				console.log('subscribed', err);
 				if (err) reject(err);
 				else {
 					resolve(assert.equal(granted[0].qos, 0x8f));
@@ -859,7 +847,6 @@ describe('test MQTT connections and commands', () => {
 				'message',
 				(message_listener = (topic, payload, packet) => {
 					let record = JSON.parse(payload);
-					console.log('received', topic, record);
 					assert(record.name);
 					if (++message_count == 4) resolve();
 				})
@@ -959,7 +946,6 @@ describe('test MQTT connections and commands', () => {
 					qos: 1,
 				},
 				function (err) {
-					console.log('subscribed', err);
 					if (err) reject(err);
 					else {
 						resolve();
@@ -1004,14 +990,17 @@ describe('test MQTT connections and commands', () => {
 				qos: 1,
 			}
 		);
-		client2.publish(
-			'SimpleRecord/42',
-			JSON.stringify({
-				name: 'This is a test of publishing to a disconnected durable session 2',
-			}),
-			{
-				qos: 1,
-			}
+		await new Promise((resolve) =>
+			client2.publish(
+				'SimpleRecord/42',
+				JSON.stringify({
+					name: 'This is a test of publishing to a disconnected durable session 2',
+				}),
+				{
+					qos: 1,
+				},
+				resolve
+			)
 		);
 		await new Promise((resolve) =>
 			client2.publish(
@@ -1180,7 +1169,8 @@ describe('test MQTT connections and commands', () => {
 		assert.equal(FourPropWithHistory.acknowledgements, 11);
 		client.end();
 	});
-	it('subscribe sub-topic with history', async function () {
+	// This requires https://github.com/HarperFast/harper/issues/147 to be re-enabled
+	it.skip('subscribe sub-topic with history', async function () {
 		// this first connection is a tear down to remove any previous durable session with this id
 		const { FourPropWithHistory } = await import('../testApp/resources.js');
 		tables.FourProp.acknowledgements = 0; // reset

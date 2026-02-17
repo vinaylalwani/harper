@@ -1,5 +1,6 @@
+require('../testUtils');
 const assert = require('assert');
-const { getMockLMDBPath } = require('../testUtils.js');
+const { setupTestDBPath } = require('../testUtils');
 const { table } = require('#src/resources/databases');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
 const { transaction } = require('#src/resources/transaction');
@@ -8,7 +9,7 @@ require('#src/server/serverHelpers/serverUtilities');
 describe('Operations on resources', () => {
 	let TargetTable;
 	before(async function () {
-		getMockLMDBPath();
+		setupTestDBPath();
 		setMainIsWorker(true);
 		TargetTable = table({
 			table: 'TargetTable',
@@ -19,11 +20,11 @@ describe('Operations on resources', () => {
 	after(() => {});
 	it('It can search_by_conditions on a resource', async function () {
 		const context = {};
-		await transaction(context, () => {
-			TargetTable.put(1, { name: 'one' }, context);
-			TargetTable.put(2, { name: 'a prime' }, context);
-			TargetTable.put(3, { name: 'another prime' }, context);
-			TargetTable.put(42, { name: 'the answer to everything' }, context);
+		await transaction(context, async () => {
+			await TargetTable.put(1, { name: 'one' }, context);
+			await TargetTable.put(2, { name: 'a prime' }, context);
+			await TargetTable.put(3, { name: 'another prime' }, context);
+			await TargetTable.put(42, { name: 'the answer to everything' }, context);
 		});
 		let operation_result = await TargetTable.operation({
 			operation: 'search_by_conditions',

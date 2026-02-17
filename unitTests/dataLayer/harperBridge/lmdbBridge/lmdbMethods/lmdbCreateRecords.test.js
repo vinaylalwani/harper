@@ -1,13 +1,13 @@
 'use strict';
 
-const testUtils = require('../../../../testUtils.js');
+const testUtils = require('../../../../testUtils');
 testUtils.preTestPrep();
 const path = require('path');
 
 const SYSTEM_FOLDER_NAME = 'system';
 const SCHEMA_NAME = 'schema';
 const TRANSACTIONS_NAME = 'transactions';
-const BASE_PATH = testUtils.getMockLMDBPath();
+const BASE_PATH = testUtils.setupTestDBPath();
 const BASE_TXN_PATH = path.join(BASE_PATH, TRANSACTIONS_NAME);
 const BASE_SCHEMA_PATH = path.join(BASE_PATH, SCHEMA_NAME);
 const SYSTEM_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, SYSTEM_FOLDER_NAME);
@@ -196,7 +196,7 @@ describe('Test lmdbCreateRecords module', () => {
 			};
 
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 
 			hdb_schema_env = await environment_utility.createEnvironment(SYSTEM_SCHEMA_PATH, systemSchema.hdb_schema.name);
@@ -238,7 +238,7 @@ describe('Test lmdbCreateRecords module', () => {
 			await hdb_attribute_env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 			delete global.hdb_schema;
 			m_time_stub.restore();
 		});

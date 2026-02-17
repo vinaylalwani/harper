@@ -41,6 +41,7 @@ import { asyncSerialization, hasAsyncSerialization } from '../server/serverHelpe
 import { HAS_BLOBS, readAuditEntry } from './auditStore.ts';
 import { getHeapStatistics } from 'node:v8';
 import { setTimeout as delay, setImmediate as rest } from 'node:timers/promises';
+import { RocksDatabase } from '@harperfast/rocksdb-js';
 
 type StorageInfo = {
 	storageIndex: number;
@@ -100,6 +101,7 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 	size: number;
 	declare finished: Promise<void>;
 	declare saveBeforeCommit: boolean;
+	declare saveInRecord: boolean; // for indicating that we want the blob to be saved in the record
 	#onError: ((error: Error) => void)[];
 	#onSize: ((size: number) => void)[];
 	constructor(options?: BlobCreationOptions) {
@@ -192,14 +194,14 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 						throw new Error(`Incomplete blob for ${filePath}`);
 					}
 					return new Promise((resolve, reject) => {
-						if (
-							store.attemptLock(lockKey, 0, () => {
-								writeFinished = true;
-								return resolve(readContents());
-							})
-						) {
+						const callback = () => {
 							writeFinished = true;
-							store.unlock(lockKey, 0);
+							return resolve(readContents());
+						};
+						const lockAcquired = store.tryLock(lockKey, callback);
+						if (lockAcquired) {
+							writeFinished = true;
+							store.unlock(lockKey);
 							return resolve(readContents());
 						}
 					});
@@ -417,10 +419,10 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 			if (isBeingWritten === undefined) {
 				const store = storageInfo.store;
 				const lockKey = storageInfo.fileId + ':blob';
-				isBeingWritten = !store.attemptLock(lockKey, 0, () => {
+				isBeingWritten = !store.tryLock(lockKey, () => {
 					isBeingWritten = false;
 				});
-				if (!isBeingWritten) store.unlock(lockKey, 0);
+				if (!isBeingWritten) store.unlock(lockKey);
 			}
 			return isBeingWritten;
 		}
@@ -449,16 +451,6 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 			throw new Error('Can not slice a streaming blob that is not backed by a file');
 		}
 		return slicedBlob;
-	}
-	save(): Promise<void> {
-		if (!warnedSaveDeprecation) {
-			warnedSaveDeprecation = true;
-			logger.warn?.(
-				`save() method on Blob is deprecated, use the 'saveBeforeCommit' flag on the Blob constructor instead`
-			);
-		}
-		this.saveBeforeCommit = true;
-		return Promise.resolve();
 	}
 	get written() {
 		return storageInfoForBlob.get(this)?.saving ?? Promise.resolve();
@@ -527,7 +519,13 @@ export function saveBlob(blob: FileBackedBlob, deleteOnFailure = false) {
 		storageInfo.store = currentStore;
 	}
 	storageInfo.deleteOnFailure = deleteOnFailure;
-
+	if (blob.saveInRecord) {
+		if (!storageInfo.contentBuffer) {
+			// TODO: Add support for this: https://github.com/HarperFast/harper/issues/141
+			throw new Error('Cannot publish a message with a streamed blob');
+		}
+		return storageInfo; // nothing more to do if it supposed to be saved in the record
+	}
 	generateFilePath(storageInfo);
 	if (storageInfo.source) writeBlobWithStream(blob, storageInfo.source, storageInfo);
 	else if (storageInfo.contentBuffer) writeBlobWithBuffer(blob, storageInfo);
@@ -546,7 +544,7 @@ function writeBlobWithStream(blob: Blob, stream: NodeJS.ReadableStream, storageI
 	storageInfo.saving = new Promise((resolve, reject) => {
 		// pipe the stream to the file
 		const lockKey = fileId + ':blob';
-		if (!store.attemptLock(lockKey, 0)) {
+		if (!store.tryLock(lockKey)) {
 			throw new Error(`Unable to get lock for blob file ${fileId}`);
 		}
 		const writeStream = createWriteStream(filePath, { autoClose: false, flags: 'w' });
@@ -905,7 +903,7 @@ export function decodeBlobsWithWrites(callback: () => void, store?: LMDBStore, b
 	currentBlobCallback = undefined;
 	const finished = promisedWrites.length < 2 ? promisedWrites[0] : Promise.all(promisedWrites);
 	promisedWrites = undefined;
-	// eslint-disable-next-line no-unsafe-finally
+
 	return finished;
 }
 
@@ -974,11 +972,15 @@ export function findBlobsInObject(object: any, callback: (blob: Blob) => void) {
  * @param record
  * @param store
  */
-export function startPreCommitBlobsForRecord(record: any, store: LMDBStore): (() => Promise<void[]>) | void {
+export function startPreCommitBlobsForRecord(record: any, store: LMDBStore | RocksDatabase, saveInRecord?: boolean) {
 	let blobsNeedingSaving = [];
 	for (const key in record) {
 		const value = record[key];
-		if (value instanceof FileBackedBlob && value.saveBeforeCommit) {
+		if (value instanceof FileBackedBlob && (saveInRecord || value.saveBeforeCommit)) {
+			currentStore = store;
+			if (saveInRecord) {
+				value.saveInRecord = true;
+			}
 			blobsNeedingSaving.push(value);
 		}
 	}
@@ -1041,7 +1043,10 @@ addExtension({
 			if (storageInfo.storageBuffer) {
 				return storageInfo.storageBuffer;
 			}
-			if (storageInfo.contentBuffer?.length < FILE_STORAGE_THRESHOLD) {
+			if (
+				storageInfo.contentBuffer &&
+				(storageInfo.contentBuffer?.length < FILE_STORAGE_THRESHOLD || blob.saveInRecord)
+			) {
 				options.size = storageInfo.contentBuffer.length;
 				return pack([options, storageInfo.contentBuffer]);
 			}
@@ -1217,10 +1222,10 @@ export async function cleanupOrphans(database: any, databaseName?: string) {
 		}
 		logger.warn?.('Checking for references to potential orphaned blobs in the audit log');
 		// search the audit store for references
-		for (const { value } of auditStore.getRange({ start: 1, snapshot: false, lazy: true })) {
+		for (const auditRecord of auditStore.getRange({ start: 1, snapshot: false, lazy: true })) {
 			try {
-				const auditRecord = readAuditEntry(value);
 				const primaryStore = auditStore.tableStores[auditRecord.tableId];
+				if (!primaryStore) continue;
 				const entry = primaryStore?.getEntry(auditRecord.recordId);
 				if (!entry || entry.version !== auditRecord.version || !entry.value) {
 					checkObjectForReferences(auditRecord.getValue(primaryStore));
@@ -1239,7 +1244,7 @@ export async function cleanupOrphans(database: any, databaseName?: string) {
 			try {
 				await unlinkPromised(path);
 			} catch (error) {
-				logger.warn?.('Error deleting file', error);
+				logger.debug?.('Error deleting file', error);
 			}
 		}
 		logger.warn?.('Finished deleting', pathsToCheck.size, 'orphaned blobs');
