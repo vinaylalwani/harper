@@ -10,6 +10,7 @@ import { getNextAvailableLoopbackAddress, releaseLoopbackAddress } from './loopb
 // Constants
 const HTTP_PORT = 9926;
 export const OPERATIONS_API_PORT = 9925;
+const REPLICATION_PORT = 9933;
 export const DEFAULT_ADMIN_USERNAME = 'admin';
 export const DEFAULT_ADMIN_PASSWORD = 'Abc1234!';
 const DEFAULT_STARTUP_TIMEOUT_MS = parseInt(process.env.HARPER_INTEGRATION_TEST_STARTUP_TIMEOUT_MS, 10) || 30000;
@@ -194,6 +195,7 @@ async function startHarper(ctx: ContextWithHarper, options?: SetupHarperOptions)
 			`--NODE_HOSTNAME=${loopbackAddress}`,
 			`--HTTP_PORT=${loopbackAddress}:${HTTP_PORT}`,
 			`--OPERATIONSAPI_NETWORK_PORT=${loopbackAddress}:${OPERATIONS_API_PORT}`,
+			`--REPLICATION_PORT=${loopbackAddress}:${REPLICATION_PORT}`,
 			'--LOGGING_LEVEL=debug',
 			'--HARPER_SET_CONFIG=' + JSON.stringify(options?.config || {}),
 		],
