@@ -113,6 +113,7 @@ export const getComponentName = () => compName;
 
 function symlinkHarperModule(componentDirectory: string) {
 	return new Promise<void>((resolve, reject) => {
+		const store = Status.primaryStore;
 		// Create timeout to avoid deadlocks
 		const timeout = setTimeout(() => {
 			store.unlock(componentDirectory);
@@ -123,7 +124,6 @@ function symlinkHarperModule(componentDirectory: string) {
 			clearTimeout(timeout);
 			resolve();
 		};
-		const store = Status.primaryStore;
 		const lockAcquired = store.tryLock(componentDirectory, callback);
 
 		if (!lockAcquired) {
