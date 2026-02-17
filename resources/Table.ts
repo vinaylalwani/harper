@@ -3089,8 +3089,7 @@ export function makeTable(options) {
 			);
 		}
 		static getStorageStats() {
-			const storePath = primaryStore.path ?? primaryStore.env.path;
-			const stats: any = fs.statfsSync?.(storePath) ?? {};
+			const stats = fs.statfsSync(primaryStore.path);
 			return {
 				available: stats.bavail * stats.bsize,
 				free: stats.bfree * stats.bsize,
