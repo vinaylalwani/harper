@@ -543,12 +543,3 @@ export class Decoder extends DataView {
 		}
 	}
 }
-
-export class AuditEntryEncoder {
-	encode(entry) {
-		return createAuditEntry({});
-	}
-	decode(buffer) {
-		return readAuditEntry(buffer);
-	}
-}
