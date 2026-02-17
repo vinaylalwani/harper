@@ -446,6 +446,7 @@ const ALLOWED_NODE_BUILTIN_MODULES = new Set([
 	'zlib',
 	'events',
 	'timers',
+	'process',
 	'async_hooks',
 	'console',
 	'perf_hooks',
