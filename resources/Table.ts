@@ -971,7 +971,7 @@ export function makeTable(options) {
 			} else {
 				// legacy table per database
 				await primaryStore.close();
-				fs.unlinkSync(primaryStore.env.path);
+				fs.unlinkSync(primaryStore.path);
 			}
 			signalling.signalSchemaChange(
 				new SchemaEventMsg(process.pid, OPERATIONS_ENUM.DROP_TABLE, databaseName, tableName)

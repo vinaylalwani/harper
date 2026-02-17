@@ -344,7 +344,7 @@ function storeDBSizeMetrics(analyticsTable: Table, databases: Databases) {
 				};
 				storeMetric(analyticsTable, metric);
 			} else {
-				const dbTotalSize = fs.statSync(firstTable.primaryStore.env.path).size;
+				const dbTotalSize = fs.statSync(firstTable.primaryStore.path).size;
 				const dbUsedSize = storeTableSizeMetrics(analyticsTable, db, tables);
 				const dbFree = dbTotalSize - dbUsedSize;
 				metric = {
