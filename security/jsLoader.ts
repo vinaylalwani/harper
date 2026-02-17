@@ -123,6 +123,9 @@ async function loadModuleWithVM(moduleUrl: string, scope: Scope) {
 	 */
 	function resolveModule(specifier: string, referrer: string): string {
 		if (specifier === 'harperdb' || specifier === 'harper') return 'harper';
+		if (specifier.startsWith('harper/') || specifier.startsWith('harperdb/')) {
+			throw new Error(`Module ${specifier} is not allowed, may only access the 'harper' module`);
+		}
 		if (specifier.startsWith('file://')) {
 			return specifier;
 		}
