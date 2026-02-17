@@ -1,7 +1,6 @@
 import { TransactionLog, RocksDatabase, shutdown, type TransactionEntry } from '@harperfast/rocksdb-js';
 import { ExtendedIterable } from '@harperfast/extended-iterable';
 import { Decoder, readAuditEntry, ENTRY_DATAVIEW, AuditRecord, createAuditEntry } from './auditStore.ts';
-import logger from '../utility/logging/harper_logger.js';
 import { isMainThread } from 'node:worker_threads';
 
 if (!process.env.HARPER_NO_FLUSH_ON_EXIT && isMainThread) {
@@ -122,13 +121,14 @@ export class RocksTransactionLogStore {
 	}): Iterable<AuditRecord> {
 		let iterable = new ExtendedIterable<TransactionEntry>();
 		if (options.log !== undefined) {
-			let log =
-				typeof options.log === 'number'
-					? (this.nodeLogs?.[options.log] ?? this.loadLogs()[options.log])
-					: this.logByName.get(options.log);
+			let log = typeof options.log === 'number' ? this.nodeLogs?.[options.log] : this.logByName.get(options.log);
 			if (!log) {
 				this.loadLogs();
-				log = this.logByName.get(options.log);
+				if (typeof options.log === 'number') {
+					log = this.nodeLogs?.[options.log];
+				} else {
+					log = this.logByName.get(options.log);
+				}
 				if (!log) {
 					log = this.rootStore.useLog(options.log);
 				}
@@ -223,11 +223,7 @@ export class RocksTransactionLogStore {
 		};
 	}
 
-	getUserSharedBuffer(
-		key: string | symbol,
-		defaultBuffer: ArrayBuffer,
-		options?: { callback?: (listener: any) => void }
-	) {
+	getUserSharedBuffer(key: string | symbol, defaultBuffer: ArrayBuffer, options?: { callback?: () => void }) {
 		return this.rootStore.getUserSharedBuffer(key, defaultBuffer, options);
 	}
 	on(eventName: string, listener: any) {

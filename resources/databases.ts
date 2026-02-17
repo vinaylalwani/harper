@@ -767,11 +767,11 @@ function openIndex(dbiKey: string, rootStore: RootDatabaseKind, attribute: any) 
 	let dbi:
 		| LMDBDatabase
 		| (RocksDatabase & {
-			customIndex?: any;
-			isIndexing?: boolean;
-			indexNulls?: boolean;
-			rootStore?: RocksRootDatabase;
-		});
+				customIndex?: any;
+				isIndexing?: boolean;
+				indexNulls?: boolean;
+				rootStore?: RocksRootDatabase;
+		  });
 	if (rootStore instanceof RocksDatabase) {
 		dbi = openRocksDatabase(rootStore.path, { ...dbiInit, name: dbiKey });
 		dbi.rootStore = rootStore;
@@ -1226,7 +1226,7 @@ async function runIndexing(Table, attributes, indicesToRemove) {
  * Once an origin has fully declared all the tables for a database, this can be run to remove any tables or attributes
  * that are unused.
  */
-function cleanupDatabase(origin) { }
+function cleanupDatabase(origin) {}
 
 export function dropTableMeta({ table: tableName, database: databaseName }) {
 	const rootStore = database({ database: databaseName, table: tableName });
