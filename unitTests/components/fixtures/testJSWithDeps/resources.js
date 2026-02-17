@@ -20,4 +20,4 @@ export const testExport = {
 };
 export class TestComponent extends Resource {}
 
-export { MyComponent as 'my-component' }
+export { MyComponent as 'my-component' };
