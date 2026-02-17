@@ -370,7 +370,7 @@ function readRocksMetaDb(path: string, defaultTable?: string, databaseName: stri
 
 function initStores(
 	path: string,
-	rootStore: LMDBRootDatabase | RocksRootDatabase,
+	rootStore: RootDatabaseKind,
 	databaseName: string,
 	defaultTable?: string,
 	auditPath?: string,
@@ -690,7 +690,7 @@ export function database({ database: databaseName, table: tableName }) {
 			? join(hdbBasePath, DATABASES_DIR_NAME)
 			: join(hdbBasePath, LEGACY_DATABASES_DIR_NAME));
 
-	let rootStore: LMDBRootDatabase | RocksRootDatabase;
+	let rootStore: RootDatabaseKind;
 	const useRocksdb = envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb';
 	if (useRocksdb) {
 		const path = join(databasePath, tablePath ? tableName : databaseName);
@@ -760,18 +760,18 @@ export async function dropDatabase(databaseName) {
 	await deleteRootBlobPathsForDB(rootStore);
 }
 // opens an index, consulting with custom indexes that may use alternate store configuration
-function openIndex(dbiKey: string, rootStore: LMDBRootDatabase | RocksRootDatabase, attribute: any) {
+function openIndex(dbiKey: string, rootStore: RootDatabaseKind, attribute: any) {
 	const objectStorage =
 		attribute.isPrimaryKey || (attribute.indexed.type && CUSTOM_INDEXES[attribute.indexed.type]?.useObjectStore);
 	const dbiInit = createOpenDBIObject(!objectStorage, objectStorage);
 	let dbi:
 		| LMDBDatabase
 		| (RocksDatabase & {
-				customIndex?: any;
-				isIndexing?: boolean;
-				indexNulls?: boolean;
-				rootStore?: RocksRootDatabase;
-		  });
+			customIndex?: any;
+			isIndexing?: boolean;
+			indexNulls?: boolean;
+			rootStore?: RocksRootDatabase;
+		});
 	if (rootStore instanceof RocksDatabase) {
 		dbi = openRocksDatabase(rootStore.path, { ...dbiInit, name: dbiKey });
 		dbi.rootStore = rootStore;
@@ -1226,7 +1226,7 @@ async function runIndexing(Table, attributes, indicesToRemove) {
  * Once an origin has fully declared all the tables for a database, this can be run to remove any tables or attributes
  * that are unused.
  */
-function cleanupDatabase(origin) {}
+function cleanupDatabase(origin) { }
 
 export function dropTableMeta({ table: tableName, database: databaseName }) {
 	const rootStore = database({ database: databaseName, table: tableName });

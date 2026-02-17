@@ -510,7 +510,7 @@ export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined): 
 	}
 }
 
-export class Decoder extends DataView {
+export class Decoder extends DataView<ArrayBufferLike> {
 	position = 0;
 	readInt() {
 		let number;
