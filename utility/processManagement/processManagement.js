@@ -7,7 +7,6 @@ const hdbLogger = require('../../utility/logging/harper_logger.js');
 const { onMessageFromWorkers } = require('../../server/threads/manageThreads.js');
 const fs = require('fs');
 const path = require('node:path');
-const terms = require('../hdbTerms');
 const { setTimeout: delay } = require('node:timers/promises');
 const { execFile, fork } = require('node:child_process');
 
