@@ -69,7 +69,7 @@ export function urlToNodeName(nodeUrl?: string | URL): string | undefined {
 }
 
 export function getThisNodeUrl() {
-	const url = env.get('replication_url');
+	const url: string | undefined = env.get(CONFIG_PARAMS.REPLICATION_URL);
 	if (url) return url;
 	return hostnameToUrl(getThisNodeName());
 }
