@@ -12,6 +12,7 @@ import {
 import { randomUUID } from 'crypto';
 import { DatabaseTransaction, type Transaction } from './DatabaseTransaction.ts';
 import { IterableEventQueue } from './IterableEventQueue.ts';
+import { _assignPackageExport } from '../globals.js';
 import { ClientError, AccessViolation } from '../utility/errors/hdbError.js';
 import { transaction, contextStorage } from './transaction.ts';
 import { parseQuery } from './search.ts';

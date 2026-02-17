@@ -14,10 +14,10 @@ assert({} instanceof Object);
 assert([] instanceof Array);
 export const testExport = {
 	get() {
-		let a = MyComponent;
+		let _a = MyComponent;
 		return 'hello world';
 	},
 };
 export class TestComponent extends Resource {}
 
-export { MyComponent as 'my-component' };
+export { MyComponent as 'my-component' }
