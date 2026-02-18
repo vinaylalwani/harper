@@ -14,7 +14,8 @@ import * as env from '../utility/environment/environmentManager';
 import { CONFIG_PARAMS } from '../utility/hdbTerms.ts';
 import type { CompartmentOptions } from 'ses';
 
-const APPLICATIONS_LOCKDOWN: boolean = env.get(CONFIG_PARAMS.APPLICATIONS_LOCKDOWN);
+type Lockdown = 'none' | 'freeze' | 'ses';
+const APPLICATIONS_LOCKDOWN: Lockdown = env.get(CONFIG_PARAMS.APPLICATIONS_LOCKDOWN);
 
 let lockedDown = false;
 /**
@@ -24,17 +25,53 @@ let lockedDown = false;
  * @param scope
  */
 export async function scopedImport(filePath: string | URL, scope?: Scope) {
-	preventFunctionConstructor();
-	if (APPLICATIONS_LOCKDOWN && !lockedDown) {
-		require('ses');
+	if (!lockedDown && APPLICATIONS_LOCKDOWN && APPLICATIONS_LOCKDOWN !== 'none') {
 		lockedDown = true;
-		lockdown({
-			domainTaming: 'unsafe',
-			consoleTaming: 'unsafe',
-			errorTaming: 'unsafe',
-			errorTrapping: 'none',
-			stackFiltering: 'verbose',
-		});
+		if (APPLICATIONS_LOCKDOWN === 'ses') {
+			require('ses'); // load the lockdown function
+			lockdown({
+				domainTaming: 'unsafe',
+				consoleTaming: 'unsafe',
+				errorTaming: 'unsafe',
+				errorTrapping: 'none',
+				stackFiltering: 'verbose',
+			});
+		} else {
+			preventFunctionConstructor();
+			for (let name of Object.getOwnPropertyNames(Object.prototype)) {
+				if (name === '__proto__') continue;
+				overridableProperty(Object.prototype, name);
+			}
+			overridableProperty(Promise.prototype, 'then');
+			overridableProperty(Date, 'now');
+			for (let Intrinsic of [
+				Object,
+				Array,
+				Promise,
+				BigInt,
+				String,
+				Number,
+				Boolean,
+				Symbol,
+				RegExp,
+				Date,
+				Map,
+				Set,
+				WeakMap,
+				WeakSet,
+				Math,
+				JSON,
+				Reflect,
+				Atomics,
+				SharedArrayBuffer,
+				WeakRef,
+				FinalizationRegistry,
+			]) {
+				Object.freeze(Intrinsic);
+				Object.freeze(Intrinsic.prototype);
+			}
+			Object.freeze(Function);
+		}
 	}
 	const moduleUrl = (filePath instanceof URL ? filePath : pathToFileURL(filePath)).toString();
 	try {
@@ -84,6 +121,9 @@ async function loadModuleWithVM(moduleUrl: string, scope: Scope) {
 	 */
 	function resolveModule(specifier: string, referrer: string): string {
 		if (specifier === 'harperdb' || specifier === 'harper') return 'harper';
+		if (specifier.startsWith('harper/') || specifier.startsWith('harperdb/')) {
+			throw new Error(`Module ${specifier} is not allowed, may only access the 'harper' module`);
+		}
 		if (specifier.startsWith('file://')) {
 			return specifier;
 		}
@@ -412,6 +452,7 @@ const ALLOWED_NODE_BUILTIN_MODULES = new Set([
 	'zlib',
 	'events',
 	'timers',
+	'process',
 	'async_hooks',
 	'console',
 	'perf_hooks',
@@ -437,4 +478,27 @@ function getContext() {
 
 export function preventFunctionConstructor() {
 	Function.prototype.constructor = function () {}; // prevent this from being used to eval data in a parent context
+}
+
+/**
+ * This can redefine a property into a getter/setter that will allow derivatives of a prototype to assign
+ * a value to the property without incurring an error from the property being frozen and readonly.
+ * @param target
+ * @param name
+ * @param value
+ */
+function overridableProperty(target, name, value = target[name]) {
+	Object.defineProperty(target, name, {
+		get() {
+			return value;
+		},
+		set(value) {
+			Object.defineProperty(this, name, {
+				value,
+				configurable: true,
+				enumerable: true,
+				writable: true,
+			});
+		},
+	});
 }

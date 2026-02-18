@@ -136,7 +136,7 @@ function symlinkHarperModule(componentDirectory: string) {
 				}
 
 				// validate harperdb module
-				const harperModule = join(nodeModulesDir, 'harperdb');
+				const harperModule = join(nodeModulesDir, 'harper');
 				if (existsSync(harperModule)) {
 					if (realpathSync(harperModule) === realpathSync(PACKAGE_ROOT)) {
 						// if it exists and correctly linked, resolve
