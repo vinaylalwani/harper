@@ -14,7 +14,6 @@ import * as env from '../utility/environment/environmentManager';
 import { CONFIG_PARAMS } from '../utility/hdbTerms.ts';
 import type { CompartmentOptions } from 'ses';
 
-type ContainmentMode = 'none' | 'vm' | 'compartment';
 type Lockdown = 'none' | 'freeze' | 'ses';
 const APPLICATIONS_LOCKDOWN: Lockdown = env.get(CONFIG_PARAMS.APPLICATIONS_LOCKDOWN);
 
