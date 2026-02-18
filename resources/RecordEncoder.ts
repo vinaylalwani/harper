@@ -551,6 +551,25 @@ export function recordUpdater(store, tableId, auditStore) {
 				if (store.encoder?.structureUpdate) {
 					extendedType |= HAS_STRUCTURE_UPDATE;
 					store.encoder.structureUpdate = null;
+					if (store instanceof RocksDatabase) {
+						// with rocks we need to store the structure update in the transaction log so that it can be replayed on recovery
+						const structures = new Map();
+						structures.set('named', store.encoder.structures);
+						structures.set('typed', store.encoder.typedStructs);
+						const previousEncoding = Buffer.from(lastValueEncoding); // copy this since it will be overwritten by the encoding below
+						auditStore.putSync(
+							null,
+							{
+								version: newVersion,
+								tableId,
+								recordId: null,
+								type: 'structures',
+								encodedRecord: store.encoder.encode(structures),
+							},
+							{ transaction: options.transaction }
+						);
+						lastValueEncoding = previousEncoding;
+					}
 				}
 				const structureVersion = store.encoder.structures.length + (store.encoder.typedStructs?.length ?? 0);
 				if (resolveRecord && existingEntry?.localTime) {

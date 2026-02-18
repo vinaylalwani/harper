@@ -112,7 +112,8 @@ export function replayLogs(rootStore: RocksDatabase, tables: any): Promise<void>
 							transaction: rocksTransaction,
 						});
 						rocksTransaction.commitSync();
-						primaryStore.decoder.structure = updatedStructures;
+						primaryStore.decoder.structures = updatedStructures.get('named').slice(0); // make an unfrozen version
+						primaryStore.decoder.typedStructs = updatedStructures.get('typed').slice(0);
 					}
 				}
 			} catch (err) {
