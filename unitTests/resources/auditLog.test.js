@@ -4,7 +4,7 @@ const { table } = require('#src/resources/databases');
 const { setAuditRetention } = require('#src/resources/auditStore');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
 const { setTimeout: delay } = require('node:timers/promises');
-
+require('#src/server/serverHelpers/serverUtilities');
 describe('Audit log', () => {
 	let AuditedTable;
 	let events = [];
@@ -52,6 +52,20 @@ describe('Audit log', () => {
 		assert.equal(AuditedTable.primaryStore.getEntry(1), undefined); // verify that the delete entry was removed
 		// verify that the twice-written entry was not removed
 		assert.equal(AuditedTable.primaryStore.getEntry(2)?.value?.name, 'two-changed');
+	});
+	it('check log after operations and prune', async () => {
+		await AuditedTable.operation({
+			operation: 'upsert',
+			records: [{ id: 3, name: 'three' }],
+		});
+		await AuditedTable.operation({
+			operation: 'update',
+			records: [{ id: 3, name: 'three changed' }],
+		});
+		let results = await AuditedTable.getHistoryOfRecord(3);
+		assert.equal(results.length, 2);
+		assert.equal(results[0].operation, 'upsert');
+		assert.equal(results[1].operation, 'update');
 	});
 	it('write big key with big user name', async () => {
 		const key = [];
