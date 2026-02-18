@@ -122,7 +122,7 @@ describe('Test upgrade.js', () => {
 			getVersionUpdateInfo_stub.resolves();
 			try {
 				await upgrade_rw.upgrade();
-			} catch (e) {
+			} catch {
 				//this is here to catch the error the exit stub is throwing so tests do not fail
 			}
 
@@ -140,7 +140,7 @@ describe('Test upgrade.js', () => {
 			version_stub.get(() => null);
 			try {
 				await upgrade_rw.upgrade();
-			} catch (e) {
+			} catch {
 				//this is here to catch the error the exit stub is throwing so tests do not fail
 			}
 
@@ -161,7 +161,7 @@ describe('Test upgrade.js', () => {
 
 			try {
 				await upgrade_rw.upgrade();
-			} catch (e) {
+			} catch {
 				//this is here to catch the error the exit stub is throwing so tests do not fail
 			}
 
@@ -180,7 +180,7 @@ describe('Test upgrade.js', () => {
 
 			try {
 				await upgrade_rw.upgrade();
-			} catch (e) {
+			} catch {
 				//this is here to catch the error the exit stub is throwing so tests do not fail
 			}
 
@@ -200,7 +200,7 @@ describe('Test upgrade.js', () => {
 
 			try {
 				await upgrade_rw.upgrade();
-			} catch (e) {
+			} catch {
 				//this is here to catch the error the exit stub is throwing so tests do not fail
 			}
 
@@ -221,7 +221,7 @@ describe('Test upgrade.js', () => {
 
 			try {
 				await upgrade_rw.upgrade();
-			} catch (e) {
+			} catch {
 				//this is here to catch the error the exit stub is throwing so tests do not fail
 			}
 

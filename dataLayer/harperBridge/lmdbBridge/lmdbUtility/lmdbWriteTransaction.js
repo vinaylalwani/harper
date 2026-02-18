@@ -1,6 +1,5 @@
 'use strict';
 
-const path = require('path');
 const environmentUtil = require('../../../../utility/lmdb/environmentUtility.js');
 const LMDBInsertTransactionObject = require('./LMDBInsertTransactionObject.js');
 const LMDBUpdateTransactionObject = require('./LMDBUpdateTransactionObject.js');

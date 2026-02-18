@@ -36,9 +36,7 @@ import { Status } from '../server/status/index.ts';
 import { lifecycle as componentLifecycle } from './status/index.ts';
 import { DEFAULT_CONFIG } from './DEFAULT_CONFIG.ts';
 import { PluginModule } from './PluginModule.ts';
-import { platform } from 'node:os';
 import { getEnvBuiltInComponents } from './Application.ts';
-import { RocksDatabase } from '@harperfast/rocksdb-js';
 
 const CF_ROUTES_DIR = resolvePath(env.get(CONFIG_PARAMS.COMPONENTSROOT));
 let loadedComponents = new Map<any, any>();

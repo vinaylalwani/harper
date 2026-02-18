@@ -9,7 +9,7 @@ module.exports = fp(
 		// eslint-disable-next-line require-await
 		fastify.addHook('onResponse', async (request, reply) => {
 			// elapsedTime has to be accessed in onResponse or it won't work
-			let time = reply.elapsedTime;
+			let _time = reply.elapsedTime;
 		});
 		// eslint-disable-next-line require-await
 		fastify.addHook('onSend', async (request, reply, payload) => {

@@ -1,7 +1,7 @@
 import { callOperation } from './utility.js';
 import axios from 'axios';
 import { setupTestApp } from './setupTestApp.mjs';
-import { assert, expect } from 'chai';
+import { expect } from 'chai';
 
 describe('test declared role', () => {
 	before(async () => {

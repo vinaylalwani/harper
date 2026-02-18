@@ -55,8 +55,24 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	 * The get methods are for directly getting a resource, and called for HTTP GET requests.
 	 */
 	static get = transactional(
-		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
-			return resource.get?.(query);
+		function (resource: Resource, query: RequestTarget, _request: Context, _data: any) {
+			const result = resource.get?.(query);
+			// for the new API we always apply select in the instance method
+			if (!resource.constructor.loadAsInstance) return result;
+			if (result?.then) return result.then(handleSelect);
+			return handleSelect(result);
+			function handleSelect(result) {
+				let select;
+				if ((select = query?.select) && result != null && !result.selectApplied) {
+					const transform = transformForSelect(select, resource.constructor);
+					if (typeof result?.map === 'function') {
+						return result.map(transform);
+					} else {
+						return transform(result);
+					}
+				}
+				return result;
+			}
 		},
 		{
 			type: 'read',
@@ -99,7 +115,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	);
 
 	static patch = transactional(
-		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
+		function (resource: Resource, query: RequestTarget, _request: Context, data: any) {
 			// TODO: Allow array like put?
 			return resource.patch
 				? resource.constructor.loadAsInstance === false
@@ -111,7 +127,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	);
 
 	static delete = transactional(
-		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
+		function (resource: Resource, query: RequestTarget, _request: Context, _data: any) {
 			return resource.delete ? resource.delete(query) : missingMethod(resource, 'delete');
 		},
 		{ hasContent: false, type: 'delete', method: 'delete' }
@@ -174,14 +190,14 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 		});
 	}
 	static invalidate = transactional(
-		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
+		function (resource: Resource, query: RequestTarget, _request: Context, _data: any) {
 			return resource.invalidate ? resource.invalidate(query) : missingMethod(resource, 'delete');
 		},
 		{ hasContent: false, type: 'update', method: 'invalidate' }
 	);
 
 	static post = transactional(
-		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
+		function (resource: Resource, query: RequestTarget, _request: Context, data: any) {
 			if (resource.#id != null) resource.update?.(); // save any changes made during post
 			return resource.constructor.loadAsInstance === false ? resource.post(query, data) : resource.post(data, query);
 		},
@@ -189,14 +205,14 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	);
 
 	static update = transactional(
-		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
+		function (resource: Resource, query: RequestTarget, _request: Context, data: any) {
 			return resource.update(query, data);
 		},
 		{ type: 'update', method: 'update' }
 	);
 
 	static connect = transactional(
-		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
+		function (resource: Resource, query: RequestTarget, _request: Context, data: any) {
 			return resource.connect
 				? resource.constructor.loadAsInstance === false
 					? resource.connect(query, data)
@@ -207,14 +223,14 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	);
 
 	static subscribe = transactional(
-		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
+		function (resource: Resource, query: RequestTarget, _request: Context, _data: any) {
 			return resource.subscribe ? resource.subscribe(query) : missingMethod(resource, 'subscribe');
 		},
 		{ type: 'read', method: 'subscribe', syncAllowed: true }
 	);
 
 	static publish = transactional(
-		function (resource: Resource, query: Map, request: Context, data: any) {
+		function (resource: Resource, query: Map, _request: Context, data: any) {
 			if (resource.#id != null) resource.update?.(); // save any changes made during publish
 			return resource.publish
 				? resource.constructor.loadAsInstance === false
@@ -239,7 +255,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	);
 
 	static query = transactional(
-		function (resource: Resource, query: Map, request: Context, data: any) {
+		function (resource: Resource, query: Map, _request: Context, data: any) {
 			return resource.search
 				? resource.constructor.loadAsInstance === false
 					? resource.search(query, data)
@@ -250,7 +266,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	);
 
 	static copy = transactional(
-		function (resource: Resource, query: Map, request: Context, data: any) {
+		function (resource: Resource, query: Map, _request: Context, data: any) {
 			return resource.copy
 				? resource.constructor.loadAsInstance === false
 					? resource.copy(query, data)
@@ -261,7 +277,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	);
 
 	static move = transactional(
-		function (resource: Resource, query: Map, request: Context, data: any) {
+		function (resource: Resource, query: Map, _request: Context, data: any) {
 			return resource.move
 				? resource.constructor.loadAsInstance === false
 					? resource.move(query, data)
@@ -357,6 +373,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	 * This default implementation simply provides a streaming iterator that does not deliver any notifications
 	 * but implementors can call send with
 	 */
+	// eslint-disable-next-line no-unused-vars
 	subscribe(request: SubscriptionRequest): AsyncIterable<Record> {
 		return new IterableEventQueue();
 	}
@@ -372,15 +389,19 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	}
 
 	// Default permissions (super user only accesss):
+	// eslint-disable-next-line no-unused-vars
 	allowRead(user: User, target: RequestTarget, context: Context): boolean | Promise<boolean> {
 		return user?.role.permission.super_user;
 	}
+	// eslint-disable-next-line no-unused-vars
 	allowUpdate(user: User, record: Promise<Record & RecordObject>, context: Context): boolean | Promise<boolean> {
 		return user?.role.permission.super_user;
 	}
+	// eslint-disable-next-line no-unused-vars
 	allowCreate(user: User, record: Promise<Record & RecordObject>, context: Context): boolean | Promise<boolean> {
 		return user?.role.permission.super_user;
 	}
+	// eslint-disable-next-line no-unused-vars
 	allowDelete(user: User, target: RequestTarget, context: Context): boolean | Promise<boolean> {
 		return user?.role.permission.super_user;
 	}
@@ -445,46 +466,6 @@ export function snakeCase(camelCase: string) {
 	);
 }
 
-let idWasCollection;
-function pathToId(path, Resource) {
-	idWasCollection = false;
-	if (path === '') return undefined;
-	path = path.slice(1);
-	if (Resource.splitSegments) {
-		if (path.indexOf('/') === -1) {
-			if (path === '') {
-				idWasCollection = true;
-				return null;
-			}
-			return Resource.coerceId(decodeURIComponent(path));
-		}
-		const stringIds = path.split('/');
-		const ids = new MultiPartId();
-		for (let i = 0; i < stringIds.length; i++) {
-			const idPart = stringIds[i];
-			if (!idPart && i === stringIds.length - 1) {
-				idWasCollection = true;
-				break;
-			}
-			ids[i] = Resource.coerceId(decodeURIComponent(idPart));
-		}
-		return ids;
-	} else if (path === '') {
-		idWasCollection = true;
-		return null;
-	} else if (path[path.length - 1] === '/') {
-		idWasCollection = true;
-	}
-	return Resource.coerceId(decodeURIComponent(path));
-}
-/**
- * An array for ids that toString's back to slash-delimited string
- */
-export class MultiPartId extends Array {
-	toString() {
-		return this.join('/');
-	}
-}
 /**
  * This is responsible for arranging arguments in the main static methods and creating the appropriate context and default transaction wrapping
  * @param action

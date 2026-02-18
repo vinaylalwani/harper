@@ -1,6 +1,5 @@
 'use strict';
 
-const SearchObject = require('../../../SearchObject.js');
 const searchValidator = require('../../../../validation/searchValidator.js');
 const commonUtils = require('../../../../utility/common_utils.js');
 const hdbTerms = require('../../../../utility/hdbTerms.ts');

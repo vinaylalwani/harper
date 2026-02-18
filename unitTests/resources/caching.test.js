@@ -4,8 +4,8 @@ const { setupTestDBPath } = require('../testUtils');
 const { table } = require('#src/resources/databases');
 const { Resource } = require('#src/resources/Resource');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
-const { transaction } = require('#src/resources/transaction');
 const { RequestTarget } = require('#src/resources/RequestTarget');
+
 describe('Caching', () => {
 	let CachingTable,
 		IndexedCachingTable,
@@ -80,7 +80,7 @@ describe('Caching', () => {
 			events.push(event);
 		});
 		CachingTableStaleWhileRevalidate = class extends CachingTable {
-			allowStaleWhileRevalidate(entry, id) {
+			allowStaleWhileRevalidate(_entry, _id) {
 				return true;
 			}
 		};

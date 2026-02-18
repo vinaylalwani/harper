@@ -536,16 +536,6 @@ describe('10. Other Role Tests', () => {
 		return reqAsNonSU(headersOnePermUser)
 			.send({ operation: 'describe_table', schema: 'northnwd', table: 'employees' })
 			.expect((r) => {
-				let top_attributes = [
-					'name',
-					'schema',
-					'id',
-					'hash_attribute',
-					'__updatedtime__',
-					'__createdtime__',
-					'attributes',
-					'record_count',
-				];
 				let expected_attributes = ['employeeid', 'city', 'firstname', 'lastname'];
 
 				assert.equal(r.body.schema, 'northnwd', r.text);

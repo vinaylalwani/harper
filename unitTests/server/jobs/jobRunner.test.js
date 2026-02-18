@@ -11,7 +11,6 @@ const sinon = require('sinon');
 const hdb_term = require('#src/utility/hdbTerms');
 const bulk_load = require('#js/dataLayer/bulkLoad');
 const JobObject = require('#js/server/jobs/JobObject');
-const pm2_utils = require('#js/utility/processManagement/processManagement');
 const threads_start = require('#js/server/threads/manageThreads');
 
 const DATA_LOAD_MESSAGE = {
@@ -30,7 +29,6 @@ const UPDATE_RESULT = {
 const BULK_LOAD_RESPONSE = 'successfully loaded 3 records';
 
 describe('Test parseMessage', function () {
-	let update_stub = undefined;
 	let bulk_load_stub = undefined;
 	let parseMessage = jobs_runner.__get__('parseMessage');
 	let sandbox = null;
@@ -56,7 +54,7 @@ describe('Test parseMessage', function () {
 			runner_message.json = DATA_LOAD_MESSAGE;
 			runner_message.job = job_object;
 
-			update_stub = sandbox.stub(jobs, 'updateJob').returns(UPDATE_RESULT);
+			sandbox.stub(jobs, 'updateJob').returns(UPDATE_RESULT);
 
 			await parseMessage(runner_message);
 			assert.equal(start_stub.called, true, 'expected start called');
@@ -199,7 +197,6 @@ describe('Test parseMessage', function () {
 describe('Test runJob', function () {
 	let sandbox = sinon.createSandbox();
 	let update_stub = undefined;
-	let bulk_load_stub = undefined;
 	let launch_job_process_stub = sandbox.stub();
 	let launch_job_thread_rw;
 	let runJob = jobs_runner.__get__('runJob');
@@ -245,7 +242,7 @@ describe('Test runJob', function () {
 			.throws(new Error('BAD UPDATE'))
 			.onSecondCall()
 			.returns(UPDATE_RESULT);
-		bulk_load_stub = sandbox.stub(bulk_load, 'csvDataLoad').returns(BULK_LOAD_RESPONSE);
+		sandbox.stub(bulk_load, 'csvDataLoad').returns(BULK_LOAD_RESPONSE);
 
 		try {
 			await runJob(runner_message, bulk_load.csvDataLoad, runner_message.json);
@@ -320,7 +317,7 @@ describe('Test runJob', function () {
 		runner_message.job = job_object;
 
 		update_stub = sandbox.stub(jobs, 'updateJob').returns(UPDATE_RESULT);
-		bulk_load_stub = sandbox.stub(bulk_load, 'csvDataLoad').throws(new Error('bad csv load oh noes!'));
+		sandbox.stub(bulk_load, 'csvDataLoad').throws(new Error('bad csv load oh noes!'));
 
 		try {
 			await runJob(runner_message, bulk_load.csvDataLoad, runner_message.json);

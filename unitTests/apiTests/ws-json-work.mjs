@@ -1,17 +1,12 @@
 'use strict';
 
-import { assert, expect } from 'chai';
 import axios from 'axios';
-import { decode, encode, DecoderStream } from 'cbor-x';
+import { decode, encode } from 'cbor-x';
 import { getVariables } from './utility.js';
 import { WebSocket } from 'ws';
-const { authorization, url } = getVariables();
+const { authorization } = getVariables();
 
 describe('test WebSocket connections', () => {
-	beforeEach(async () => {
-		//await removeAllSchemas();
-	});
-
 	it('do post/update with CBOR', async () => {
 		const headers = {
 			authorization,
@@ -106,7 +101,6 @@ describe('test WebSocket connections', () => {
 					path,
 				})
 			);
-			let first = true;
 			ws.on('message', (data) => {
 				if (message_count === 0) {
 					setTimeout(() => {

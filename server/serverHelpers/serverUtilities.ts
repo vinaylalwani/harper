@@ -32,7 +32,7 @@ import { server } from '../Server.ts';
 const operationLog = harperLogger.loggerWithTag('operation');
 import * as analytics from '../../resources/analytics/read.ts';
 import operationFunctionCaller from '../../utility/OperationFunctionCaller.js';
-import type { OperationRequest, OperationRequestBody, OperationResult } from '../operationsServer.ts';
+import type { OperationRequest, OperationRequestBody } from '../operationsServer.ts';
 import type { Context } from '../../resources/ResourceInterface.ts';
 import * as status from '../status/index.ts';
 
@@ -245,19 +245,18 @@ async function catchup(req: CatchupOperationRequest) {
 		try {
 			transaction.schema = _schema;
 			transaction.table = table;
-			let result: OperationResult;
 			switch (transaction.operation) {
 				case terms.OPERATIONS_ENUM.INSERT:
-					result = await insert.insert(transaction);
+					await insert.insert(transaction);
 					break;
 				case terms.OPERATIONS_ENUM.UPDATE:
-					result = await insert.update(transaction);
+					await insert.update(transaction);
 					break;
 				case terms.OPERATIONS_ENUM.UPSERT:
-					result = await insert.upsert(transaction);
+					await insert.upsert(transaction);
 					break;
 				case terms.OPERATIONS_ENUM.DELETE:
-					result = await delete_.deleteRecord(transaction);
+					await delete_.deleteRecord(transaction);
 					break;
 				default:
 					operationLog.warn('invalid operation in catchup');

@@ -4,12 +4,10 @@ const { table } = require('#src/resources/databases');
 const { setAuditRetention } = require('#src/resources/auditStore');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
 const { setTimeout: delay } = require('node:timers/promises');
+
 describe('Audit log', () => {
 	let AuditedTable;
 	let events = [];
-	let timer = 0;
-	let return_value = true;
-	let return_error;
 
 	before(async function () {
 		setupTestDBPath();

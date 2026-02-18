@@ -104,7 +104,7 @@ export async function setupTestApp() {
 				}
 			}
 
-			let response = await axios.put('http://localhost:9926/VariedProps/' + object.id, encode(object), {
+			await axios.put('http://localhost:9926/VariedProps/' + object.id, encode(object), {
 				method: 'PUT',
 				responseType: 'arraybuffer',
 				headers,
@@ -122,7 +122,7 @@ export async function setupTestApp() {
 				birthday,
 				title: 'title' + i,
 			};
-			let response = await axios.put('http://localhost:9926/FourProp/' + object.id, encode(object), {
+			await axios.put('http://localhost:9926/FourProp/' + object.id, encode(object), {
 				method: 'PUT',
 				responseType: 'arraybuffer',
 				headers,

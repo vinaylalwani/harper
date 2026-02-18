@@ -143,7 +143,7 @@ async function launchJobThread(job_id) {
 	}
 }
 if (isMainThread) {
-	onMessageByType(hdbTerms.ITC_EVENT_TYPES.START_JOB, async (message, port) => {
+	onMessageByType(hdbTerms.ITC_EVENT_TYPES.START_JOB, async (message) => {
 		try {
 			threadsStart.startWorker(join(__dirname, './jobProcess.js'), {
 				autoRestart: false,

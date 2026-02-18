@@ -1,11 +1,11 @@
 'use strict';
 
+// eslint-disable-next-line no-unused-vars
 const { SearchByConditionsObject, SearchCondition } = require('../../../SearchByConditionsObject.js');
 const SearchObject = require('../../../SearchObject.js');
 const searchValidator = require('../../../../validation/searchValidator.js');
 const searchUtility = require('../../../../utility/lmdb/searchUtility.js');
 const lmdbTerms = require('../../../../utility/lmdb/terms.js');
-const { Resource } = require('../../../../resources/Resource.ts');
 const lmdb_search = require('../lmdbUtility/lmdbSearch.js');
 const cursorFunctions = require('../../../../utility/lmdb/searchCursorFunctions.js');
 const _ = require('lodash');
@@ -124,26 +124,6 @@ async function lmdbSearchByConditions(searchObject) {
 }
 
 /**
- * This function sorts an array ascending, the sort checks if either element is not a number.  if not a number they are both set to strings to compare them properly as a string will not compare to a number natively
- * @param a
- * @param b
- * @returns {number}
- */
-function sorter(a, b) {
-	if (isNaN(a) || isNaN(b)) {
-		a = a.toString();
-		b = b.toString();
-	}
-
-	if (a > b) {
-		return 1;
-	} else if (b > a) {
-		return -1;
-	}
-	return 0;
-}
-
-/**
  *
  * @param transaction
  * @param {SearchByConditionsObject} searchObject
@@ -151,7 +131,6 @@ function sorter(a, b) {
  * @param {String} hash_attribute
  * @returns {Promise<unknown[]>}
  */
-// eslint-disable-next-line require-await
 async function executeConditionSearch(transaction, searchObject, condition, hash_attribute) {
 	//build a prototype object for search
 	let search = new SearchObject(

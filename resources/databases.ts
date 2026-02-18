@@ -1043,7 +1043,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 						hasChanges = true;
 						if (attribute.indexNulls === undefined) attribute.indexNulls = true;
 						let hasExistingData = false;
-						for (let entry of Table.primaryStore.getRange({ start: true })) {
+						for (let _entry of Table.primaryStore.getRange({ start: true })) {
 							hasExistingData = true;
 							break;
 						}
@@ -1113,7 +1113,6 @@ const MIN_OUTSTANDING_INDEXING = 10;
 async function runIndexing(Table, attributes, indicesToRemove) {
 	try {
 		logger.info(`Indexing ${Table.tableName} attributes`, attributes);
-		const schemaVersion = Table.schemaVersion;
 		await signalling.signalSchemaChange(
 			new SchemaEventMsg(process.pid, 'schema-change', Table.databaseName, Table.tableName)
 		);
@@ -1143,7 +1142,7 @@ async function runIndexing(Table, attributes, indicesToRemove) {
 			}
 			let outstanding = 0;
 			// this means that a new attribute has been introduced that needs to be indexed
-			for (const { key, value: record, version } of Table.primaryStore.getRange({
+			for (const { key, value: record } of Table.primaryStore.getRange({
 				start,
 				lazy: attributesLength < 4,
 				versions: true,
@@ -1222,11 +1221,6 @@ async function runIndexing(Table, attributes, indicesToRemove) {
 		logger.error('Error in indexing', error);
 	}
 }
-/**
- * Once an origin has fully declared all the tables for a database, this can be run to remove any tables or attributes
- * that are unused.
- */
-function cleanupDatabase(origin) {}
 
 export function dropTableMeta({ table: tableName, database: databaseName }) {
 	const rootStore = database({ database: databaseName, table: tableName });

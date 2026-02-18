@@ -2,6 +2,7 @@
 
 const SearchObject = require('../../../SearchObject.js');
 const DeleteObject = require('../../../DeleteObject.js');
+// eslint-disable-next-line no-unused-vars
 const DropAttributeObject = require('../../../DropAttributeObject.js');
 const hdbTerms = require('../../../../utility/hdbTerms.ts');
 const commonUtils = require('../../../../utility/common_utils.js');

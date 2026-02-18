@@ -4,7 +4,6 @@ const LMDB_ERRORS = require('../errors/commonErrors.js').LMDB_ERRORS_ENUM;
 // eslint-disable-next-line no-unused-vars
 const lmdb = require('lmdb');
 const lmdbTerms = require('./terms.js');
-const Buffer = require('buffer').Buffer;
 
 const { OVERFLOW_MARKER, MAX_SEARCH_KEY_LENGTH } = lmdbTerms;
 const PRIMITIVES = ['number', 'string', 'symbol', 'boolean', 'bigint'];
@@ -34,7 +33,7 @@ function stringifyData(rawValue) {
 
 	try {
 		value = typeof rawValue === 'object' ? JSON.stringify(rawValue) : rawValue.toString();
-	} catch (e) {
+	} catch {
 		value = rawValue.toString();
 	}
 
@@ -53,15 +52,6 @@ function convertKeyValueToWrite(key) {
 		return key.valueOf();
 	}
 	return key;
-}
-
-/**
- * checks is a value is a primitive type 'number', 'string', 'symbol', 'boolean', 'bigint', buffer
- * @param value
- * @returns {boolean}
- */
-function primitiveCheck(value) {
-	return PRIMITIVES.indexOf(typeof value) >= 0 || value instanceof Buffer;
 }
 
 /**

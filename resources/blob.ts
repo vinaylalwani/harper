@@ -20,6 +20,7 @@ import {
 	open,
 	readFileSync,
 	read,
+	readSync,
 	unlink,
 	readdirSync,
 	existsSync,
@@ -27,6 +28,7 @@ import {
 	write,
 	statSync,
 	writeFile,
+	type FSWatcher,
 } from 'node:fs';
 import type { StatsFs } from 'node:fs';
 import { createDeflate, deflate } from 'node:zlib';
@@ -38,7 +40,7 @@ import { join, dirname } from 'path';
 import logger from '../utility/logging/logger.js';
 import type { LMDBStore } from 'lmdb';
 import { asyncSerialization, hasAsyncSerialization } from '../server/serverHelpers/contentTypes.ts';
-import { HAS_BLOBS, readAuditEntry } from './auditStore.ts';
+import { HAS_BLOBS } from './auditStore.ts';
 import { getHeapStatistics } from 'node:v8';
 import { setTimeout as delay, setImmediate as rest } from 'node:timers/promises';
 import { RocksDatabase } from '@harperfast/rocksdb-js';
@@ -74,7 +76,6 @@ let currentBlobCallback: (blob: Blob) => Blob | void;
 export const Blob = global.Blob || polyfillBlob(); // use the global Blob class if it exists (it doesn't on Node v16)
 let encodeForStorageForRecordId: number = undefined; // only enable encoding of the file path if we are saving to the DB, not for serialization to external clients, and only for one record
 let promisedWrites: Array<Promise<void>>;
-let promisedReads: Array<Promise<void>>;
 let currentStore: any; // the root store of the database we are currently encoding for
 export let blobsWereEncoded = false; // keep track of whether blobs were encoded with file paths
 // the header is 8 bytes
@@ -86,7 +87,6 @@ const FILE_READ_TIMEOUT = 60000;
 function InstanceOfBlobWithNoConstructor() {}
 InstanceOfBlobWithNoConstructor.prototype = Blob.prototype;
 
-let warnedSaveDeprecation = false;
 // @ts-ignore
 /**
  * A blob that is backed by a file, and can be saved to the database as a reference
@@ -193,7 +193,7 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 					if (writeFinished) {
 						throw new Error(`Incomplete blob for ${filePath}`);
 					}
-					return new Promise((resolve, reject) => {
+					return new Promise((resolve) => {
 						const callback = () => {
 							writeFinished = true;
 							return resolve(readContents());
@@ -251,8 +251,8 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 		let fd: number;
 		let position = 0;
 		let totalContentRead = 0;
-		let watcher: any;
-		let timer: any;
+		let watcher: FSWatcher;
+		let timer: NodeJS.Timeout;
 		let isBeingWritten: boolean;
 		let previouslyFinishedWriting = false;
 		const blob = this;
@@ -338,24 +338,25 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 								if (size > totalContentRead) {
 									if (checkIfIsBeingWritten()) {
 										// the file is not finished being written, watch the file for changes to resume reading
-										if (watcher) {
-											// already watching, but add a timer to make sure we don't wait forever
+										// set up a watcher to be notified of file changes
+										watcher = watch(filePath, { persistent: false }, () => {
+											watcher.close();
+											watcher = null;
+											clearTimeout(timer); // clear it
+											readMore(resolve, reject);
+										});
+										// immediately try to read again in case there was a change before we started watching,
+										// readSync should be fine here, the data should be in memory
+										if (readSync(fd, buffer, 0, buffer.length, position) > 0) {
+											// never mind with the watcher, let's read more data
+											watcher.close();
+											watcher = null;
+											readMore(resolve, reject);
+										} else {
+											// set a timer for the watcher too
 											timer = setTimeout(() => {
 												onError(new Error(`File read timed out reading from ${filePath}`));
 											}, FILE_READ_TIMEOUT).unref();
-										} else {
-											// set up a watcher to be notified of file changes
-											watcher = watch(filePath, { persistent: false }, () => {
-												watcher.close();
-												watcher = null;
-												if (timer) {
-													// if we are waiting for a timeout, that means we finished another read and we can proceed with the next one=
-													clearTimeout(timer); // clear it
-													timer = null;
-													readMore(resolve, reject);
-												}
-											});
-											readMore(resolve, reject); // immediately try to read again in case there was a change before we started watching
 										}
 									} else {
 										if (previouslyFinishedWriting) {
@@ -812,7 +813,7 @@ function getNextStorageIndex(blobStoragePaths: string[], fileId: number) {
 async function createFrequencyTableForStoragePaths(blobStoragePaths: string[]) {
 	if (!statfs) return; // statfs is not available on all older node versions
 	const availableSpaces = await Promise.all(
-		blobStoragePaths.map(async (path, index) => {
+		blobStoragePaths.map(async (path) => {
 			let stats: StatsFs;
 			try {
 				stats = await statfs(path);

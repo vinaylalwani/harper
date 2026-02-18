@@ -7,7 +7,7 @@ import { convertToMS } from '../utility/common_utils.js';
 import { PREVIOUS_TIMESTAMP_PLACEHOLDER, LAST_TIMESTAMP_PLACEHOLDER } from './RecordEncoder.ts';
 import * as harperLogger from '../utility/logging/harper_logger.js';
 import { getRecordAtTime } from './crdt.ts';
-import { decodeFromDatabase, deleteBlobsInObject } from './blob.ts';
+import { decodeFromDatabase } from './blob.ts';
 import { onStorageReclamation } from '../server/storageReclamation.ts';
 import { RocksDatabase } from '@harperfast/rocksdb-js';
 import { RocksTransactionLogStore } from './RocksTransactionLogStore.ts';
@@ -246,8 +246,6 @@ export const ACTION_32_BIT = 14;
 export const ACTION_64_BIT = 15;
 /** Used to indicate we have received a remote local time update */
 export const REMOTE_SEQUENCE_UPDATE = 11;
-const HAS_PREVIOUS_VERSION = 64;
-const HAS_EXTENDED_TYPE = 128;
 export const HAS_CURRENT_RESIDENCY_ID = 512;
 export const HAS_PREVIOUS_RESIDENCY_ID = 1024;
 export const HAS_ORIGINATING_OPERATION = 2048;
@@ -390,28 +388,6 @@ export function createAuditEntry(auditRecord: AuditRecord, start = 0) {
 			position += 5;
 		}
 	}
-}
-
-/**
- * Reads an action from an audit entry binary data, quickly
- * @param buffer
- */
-function readAction(buffer: Buffer) {
-	let position = 0;
-	if (buffer[0] == 66) {
-		// 66 is the first byte in a date double, so we need to skip it
-		position = 8;
-	}
-	const action = buffer[position];
-	if (action < 0x80) {
-		// simple case of a single byte
-		return action;
-	}
-	// otherwise, we need to decode the number
-	const decoder =
-		buffer.dataView || (buffer.dataView = new Decoder(buffer.buffer, buffer.byteOffset, buffer.byteLength));
-	decoder.position = position;
-	return decoder.readInt();
 }
 
 /**

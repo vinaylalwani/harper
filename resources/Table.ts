@@ -6,7 +6,7 @@
 
 import { CONFIG_PARAMS, OPERATIONS_ENUM, SYSTEM_TABLE_NAMES, SYSTEM_SCHEMA_NAME } from '../utility/hdbTerms.ts';
 import { type Database } from 'lmdb';
-import { getIndexedValues, getNextMonotonicTime } from '../utility/lmdb/commonUtility.js';
+import { getIndexedValues } from '../utility/lmdb/commonUtility.js';
 import lodash from 'lodash';
 import { ExtendedIterable, SKIP } from '@harperfast/extended-iterable';
 import type {
@@ -44,7 +44,7 @@ import { transaction, contextStorage } from './transaction.ts';
 import { MAXIMUM_KEY, writeKey, compareKeys } from 'ordered-binary';
 import { getWorkerIndex, getWorkerCount } from '../server/threads/manageThreads.js';
 import { HAS_BLOBS, auditRetention, removeAuditEntry } from './auditStore.ts';
-import { autoCast, convertToMS, autoCastBooleanStrict } from '../utility/common_utils.js';
+import { autoCast, autoCastBooleanStrict } from '../utility/common_utils.js';
 import {
 	recordUpdater,
 	removeEntry,
@@ -86,9 +86,6 @@ const RECORD_PRUNING_INTERVAL = 60000; // one minute
 envMngr.initSync();
 const LMDB_PREFETCH_WRITES = envMngr.get(CONFIG_PARAMS.STORAGE_PREFETCHWRITES);
 const LOCK_TIMEOUT = 10000;
-const SAVING_FULL_UPDATE = 1;
-const SAVING_CRDT_UPDATE = 2;
-const NOTIFICATION = { isNotification: true, ensureLoaded: false };
 export const INVALIDATED = 1;
 export const EVICTED = 8; // note that 2 is reserved for timestamps
 const TEST_WRITE_KEY_BUFFER = Buffer.allocUnsafeSlow(8192);
@@ -119,9 +116,6 @@ export interface Table {
 	Transaction: ReturnType<typeof makeTable>;
 }
 type ResidencyDefinition = number | string[] | void;
-
-// we default to the max age of the streams because this is the limit on the number of old transactions
-// we might need to reconcile deleted entries against.
 
 /**
  * This returns a Table class for the given table settings (determined from the metadata table)
@@ -590,9 +584,9 @@ export function makeTable(options) {
 		/**
 		 * Gets a resource instance, as defined by the Resource class, adding the table-specific handling
 		 * of also loading the stored record into the resource instance.
-		 * @param id
+		 * @param target
 		 * @param request
-		 * @param options An important option is ensureLoaded, which can be used to indicate that it is necessary for a caching table to load data from the source if there is not a local copy of the data in the table (usually not necessary for a delete, for example).
+		 * @param resourceOptions An important option is ensureLoaded, which can be used to indicate that it is necessary for a caching table to load data from the source if there is not a local copy of the data in the table (usually not necessary for a delete, for example).
 		 * @returns
 		 */
 		static getResource<Record extends object = any>(
@@ -1134,6 +1128,7 @@ export function makeTable(options) {
 		 * Determine if the user is allowed to update data from the current resource
 		 */
 		// @ts-expect-error Tables only allow synchronous allowUpdate checks.
+		// eslint-disable-next-line no-unused-vars
 		allowUpdate(user: User, updatedData: Record, context: Context): boolean {
 			const tablePermission = getTablePermissions(user);
 			if (tablePermission?.update) {
@@ -1345,7 +1340,7 @@ export function makeTable(options) {
 					partialRecord,
 					applyToSourcesIntermediate.invalidate?.bind(this, context, id)
 				),
-				commit: (txnTime, existingEntry, retry, transaction: any) => {
+				commit: (txnTime, existingEntry, _retry, transaction: any) => {
 					if (precedesExistingVersion(txnTime, existingEntry, options?.nodeId) <= 0) return;
 					partialRecord ??= null;
 					for (const name in indices) {
@@ -1387,7 +1382,7 @@ export function makeTable(options) {
 				entry: this.#entry,
 				before: applyToSources.relocate?.bind(this, context, id),
 				beforeIntermediate: applyToSourcesIntermediate.relocate?.bind(this, context, id),
-				commit: (txnTime, existingEntry, retry, transaction: any) => {
+				commit: (txnTime, existingEntry, _retry, transaction: any) => {
 					if (precedesExistingVersion(txnTime, existingEntry, options?.nodeId) <= 0) return;
 					const residency = TableResource.getResidencyRecord(options.residencyId);
 					let metadata = 0;
@@ -1447,7 +1442,7 @@ export function makeTable(options) {
 			}
 			const metadata = 0;
 			logger.debug?.('Performing a relocate of an entry', existingEntry.key, entry.value, residency);
-			const record = updateRecord(
+			updateRecord(
 				existingEntry.key,
 				entry.value, // store the record we downloaded
 				existingEntry,
@@ -1465,7 +1460,6 @@ export function makeTable(options) {
 		 * Evicting a record will remove it from a caching table. This is not considered a canonical data change, and it is assumed that retrieving this record from the source will still yield the same record, this is only removing the local copy of the record.
 		 */
 		static evict(id, existingRecord, existingVersion) {
-			const source = this.Source;
 			let entry;
 			if (hasSourceGet || audit) {
 				if (!existingRecord) return;
@@ -1843,7 +1837,7 @@ export function makeTable(options) {
 						(() => {
 							try {
 								return JSON.stringify(recordToStore).slice(0, 100);
-							} catch (e) {
+							} catch {
 								return '';
 							}
 						})()
@@ -1986,12 +1980,10 @@ export function makeTable(options) {
 
 			function prepareConditions(conditions: Condition[], operator: string) {
 				// some validation:
-				let isIntersection: boolean;
 				switch (operator) {
 					case 'and':
 					case undefined:
 						if (conditions.length < 1) throw new Error('An "and" operator requires at least one condition');
-						isIntersection = true;
 						break;
 					case 'or':
 						if (conditions.length < 2) throw new Error('An "or" operator requires at least two conditions');
@@ -2837,7 +2829,7 @@ export function makeTable(options) {
 					applyToSourcesIntermediate.publish?.bind(this, context, id, message),
 					true // because transaction log entries can be deleted at any point, we must save the blobs in the record, there is no cleanup of them
 				),
-				commit: (txnTime, existingEntry, retry, transaction: any) => {
+				commit: (txnTime, existingEntry, _retry, transaction: any) => {
 					// just need to update the version number of the record so it points to the latest audit record
 					// but have to update the version number of the record
 					// TODO: would be faster to use getBinaryFast here and not have the record loaded
@@ -3358,7 +3350,7 @@ export function makeTable(options) {
 				// this is separate procedure we can do if the records are not being cleaned up by the audit log. This shouldn't
 				// ever happen, but if there are cleanup failures for some reason, we can run this to clean up the records
 				for (const entry of primaryStore.getRange({ start: 0, versions: true })) {
-					const { key, value, localTime } = entry;
+					const { value, localTime } = entry;
 					await rest(); // yield to other async operations
 					if (value === null && localTime < endTime) {
 						completion = removeEntry(primaryStore, entry);
@@ -3446,7 +3438,6 @@ export function makeTable(options) {
 	);
 
 	TableResource.updatedAttributes(); // on creation, update accessors as well
-	const prototype = TableResource.prototype;
 	if (expirationMs) TableResource.setTTLExpiration(expirationMs / 1000);
 	if (expiresAtProperty) runRecordExpirationEviction();
 	return TableResource;
@@ -3577,7 +3568,7 @@ export function makeTable(options) {
 		function withLocalEntry(entry) {
 			// skip recording reads for most system tables except hdb_analytics
 			// we want to track analytics reads in licensing, etc.
-			if (databaseName !== 'system' || tableName === 'hdb_analytics') {
+			if (databaseName !== 'system' && (options.type === 'read' || !options.type)) {
 				harperLogger.trace?.('Recording db-read action for', `${databaseName}.${tableName}`);
 				recordAction(entry?.size ?? 1, 'db-read', tableName, null);
 			}
@@ -3946,7 +3937,7 @@ export function makeTable(options) {
 			// and let the transaction commit in the background
 			let resolved;
 			when(
-				transaction(sourceContext, async (txn) => {
+				transaction(sourceContext, async (_txn) => {
 					const start = performance.now();
 					let updatedRecord;
 					let hasChanges, invalidated;
@@ -4026,12 +4017,12 @@ export function makeTable(options) {
 						entry: existingEntry,
 						nodeName: 'source',
 						before: preCommitBlobsForRecordBefore(updatedRecord),
-						commit: (txnTime, existingEntry, retry, transaction: any) => {
+						commit: (txnTime, existingEntry, _retry, transaction: any) => {
 							if (existingEntry?.version !== existingVersion) {
 								// don't do anything if the version has changed
 								return;
 							}
-							const hasIndexChanges = updateIndices(id, existingRecord, updatedRecord);
+							updateIndices(id, existingRecord, updatedRecord);
 							if (updatedRecord) {
 								applyToSourcesIntermediate.put?.(sourceContext, id, updatedRecord);
 								if (existingEntry) {
@@ -4443,7 +4434,7 @@ function exists(value) {
 function stringify(value) {
 	try {
 		return JSON.stringify(value);
-	} catch (err) {
+	} catch {
 		return value;
 	}
 }

@@ -30,7 +30,7 @@ describe('Scope', () => {
 		try {
 			rmSync(this.directory, { recursive: true, force: true });
 			// eslint-disable-next-line sonarjs/no-ignored-exceptions
-		} catch (err) {
+		} catch {
 			// best effort to clean up - but doesn't matter too much since this is a temp directory
 		}
 	});

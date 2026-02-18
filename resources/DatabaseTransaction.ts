@@ -180,7 +180,6 @@ export class DatabaseTransaction implements Transaction {
 	 * Resolves with information on the timestamp and success of the commit
 	 */
 	commit(options: CommitOptions = {}): MaybePromise<CommitResolution> {
-		let txnTime = this.timestamp;
 		for (let i = 0; i < this.writes.length; i++) {
 			let operation = this.writes[i];
 			if (this.retries === 0 && operation.saved) continue;

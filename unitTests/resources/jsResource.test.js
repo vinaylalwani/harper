@@ -99,7 +99,7 @@ describe('jsResource', () => {
 		};
 
 		// Mock scopedImport to throw an error
-		const jsLoader = require('#src/security/jsLoader');
+		const _jsLoader = require('#src/security/jsLoader');
 
 		// handleApplication registers the handler
 		await handleApplication(mockScope);

@@ -539,6 +539,8 @@ export const CONFIG_PARAMS = {
 	REPLICATION_SHARD: 'replication_shard',
 	REPLICATION_BLOBTIMEOUT: 'replication_blobTimeout',
 	REPLICATION_FAILOVER: 'replication_failover',
+	REPLICATION_BLOBCONCURRENCY: 'replication_blobConcurrency',
+	REPLICATION_RECORDCONCURRENCY: 'replication_recordConcurrency',
 	ROOTPATH: 'rootPath',
 	SERIALIZATION_BIGINT: 'serialization_bigInt',
 	STORAGE_WRITEASYNC: 'storage_writeAsync',

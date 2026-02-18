@@ -128,7 +128,7 @@ async function getReplicationCert() {
 	const SNICallback = createTLSSelector('operations-api');
 	const secureTarget = {
 		secureContexts: null,
-		setSecureContext: (ctx) => {},
+		setSecureContext: (_ctx) => {},
 	};
 	await SNICallback.initialize(secureTarget);
 	const cert = secureTarget.secureContexts.get(getThisNodeName());

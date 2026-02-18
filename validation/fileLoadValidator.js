@@ -2,16 +2,13 @@ const clone = require('clone');
 const validator = require('./validationWrapper.js');
 const commonUtils = require('../utility/common_utils.js');
 const hdbTerms = require('../utility/hdbTerms.ts');
-const log = require('../utility/logging/harper_logger.js');
 const fs = require('fs');
 const joi = require('joi');
 const { string } = joi.types();
 const { hdbErrors, handleHDBError } = require('../utility/errors/hdbError.js');
-const { HDB_ERROR_MSGS, HTTP_STATUS_CODES } = hdbErrors;
+const { HTTP_STATUS_CODES } = hdbErrors;
 
 const { commonValidators } = require('./common_validators.js');
-// Maximum file size in bytes
-const MAX_FILE_SIZE = 1000000000;
 
 const isRequiredString = ' is required';
 

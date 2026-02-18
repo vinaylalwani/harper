@@ -522,7 +522,7 @@ describe('Test sql_statement_bucket Class', () => {
 				assert.equal(table_lookup.has(key), true, `table_lookup does not have key ${key}`);
 			});
 			//assert all columns are accounted for
-			attributes.forEach(function (value, key, obj) {
+			attributes.forEach(function (value, key) {
 				// assert all tables are accounted for
 				assert.equal(affected_attributes.get(schema).has(key), true, `attributes does not contain key ${key}`);
 				assert.equal(
@@ -602,7 +602,7 @@ describe('Test sql_statement_bucket Class', () => {
 				assert.equal(table_lookup.has(key), true, `table_lookup does not have key ${key}`);
 			});
 			//assert all columns are accounted for
-			attributes.forEach(function (value, key, obj) {
+			attributes.forEach(function (value, key) {
 				// assert all tables are accounted for
 				assert.equal(affected_attributes.get(schemas[key]).has(key), true, `attributes does not contain key ${key}`);
 				assert.equal(

@@ -515,7 +515,7 @@ class SQLSearch {
 		let whereString = null;
 		try {
 			whereString = this.statement.where ? this.statement.where.toString() : '';
-		} catch (e) {
+		} catch {
 			throw new Error('Could not generate proper where clause');
 		}
 		if (this.columns.where) {

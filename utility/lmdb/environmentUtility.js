@@ -172,7 +172,7 @@ async function createEnvironment(basePath, envName, isTxn = false, isV3 = false)
 	}
 }
 
-async function copyEnvironment(basePath, envName, destinationPath, compactEnvironment = true) {
+async function copyEnvironment(basePath, envName, _destinationPath, _compactEnvironment = true) {
 	pathEnvNameValidation(basePath, envName);
 	envName = envName.toString();
 	let environmentPath = path.join(basePath, envName);
@@ -298,7 +298,7 @@ function listDBIDefinitions(env) {
 		if (key !== INTERNAL_DBIS_NAME) {
 			try {
 				dbis[key] = Object.assign(new DBIDefinition(), value);
-			} catch (e) {
+			} catch {
 				log.warn(`an internal error occurred: unable to parse DBI Definition for ${key}`);
 			}
 		}
@@ -344,7 +344,7 @@ function getDBIDefinition(env, dbiName) {
 
 	try {
 		dbiDefinition = Object.assign(dbiDefinition, found.value);
-	} catch (e) {
+	} catch {
 		log.warn(`an internal error occurred: unable to parse DBI Definition for ${found}`);
 	}
 
@@ -467,7 +467,7 @@ async function environmentDataSize(environmentBasePath, tableName) {
 		let environmentPath = path.join(environmentBasePath, tableName + MDB_FILE_EXTENSION);
 		let statResult = await fs.stat(environmentPath);
 		return statResult['size'];
-	} catch (e) {
+	} catch {
 		throw new Error(LMDB_ERRORS.INVALID_ENVIRONMENT);
 	}
 }

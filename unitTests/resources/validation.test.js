@@ -2,10 +2,8 @@ require('../testUtils');
 const assert = require('assert');
 const { setupTestDBPath } = require('../testUtils');
 const { table } = require('#src/resources/databases');
-const { Resource } = require('#src/resources/Resource');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
-const { transaction } = require('#src/resources/transaction');
-// might want to enable an iteration with NATS being assigned as a source
+
 describe('Types Validation', () => {
 	let ValidationTest;
 	before(async function () {

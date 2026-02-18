@@ -11,7 +11,6 @@ const rewire = require('rewire');
 const testUtils = require('../../testUtils.js');
 const read_log = rewire('#js/utility/logging/readLog');
 const hdb_terms = require('#src/utility/hdbTerms');
-const harper_logger = require('#js/utility/logging/harper_logger');
 
 const LOG_DIR_TEST = 'testLogger';
 const LOG_NAME_TEST = 'log_unit_test.log';

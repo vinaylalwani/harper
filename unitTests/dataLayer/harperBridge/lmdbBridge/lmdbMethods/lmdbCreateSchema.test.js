@@ -5,7 +5,6 @@ testUtils.preTestPrep();
 const path = require('path');
 
 const LMDB_TEST_FOLDER_NAME = 'system';
-const SCHEMA_NAME = 'schema';
 const BASE_PATH = testUtils.setupTestDBPath();
 const BASE_SCHEMA_PATH = path.join(BASE_PATH);
 const BASE_TEST_PATH = path.join(BASE_SCHEMA_PATH, LMDB_TEST_FOLDER_NAME);

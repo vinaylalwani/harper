@@ -6,9 +6,6 @@ const util = require('util');
 const hdbUtils = require('../utility/common_utils.js');
 const terms = require('../utility/hdbTerms.ts');
 const globalSchema = require('../utility/globalSchema.js');
-const transaction = require('../dataLayer/transaction.js');
-
-const write = require('../dataLayer/insert.js');
 
 const RECORD = 'record';
 const SUCCESS = 'successfully deleted';

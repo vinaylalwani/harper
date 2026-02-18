@@ -10,6 +10,7 @@ import { Id } from './ResourceInterface.ts';
 import { MAXIMUM_KEY } from 'ordered-binary';
 
 declare module '@harperfast/rocksdb-js' {
+	// eslint-disable-next-line no-unused-vars
 	interface DBI<T> {
 		getValuesCount(indexedValue: any): number;
 	}

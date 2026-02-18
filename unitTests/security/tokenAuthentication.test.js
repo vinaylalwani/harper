@@ -256,13 +256,13 @@ describe('test createTokens', () => {
 	let update_stub;
 	let signalling_stub;
 	beforeEach(() => {
-		validate_user_stub = sandbox.stub(user, 'findAndValidateUser').callsFake(async (u, pw) => {
+		validate_user_stub = sandbox.stub(user, 'findAndValidateUser').callsFake(async (u, _pw) => {
 			return { username: u, role: { permission: { super_user: true } } };
 		});
-		update_stub = sandbox.stub(insert, 'update').callsFake(async (update_object) => {
+		update_stub = sandbox.stub(insert, 'update').callsFake(async (_update_object) => {
 			return { message: 'updated 1 of 1', update_hashes: ['1'], skipped_hashes: [] };
 		});
-		signalling_stub = sandbox.stub(signalling, 'signalUserChange').callsFake((obj) => {});
+		signalling_stub = sandbox.stub(signalling, 'signalUserChange').callsFake((_obj) => {});
 	});
 
 	afterEach(() => {
@@ -311,7 +311,7 @@ describe('test createTokens', () => {
 		assert.deepStrictEqual(error.message, "'password' is not allowed to be empty");
 
 		//test bad credentials
-		validate_user_stub.callsFake(async (u, pw) => {
+		validate_user_stub.callsFake(async (_u, _pw) => {
 			throw new Error('bad credentials');
 		});
 
@@ -324,7 +324,7 @@ describe('test createTokens', () => {
 		assert.deepStrictEqual(error.message, 'invalid credentials');
 
 		//test good credentials, no RSA keys
-		validate_user_stub.callsFake(async (u, pw) => ({ username: u }));
+		validate_user_stub.callsFake(async (u, _pw) => ({ username: u }));
 		try {
 			result = await token_auth.createTokens({ username: 'HDB_USER', password: 'pass' });
 		} catch (e) {
@@ -359,11 +359,11 @@ describe('test createTokens', () => {
 	});
 
 	it('test update failed', async () => {
-		update_stub.callsFake(async (update_object) => {
+		update_stub.callsFake(async (_update_object) => {
 			throw Error('update failed');
 		});
 
-		let rw_get_tokens = token_auth.__set__(
+		token_auth.__set__(
 			'getJWTRSAKeys',
 			async () => new JWTRSAKeys(PUBLIC_KEY_VALUE, PRIVATE_KEY_VALUE, PASSPHRASE_VALUE)
 		);
@@ -380,11 +380,11 @@ describe('test createTokens', () => {
 	});
 
 	it('test update skipped the record', async () => {
-		update_stub.callsFake(async (update_object) => {
+		update_stub.callsFake(async (_update_object) => {
 			return { message: 'updated 0 of 1', update_hashes: [], skipped_hashes: ['1'] };
 		});
 
-		let rw_get_tokens = token_auth.__set__(
+		token_auth.__set__(
 			'getJWTRSAKeys',
 			async () => new JWTRSAKeys(PUBLIC_KEY_VALUE, PRIVATE_KEY_VALUE, PASSPHRASE_VALUE)
 		);
@@ -416,12 +416,12 @@ describe('test validateOperationToken function', () => {
 			async () => new JWTRSAKeys(PUBLIC_KEY_VALUE, PRIVATE_KEY_VALUE, PASSPHRASE_VALUE)
 		);
 
-		let update_stub = sandbox.stub(insert, 'update').callsFake(async (update_object) => {
+		let update_stub = sandbox.stub(insert, 'update').callsFake(async (_update_object) => {
 			return { message: 'updated 1 of 1', update_hashes: ['1'], skipped_hashes: [] };
 		});
 
-		let signalling_stub = sandbox.stub(signalling, 'signalUserChange').callsFake((obj) => {});
-		validate_user_stub = sandbox.stub(user, 'findAndValidateUser').callsFake(async (u, pw) => ({ username: u }));
+		let signalling_stub = sandbox.stub(signalling, 'signalUserChange').callsFake((_obj) => {});
+		validate_user_stub = sandbox.stub(user, 'findAndValidateUser').callsFake(async (u, _pw) => ({ username: u }));
 
 		await user.setUsersWithRolesCache(
 			new Map([
@@ -499,13 +499,10 @@ describe('test validateOperationToken function', () => {
 	});
 
 	it('test non-existent user', async () => {
-		let error;
 		let user;
 		try {
 			user = await token_auth.validateOperationToken(non_user_tokens.operation_token);
-		} catch (e) {
-			error = e;
-		}
+		} catch {}
 
 		assert.deepStrictEqual(user, { username: 'non_user' });
 		assert(jwt_spy.callCount === 1);
@@ -550,7 +547,6 @@ describe('test validateOperationToken function', () => {
 
 describe('test validateRefreshToken function', () => {
 	let rw_get_tokens;
-	let rw_validate_user;
 	let jwt_spy;
 	let validate_user_spy;
 	let hdb_admin_tokens;
@@ -567,13 +563,13 @@ describe('test validateRefreshToken function', () => {
 			async () => new JWTRSAKeys(PUBLIC_KEY_VALUE, PRIVATE_KEY_VALUE, PASSPHRASE_VALUE)
 		);
 
-		let update_stub = sandbox.stub(insert, 'update').callsFake(async (update_object) => {
+		let update_stub = sandbox.stub(insert, 'update').callsFake(async (_update_object) => {
 			return { message: 'updated 1 of 1', update_hashes: ['1'], skipped_hashes: [] };
 		});
 
-		let signalling_stub = sandbox.stub(signalling, 'signalUserChange').callsFake((obj) => {});
+		let signalling_stub = sandbox.stub(signalling, 'signalUserChange').callsFake((_obj) => {});
 
-		const validate_user_stub = sandbox.stub(user, 'findAndValidateUser').callsFake(async (u, pw) => ({ username: u }));
+		const validate_user_stub = sandbox.stub(user, 'findAndValidateUser').callsFake(async (u, _pw) => ({ username: u }));
 
 		token_timeout = token_auth.__set__('REFRESH_TOKEN_TIMEOUT', '-1');
 		expired_user_tokens = await token_auth.createTokens({ username: 'EXPIRED', password: 'cool' });
@@ -723,13 +719,13 @@ describe('test refreshOperationToken function', () => {
 			async () => new JWTRSAKeys(PUBLIC_KEY_VALUE, PRIVATE_KEY_VALUE, PASSPHRASE_VALUE)
 		);
 
-		let update_stub = sandbox.stub(insert, 'update').callsFake(async (update_object) => {
+		let update_stub = sandbox.stub(insert, 'update').callsFake(async (_update_object) => {
 			return { message: 'updated 1 of 1', update_hashes: ['1'], skipped_hashes: [] };
 		});
 
-		let signalling_stub = sandbox.stub(signalling, 'signalUserChange').callsFake((obj) => {});
+		let signalling_stub = sandbox.stub(signalling, 'signalUserChange').callsFake((_obj) => {});
 
-		let validate_user_stub = sandbox.stub(user, 'findAndValidateUser').callsFake(async (u, pw) => ({ username: u }));
+		let validate_user_stub = sandbox.stub(user, 'findAndValidateUser').callsFake(async (u, _pw) => ({ username: u }));
 
 		hdb_admin_tokens = await token_auth.createTokens({ username: 'HDB_ADMIN', password: 'cool' });
 		old_user_tokens = await token_auth.createTokens({ username: 'old_user', password: 'notcool' });

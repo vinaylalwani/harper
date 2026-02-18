@@ -1,6 +1,5 @@
 'use strict';
 
-const fs = require('fs');
 const env = require('../../../utility/environment/environmentManager.js');
 env.initSync();
 const { CONFIG_PARAMS } = require('../../../utility/hdbTerms.ts');

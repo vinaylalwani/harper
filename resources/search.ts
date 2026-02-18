@@ -4,10 +4,10 @@ import { compareKeys, MAXIMUM_KEY } from 'ordered-binary';
 import { SKIP } from '@harperfast/extended-iterable';
 import { INVALIDATED, EVICTED } from './Table.ts';
 import type { DirectCondition, Id } from './ResourceInterface.ts';
-import { MultiPartId } from './Resource.ts';
 import { RequestTarget } from './RequestTarget.ts';
 import { lastMetadata } from './RecordEncoder.ts';
-import { RocksDatabase } from '@harperfast/rocksdb-js';
+import { recordAction } from './analytics/write';
+
 // these are ratios/percentages of overall table size
 const OPEN_RANGE_ESTIMATE = 0.3;
 const BETWEEN_ESTIMATE = 0.1;
@@ -340,6 +340,7 @@ export function searchByIndex(
 				: (entry) => {
 						if (entry.value == null && !(entry.metadataFlags & (INVALIDATED | EVICTED))) return SKIP;
 						Object.freeze(entry.value);
+						recordRead(entry);
 						return entry;
 					}
 		);
@@ -353,6 +354,7 @@ export function searchByIndex(
 					const { key, ...otherProps } = entry;
 					const loadedEntry = Table.primaryStore.getEntry(key);
 					Object.freeze(loadedEntry?.value);
+					recordRead(loadedEntry);
 					return { ...otherProps, ...loadedEntry };
 				}
 				return entry;
@@ -384,13 +386,18 @@ export function searchByIndex(
 	} else {
 		return Table.primaryStore
 			.getRange(reverse ? { end: true, transaction, reverse: true } : { start: true, transaction })
-			.map(function ({ key, value }) {
-				if (this.isSync) return value && filter(value) ? key : SKIP;
+			.map(function (entry) {
+				const { key, value } = entry;
+				if (this.isSync) {
+					recordRead(entry);
+					return value && filter(value) ? key : SKIP;
+				}
 				// for filter operations, we intentionally yield the event turn so that scanning queries
 				// do not hog resources
 				return new Promise((resolve, reject) =>
 					setImmediate(() => {
 						try {
+							recordRead(entry);
 							resolve(value && filter(value) ? key : SKIP);
 						} catch (error) {
 							reject(error);
@@ -398,6 +405,11 @@ export function searchByIndex(
 					})
 				);
 			});
+	}
+	function recordRead(entry) {
+		if ((Table.databaseName !== 'system' || Table.name === 'hdb_analytics') && entry?.value) {
+			recordAction(entry.size ?? 1, 'db-read', Table.name, null);
+		}
 	}
 }
 

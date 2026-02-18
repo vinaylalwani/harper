@@ -1,5 +1,3 @@
-import { readAuditEntry } from './auditStore.ts';
-
 export function add(record, property, action) {
 	const previousValue = record[property];
 	if (typeof previousValue === 'bigint') {
@@ -71,7 +69,7 @@ export function applyReverse(record, update, unknowns: Set<string>) {
 		}
 	}
 }
-const UNKNOWN = {};
+
 /**
  * Reconstruct the record state at a given timestamp by going back through the audit history and reversing any changes
  * @param currentEntry

@@ -5,7 +5,6 @@
 //testUtils.preTestPrep();
 const assert = require('assert');
 const op_func_caller = require('#js/utility/OperationFunctionCaller');
-const sinon = require('sinon');
 const { promisify } = require('util');
 
 class TestInputObject {
@@ -44,7 +43,7 @@ describe(`Test callOperationFunctionAsAwait`, function () {
 	});
 
 	it('Error in test function, expect exception & followup not run', async function () {
-		let test_func_exception = async function (input) {
+		let test_func_exception = async function (_input) {
 			throw new Error('This is bad!');
 		};
 		let test_input = new TestInputObject();
@@ -60,7 +59,7 @@ describe(`Test callOperationFunctionAsAwait`, function () {
 	});
 
 	it('Error in followup function, expect exception & was_run to be true', async function () {
-		let followup_func_exception = async function (input) {
+		let followup_func_exception = async function (_input) {
 			throw new Error('This is bad!');
 		};
 		let test_input = new TestInputObject();

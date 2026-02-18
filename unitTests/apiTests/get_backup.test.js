@@ -1,11 +1,10 @@
-const { callOperation, removeAllSchemas } = require('./utility');
-const { promisify } = require('util');
+const { callOperation } = require('./utility');
 const { join } = require('path');
 const { pipeline } = require('stream/promises');
 const { readMetaDb, databases } = require('#src/resources/databases');
-const { writeFileSync, mkdirpSync, createWriteStream } = require('fs-extra');
+const { mkdirpSync, createWriteStream } = require('fs-extra');
 const { assert, expect } = globalThis.chai || require('chai');
-const { openEnvironment } = require('#js/utility/lmdb/environmentUtility');
+
 const UNIT_TEST_DIR = __dirname;
 const ENV_DIR_NAME = 'envDir';
 
@@ -60,13 +59,13 @@ describe('test backup operation', () => {
 			records.push(record);
 		}
 		expect(records.length > 10).to.be.true;
-		let record_history = [];
+		let recordHistory = [];
 		for await (let entry of databases.data_restore.VariedProps.getHistory()) {
 			expect(entry.localTime > 1695130929324).to.be.true;
 			expect(entry.version > 1695130929324).to.be.true;
-			record_history.push(entry);
+			recordHistory.push(entry);
 		}
-		expect(records.length > 10).to.be.true;
+		expect(recordHistory.length > 10).to.be.true;
 	});
 
 	it('get backup of system database', async () => {

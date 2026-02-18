@@ -3,14 +3,11 @@
 const environmentUtil = require('./environmentUtility.js');
 const common = require('./commonUtility.js');
 const LMDB_ERRORS = require('../errors/commonErrors.js').LMDB_ERRORS_ENUM;
-const lmdbTerms = require('./terms.js');
 const log = require('../logging/harper_logger.js');
-const hdbUtils = require('../common_utils.js');
 // eslint-disable-next-line no-unused-vars
 const lmdb = require('lmdb');
 const DeleteRecordsResponseObject = require('./DeleteRecordsResponseObject.js');
 const hdbTerms = require('../hdbTerms.ts');
-const { OVERFLOW_MARKER, MAX_SEARCH_KEY_LENGTH } = lmdbTerms;
 const UPDATED_TIME_ATTRIBUTE_NAME = hdbTerms.TIME_STAMP_NAMES_ENUM.UPDATED_TIME;
 
 /**
@@ -84,7 +81,7 @@ async function deleteRecords(env, hash_attribute, ids, whenDeleted) {
 										dbi.remove(values[i], hashValue);
 									}
 								}
-							} catch (e) {
+							} catch {
 								log.warn(`cannot delete from attribute: ${attribute}, ${value}:${hashValue}`);
 							}
 						}

@@ -31,14 +31,13 @@ describe.skip('Test initializePaths module', () => {
 		},
 	};
 	let sandbox;
-	let get_hdb_base_path_stub;
 
 	before(() => {
 		init_paths.__set__('BASE_SCHEMA_PATH', undefined);
 		init_paths.__set__('SYSTEM_SCHEMA_PATH', undefined);
 		init_paths.__set__('TRANSACTION_STORE_PATH', undefined);
 		sandbox = sinon.createSandbox();
-		get_hdb_base_path_stub = sandbox.stub(env_mgr, 'getHdbBasePath').returns(test_base_path);
+		sandbox.stub(env_mgr, 'getHdbBasePath').returns(test_base_path);
 		env_mgr.setProperty(hdb_terms.CONFIG_PARAMS.STORAGE_PATH, undefined);
 		env_mgr.setProperty(hdb_terms.CONFIG_PARAMS.STORAGE_AUDIT_PATH, undefined);
 		env_mgr.setProperty(hdb_terms.CONFIG_PARAMS.DATABASES, test_schemas_config);
