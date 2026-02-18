@@ -1,9 +1,6 @@
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const { loadComponent, loadedPaths } = require('#src/components/componentLoader');
-const { Scope } = require('#js/components/Scope');
-const { server } = require('#js/server/Server');
-const { handleApplication } = require('#js/resources/jsResource');
 const { PACKAGE_ROOT } = require('#js/utility/packageUtils');
 
 describe('Global Variable Isolation in testJSWithDeps', function () {

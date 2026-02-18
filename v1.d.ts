@@ -1,11 +1,12 @@
 export { Resource } from './resources/Resource.ts';
 import { Resource as ResourceImport } from './resources/Resource.ts';
 export type {
-	Query,
 	Context,
+	Query,
+	RequestTargetOrId,
+	Session,
 	SourceContext,
 	SubscriptionRequest,
-	RequestTargetOrId,
 } from './resources/ResourceInterface.ts';
 export { ResourceInterface } from './resources/ResourceInterface.ts';
 export type { User } from './security/user.ts';

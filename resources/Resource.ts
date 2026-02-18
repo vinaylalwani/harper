@@ -14,13 +14,10 @@ import { DatabaseTransaction, type Transaction } from './DatabaseTransaction.ts'
 import { IterableEventQueue } from './IterableEventQueue.ts';
 import { _assignPackageExport } from '../globals.js';
 import { ClientError, AccessViolation } from '../utility/errors/hdbError.js';
-import { transaction } from './transaction.ts';
+import { transaction, contextStorage } from './transaction.ts';
 import { parseQuery } from './search.ts';
-import { AsyncLocalStorage } from 'async_hooks';
 import { RequestTarget } from './RequestTarget.ts';
-import logger from '../utility/logging/logger.js';
-
-export const contextStorage = new AsyncLocalStorage<Context>();
+import { when, promiseNormalize } from '../utility/when.ts';
 
 const EXTENSION_TYPES = {
 	json: 'application/json',
@@ -58,10 +55,10 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	 * The get methods are for directly getting a resource, and called for HTTP GET requests.
 	 */
 	static get = transactional(
-		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
+		function (resource: Resource, query: RequestTarget, _request: Context, _data: any) {
 			const result = resource.get?.(query);
 			// for the new API we always apply select in the instance method
-			if (resource.constructor.loadAsInstance === false) return result;
+			if (!resource.constructor.loadAsInstance) return result;
 			if (result?.then) return result.then(handleSelect);
 			return handleSelect(result);
 			function handleSelect(result) {
@@ -82,6 +79,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 			// allows context to reset/remove transaction after completion so it can be used in immediate mode:
 			letItLinger: true,
 			ensureLoaded: true, // load from source by default
+			hasContent: false,
 			async: true, // use async by default
 			method: 'get',
 		}
@@ -97,11 +95,13 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 				for (const element of data) {
 					const resourceClass = resource.constructor;
 					const id = element[resourceClass.primaryKey];
-					const elementResource = resourceClass.getResource(id, request, {
+					let target = new RequestTarget();
+					target.id = id;
+					const elementResource = resourceClass.getResource(target, request, {
 						async: true,
 					});
 					if (elementResource.then) results.push(elementResource.then((resource) => resource.put(element, request)));
-					else results.push(elementResource.put(element, request));
+					else results.push(elementResource.put(element, query));
 				}
 				return Promise.all(results);
 			}
@@ -115,7 +115,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	);
 
 	static patch = transactional(
-		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
+		function (resource: Resource, query: RequestTarget, _request: Context, data: any) {
 			// TODO: Allow array like put?
 			return resource.patch
 				? resource.constructor.loadAsInstance === false
@@ -127,7 +127,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	);
 
 	static delete = transactional(
-		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
+		function (resource: Resource, query: RequestTarget, _request: Context, _data: any) {
 			return resource.delete ? resource.delete(query) : missingMethod(resource, 'delete');
 		},
 		{ hasContent: false, type: 'delete', method: 'delete' }
@@ -190,14 +190,14 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 		});
 	}
 	static invalidate = transactional(
-		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
+		function (resource: Resource, query: RequestTarget, _request: Context, _data: any) {
 			return resource.invalidate ? resource.invalidate(query) : missingMethod(resource, 'delete');
 		},
 		{ hasContent: false, type: 'update', method: 'invalidate' }
 	);
 
 	static post = transactional(
-		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
+		function (resource: Resource, query: RequestTarget, _request: Context, data: any) {
 			if (resource.#id != null) resource.update?.(); // save any changes made during post
 			return resource.constructor.loadAsInstance === false ? resource.post(query, data) : resource.post(data, query);
 		},
@@ -205,14 +205,14 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	);
 
 	static update = transactional(
-		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
+		function (resource: Resource, query: RequestTarget, _request: Context, data: any) {
 			return resource.update(query, data);
 		},
-		{ hasContent: false, type: 'update', method: 'update' }
+		{ type: 'update', method: 'update' }
 	);
 
 	static connect = transactional(
-		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
+		function (resource: Resource, query: RequestTarget, _request: Context, data: any) {
 			return resource.connect
 				? resource.constructor.loadAsInstance === false
 					? resource.connect(query, data)
@@ -223,14 +223,14 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	);
 
 	static subscribe = transactional(
-		function (resource: Resource, query: RequestTarget, request: Context, data: any) {
+		function (resource: Resource, query: RequestTarget, _request: Context, _data: any) {
 			return resource.subscribe ? resource.subscribe(query) : missingMethod(resource, 'subscribe');
 		},
-		{ type: 'read', method: 'subscribe' }
+		{ type: 'read', method: 'subscribe', syncAllowed: true }
 	);
 
 	static publish = transactional(
-		function (resource: Resource, query: Map, request: Context, data: any) {
+		function (resource: Resource, query: Map, _request: Context, data: any) {
 			if (resource.#id != null) resource.update?.(); // save any changes made during publish
 			return resource.publish
 				? resource.constructor.loadAsInstance === false
@@ -251,11 +251,11 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 			}
 			return result;
 		},
-		{ type: 'read', method: 'search' }
+		{ type: 'read', method: 'search', hasContent: false, syncAllowed: true }
 	);
 
 	static query = transactional(
-		function (resource: Resource, query: Map, request: Context, data: any) {
+		function (resource: Resource, query: Map, _request: Context, data: any) {
 			return resource.search
 				? resource.constructor.loadAsInstance === false
 					? resource.search(query, data)
@@ -266,7 +266,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	);
 
 	static copy = transactional(
-		function (resource: Resource, query: Map, request: Context, data: any) {
+		function (resource: Resource, query: Map, _request: Context, data: any) {
 			return resource.copy
 				? resource.constructor.loadAsInstance === false
 					? resource.copy(query, data)
@@ -277,7 +277,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	);
 
 	static move = transactional(
-		function (resource: Resource, query: Map, request: Context, data: any) {
+		function (resource: Resource, query: Map, _request: Context, data: any) {
 			return resource.move
 				? resource.constructor.loadAsInstance === false
 					? resource.move(query, data)
@@ -348,8 +348,13 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	 * @param options
 	 * @returns
 	 */
-	static getResource(id: Id, request: Context | SourceContext, options?: any): Resource | Promise<Resource> {
+	static getResource(
+		target: RequestTarget,
+		request: Context | SourceContext,
+		options?: any
+	): Resource | Promise<Resource> {
 		let resource;
+		const id = target.id;
 		let context = request.getContext?.();
 		let isCollection;
 		if (typeof request.isCollection === 'boolean' && request.hasOwnProperty('isCollection'))
@@ -358,41 +363,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 		// if it is a collection and we have a collection class defined, use it
 		const constructor = (isCollection && this.Collection) || this;
 		if (!context) context = context === undefined ? request : {};
-		if (context.transaction) {
-			// if this is part of a transaction, we use a map of existing loaded instances
-			// so that if a resource is already requested by id in this transaction, we can
-			// reuse that instance and preserve and changes/updates in that instance.
-			let resourceCache;
-			if (context.resourceCache) {
-				resourceCache = context.resourceCache;
-			} else resourceCache = context.resourceCache = [];
-			// we have two different cache formats, generally we want to use a simple array for small transactions, but can transition to a Map for larger operations
-			if (resourceCache.asMap) {
-				// we use the Map structure for larger transactions that require a larger cache (constant time lookups)
-				let cacheForId = resourceCache.asMap.get(id);
-				resource = cacheForId?.find((resource) => resource.constructor === constructor);
-				if (resource) return resource;
-				if (!cacheForId) resourceCache.asMap.set(id, (cacheForId = []));
-				cacheForId.push((resource = new constructor(id, context)));
-			} else {
-				// for small caches, this is probably fastest
-				resource = resourceCache.find((resource) => resource.#id === id && resource.constructor === constructor);
-				if (resource) return resource;
-				resourceCache.push((resource = new constructor(id, context)));
-				if (resourceCache.length > 10) {
-					// if it gets too big, upgrade to a Map
-					const cacheMap = new Map();
-					for (const resource of resourceCache) {
-						const id = resource.#id;
-						const cacheForId = cacheMap.get(id);
-						if (cacheForId) cacheForId.push(resource);
-						else cacheMap.set(id, [resource]);
-					}
-					context.resourceCache.length = 0; // clear out all the entries since we are using the map now
-					context.resourceCache.asMap = cacheMap;
-				}
-			}
-		} else resource = new constructor(id, context); // outside of a transaction, just create an instance
+		resource = new constructor(id, context); // outside of a transaction, just create an instance
 		if (isCollection) resource.#isCollection = true;
 		return resource;
 	}
@@ -402,6 +373,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	 * This default implementation simply provides a streaming iterator that does not deliver any notifications
 	 * but implementors can call send with
 	 */
+	// eslint-disable-next-line no-unused-vars
 	subscribe(request: SubscriptionRequest): AsyncIterable<Record> {
 		return new IterableEventQueue();
 	}
@@ -417,15 +389,19 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	}
 
 	// Default permissions (super user only accesss):
+	// eslint-disable-next-line no-unused-vars
 	allowRead(user: User, target: RequestTarget, context: Context): boolean | Promise<boolean> {
 		return user?.role.permission.super_user;
 	}
+	// eslint-disable-next-line no-unused-vars
 	allowUpdate(user: User, record: Promise<Record & RecordObject>, context: Context): boolean | Promise<boolean> {
 		return user?.role.permission.super_user;
 	}
+	// eslint-disable-next-line no-unused-vars
 	allowCreate(user: User, record: Promise<Record & RecordObject>, context: Context): boolean | Promise<boolean> {
 		return user?.role.permission.super_user;
 	}
+	// eslint-disable-next-line no-unused-vars
 	allowDelete(user: User, target: RequestTarget, context: Context): boolean | Promise<boolean> {
 		return user?.role.permission.super_user;
 	}
@@ -490,53 +466,21 @@ export function snakeCase(camelCase: string) {
 	);
 }
 
-let idWasCollection;
-function pathToId(path, Resource) {
-	idWasCollection = false;
-	if (path === '') return null;
-	path = path.slice(1);
-	if (Resource.splitSegments) {
-		if (path.indexOf('/') === -1) {
-			if (path === '') {
-				idWasCollection = true;
-				return null;
-			}
-			return Resource.coerceId(decodeURIComponent(path));
-		}
-		const stringIds = path.split('/');
-		const ids = new MultiPartId();
-		for (let i = 0; i < stringIds.length; i++) {
-			const idPart = stringIds[i];
-			if (!idPart && i === stringIds.length - 1) {
-				idWasCollection = true;
-				break;
-			}
-			ids[i] = Resource.coerceId(decodeURIComponent(idPart));
-		}
-		return ids;
-	} else if (path === '') {
-		idWasCollection = true;
-		return null;
-	} else if (path[path.length - 1] === '/') {
-		idWasCollection = true;
-	}
-	return Resource.coerceId(decodeURIComponent(path));
-}
-/**
- * An array for ids that toString's back to slash-delimited string
- */
-export class MultiPartId extends Array {
-	toString() {
-		return this.join('/');
-	}
-}
 /**
  * This is responsible for arranging arguments in the main static methods and creating the appropriate context and default transaction wrapping
  * @param action
  * @param options
  * @returns
  */
-function transactional(action, options) {
+function transactional(
+	action: (resource: ResourceInterface, query: RequestTarget, context: Context, data: any) => any,
+	options: {
+		hasContent: boolean;
+		type: 'read' | 'update' | 'create' | 'delete';
+		async?: boolean;
+		ensureLoaded?: boolean;
+	}
+) {
 	applyContext.reliesOnPrototype = true;
 	const hasContent = options.hasContent;
 	return applyContext;
@@ -584,13 +528,15 @@ function transactional(action, options) {
 				// (id, data, context), this a method that doesn't normally have a body/data, but with the three arguments, we have explicit data
 				data = dataOrContext;
 				context = context.getContext?.() || context;
-			} else {
-				// (id, context), preferred form used for methods without a body
+			} else if (hasContent === false) {
+				// (id, context), preferred form used for methods that are explicitly without a body
 				context = dataOrContext.getContext?.() || dataOrContext;
+			} else if (dataOrContext.transaction || dataOrContext.getContext) {
+				// or if it looks like a context
+				context = dataOrContext.getContext?.() || dataOrContext;
+			} else {
+				data = dataOrContext;
 			}
-		} else if (idOrQuery && typeof idOrQuery === 'object' && !Array.isArray(idOrQuery)) {
-			// (request) a structured id/query, which we will use as the context
-			context = idOrQuery;
 		}
 		if (id === undefined) {
 			if (typeof idOrQuery === 'object' && idOrQuery) {
@@ -664,42 +610,46 @@ function transactional(action, options) {
 		if (query.ensureLoaded != null || query.async || isCollection) {
 			resourceOptions = { ...options };
 			if (query.ensureLoaded != null) resourceOptions.ensureLoaded = query.ensureLoaded;
-			if (query.async) resourceOptions.async = query.async;
+			if (query.syncAllowed) resourceOptions.syncAllowed = query.syncAllowed;
 			if (isCollection) resourceOptions.isCollection = true;
 		} else resourceOptions = options;
 		const loadAsInstance = this.loadAsInstance;
-		let runAction = authorizeActionOnResource;
-		if (loadAsInstance === false ? !this.explicitContext : this.explicitContext === false) {
-			// if we are using the newer resource API, we default to doing ALS context tracking, which is also
-			// necessary for accessing relationship properties on the direct frozen records
-			runAction = (resource) => contextStorage.run(context, () => authorizeActionOnResource(resource));
-		}
 		if (context?.transaction) {
 			// we are already in a transaction, proceed
-			const resource = this.getResource(id, context, resourceOptions);
-			return resource.then ? resource.then(runAction) : runAction(resource);
+			const resource = this.getResource(query, context, resourceOptions);
+			return resource.then
+				? resource.then(authorizeActionOnResource)
+				: promiseNormalize(authorizeActionOnResource(resource), resourceOptions);
 		} else {
 			// start a transaction
-			return transaction(
-				context,
-				() => {
+			return promiseNormalize(
+				transaction(context, () => {
 					// record what transaction we are starting from, so that if it times out, we can have an indication of the cause
 					context.transaction.startedFrom = {
 						resourceName: this.name,
 						method: options.method,
 					};
-					const resource = this.getResource(id, context, resourceOptions);
-					return resource.then ? resource.then(runAction) : runAction(resource);
-				},
+					const resource = this.getResource(query, context, resourceOptions);
+					return resource.then ? resource.then(authorizeActionOnResource) : authorizeActionOnResource(resource);
+				}),
 				resourceOptions
 			);
 		}
 		function authorizeActionOnResource(resource: ResourceInterface) {
+			let checkPermission = false;
+			if (query.checkPermission) {
+				checkPermission = true;
+				// authorization has been requested, but only do it for this entry call
+			}
 			if (context.authorize) {
+				checkPermission = true;
 				// authorization has been requested, but only do it for this entry call
 				context.authorize = false;
+				query.checkPermission = true;
+			}
+			if (checkPermission) {
 				if (loadAsInstance !== false) {
-					// do permission checks, with legacy allow methods
+					// do permission checks, with allow methods
 					const allowed =
 						options.type === 'read'
 							? resource.allowRead(context.user, query, context)
@@ -712,20 +662,24 @@ function transactional(action, options) {
 									: resource.allowDelete(context.user, query, context);
 					if (allowed?.then) {
 						return allowed.then((allowed) => {
+							query.checkPermission = false;
 							if (!allowed) {
 								throw new AccessViolation(context.user);
 							}
-							if (typeof data?.then === 'function') return data.then((data) => action(resource, query, context, data));
-							return action(resource, query, context, data);
+							return when(data, (data) => {
+								return action(resource, query, context, data);
+							});
 						});
 					}
+					query.checkPermission = false;
 					if (!allowed) {
 						throw new AccessViolation(context.user);
 					}
 				}
 			}
-			if (typeof data?.then === 'function') return data.then((data) => action(resource, query, context, data));
-			return action(resource, query, context, data);
+			return when(data, (data) => {
+				return action(resource, query, context, data);
+			});
 		}
 	}
 }

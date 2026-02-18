@@ -27,6 +27,9 @@ export function onStorageReclamation(
 ) {
 	if (skipThreadCheck || getWorkerIndex() === getWorkerCount() - 1) {
 		// only run on one thread (last one)
+		if (!path) {
+			throw new Error('Storage reclamation path cannot be empty');
+		}
 		if (!reclamationHandlers.has(path)) {
 			reclamationHandlers.set(path, []);
 		}
@@ -40,7 +43,7 @@ const defaultGetAvailableSpaceRatio = async (path: string): Promise<number> => {
 		const fsStats = await statfs(path);
 		return fsStats.bavail / fsStats.blocks;
 	} else {
-		return new Promise((resolve, reject) => {
+		return new Promise((resolve) => {
 			import('hdd-space').then((hddSpace) => {
 				hddSpace.default((space: any) => {
 					for (const volume of space.parts) {

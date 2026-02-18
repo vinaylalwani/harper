@@ -1,38 +1,55 @@
-import type { Request } from '../server/serverHelpers/Request.ts';
+import type { Context } from './ResourceInterface.ts';
 import { _assignPackageExport } from '../globals.js';
-import { DatabaseTransaction, TRANSACTION_STATE, type Transaction } from './DatabaseTransaction.ts';
+import { DatabaseTransaction, type Transaction, TRANSACTION_STATE } from './DatabaseTransaction.ts';
+import { AsyncLocalStorage } from 'async_hooks';
 
-export function transaction<T>(context: Request, callback: (transaction: Transaction) => T, options?: any): T;
+export function transaction<T>(context: Context, callback: (transaction: Transaction) => T): T;
 export function transaction<T>(callback: (transaction: Transaction) => T): T;
+export const contextStorage = new AsyncLocalStorage<Context>();
+
 /**
  * Start and run a new transaction. This can be called with a request to hold the transaction, or a new request object will be created
- * @param context
+ * @param ctx
  * @param callback
  * @returns
  */
 export function transaction<T>(
-	context: Request | ((transaction: Transaction) => T),
-	callback?: (transaction: Transaction) => T,
-	options?: any
+	ctx: Context | ((transaction: Transaction) => T),
+	callback?: (transaction: Transaction) => T
 ): T {
-	if (!callback) {
+	let context: Context;
+	let asyncStorageContext;
+	if (typeof ctx === 'function') {
 		// optional first argument, handle case of no request
-		callback = context;
-		context = {};
-	} else if (!context)
-		context = {}; // request argument included, but null or undefined, so create anew one
-	else if (context?.transaction?.open === TRANSACTION_STATE.OPEN && typeof callback === 'function')
+		callback = ctx;
+		asyncStorageContext = contextStorage.getStore();
+		context = asyncStorageContext ?? {};
+	} else {
+		// request argument included, but null or undefined, so maybe create a new one
+		context = ctx ?? (asyncStorageContext = contextStorage.getStore()) ?? {};
+	}
+
+	if (typeof callback !== 'function') {
+		throw new TypeError('Callback function must be provided to transaction');
+	}
+	if (context?.transaction?.open === TRANSACTION_STATE.OPEN && typeof callback === 'function') {
 		return callback(context.transaction); // nothing to be done, already in open transaction
-	if (typeof callback !== 'function') throw new Error('Callback function must be provided to transaction');
-	const transaction = (context.transaction = new DatabaseTransaction());
+	}
+
+	const transaction = new DatabaseTransaction();
+	context.transaction = transaction;
 	if (context.timestamp) transaction.timestamp = context.timestamp;
 	if (context.replicatedConfirmation) transaction.replicatedConfirmation = context.replicatedConfirmation;
 	transaction.setContext(context);
+
 	// create a resource cache so that multiple requests to the same resource return the same resource
 	if (!context.resourceCache) context.resourceCache = [];
 	let result;
 	try {
-		result = callback(transaction);
+		result =
+			context.isExplicit || asyncStorageContext
+				? callback(transaction)
+				: contextStorage.run(context, () => callback(transaction));
 		if (result?.then) {
 			return result.then(onComplete, onError);
 		}
@@ -53,7 +70,7 @@ export function transaction<T>(
 	}
 	// if the transaction function throws an error, we abort
 	function onError(error) {
-		transaction.abort({});
+		transaction.abort();
 		throw error;
 	}
 }

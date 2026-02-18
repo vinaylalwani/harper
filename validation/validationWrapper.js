@@ -15,8 +15,9 @@ const validate = require('validate.js');
 
 //This validator is added here b/c we are still on version 0.11.1 that does not include this build in functionality.  When
 // we do update, we can remove.  The reason we have not is related to a breaking change on the "presence" validator rule
-// that will require a lot of fixes on our.  More here - https://validatejs.org/#changelog-0-12-0
-validate.validators.type = function (value, options, key, attributes) {
+// that will require a lot of fixes on our end.  More here - https://validatejs.org/#changelog-0-12-0
+// TODO: We are on version 0.13.x+ now, so we should be able to get rid of this. - WSM 2026-01-14
+validate.validators.type = function (value, options, _key, _attributes) {
 	// allow empty values by default (needs to be checked by "presence" check)
 	if (value === null || typeof value === 'undefined') {
 		return null;

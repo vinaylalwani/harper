@@ -7,7 +7,6 @@ const sinon = require('sinon');
 const auth = rewire('#js/security/fastifyAuth');
 const token_auth = rewire('#js/security/tokenAuthentication');
 const password_function = require('#src/utility/password');
-const hdb_error = require('#js/utility/errors/hdbError').handleHDBError;
 const user = require('#src/security/user');
 const insert = require('#js/dataLayer/insert');
 const signalling = require('#js/utility/signalling');
@@ -171,14 +170,14 @@ describe('Test authorize function', function () {
 	});
 
 	it('Cannot complete request Basic authorization: User not found ', function (done) {
-		auth.authorize(invalid_basic_user, null, function (err, user) {
+		auth.authorize(invalid_basic_user, null, function (err) {
 			assert.equal(err.message, 'Login failed', "Cannot complete request: User 'nonook' not found");
 			done();
 		});
 	});
 
 	it('Cannot complete request Basic authorization: User is inactive', function (done) {
-		auth.authorize(unactive_basic_request, null, function (err, user) {
+		auth.authorize(unactive_basic_request, null, function (err) {
 			assert.equal(
 				err.message,
 				'Cannot complete request: User is inactive',
@@ -189,7 +188,7 @@ describe('Test authorize function', function () {
 	});
 
 	it('Cannot complete request Basic authorization:  Invalid password', function (done) {
-		auth.authorize(invalid_password_basic_request, null, function (err, user) {
+		auth.authorize(invalid_password_basic_request, null, function (err) {
 			assert.equal(err.message, 'Login failed');
 			done();
 		});
@@ -206,14 +205,14 @@ describe('Test authorize function', function () {
 
 	//other authorization
 	it('Cannot complete request Other authorization: User not found ', function (done) {
-		auth.authorize(invalid_other_user, null, function (err, user) {
+		auth.authorize(invalid_other_user, null, function (err) {
 			assert.equal(err.message, 'Login failed', "Cannot complete request: User 'nouser' not found");
 			done();
 		});
 	});
 
 	it('Cannot complete request Other authorization: User is inactive', function (done) {
-		auth.authorize(unactive_other_request, null, function (err, user) {
+		auth.authorize(unactive_other_request, null, function (err) {
 			assert.equal(
 				err.message,
 				'Cannot complete request: User is inactive',
@@ -224,7 +223,7 @@ describe('Test authorize function', function () {
 	});
 
 	it('Cannot complete request Other authorization:  Invalid password', function (done) {
-		auth.authorize(invalid_password_other_request, null, function (err, user) {
+		auth.authorize(invalid_password_other_request, null, function (err) {
 			assert.equal(err.message, 'Login failed');
 			done();
 		});
@@ -243,7 +242,6 @@ describe('Test authorize function', function () {
 describe('test authorize function for JWT', () => {
 	let sandbox;
 	let rw_get_tokens;
-	let rw_validate_user;
 	let rw_token_auth;
 	let hdb_admin_tokens;
 	let old_user_tokens;
@@ -258,11 +256,11 @@ describe('test authorize function for JWT', () => {
 			return { publicKey: PUBLIC_KEY_VALUE, privateKey: PRIVATE_KEY_VALUE, passphrase: PASSPHRASE_VALUE };
 		});
 
-		sandbox.stub(user, 'findAndValidateUser').callsFake(async (u, pw) => ({ username: u }));
-		sandbox.stub(insert, 'update').callsFake(async (update_object) => {
+		sandbox.stub(user, 'findAndValidateUser').callsFake(async (u, _pw) => ({ username: u }));
+		sandbox.stub(insert, 'update').callsFake(async (_update_object) => {
 			return { message: 'updated 1 of 1', update_hashes: ['1'], skipped_hashes: [] };
 		});
-		sandbox.stub(signalling, 'signalUserChange').callsFake((obj) => {});
+		sandbox.stub(signalling, 'signalUserChange').callsFake((_obj) => {});
 
 		op_token_timeout = token_auth.__set__('OPERATION_TOKEN_TIMEOUT', '-1');
 		r_token_timeout = token_auth.__set__('REFRESH_TOKEN_TIMEOUT', '-1');
@@ -671,14 +669,14 @@ let permission_object_no_role = {
 
 describe('Test checkPermissions function', function () {
 	it('validate permission object, should get error when object is incomplete ', function (done) {
-		auth.checkPermissions(check_permission_empty_object, function (err, result) {
+		auth.checkPermissions(check_permission_empty_object, function (err) {
 			assert.equal(err.message, "Operation can't be blank", 'no error');
 			done();
 		});
 	});
 
 	it('no permission role in object should error ', function (done) {
-		auth.checkPermissions(permission_object_no_role, function (err, result) {
+		auth.checkPermissions(permission_object_no_role, function (err) {
 			assert.equal(err, 'Invalid role', 'Invalid role');
 			done();
 		});

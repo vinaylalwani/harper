@@ -1436,7 +1436,7 @@ describe('3. SQL Tests', () => {
 			.send({ operation: 'sql', sql: 'select * from dev.books WHERE id NOT BETWEEN 1 AND 3 ORDER BY id' })
 			.expect((r) => {
 				assert.equal(r.body.length, 47, r.text);
-				r.body.forEach((row, i) => {
+				r.body.forEach((row) => {
 					assert.ok(row.id > 3, r.text);
 				});
 			})

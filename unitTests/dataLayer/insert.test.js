@@ -225,13 +225,6 @@ describe('Test insert module', () => {
 		update_object_test.operation = 'update';
 		let bridge_update_stub = sandbox.stub();
 
-		const bridge_update_resp_test = {
-			written_hashes: ['123d2', '312312'],
-			skipped_hashes: ['123fd2'],
-			new_attributes: ['height', 'age'],
-			txn_time: 12345,
-		};
-
 		before(() => {
 			insert_rw.__set__('harperBridge', { updateRecords: bridge_update_stub });
 		});

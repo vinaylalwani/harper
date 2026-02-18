@@ -8,10 +8,9 @@ const installValidator = require('#js/validation/installValidator');
 
 describe('Test installValidator module', () => {
 	const sandbox = sinon.createSandbox();
-	let exists_sync_stub;
 
 	before(() => {
-		exists_sync_stub = sandbox.stub(fs, 'existsSync').returns(true);
+		sandbox.stub(fs, 'existsSync').returns(true);
 	});
 
 	after(() => {

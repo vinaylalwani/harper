@@ -144,15 +144,7 @@ export class ResourceBridge extends LMDBBridge {
 			const deleteRecord = (key, record, version): Promise<void> => {
 				record = { ...record };
 				delete record[property];
-				return Table.primaryStore
-					.ifVersion(key, version, () => Table.primaryStore.put(key, record, version))
-					.then((success) => {
-						if (!success) {
-							// try again with the latest record
-							const { value: record, version } = Table.primaryStore.getEntry(key);
-							return deleteRecord(key, record, version);
-						}
-					});
+				return Table.primaryStore.put(key, record, version);
 			};
 			for (const { key, value: record, version } of Table.primaryStore.getRange({ start: true, versions: true })) {
 				resolution = deleteRecord(key, record, version);
@@ -193,7 +185,7 @@ export class ResourceBridge extends LMDBBridge {
 	}
 
 	async upsertRecords(upsertObj) {
-		const { schemaTable, attributes } = insertUpdateValidate(upsertObj);
+		const { attributes } = insertUpdateValidate(upsertObj);
 
 		let new_attributes;
 		const Table = getDatabases()[upsertObj.schema][upsertObj.table];
@@ -252,13 +244,11 @@ export class ResourceBridge extends LMDBBridge {
 						}
 					}
 				}
-				if (existingRecord) {
-					for (const key in existingRecord) {
-						// if the record is missing any properties, fill them in from the existing record
-						if (!Object.prototype.hasOwnProperty.call(record, key)) record[key] = existingRecord[key];
-					}
-				}
-				await (id == undefined ? Table.create(record, context) : Table.put(record, context));
+				await (id == undefined
+					? Table.create(record, context)
+					: existingRecord
+						? Table.patch(record, context)
+						: Table.put(record, context));
 				keys.push(record[Table.primaryKey]);
 			}
 			return {
@@ -459,7 +449,7 @@ export class ResourceBridge extends LMDBBridge {
 	}
 
 	resetReadTxn(schema, table) {
-		getTable({ schema, table })?.primaryStore.resetReadTxn();
+		getTable({ schema, table })?.primaryStore.resetReadTxn?.();
 	}
 
 	async deleteAuditLogsBefore(deleteObj) {
@@ -575,6 +565,7 @@ function getRecords(searchObject, returnKeyValue?) {
 						done: true,
 					};
 				},
+				// eslint-disable-next-line no-unused-vars
 				throw(error) {
 					finishedIteration();
 					return {

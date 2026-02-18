@@ -44,7 +44,7 @@ describe('harperConfigEnvVars - Edge Cases', function () {
 		try {
 			fs.removeSync(testRoot);
 			// eslint-disable-next-line sonarjs/no-ignored-exceptions
-		} catch (err) {
+		} catch {
 			// Ignore cleanup errors
 		}
 	});

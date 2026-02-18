@@ -7,9 +7,10 @@ import { convertToMS } from '../utility/common_utils.js';
 import { PREVIOUS_TIMESTAMP_PLACEHOLDER, LAST_TIMESTAMP_PLACEHOLDER } from './RecordEncoder.ts';
 import * as harperLogger from '../utility/logging/harper_logger.js';
 import { getRecordAtTime } from './crdt.ts';
-import { isMainThread } from 'worker_threads';
-import { decodeFromDatabase, deleteBlobsInObject } from './blob.ts';
+import { decodeFromDatabase } from './blob.ts';
 import { onStorageReclamation } from '../server/storageReclamation.ts';
+import { RocksDatabase } from '@harperfast/rocksdb-js';
+import { RocksTransactionLogStore } from './RocksTransactionLogStore.ts';
 
 /**
  * This module is responsible for the binary representation of audit records in an efficient form.
@@ -30,8 +31,28 @@ import { onStorageReclamation } from '../server/storageReclamation.ts';
  */
 initSync();
 
+export type AuditRecord = {
+	version?: number;
+	localTime?: number; // only to be used by LMDB (from the key)
+	type: string;
+	encodedRecord: Buffer;
+	extendedType: number;
+	residencyId: number;
+	previousResidencyId: number;
+	expiresAt: Date | null;
+	originatingOperation: string;
+	tableId: number;
+	recordId: number;
+	previousVersion: number;
+	user?: string;
+	nodeId?: number;
+	previousNodeId?: number;
+	endTxn?: boolean;
+	structureVersion?: number;
+};
+
 const ENTRY_HEADER = Buffer.alloc(2816); // this is sized to be large enough for the maximum key size (1976) plus large usernames. We may want to consider some limits on usernames to ensure this all fits
-const ENTRY_DATAVIEW = new DataView(ENTRY_HEADER.buffer, ENTRY_HEADER.byteOffset, 2816);
+export const ENTRY_DATAVIEW = new DataView(ENTRY_HEADER.buffer, ENTRY_HEADER.byteOffset, 2816);
 export const transactionKeyEncoder = {
 	writeKey(key, buffer, position) {
 		if (key === LAST_TIMESTAMP_PLACEHOLDER) {
@@ -58,26 +79,38 @@ export const transactionKeyEncoder = {
 	},
 };
 export const AUDIT_STORE_OPTIONS = {
-	encoding: 'binary',
+	needsStableBuffer: true,
+	encoder: {
+		encode: (auditRecord: AuditRecord) =>
+			auditRecord && (auditRecord instanceof Uint8Array ? auditRecord : createAuditEntry(auditRecord)),
+		decode: (encoding: Buffer) => readAuditEntry(encoding),
+	},
 	keyEncoder: transactionKeyEncoder,
 };
 
-let auditRetention = convertToMS(envGet(CONFIG_PARAMS.LOGGING_AUDITRETENTION)) || 86400 * 3;
+export let auditRetention = convertToMS(envGet(CONFIG_PARAMS.LOGGING_AUDITRETENTION)) || 86400 * 1000;
 const MAX_DELETES_PER_CLEANUP = 1000;
 const FLOAT_TARGET = new Float64Array(1);
 const FLOAT_BUFFER = new Uint8Array(FLOAT_TARGET.buffer);
 let DEFAULT_AUDIT_CLEANUP_DELAY = 10000; // default delay of 10 seconds
 let timestampErrored = false;
 export function openAuditStore(rootStore) {
-	let auditStore = (rootStore.auditStore = rootStore.openDB(AUDIT_STORE_NAME, {
-		create: false,
-		...AUDIT_STORE_OPTIONS,
-	}));
-	if (!auditStore) {
-		// this means we are creating a new audit store. Initialize with the last removed timestamp (we don't want to put this in legacy audit logs since we don't know if they have had deletions or not).
-		auditStore = rootStore.auditStore = rootStore.openDB(AUDIT_STORE_NAME, AUDIT_STORE_OPTIONS);
-		updateLastRemoved(auditStore, 1);
+	let auditStore;
+	if (rootStore instanceof RocksDatabase) {
+		auditStore = new RocksTransactionLogStore(rootStore);
+		auditStore.env = {};
+	} else {
+		auditStore = rootStore.openDB(AUDIT_STORE_NAME, {
+			create: false,
+			...AUDIT_STORE_OPTIONS,
+		});
+		if (!auditStore) {
+			// this means we are creating a new audit store. Initialize with the last removed timestamp (we don't want to put this in legacy audit logs since we don't know if they have had deletions or not).
+			auditStore = rootStore.openDB(AUDIT_STORE_NAME, AUDIT_STORE_OPTIONS);
+			updateLastRemoved(auditStore, 1);
+		}
 	}
+	rootStore.auditStore = auditStore;
 	auditStore.rootStore = rootStore;
 	auditStore.tableStores = [];
 	const deleteCallbacks = [];
@@ -95,7 +128,7 @@ export function openAuditStore(rootStore) {
 	let lastCleanupResolution: Promise<void>;
 	let cleanupPriority = 0;
 	let auditCleanupDelay = DEFAULT_AUDIT_CLEANUP_DELAY;
-	onStorageReclamation(auditStore.env.path, (priority) => {
+	onStorageReclamation(rootStore.path, (priority) => {
 		cleanupPriority = priority; // update the priority
 		if (priority) {
 			// and if we have a priority, schedule cleanup soon
@@ -103,6 +136,7 @@ export function openAuditStore(rootStore) {
 		}
 	});
 	function scheduleAuditCleanup(newCleanupDelay?: number): Promise<void> {
+		if (auditStore instanceof RocksTransactionLogStore) return; // transaction logs are simply deleted with rocksdb
 		if (newCleanupDelay) auditCleanupDelay = newCleanupDelay;
 		clearTimeout(pendingCleanup);
 		const resolution = new Promise<void>((resolve) => {
@@ -170,30 +204,10 @@ export function openAuditStore(rootStore) {
 	return auditStore;
 }
 
-export function removeAuditEntry(auditStore: any, key: number, value: any): Promise<void> {
-	const type = readAction(value);
-	let auditRecord;
-	if (type & HAS_BLOBS) {
-		// if it has blobs, and isn't in use from the main record, we need to delete them as well
-		auditRecord = readAuditEntry(value);
-		const primaryStore = auditStore.tableStores[auditRecord.tableId];
-		// if the table has been deleted, this might not be there
-		if (primaryStore) {
-			const entry =
-				auditRecord.type === 'message'
-					? null // if the audit record is a message, then the record won't contain any of the same referenced data, so we should always remove everything
-					: primaryStore?.getEntry(auditRecord.recordId); // otherwise, we need to check if the record is still in use
-			if (!entry || entry.version !== auditRecord.version || !entry.value) {
-				// if the versions don't match or the record has been removed/null-ed, then this should be the only/last reference to any blob
-				decodeFromDatabase(() => deleteBlobsInObject(auditRecord.getValue(primaryStore)), primaryStore.rootStore);
-			}
-		}
-	}
-
-	if ((type & 15) === DELETE) {
+export function removeAuditEntry(auditStore: any, key: number, auditRecord: AuditRecord): Promise<void> {
+	if (auditRecord.type === 'delete') {
 		// if this is a delete, we remove the delete entry from the primary table
 		// at the same time so the audit table the primary table are in sync, assuming the entry matches this audit record version
-		auditRecord = auditRecord || readAuditEntry(value);
 		const tableId = auditRecord.tableId;
 		const primaryStore = auditStore.tableStores[auditRecord.tableId];
 		if (primaryStore?.getEntry(auditRecord.recordId)?.version === auditRecord.version)
@@ -227,12 +241,11 @@ const MESSAGE = 3;
 const INVALIDATE = 4;
 const PATCH = 5;
 const RELOCATE = 6;
+const STRUCTURES = 7;
 export const ACTION_32_BIT = 14;
 export const ACTION_64_BIT = 15;
 /** Used to indicate we have received a remote local time update */
 export const REMOTE_SEQUENCE_UPDATE = 11;
-const HAS_PREVIOUS_VERSION = 64;
-const HAS_EXTENDED_TYPE = 128;
 export const HAS_CURRENT_RESIDENCY_ID = 512;
 export const HAS_PREVIOUS_RESIDENCY_ID = 1024;
 export const HAS_ORIGINATING_OPERATION = 2048;
@@ -251,6 +264,10 @@ const EVENT_TYPES = {
 	[PATCH]: 'patch',
 	relocate: RELOCATE,
 	[RELOCATE]: 'relocate',
+	structures: STRUCTURES,
+	[STRUCTURES]: 'structures',
+	remoteSequenceUpdate: REMOTE_SEQUENCE_UPDATE,
+	[REMOTE_SEQUENCE_UPDATE]: 'remoteSequenceUpdate',
 };
 const ORIGINATING_OPERATIONS = {
 	insert: 1,
@@ -266,39 +283,40 @@ const ORIGINATING_OPERATIONS = {
  * @param txnTime
  * @param tableId
  * @param recordId
- * @param previousLocalTime
+ * @param previousVersion
  * @param nodeId
- * @param username
+ * @param user
  * @param type
  * @param encodedRecord
  * @param extendedType
  * @param residencyId
  * @param previousResidencyId
  */
-export function createAuditEntry(
-	txnTime,
-	tableId,
-	recordId,
-	previousLocalTime,
-	nodeId,
-	username,
-	type,
-	encodedRecord,
-	extendedType,
-	residencyId,
-	previousResidencyId,
-	expiresAt,
-	originatingOperation?: string
-) {
+export function createAuditEntry(auditRecord: AuditRecord, start = 0) {
+	const {
+		version,
+		tableId,
+		recordId,
+		previousVersion,
+		nodeId,
+		user,
+		type,
+		encodedRecord,
+		extendedType,
+		residencyId,
+		previousResidencyId,
+		expiresAt,
+		originatingOperation,
+	} = auditRecord;
 	const action = EVENT_TYPES[type];
 	if (!action) {
 		throw new Error(`Invalid audit entry type ${type}`);
 	}
-	let position = 1;
-	if (previousLocalTime) {
-		if (previousLocalTime > 1) ENTRY_DATAVIEW.setFloat64(0, previousLocalTime);
-		else ENTRY_HEADER.set(PREVIOUS_TIMESTAMP_PLACEHOLDER);
-		position = 9;
+	let position = start + 1;
+	if (previousVersion) {
+		if (previousVersion > 1) ENTRY_DATAVIEW.setFloat64(start, previousVersion);
+		else ENTRY_HEADER.set(PREVIOUS_TIMESTAMP_PLACEHOLDER, start);
+		position = start + 9;
 	}
 	if (extendedType) {
 		if (extendedType & 0xff) {
@@ -310,7 +328,9 @@ export function createAuditEntry(
 	writeInt(nodeId);
 	writeInt(tableId);
 	writeValue(recordId);
-	ENTRY_DATAVIEW.setFloat64(position, txnTime);
+	// TODO: Once we support multiple format versions, we can conditionally write the version (and the previousResidencyId)
+	//	if (formatVersion === 1) {
+	ENTRY_DATAVIEW.setFloat64(position, version);
 	position += 8;
 	if (extendedType & HAS_CURRENT_RESIDENCY_ID) writeInt(residencyId);
 	if (extendedType & HAS_PREVIOUS_RESIDENCY_ID) writeInt(previousResidencyId);
@@ -322,10 +342,10 @@ export function createAuditEntry(
 		writeInt(ORIGINATING_OPERATIONS[originatingOperation]);
 	}
 
-	if (username) writeValue(username);
+	if (user) writeValue(user);
 	else ENTRY_HEADER[position++] = 0;
-	if (extendedType) ENTRY_DATAVIEW.setUint32(previousLocalTime ? 8 : 0, action | extendedType | 0xc0000000);
-	else ENTRY_HEADER[previousLocalTime ? 8 : 0] = action;
+	if (extendedType) ENTRY_DATAVIEW.setUint32(start + (previousVersion ? 8 : 0), action | extendedType | 0xc0000000);
+	else ENTRY_HEADER[start + (previousVersion ? 8 : 0)] = action;
 	const header = ENTRY_HEADER.subarray(0, position);
 	if (encodedRecord) {
 		return Buffer.concat([header, encodedRecord]);
@@ -371,42 +391,20 @@ export function createAuditEntry(
 }
 
 /**
- * Reads an action from an audit entry binary data, quickly
- * @param buffer
- */
-function readAction(buffer: Buffer) {
-	let position = 0;
-	if (buffer[0] == 66) {
-		// 66 is the first byte in a date double, so we need to skip it
-		position = 8;
-	}
-	const action = buffer[position];
-	if (action < 0x80) {
-		// simple case of a single byte
-		return action;
-	}
-	// otherwise, we need to decode the number
-	const decoder =
-		buffer.dataView || (buffer.dataView = new Decoder(buffer.buffer, buffer.byteOffset, buffer.byteLength));
-	decoder.position = position;
-	return decoder.readInt();
-}
-
-/**
  * Reads a audit entry from binary data
  * @param buffer
  * @param start
  * @param end
  */
-export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined) {
+export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined): AuditRecord {
 	try {
 		const decoder =
 			buffer.dataView || (buffer.dataView = new Decoder(buffer.buffer, buffer.byteOffset, buffer.byteLength));
 		decoder.position = start;
-		let previousLocalTime;
+		let previousVersion;
 		if (buffer[decoder.position] == 66) {
 			// 66 is the first byte in a date double.
-			previousLocalTime = decoder.readFloat64();
+			previousVersion = decoder.readFloat64();
 		}
 		const action = decoder.readInt();
 		const nodeId = decoder.readInt();
@@ -414,6 +412,7 @@ export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined) {
 		let length = decoder.readInt();
 		const recordIdStart = decoder.position;
 		const recordIdEnd = (decoder.position += length);
+		// TODO: Once we support multiple format versions, we can conditionally read the version (and the previousResidencyId)
 		const version = decoder.readFloat64();
 		let residencyId, previousResidencyId, expiresAt, originatingOperation;
 		if (action & HAS_CURRENT_RESIDENCY_ID) {
@@ -438,15 +437,18 @@ export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined) {
 			tableId,
 			nodeId,
 			get recordId() {
-				return readKey(buffer, recordIdStart, recordIdEnd);
+				// use a subarray to protect against the underlying buffer being modified
+				return readKey(buffer.subarray(0, recordIdEnd), recordIdStart, recordIdEnd);
 			},
 			getBinaryRecordId() {
 				return buffer.subarray(recordIdStart, recordIdEnd);
 			},
 			version,
-			previousLocalTime,
+			previousVersion,
 			get user() {
-				return usernameEnd > usernameStart ? readKey(buffer, usernameStart, usernameEnd) : undefined;
+				return usernameEnd > usernameStart
+					? readKey(buffer.subarray(0, usernameEnd), usernameStart, usernameEnd)
+					: undefined;
 			},
 			get encoded() {
 				return start ? buffer.subarray(start, end) : buffer;
@@ -465,11 +467,12 @@ export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined) {
 					return value;
 				}
 				if (action & HAS_PARTIAL_RECORD && auditTime) {
-					return getRecordAtTime(store.getEntry(this.recordId), auditTime, store);
+					const recordId = this.recordId;
+					return getRecordAtTime(store.getEntry(recordId), auditTime, store, tableId, recordId);
 				} // TODO: If we store a partial and full record, may need to read both sequentially
 			},
 			getBinaryValue() {
-				return action & (HAS_RECORD | HAS_PARTIAL_RECORD) ? buffer.subarray(decoder.position, end) : undefined;
+				return buffer.subarray(decoder.position, end);
 			},
 			extendedType: action,
 			residencyId,
@@ -483,7 +486,7 @@ export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined) {
 	}
 }
 
-export class Decoder extends DataView {
+export class Decoder extends DataView<ArrayBufferLike> {
 	position = 0;
 	readInt() {
 		let number;

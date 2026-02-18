@@ -34,7 +34,7 @@ class TransactionCursor {
 	constructor(env, attribute, writeCursor = false) {
 		this.dbi = openDBI(env, attribute);
 		this.key_type = this.dbi[lmdbTerms.DBI_DEFINITION_NAME].key_type;
-		this.is_hash_attribute = this.dbi[lmdbTerms.DBI_DEFINITION_NAME].is_hash_attribute;
+		this.isPrimaryKey = this.dbi[lmdbTerms.DBI_DEFINITION_NAME].isPrimaryKey;
 		this.txn = env.beginTxn({ readOnly: writeCursor === false });
 		this.cursor = new lmdb.Cursor(this.txn, this.dbi);
 	}
@@ -172,7 +172,7 @@ async function createEnvironment(basePath, envName, isTxn = false, isV3 = false)
 	}
 }
 
-async function copyEnvironment(basePath, envName, destinationPath, compactEnvironment = true) {
+async function copyEnvironment(basePath, envName, _destinationPath, _compactEnvironment = true) {
 	pathEnvNameValidation(basePath, envName);
 	envName = envName.toString();
 	let environmentPath = path.join(basePath, envName);
@@ -298,7 +298,7 @@ function listDBIDefinitions(env) {
 		if (key !== INTERNAL_DBIS_NAME) {
 			try {
 				dbis[key] = Object.assign(new DBIDefinition(), value);
-			} catch (e) {
+			} catch {
 				log.warn(`an internal error occurred: unable to parse DBI Definition for ${key}`);
 			}
 		}
@@ -344,7 +344,7 @@ function getDBIDefinition(env, dbiName) {
 
 	try {
 		dbiDefinition = Object.assign(dbiDefinition, found.value);
-	} catch (e) {
+	} catch {
 		log.warn(`an internal error occurred: unable to parse DBI Definition for ${found}`);
 	}
 
@@ -449,7 +449,7 @@ function statDBI(env, dbiName) {
 	let dbi = openDBI(env, dbiName);
 
 	let stats = dbi.getStats();
-	if (dbi[lmdbTerms.DBI_DEFINITION_NAME].is_hash_attribute && stats.entryCount > 0) {
+	if (dbi[lmdbTerms.DBI_DEFINITION_NAME].isPrimaryKey && stats.entryCount > 0) {
 		stats.entryCount--;
 	}
 
@@ -467,7 +467,7 @@ async function environmentDataSize(environmentBasePath, tableName) {
 		let environmentPath = path.join(environmentBasePath, tableName + MDB_FILE_EXTENSION);
 		let statResult = await fs.stat(environmentPath);
 		return statResult['size'];
-	} catch (e) {
+	} catch {
 		throw new Error(LMDB_ERRORS.INVALID_ENVIRONMENT);
 	}
 }

@@ -1,11 +1,11 @@
 'use strict';
 
-const testUtils = require('../../../../testUtils.js');
+const testUtils = require('../../../../testUtils');
 testUtils.preTestPrep();
 const path = require('path');
 const SYSTEM_FOLDER_NAME = 'system';
 const SCHEMA_NAME = 'schema';
-const BASE_PATH = testUtils.getMockLMDBPath();
+const BASE_PATH = testUtils.setupTestDBPath();
 const BASE_SCHEMA_PATH = path.join(BASE_PATH, SCHEMA_NAME);
 const SYSTEM_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, SYSTEM_FOLDER_NAME);
 const DEV_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, 'dev');
@@ -18,8 +18,6 @@ const write_utility = require('#js/utility/lmdb/writeUtility');
 const SearchObject = require('#js/dataLayer/SearchObject');
 const lmdb_search = rewire('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbSearch');
 const lmdb_terms = require('#js/utility/lmdb/terms');
-const hdb_terms = require('#src/utility/hdbTerms');
-const LMDB_ERRORS = require('../../../../commonTestErrors').LMDB_ERRORS_ENUM;
 const assert = require('assert');
 const fs = require('fs-extra');
 const sinon = require('sinon');
@@ -29,11 +27,6 @@ const { orderedArray } = testUtils;
 const TIMESTAMP = Date.now();
 
 const sandbox = sinon.createSandbox();
-
-const TIMESTAMP_OBJECT = {
-	[hdb_terms.TIME_STAMP_NAMES_ENUM.CREATED_TIME]: TIMESTAMP,
-	[hdb_terms.TIME_STAMP_NAMES_ENUM.UPDATED_TIME]: TIMESTAMP,
-};
 
 const HASH_ATTRIBUTE_NAME = 'id';
 
@@ -58,7 +51,7 @@ describe('test lmdbSearch module', () => {
 		let env;
 		before(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 			await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -98,7 +91,7 @@ describe('test lmdbSearch module', () => {
 			await env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 		});
 
 		it('test equals on string limit 20', async () => {

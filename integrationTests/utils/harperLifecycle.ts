@@ -9,9 +9,9 @@ import { getNextAvailableLoopbackAddress, releaseLoopbackAddress } from './loopb
 
 // Constants
 const HTTP_PORT = 9926;
-const OPERATIONS_API_PORT = 9925;
-const DEFAULT_ADMIN_USERNAME = 'admin';
-const DEFAULT_ADMIN_PASSWORD = 'Abc1234!';
+export const OPERATIONS_API_PORT = 9925;
+export const DEFAULT_ADMIN_USERNAME = 'admin';
+export const DEFAULT_ADMIN_PASSWORD = 'Abc1234!';
 const DEFAULT_STARTUP_TIMEOUT_MS = parseInt(process.env.HARPER_INTEGRATION_TEST_STARTUP_TIMEOUT_MS, 10) || 30000;
 
 /**
@@ -89,7 +89,7 @@ function getHarperScript(): string {
  */
 function runHarperCommand(args: string[], env: any, completionMessage?: string): Promise<ChildProcess> {
 	const harperScript = getHarperScript();
-	const proc = spawn('node', [harperScript, ...args], {
+	const proc = spawn('node', ['--trace-warnings', harperScript, ...args], {
 		env: { ...process.env, ...env },
 	});
 	return new Promise((resolve, reject) => {
@@ -121,9 +121,6 @@ function runHarperCommand(args: string[], env: any, completionMessage?: string):
 				resolve(proc);
 			} else {
 				let errorMessage = `Harper process failed with exit code ${statusCode}`;
-				if (stdout) {
-					errorMessage += `\n\nstdout:\n${stdout}`;
-				}
 				if (stderr) {
 					errorMessage += `\n\nstderr:\n${stderr}`;
 				}
@@ -173,7 +170,7 @@ export async function setupHarper(ctx: ContextWithHarper, options?: SetupHarperO
  *
  * @param ctx - The test context with Harper installation details
  */
-async function startHarper(ctx: ContextWithHarper, options?: SetupHarperOptions): Promise<ContextWithHarper> {
+export async function startHarper(ctx: ContextWithHarper, options?: SetupHarperOptions): Promise<ContextWithHarper> {
 	// Create a directory for this Harper installation
 	// Use the system temp directory by default, or a custom parent directory if specified
 	const installDirPrefix = join(
@@ -182,7 +179,7 @@ async function startHarper(ctx: ContextWithHarper, options?: SetupHarperOptions)
 	);
 	const installDir = await mkdtemp(installDirPrefix);
 
-	const loopbackAddress = await getNextAvailableLoopbackAddress();
+	const loopbackAddress = ctx.hostname ?? (await getNextAvailableLoopbackAddress());
 	const harperProcess = await runHarperCommand(
 		[
 			`--ROOTPATH=${installDir}`,
@@ -238,7 +235,22 @@ async function startHarper(ctx: ContextWithHarper, options?: SetupHarperOptions)
  * ```
  */
 export async function teardownHarper(ctx: ContextWithHarper): Promise<void> {
-	ctx.harper.process.kill();
+	await new Promise((resolve) => {
+		let timer: NodeJS.Timeout;
+		ctx.harper.process.on('exit', () => {
+			resolve();
+			clearTimeout(timer);
+		});
+		ctx.harper.process.kill();
+		timer = setTimeout(() => {
+			try {
+				ctx.harper.process.kill('SIGKILL');
+			} catch {
+				// possible that the process terminated but the exit event hasn't reached us yet
+			}
+			resolve();
+		}, 200);
+	});
 
 	await releaseLoopbackAddress(ctx.harper.hostname);
 

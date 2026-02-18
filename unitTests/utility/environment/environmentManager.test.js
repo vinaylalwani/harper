@@ -94,11 +94,10 @@ describe('Test environmentManager module', () => {
 	});
 
 	describe('Test doesPropFileExist function', () => {
-		let fs_access_stub;
 		const does_prop_file_exist = env_rw.__get__('doesPropFileExist');
 
 		before(() => {
-			fs_access_stub = sandbox.stub(fs, 'accessSync').resolves();
+			sandbox.stub(fs, 'accessSync').resolves();
 		});
 
 		afterEach(() => {
@@ -150,12 +149,11 @@ describe('Test environmentManager module', () => {
 	});
 
 	describe('Test initTestEnvironment function', () => {
-		let set_property_rw;
 		let set_property_stub;
 
 		before(() => {
 			set_property_stub = sandbox.stub();
-			set_property_rw = env_rw.__set__('setProperty', set_property_stub);
+			env_rw.__set__('setProperty', set_property_stub);
 		});
 
 		afterEach(() => {

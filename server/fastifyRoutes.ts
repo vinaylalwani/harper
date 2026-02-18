@@ -36,6 +36,7 @@ export function start(options) {
 	// if we have a secure port, need to use the secure HTTP server for fastify (it can be used for HTTP as well)
 	const isHttps = options.securePort > 0;
 	return {
+		// eslint-disable-next-line no-unused-vars
 		async handleFile(jsContent, relativePath, filePath, projectName) {
 			if (!fastifyServer) {
 				fastifyServer = buildServer(isHttps);

@@ -292,7 +292,6 @@ describe('8. Delete Tests', () => {
 			})
 			.expect((r) => assert.equal(r.body.message, "table 'drop_schema.drop_table' successfully created.", r.text))
 			.expect(200);
-		await setTimeout(2000);
 	});
 
 	it('Confirm correct attributes', () => {
@@ -717,15 +716,15 @@ describe('8. Delete Tests', () => {
 	it('create schema drop_attr', () => {
 		return req()
 			.send({ operation: 'create_schema', schema: 'drop_attr' })
-			.expect((r) => assert.ok(r.body.message.includes('successfully created'), r.text))
-			.expect(200);
+			.expect(200)
+			.expect((r) => assert.ok(r.body.message.includes('successfully created'), r.text));
 	});
 
 	it('create table test', async () => {
 		await req()
 			.send({ operation: 'create_table', schema: 'drop_attr', table: 'test', hash_attribute: 'id' })
-			.expect((r) => assert.ok(r.body.message.includes('successfully created'), r.text))
-			.expect(200);
+			.expect(200)
+			.expect((r) => assert.ok(r.body.message.includes('successfully created'), r.text));
 		await setTimeout(2000);
 	});
 

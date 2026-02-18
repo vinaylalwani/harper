@@ -1,12 +1,13 @@
 import { ClientError, ServerError, Violation } from '../utility/errors/hdbError.js';
 import { OVERFLOW_MARKER, MAX_SEARCH_KEY_LENGTH, SEARCH_TYPES } from '../utility/lmdb/terms.js';
 import { compareKeys, MAXIMUM_KEY } from 'ordered-binary';
-import { SKIP } from 'lmdb';
+import { SKIP } from '@harperfast/extended-iterable';
 import { INVALIDATED, EVICTED } from './Table.ts';
 import type { DirectCondition, Id } from './ResourceInterface.ts';
-import { MultiPartId } from './Resource.ts';
 import { RequestTarget } from './RequestTarget.ts';
 import { lastMetadata } from './RecordEncoder.ts';
+import { recordAction } from './analytics/write';
+
 // these are ratios/percentages of overall table size
 const OPEN_RANGE_ESTIMATE = 0.3;
 const BETWEEN_ESTIMATE = 0.1;
@@ -338,7 +339,8 @@ export function searchByIndex(
 					}
 				: (entry) => {
 						if (entry.value == null && !(entry.metadataFlags & (INVALIDATED | EVICTED))) return SKIP;
-						if (context?._freezeRecords) Object.freeze(entry.value);
+						Object.freeze(entry.value);
+						recordRead(entry);
 						return entry;
 					}
 		);
@@ -351,7 +353,8 @@ export function searchByIndex(
 				if (typeof entry === 'object' && entry) {
 					const { key, ...otherProps } = entry;
 					const loadedEntry = Table.primaryStore.getEntry(key);
-					if (context?._freezeRecords) Object.freeze(loadedEntry?.value);
+					Object.freeze(loadedEntry?.value);
+					recordRead(loadedEntry);
 					return { ...otherProps, ...loadedEntry };
 				}
 				return entry;
@@ -363,7 +366,7 @@ export function searchByIndex(
 						let recordMatcher: any;
 						if (typeof key === 'string' && key.length > MAX_SEARCH_KEY_LENGTH) {
 							// if it is an overflow string, need to get the actual value from the database
-							recordMatcher = Table.primaryStore.get(value);
+							recordMatcher = Table.primaryStore.getSync(value);
 						} else recordMatcher = { [attribute_name]: key };
 						if (this.isSync) return filter(recordMatcher) ? value : SKIP;
 						// for filter operations, we intentionally yield the event turn so that scanning queries
@@ -383,13 +386,18 @@ export function searchByIndex(
 	} else {
 		return Table.primaryStore
 			.getRange(reverse ? { end: true, transaction, reverse: true } : { start: true, transaction })
-			.map(function ({ key, value }) {
-				if (this.isSync) return value && filter(value) ? key : SKIP;
+			.map(function (entry) {
+				const { key, value } = entry;
+				if (this.isSync) {
+					recordRead(entry);
+					return value && filter(value) ? key : SKIP;
+				}
 				// for filter operations, we intentionally yield the event turn so that scanning queries
 				// do not hog resources
 				return new Promise((resolve, reject) =>
 					setImmediate(() => {
 						try {
+							recordRead(entry);
 							resolve(value && filter(value) ? key : SKIP);
 						} catch (error) {
 							reject(error);
@@ -397,6 +405,11 @@ export function searchByIndex(
 					})
 				);
 			});
+	}
+	function recordRead(entry) {
+		if ((Table.databaseName !== 'system' || Table.name === 'hdb_analytics') && entry?.value) {
+			recordAction(entry.size ?? 1, 'db-read', Table.name, null);
+		}
 	}
 }
 
@@ -441,7 +454,7 @@ function joinTo(rightIterable, attribute, store, isManyToMany, joined: Map<any, 
 						//let i = 0;
 						// get all the ids of the related records
 						for (const entry of rightIterable) {
-							const record = entry.value ?? store.get(entry.key ?? entry);
+							const record = entry.value ?? store.getSync(entry.key ?? entry);
 							const leftKey = record?.[rightProperty];
 							if (leftKey == null) continue;
 							if (joined.filters?.some((filter) => !filter(record))) continue;
@@ -521,7 +534,7 @@ function joinFrom(rightIterable, attribute, store, joined: Map<any, any[]>, sear
 						for (const id of rightIterable) {
 							if (joined.filters) {
 								// if additional filters are defined, we need to check them
-								const record = store.get(id);
+								const record = store.getSync(id);
 								if (joined.filters.some((filter) => !filter(record))) continue;
 							}
 							ids.add(id);
@@ -786,11 +799,11 @@ export function filterByType(searchCondition, Table, context, filtered, isPrimar
 					(++misses / filteredSoFar) * estimatedIncomingCount > thresholdRemainingMisses
 				) {
 					// if we have missed too many times, we need to switch to indexed retrieval
-					const searchResults = searchByIndex(searchCondition, context.transaction.getReadTxn(), false, Table);
+					const searchResults = searchByIndex(searchCondition, Table._readTxnForContext(context), false, Table);
 					let matchingIds: Iterable<Id>;
 					if (recordFilter.to) {
 						// the values could be an array of keys, so we flatten the mapping
-						matchingIds = searchResults.flatMap((id) => Table.primaryStore.get(id)[recordFilter.to]);
+						matchingIds = searchResults.flatMap((id) => Table.primaryStore.getSync(id)[recordFilter.to]);
 					} else {
 						matchingIds = searchResults.map(flattenKey);
 					}
@@ -1271,7 +1284,8 @@ export function flattenKey(key) {
 function estimatedEntryCount(store) {
 	const now = Date.now();
 	if ((store.estimatedEntryCountExpires || 0) < now) {
-		store.estimatedEntryCount = store.getStats().entryCount;
+		// use getStats for LMDB because it is fast path, otherwise RocksDB can handle fast path on its own
+		store.estimatedEntryCount = store.readerCheck ? store.getStats().entryCount : store.getKeysCount();
 		store.estimatedEntryCountExpires = now + 10000;
 	}
 	return store.estimatedEntryCount;

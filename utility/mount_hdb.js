@@ -7,7 +7,7 @@ const hdbLogger = require('../utility/logging/harper_logger.js');
 const bridge = require('../dataLayer/harperBridge/harperBridge.js');
 const systemSchema = require('../json/systemSchema.json');
 const initPaths = require('../dataLayer/harperBridge/lmdbBridge/lmdbUtility/initializePaths.js');
-const { NON_REPLICATING_SYSTEM_TABLES } = require('../resources/databases.ts');
+const { PACKAGE_ROOT } = require('../utility/packageUtils');
 
 module.exports = mountHdb;
 
@@ -20,17 +20,16 @@ async function mountHdb(hdbPath) {
 	makeDirectory(path.join(hdbPath, 'log'));
 	makeDirectory(path.join(hdbPath, 'database'));
 	makeDirectory(path.join(hdbPath, 'components'));
-	copySync(path.resolve(__dirname, '../../static/README.md'), path.join(hdbPath, 'README.md'));
+	copySync(path.join(PACKAGE_ROOT, 'static/README.md'), path.join(hdbPath, 'README.md'));
 
-	await createLMDBTables();
+	await createTables();
 }
 
 /**
  * creates the environments & dbis needed for lmdb  based on the systemSchema
  * @returns {Promise<void>}
  */
-async function createLMDBTables() {
-	// eslint-disable-next-line global-require
+async function createTables() {
 	const CreateTableObject = require('../dataLayer/CreateTableObject.js');
 
 	let tables = Object.keys(systemSchema);
@@ -44,8 +43,8 @@ async function createLMDBTables() {
 			let primaryKeyAttribute = createTable.attributes.find(({ attribute }) => attribute === hash_attribute);
 			primaryKeyAttribute.isPrimaryKey = true;
 
-			// Array of tables to enable audit store, config file doesn't exist yet so we need to manually set which tables to audit
-			if (!NON_REPLICATING_SYSTEM_TABLES.includes(tableName)) createTable.audit = true;
+			// with RocksDB at least, we need to audit everything or there will be lost data
+			createTable.audit = true;
 			await bridge.createTable(tableName, createTable);
 		} catch (e) {
 			hdbLogger.error(`issue creating environment for ${terms.SYSTEM_SCHEMA_NAME}.${tableName}: ${e}`);

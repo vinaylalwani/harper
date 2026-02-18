@@ -3,6 +3,7 @@ import { setChildListenerByType } from '../../server/threads/manageThreads.js';
 import { getDatabases, table } from '../databases.ts';
 import type { Databases, Table, Tables } from '../databases.ts';
 import harperLogger from '../../utility/logging/harper_logger.js';
+import { stat } from 'node:fs/promises';
 const { getLogFilePath, forComponent } = harperLogger;
 import { dirname, join } from 'path';
 import { open } from 'fs/promises';
@@ -17,6 +18,7 @@ setTimeout(() => {
 	// let everything load before we actually load and start the profiler
 	import('./profile.ts');
 }, 1000);
+import { RocksDatabase } from '@harperfast/rocksdb-js';
 
 const log = forComponent('analytics').conditional;
 
@@ -151,7 +153,7 @@ function sendAnalytics() {
 			threadId,
 			metrics,
 		};
-		for (const [name, action] of activeActions) {
+		for (const [_name, action] of activeActions) {
 			if (action.values) {
 				const values = action.values.subarray(0, action.values.index);
 				values.sort();
@@ -325,19 +327,36 @@ function storeDBSizeMetrics(analyticsTable: Table, databases: Databases) {
 			if (!dbAuditSize) {
 				return;
 			}
-			const dbTotalSize = fs.statSync(firstTable.primaryStore.env.path).size;
-			const dbUsedSize = storeTableSizeMetrics(analyticsTable, db, tables);
-			const dbFree = dbTotalSize - dbUsedSize;
-			const metric = {
-				metric: METRIC.DATABASE_SIZE,
-				database: db,
-				size: dbTotalSize,
-				used: dbUsedSize,
-				free: dbFree,
-				audit: dbAuditSize,
-			};
-			storeMetric(analyticsTable, metric);
-			log.trace?.(`database ${db} size metric: ${JSON.stringify(metric)}`);
+			let metric;
+			if (firstTable.primaryStore instanceof RocksDatabase) {
+				const dbPath = firstTable.primaryStore.path;
+				let dbSize = 0;
+				for (const filename of fs.readdirSync(dbPath)) {
+					if (filename.endsWith('.sst')) {
+						dbSize += fs.statSync(join(dbPath, filename)).size;
+					}
+				}
+				metric = {
+					metric: METRIC.DATABASE_SIZE,
+					database: db,
+					size: dbSize,
+					transactionLog: dbAuditSize,
+				};
+				storeMetric(analyticsTable, metric);
+			} else {
+				const dbTotalSize = fs.statSync(firstTable.primaryStore.path).size;
+				const dbUsedSize = storeTableSizeMetrics(analyticsTable, db, tables);
+				const dbFree = dbTotalSize - dbUsedSize;
+				metric = {
+					metric: METRIC.DATABASE_SIZE,
+					database: db,
+					size: dbTotalSize,
+					used: dbUsedSize,
+					free: dbFree,
+					audit: dbAuditSize,
+				};
+				storeMetric(analyticsTable, metric);
+			}
 		} catch (error) {
 			// a table or db was deleted, could get an error here
 			log.warn?.(`Error getting DB size metrics`, error);
@@ -370,21 +389,16 @@ function storeVolumeMetrics(analyticsTable: Table, databases: Databases) {
 async function aggregation(fromPeriod, toPeriod = 60000) {
 	const rawAnalyticsTable = getRawAnalyticsTable();
 	const analyticsTable = getAnalyticsTable();
-	const taskQueueLatency = new Promise((resolve) => {
-		let start = performance.now();
-		setImmediate(() => {
-			const now = performance.now();
-			if (now - start > 5000)
-				log.warn?.('Unusually high event queue latency on the main thread of ' + Math.round(now - start) + 'ms');
-			start = performance.now(); // We use this start time to measure the time it actually takes to on the task queue, minus the time on the event queu
-		});
-		analyticsTable.primaryStore.prefetch([1], () => {
-			const now = performance.now();
-			if (now - start > 5000)
-				log.warn?.('Unusually high task queue latency on the main thread of ' + Math.round(now - start) + 'ms');
-			resolve(now - start);
-		});
-	});
+	const taskQueueLatency = (async () => {
+		const start = performance.now();
+		// measure how long it takes to enqueue and get a callback from a simple/fast task:
+		await stat(getLogFilePath());
+		const delay = performance.now() - start;
+		if (delay > 5000) {
+			log.warn?.('Unusually high task queue latency on the main thread of ' + Math.round(now - start) + 'ms');
+		}
+		return delay;
+	})();
 	let lastForPeriod;
 	const localNodeId = getHostNodeId(server.hostname);
 	// find the last entry for this period for the local node only
@@ -416,6 +430,7 @@ async function aggregation(fromPeriod, toPeriod = 60000) {
 		lastTime = key;
 		const { metrics, threadId } = value;
 		for (const entry of metrics || []) {
+			// eslint-disable-next-line no-unused-vars
 			let { path, method, type, metric, count, total, distribution, threads, ...measures } = entry;
 			if (!count) count = 1;
 			let key = metric + (path ? '-' + path : '');
@@ -690,7 +705,7 @@ async function logAnalytics(report) {
 		const logDir = dirname(getLogFilePath());
 		try {
 			analyticsLog = await open(join(logDir, 'analytics.log'), 'r+');
-		} catch (error) {
+		} catch {
 			analyticsLog = await open(join(logDir, 'analytics.log'), 'w+');
 		}
 	}

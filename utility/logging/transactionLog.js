@@ -1,9 +1,6 @@
 'use strict';
 
-const hdbTerms = require('../hdbTerms.ts');
 const hdbUtils = require('../common_utils.js');
-const envMgr = require('../environment/environmentManager.js');
-const cryptoHash = require('../../security/cryptoHash.js');
 const log = require('./harper_logger.js');
 const { handleHDBError, hdbErrors } = require('../errors/hdbError.js');
 const { HTTP_STATUS_CODES } = hdbErrors;
@@ -12,9 +9,6 @@ const {
 	deleteTransactionLogsBeforeValidator,
 } = require('../../validation/transactionLogValidator.js');
 const harperBridge = require('../../dataLayer/harperBridge/harperBridge.js');
-
-const PARTIAL_DELETE_SUCCESS_MSG = 'Logs successfully deleted from transaction log.';
-const ALL_DELETE_SUCCESS_MSG = 'All logs successfully deleted from transaction log.';
 
 module.exports = {
 	readTransactionLog,

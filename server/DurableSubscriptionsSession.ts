@@ -7,6 +7,7 @@ import { getWorkerIndex } from '../server/threads/manageThreads.js';
 import { whenComponentsLoaded } from '../server/threads/threadServer.js';
 import { server } from '../server/Server.ts';
 import { RequestTarget } from '../resources/RequestTarget';
+import { cloneDeep } from 'lodash';
 
 const AWAITING_ACKS_HIGH_WATER_MARK = 100;
 const DurableSession = table({
@@ -45,7 +46,7 @@ if (getWorkerIndex() === 0) {
 			if (message.user?.username) message.user = await server.getUser(message.user.username);
 			try {
 				await publish(message, data, message);
-			} catch (error) {
+			} catch {
 				warn('Failed to publish will', data);
 			}
 			LastWill.delete(will.id);
@@ -102,7 +103,7 @@ export async function getSession({
 		if (sessionId) {
 			// connecting with a clean session and session id is how durable sessions are deleted
 			const sessionResource = await DurableSession.get(sessionId);
-			if (sessionResource) sessionResource.delete();
+			if (sessionResource) DurableSession.delete(sessionId);
 		}
 		session = new SubscriptionsSession(sessionId, user);
 	}
@@ -151,9 +152,8 @@ class SubscriptionsSession {
 	async addSubscription(subscriptionRequest, needsAck, filter?) {
 		const { topic, rh: retainHandling, startTime } = subscriptionRequest;
 		const searchIndex = topic.indexOf('?');
-		let search, path;
+		let path;
 		if (searchIndex > -1) {
-			search = topic.slice(searchIndex);
 			path = topic.slice(0, searchIndex);
 		} else path = topic;
 		if (!path) throw new Error('No topic provided');
@@ -243,18 +243,18 @@ class SubscriptionsSession {
 		});
 		const resourcePath = entry.path;
 		const resource = entry.Resource;
-		const subscription = await transaction(request, async () => {
-			const context = this.createContext();
-			context.topic = topic;
-			context.retainHandling = retainHandling;
-			context.isCollection = request.isCollection;
+		const context = this.createContext();
+		context.topic = topic;
+		context.retainHandling = retainHandling;
+		context.isCollection = request.isCollection;
+		const subscription = await transaction(context, async () => {
 			const subscription = await resource.subscribe(request, context);
 			if (!subscription) {
 				return; // if no subscription, nothing to return
 			}
 			if (!subscription[Symbol.asyncIterator])
 				throw new Error(`Subscription is not (async) iterable for topic ${topic}`);
-			const result = (async () => {
+			const _result = (async () => {
 				for await (const update of subscription) {
 					try {
 						let messageId;
@@ -358,7 +358,7 @@ class SubscriptionsSession {
 			try {
 				if (!clientTerminated) {
 					const will = await LastWill.get(this.sessionId);
-					if (will?.doesExist()) {
+					if (will) {
 						await publish(will, will.data, context);
 					}
 				}
@@ -386,8 +386,7 @@ class SubscriptionsSession {
 }
 function publish(message, data, context) {
 	const { topic, retain } = message;
-	message.data = data;
-	message.async = true;
+	message = { ...message, data, async: true };
 	context.authorize = true;
 	const entry = resources.getMatch(topic, 'mqtt');
 	if (!entry)
@@ -412,7 +411,7 @@ export class DurableSubscriptionsSession extends SubscriptionsSession {
 	sessionRecord: any;
 	constructor(sessionId, user, record?) {
 		super(sessionId, user);
-		this.sessionRecord = record || { id: sessionId, subscriptions: [] };
+		this.sessionRecord = cloneDeep(record) || { id: sessionId, subscriptions: [] };
 	}
 	async resume() {
 		// resuming a session, we need to resume each subscription
@@ -459,7 +458,7 @@ export class DurableSubscriptionsSession extends SubscriptionsSession {
 							}
 							subscription.acks.push(update.timestamp);
 							trace('Received ack', topic, update.timestamp);
-							this.sessionRecord.update();
+							DurableSession.put(this.sessionRecord);
 							return;
 						}
 					}
@@ -472,7 +471,7 @@ export class DurableSubscriptionsSession extends SubscriptionsSession {
 				subscription.startTime = update.timestamp;
 			}
 		}
-		this.sessionRecord.update();
+		DurableSession.put(this.sessionRecord);
 		// TODO: Increment the timestamp for the corresponding subscription, possibly recording any interim unacked messages
 	}
 

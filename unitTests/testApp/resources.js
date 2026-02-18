@@ -34,7 +34,7 @@ export class Echo extends Resource {
 		return super.subscribe(query);
 	}
 
-	get(target) {
+	get(_target) {
 		if (this.getId() === 'error-plain-object') throw { message: 'Test error' };
 		if (this.getId() === 'error-bad-body') {
 			return {
@@ -82,9 +82,11 @@ class SubObject extends tables.SubObject {
 		this.addedProperty = true;
 		return super.get(query);
 	}
-	post(data) {
-		this.subObject.set('subProperty', data.subPropertyValue);
-		this.subArray.push(data.subArrayItem);
+	static async post(target, data) {
+		data = await data;
+		let object = await this.update(target);
+		object.subObject.subProperty = data.subPropertyValue;
+		object.subArray.push(data.subArrayItem);
 		return 'success';
 	}
 }
@@ -105,7 +107,9 @@ tables.SimpleCache.sourcedFrom(SimpleCacheSource);
 export class SimpleCache extends tables.SimpleCache {
 	static loadAsInstance = false;
 	post(query, data) {
-		if (data.invalidate) this.invalidate();
+		if (data.invalidate) {
+			this.invalidate();
+		}
 		if (data.customResponse) {
 			return {
 				status: 222,
@@ -165,10 +169,11 @@ export class FourPropWithHistory extends tables.FourProp {
 		assert(context.session?.subscriptions);
 		assert(context.user);
 		assert(context.socket);
-		options.previousCount = 10;
+		// TODO: At some point we may want to re-enable this functionality for RocksDB
+		// options.previousCount = 10;
 		tables.FourProp.acknowledgements = 0;
 		const subscription = await super.subscribe(options);
-		for (let update of subscription.queue) {
+		for (let update of subscription.queue || []) {
 			update.acknowledge = () => {
 				tables.FourProp.acknowledgements++;
 			};
@@ -209,14 +214,14 @@ server.getUser = function (username, password) {
 
 // These are for the "handles iterator content type handler" tests in unitTests/apiTests/basicREST-test.mjs
 server.contentTypes.set('application/custom-async-iterator', {
-	async *serializeStream(data) {
+	async *serializeStream(_data) {
 		yield 'one';
 		yield 'two';
 	},
 });
 
 server.contentTypes.set('application/custom-iterator', {
-	*serializeStream(data) {
+	*serializeStream(_data) {
 		yield 'one';
 		yield 'two';
 	},

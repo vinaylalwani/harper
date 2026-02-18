@@ -4,6 +4,7 @@
 	"categories": {},
 	"rules": {
 		"no-undef": "error",
+		"no-unused-vars": "error",
 		"no-console": "off",
 		"no-constant-condition": "off",
 		"prefer-const": "off",
@@ -37,7 +38,12 @@
 		"lockdown": "readonly",
 		"threads": "readonly",
 		"Resource": "readonly",
-		"headersTest": "readonly"
+		"headersTest": "readonly",
+		"operation": "readonly",
+		"transaction": "readonly",
+		"authenticateUser": "readonly",
+		"contentTypes": "readonly",
+		"getUser": "readonly"
 	},
 	"ignorePatterns": ["unitTests/security/jsLoader/fixtures"]
 }

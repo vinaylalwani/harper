@@ -8,12 +8,12 @@
 class DBIDefinition {
 	/**
 	 * @param {Boolean} dupSort - allow duplicate keys, or not
-	 * @param {Boolean} isHashAttribute - defines if this attribute is a hash attribute
+	 * @param {Boolean} isPrimaryKey - defines if this is the primary key
 	 */
-	constructor(dupSort = false, isHashAttribute = false) {
+	constructor(dupSort = false, isPrimaryKey = false) {
 		this.dup_sort = dupSort;
-		this.is_hash_attribute = isHashAttribute;
-		this.useVersions = isHashAttribute;
+		this.isPrimaryKey = isPrimaryKey;
+		this.useVersions = isPrimaryKey;
 	}
 }
 

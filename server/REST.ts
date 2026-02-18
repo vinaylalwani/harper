@@ -5,7 +5,6 @@ import { ServerOptions } from 'http';
 import { ServerError, ClientError } from '../utility/errors/hdbError.js';
 import { Resources } from '../resources/Resources.ts';
 import { Resource } from '../resources/Resource.ts';
-import { parseQuery } from '../resources/search.ts';
 import { IterableEventQueue } from '../resources/IterableEventQueue.ts';
 import { transaction } from '../resources/transaction.ts';
 import { Headers, mergeHeaders } from '../server/serverHelpers/Headers.ts';
@@ -14,12 +13,6 @@ import type { Context } from '../resources/ResourceInterface.ts';
 import { Request } from '../server/serverHelpers/Request.ts';
 import { RequestTarget } from '../resources/RequestTarget';
 
-interface Response {
-	status?: number;
-	headers?: any;
-	data?: any;
-	body?: any;
-}
 const { errorToString } = harperLogger;
 const etagBytes = new Uint8Array(8);
 const etagFloat = new Float64Array(etagBytes.buffer, 0, 1);
@@ -36,15 +29,15 @@ async function http(request: Context & Request, nextHandler) {
 		request.responseHeaders = headers;
 		const url = request.url.slice(1);
 
-		let resourceRequest;
+		let target: RequestTarget;
 		let resource: typeof Resource;
 		if (url !== OPENAPI_DOMAIN) {
 			const entry = resources.getMatch(url, isSse ? 'sse' : 'rest');
 			if (!entry) return nextHandler(request); // no resource handler found
 			request.handlerPath = entry.path;
-			resourceRequest = new RequestTarget(entry.relativeURL); // TODO: We don't want to have to remove the forward slash and then re-add it
+			target = new RequestTarget(entry.relativeURL); // TODO: We don't want to have to remove the forward slash and then re-add it
 
-			resourceRequest.async = true;
+			target.async = true;
 			resource = entry.Resource;
 		}
 		if (resource?.isCaching) {
@@ -105,40 +98,41 @@ async function http(request: Context & Request, nextHandler) {
 			request.authorize = true;
 
 			if (url === OPENAPI_DOMAIN && method === 'GET') {
+				target = {};
 				if (request?.user?.role?.permission?.super_user) {
 					return generateJsonApi(resources, `${request.protocol}://${request.hostname}`);
 				} else {
 					throw new ServerError(`Forbidden`, 403);
 				}
 			}
-			resourceRequest.checkPermission = request.user?.role?.permission ?? {};
+			target.checkPermission = request.user?.role?.permission ?? {};
 
 			switch (method) {
 				case 'GET':
 				case 'HEAD':
-					return resource.get(resourceRequest, request);
+					return resource.get(target, request);
 				case 'POST':
-					return resource.post(resourceRequest, request.data, request);
+					return resource.post(target, request.data, request);
 				case 'PUT':
-					return resource.put(resourceRequest, request.data, request);
+					return resource.put(target, request.data, request);
 				case 'DELETE':
-					return resource.delete(resourceRequest, request);
+					return resource.delete(target, request);
 				case 'PATCH':
-					return resource.patch(resourceRequest, request.data, request);
+					return resource.patch(target, request.data, request);
 				case 'OPTIONS': // used primarily for CORS
 					headers.setIfNone('Allow', 'GET, HEAD, POST, PUT, DELETE, PATCH, OPTIONS, TRACE, QUERY, COPY, MOVE');
 					return;
 				case 'CONNECT':
 					// websockets? and event-stream
-					return resource.connect(resourceRequest, null, request);
+					return resource.connect(target, null, request);
 				case 'TRACE':
 					return 'Harper is the terminating server';
 				case 'QUERY':
-					return resource.query(resourceRequest, request.data, request);
+					return resource.query(target, request.data, request);
 				case 'COPY': // methods suggested from webdav RFC 4918
-					return resource.copy(resourceRequest, headersObject.destination, request);
+					return resource.copy(target, headersObject.destination, request);
 				case 'MOVE':
-					return resource.move(resourceRequest, headersObject.destination, request);
+					return resource.move(target, headersObject.destination, request);
 				case 'BREW': // RFC 2324
 					throw new ClientError("Harper is short and stout and can't brew coffee", 418);
 				default:
@@ -199,7 +193,7 @@ async function http(request: Context & Request, nextHandler) {
 			headers,
 			body: undefined,
 		};
-		const loadedFromSource = request.loadedFromSource ?? responseData?.wasLoadedFromSource?.();
+		const loadedFromSource = target.loadedFromSource;
 		if (loadedFromSource !== undefined) {
 			// this appears to be a caching table with a source
 			responseObject.wasCacheMiss = loadedFromSource; // indicate if it was a missed cache

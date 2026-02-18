@@ -1,4 +1,5 @@
-import { Resource, contextStorage } from '../resources/Resource.ts';
+import { Resource } from '../resources/Resource.ts';
+import { contextStorage } from '../resources/transaction.ts';
 import { RequestTarget } from '../resources/RequestTarget.ts';
 import { tables, databases } from '../resources/databases.ts';
 import { readFile } from 'node:fs/promises';
@@ -15,8 +16,6 @@ import type { CompartmentOptions } from 'ses';
 
 type ContainmentMode = 'none' | 'vm' | 'compartment';
 type Lockdown = 'none' | 'freeze' | 'ses';
-const APPLICATIONS_CONTAINMENT: ContainmentMode = env.get(CONFIG_PARAMS.APPLICATIONS_CONTAINMENT);
-const APPLICATIONS_DEPENDENCYCONTAINMENT: boolean = env.get(CONFIG_PARAMS.APPLICATIONS_DEPENDENCYCONTAINMENT);
 const APPLICATIONS_LOCKDOWN: Lockdown = env.get(CONFIG_PARAMS.APPLICATIONS_LOCKDOWN);
 
 let lockedDown = false;
@@ -259,7 +258,7 @@ async function loadModuleWithVM(moduleUrl: string, scope: Scope) {
 					initializeImportMeta(meta) {
 						meta.url = url;
 					},
-					async importModuleDynamically(specifier: string, script) {
+					async importModuleDynamically(specifier: string) {
 						const resolvedUrl = resolveModule(specifier, url);
 						const dynamicModule = await loadModuleWithCache(resolvedUrl, true);
 						return dynamicModule;
@@ -431,6 +430,11 @@ function getHarperExports(scope: Scope) {
 		createBlob,
 		RequestTarget,
 		getContext,
+		transaction,
+		getUser,
+		authenticateUser,
+		contentTypes,
+		operation,
 	};
 }
 const ALLOWED_NODE_BUILTIN_MODULES = new Set([

@@ -10,10 +10,10 @@ const UPGRADE_PROCEED = ['yes', 'y'];
 
 /**
  * Prompt the user that they need to run the upgrade scripts, typically after upgrading via a package manager.
- * @param upgradeObject - {UpgradeObject} Object includes the versions the data and current install are on
+ * @param _upgradeObj - {UpgradeObject} Object includes the versions the data and current install are on
  * @returns {Promise<boolean>}
  */
-async function forceUpdatePrompt(upgradeObj) {
+async function forceUpdatePrompt(_upgradeObj) {
 	let upgradeMessage =
 		`${os.EOL}` +
 		chalk.bold.green('Your current Harper version requires that we complete an update process.') +
@@ -51,10 +51,10 @@ async function forceUpdatePrompt(upgradeObj) {
 
 /**
  * Prompt the user before proceeding with a minor version downgrade
- * @param upgradeObject - {UpgradeObject} Object includes the versions the data and current install are on
+ * @param _upgradeObj - {UpgradeObject} Object includes the versions the data and current install are on
  * @returns {Promise<boolean>}
  */
-async function forceDowngradePrompt(upgradeObj) {
+async function forceDowngradePrompt(_upgradeObj) {
 	let downgradeMessage =
 		`${os.EOL}` +
 		chalk.bold.green(

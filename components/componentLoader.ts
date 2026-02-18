@@ -36,7 +36,6 @@ import { Status } from '../server/status/index.ts';
 import { lifecycle as componentLifecycle } from './status/index.ts';
 import { DEFAULT_CONFIG } from './DEFAULT_CONFIG.ts';
 import { PluginModule } from './PluginModule.ts';
-import { platform } from 'node:os';
 import { getEnvBuiltInComponents } from './Application.ts';
 
 const CF_ROUTES_DIR = resolvePath(env.get(CONFIG_PARAMS.COMPONENTSROOT));
@@ -112,18 +111,22 @@ export const getComponentName = () => compName;
 
 function symlinkHarperModule(componentDirectory: string) {
 	return new Promise<void>((resolve, reject) => {
+		const store = Status.primaryStore;
 		// Create timeout to avoid deadlocks
 		const timeout = setTimeout(() => {
-			Status.primaryStore.unlock(componentDirectory, 0);
+			store.unlock(componentDirectory);
 			reject(new Error('symlinking harperdb module timed out'));
 		}, 10_000);
-		if (
-			// Get lock for this component
-			Status.primaryStore.attemptLock(componentDirectory, 0, () => {
-				clearTimeout(timeout);
-				resolve();
-			})
-		) {
+
+		const callback = () => {
+			clearTimeout(timeout);
+			resolve();
+		};
+		const lockAcquired = store.tryLock(componentDirectory, callback);
+
+		if (!lockAcquired) {
+			clearTimeout(timeout);
+		} else {
 			try {
 				// validate node_modules directory exists
 				const nodeModulesDir = join(componentDirectory, 'node_modules');
@@ -149,7 +152,7 @@ function symlinkHarperModule(componentDirectory: string) {
 				resolve();
 			} finally {
 				// finally release the lock
-				Status.primaryStore.unlock(componentDirectory, 0);
+				store.unlock(componentDirectory);
 			}
 		}
 	});
@@ -173,12 +176,14 @@ function sequentiallyHandleApplication(scope: Scope, plugin: PluginModule) {
 			throw new Error(`Invalid timeout value for ${scope.name}. Expected a number, received: ${typeof timeout}`);
 		}
 		let whenResolved, timer;
-		if (
-			!Status.primaryStore.attemptLock(scope.name, 0, () => {
-				clearTimeout(timer);
-				whenResolved(sequentiallyHandleApplication(scope, plugin));
-			})
-		) {
+		const callback = () => {
+			clearTimeout(timer);
+			whenResolved(sequentiallyHandleApplication(scope, plugin));
+		};
+		const store = Status.primaryStore;
+		const lockAcquired = store.tryLock(scope.name, callback);
+
+		if (!lockAcquired) {
 			return new Promise((resolve, reject) => {
 				whenResolved = resolve;
 				timer = setTimeout(() => {
@@ -204,7 +209,7 @@ function sequentiallyHandleApplication(scope: Scope, plugin: PluginModule) {
 				),
 			]);
 		} finally {
-			Status.primaryStore.unlock(scope.name, 0);
+			Status.primaryStore.unlock(scope.name);
 			clearTimeout(loadTimeout);
 		}
 	});

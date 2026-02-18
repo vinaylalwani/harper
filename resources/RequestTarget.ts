@@ -14,6 +14,9 @@ export class RequestTarget extends URLSearchParams {
 	/** Request a specific property from the identified record */
 	declare property?: string;
 
+	/** Request best effort and returning synchronously */
+	declare syncAllowed?: boolean;
+
 	/** Indicates that this is a request to query for collection of records */
 	isCollection?: boolean;
 	// these are query parameters
@@ -52,6 +55,10 @@ export class RequestTarget extends URLSearchParams {
 	declare originatingOperation?: string;
 	declare previousResidency?: string[];
 
+	// Action tracking
+	declare loadedFromSource?: boolean;
+	declare createdNewId?: string;
+
 	declare checkPermission?: UserRoleDatabasePermissions | boolean;
 	declare subscribe?: boolean;
 
@@ -78,7 +85,7 @@ export class RequestTarget extends URLSearchParams {
 			super();
 			path = target;
 		}
-		this.pathname = path ?? '';
+		this.pathname = path;
 		this.#target = target;
 		if (path) {
 			// parse for properties and set the id
@@ -98,8 +105,9 @@ export class RequestTarget extends URLSearchParams {
 	}
 	toString() {
 		if (this.#target) return this.#target;
-		if (this.size > 0) return this.pathname + '?' + super.toString();
-		else return this.pathname;
+		const path = this.pathname ?? this.id?.toString() ?? '';
+		if (this.size > 0) return path + '?' + super.toString();
+		else return path;
 	}
 	get url() {
 		// for back-compat?

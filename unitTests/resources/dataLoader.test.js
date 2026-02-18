@@ -618,8 +618,8 @@ records:
 			});
 
 			// Now the data file has changed (new values for original fields)
-			const newHash1 = computeRecordHash({ id: 1, name: 'JSON Item 1', value: 350 }); // value changed to 350
-			const newHash2 = computeRecordHash({ id: 2, name: 'JSON Item 2', value: 450 }); // value changed to 450
+			computeRecordHash({ id: 1, name: 'JSON Item 1', value: 350 }); // value changed to 350
+			computeRecordHash({ id: 2, name: 'JSON Item 2', value: 450 }); // value changed to 450
 
 			// Update the jsonDataFile content
 			const updatedJsonFile = join(tempDir, 'updated-with-extra-fields.json');

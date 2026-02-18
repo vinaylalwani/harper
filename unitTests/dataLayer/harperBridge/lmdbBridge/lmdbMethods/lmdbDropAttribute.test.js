@@ -1,12 +1,12 @@
 'use strict';
 
-const testUtils = require('../../../../testUtils.js');
+const testUtils = require('../../../../testUtils');
 testUtils.preTestPrep();
 const path = require('path');
 
 const SYSTEM_FOLDER_NAME = 'system';
 const SCHEMA_NAME = 'schema';
-const BASE_PATH = testUtils.getMockLMDBPath();
+const BASE_PATH = testUtils.setupTestDBPath();
 const BASE_SCHEMA_PATH = path.join(BASE_PATH, SCHEMA_NAME);
 const SYSTEM_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, SYSTEM_FOLDER_NAME);
 const DEV_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, 'dev');
@@ -69,7 +69,7 @@ describe('test lmdbDropAttribute module', () => {
 	let date_stub;
 
 	before(async () => {
-		await fs.remove(testUtils.getMockLMDBPath());
+		await fs.remove(testUtils.setupTestDBPath());
 		date_stub = sandbox.stub(Date, 'now').returns(TIMESTAMP);
 	});
 
@@ -83,7 +83,7 @@ describe('test lmdbDropAttribute module', () => {
 		let hdb_attribute_env;
 		before(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 			await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -137,7 +137,7 @@ describe('test lmdbDropAttribute module', () => {
 			await hdb_attribute_env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 		});
 
 		it('test attribute not found', async () => {
@@ -168,7 +168,7 @@ describe('test lmdbDropAttribute module', () => {
 		let hdb_attribute_env;
 		before(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 			await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -222,7 +222,7 @@ describe('test lmdbDropAttribute module', () => {
 			await hdb_attribute_env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 		});
 
 		it('test removing temperature_str, pass invalid hash attribute', async () => {
@@ -244,7 +244,6 @@ describe('test lmdbDropAttribute module', () => {
 			search_results.forEach((result) => {
 				assert.notDeepStrictEqual(result.id, null);
 				assert.deepStrictEqual(result.temperature_str, null);
-				let entry = tbl_env.dbis['id'].getEntry(result.id);
 			});
 		});
 	});
@@ -255,7 +254,7 @@ describe('test lmdbDropAttribute module', () => {
 		let hdb_attribute_env;
 		before(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 			await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -309,7 +308,7 @@ describe('test lmdbDropAttribute module', () => {
 			await hdb_attribute_env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 		});
 
 		it('test removing temperature_str', async () => {

@@ -8,6 +8,8 @@ const { setMainIsWorker } = require('#js/server/threads/manageThreads');
 const config_utils = require('#js/config/configUtils');
 const copyDB = require('#src/bin/copyDb');
 const { resetDatabases } = require('#src/resources/databases');
+const { get: envGet } = require('#js/utility/environment/environmentManager');
+const { CONFIG_PARAMS } = require('#js/utility/hdbTerms');
 
 describe('Test database copy and compact', () => {
 	const sandbox = sinon.createSandbox();
@@ -19,7 +21,7 @@ describe('Test database copy and compact', () => {
 	let update_config_stub;
 	let test_db_path;
 	let test_db_backup_path;
-
+	if (envGet(CONFIG_PARAMS.STORAGE_ENGINE) !== 'lmdb') return;
 	before(async function () {
 		console_error_spy = sandbox.spy(console, 'error');
 		sandbox.spy(console, 'log');

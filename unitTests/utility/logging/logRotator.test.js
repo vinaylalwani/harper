@@ -14,7 +14,6 @@ const LOG_NAME_TEST = 'hdb.log';
 const LOG_DIR_TEST = path.join(__dirname, LOG_DIR_NAME_TEST);
 const LOG_FILE_PATH_TEST = path.join(LOG_DIR_TEST, LOG_NAME_TEST);
 const TEST_TIMEOUT = 10000;
-let test_file_size;
 
 describe('Test logRotator module', () => {
 	let logger;
@@ -24,7 +23,7 @@ describe('Test logRotator module', () => {
 		}
 		await hdb_utils.asyncSetTimeout(50);
 		setTimeout(() => {}, 500);
-		test_file_size = fs.statSync(LOG_FILE_PATH_TEST).size;
+		fs.statSync(LOG_FILE_PATH_TEST).size;
 	}
 
 	before(() => {
@@ -44,7 +43,7 @@ describe('Test logRotator module', () => {
 	after(() => {
 		try {
 			fs.removeSync(LOG_DIR_TEST);
-		} catch (e) {}
+		} catch {}
 	});
 
 	async function runRotator(options) {

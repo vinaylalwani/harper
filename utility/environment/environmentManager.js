@@ -105,7 +105,7 @@ function doesPropFileExist() {
 		installProps[BOOT_PROPS_FILE_PATH] = bootPropPath;
 
 		return true;
-	} catch (e) {
+	} catch {
 		log.trace(`Environment manager found no properties file at ${bootPropPath}`);
 		return false;
 	}
@@ -117,12 +117,13 @@ function doesPropFileExist() {
  */
 function initSync(force = false) {
 	try {
-		// If readPropsFile returns false, we are installing and don't need to read anything yet.
 		if (propFileExists || doesPropFileExist() || commonUtils.noBootFile() || force) {
 			configUtils.initConfig(force);
-			installProps[hdbTerms.HDB_SETTINGS_NAMES.HDB_ROOT_KEY] = configUtils.getConfigValue(
-				hdbTerms.HDB_SETTINGS_NAMES.HDB_ROOT_KEY
-			);
+			const configHdbRoot = configUtils.getConfigValue(hdbTerms.HDB_SETTINGS_NAMES.HDB_ROOT_KEY);
+			// Only overwrite if we actually got a value from config
+			if (configHdbRoot !== undefined) {
+				installProps[hdbTerms.HDB_SETTINGS_NAMES.HDB_ROOT_KEY] = configHdbRoot;
+			}
 		}
 	} catch (err) {
 		log.error(INIT_ERR);

@@ -15,7 +15,7 @@ class LMDBCreateAttributeObject extends CreateAttributeObject {
 	constructor(schema, table, attribute, id, dupSort = true, isHashAttribute = false) {
 		super(schema, table, attribute, id);
 		this.dup_sort = dupSort;
-		this.is_hash_attribute = isHashAttribute;
+		this.isPrimaryKey = isHashAttribute;
 	}
 }
 

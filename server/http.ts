@@ -38,7 +38,7 @@ let httpOptions: any = {};
 export const suppressHandleApplicationWarning = true;
 export function handleApplication(scope: Scope) {
 	httpOptions = scope.options.getAll();
-	scope.options.on('change', (key) => {
+	scope.options.on('change', (_key) => {
 		// TODO: Check to see if the key is something we can or can't handle
 		httpOptions = scope.options.getAll();
 	});
@@ -483,7 +483,7 @@ Object.defineProperty(IncomingMessage.prototype, 'upgrade', {
 			this.headers.upgrade.toLowerCase() == 'websocket'
 		);
 	},
-	set(v) {},
+	set(_v) {},
 });
 
 type OnUpgradeOptions = {

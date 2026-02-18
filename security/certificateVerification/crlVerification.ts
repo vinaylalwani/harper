@@ -390,7 +390,7 @@ async function checkCRLFreshness(
 				} else if (cachedCRL && cachedCRL.next_update + config.gracePeriod > now) {
 					crlData = cachedCRL;
 				}
-			} catch (cacheError) {
+			} catch {
 				// Failed to check cache, continue
 			}
 
@@ -406,7 +406,7 @@ async function checkCRLFreshness(
 				if (!cachedCRL) {
 					try {
 						await (crlTable as any).put(distributionPoint, crlData);
-					} catch (cacheError) {
+					} catch {
 						// Failed to cache, but continue anyway
 					}
 				}
