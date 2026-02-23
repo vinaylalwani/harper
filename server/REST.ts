@@ -149,6 +149,7 @@ async function http(request: Context & Request, nextHandler) {
 		} else if (responseData.headers) {
 			// if response is a Response object, use it as the response
 			if (Object.isFrozen(responseData)) {
+				// make a copy if it is a frozen record
 				responseData = Object.assign({}, responseData);
 			}
 			// merge headers from response
@@ -157,8 +158,11 @@ async function http(request: Context & Request, nextHandler) {
 				// if we rebuilt the headers, reassign it, but we don't want to assign to a Response object (which should already
 				// have a valid Headers object) or it will throw an error
 				responseData.headers = responseHeaders;
-			// if data is provided, serialize it
-			if (responseData.data !== undefined) responseData.body = serialize(responseData.data, request, responseData);
+			// if no body, look for provided data to serialize
+			if (!responseData.body) {
+				if ('data' in responseData) responseData.body = serialize(responseData.data, request, responseData);
+				else responseData.body = serialize(responseData, request, responseData);
+			}
 			responseData.status ??= 200;
 			return responseData;
 		} else if (isFinite(lastModification)) {

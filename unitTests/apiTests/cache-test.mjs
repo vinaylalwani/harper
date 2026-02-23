@@ -95,5 +95,11 @@ describe('test REST calls with cache table', () => {
 			assert(response.data.startsWith('<html>'));
 			assert.equal(response.headers.get('content-type'), 'text/html');
 		});
+		it('get resolved as object with headers', async () => {
+			let response = await axios.get('http://localhost:9926/CacheOfHttp/headers-in-data');
+			assert.equal(response.status, 200);
+			assert.equal(response.data.name, 'test-sibling-to-headers');
+			assert.equal(response.headers.get('x-custom-header'), 'custom value');
+		});
 	});
 });

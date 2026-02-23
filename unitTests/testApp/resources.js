@@ -184,6 +184,11 @@ tables.CacheOfHttp.sourcedFrom({
 				return new Response('<html>test</html>', {
 					headers: { 'content-type': 'text/html' },
 				});
+			case 'headers-in-data':
+				return {
+					headers: { 'x-custom-header': 'custom value' },
+					name: 'test-sibling-to-headers',
+				};
 		}
 	},
 });
