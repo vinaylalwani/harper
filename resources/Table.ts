@@ -64,7 +64,7 @@ import harperLogger from '../utility/logging/harper_logger.js';
 import { throttle } from '../server/throttle.ts';
 import { RocksDatabase } from '@harperfast/rocksdb-js';
 import { LMDBTransaction, ImmediateTransaction as ImmediateLMDBTransaction } from './LMDBTransaction';
-import { contentTypes } from '#js/server/serverHelpers/contentTypes';
+import { contentTypes } from '../server/serverHelpers/contentTypes';
 
 const { sortBy } = lodash;
 const { validateAttribute } = lmdbProcessRows;
