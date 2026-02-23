@@ -65,4 +65,10 @@ describe('test REST calls with cache table', () => {
 		assert(tables.CacheOfResource.sourceGetsPerformed > start_count);
 		assert.equal(response.status, 200);
 	});
+	it('get with HTTP cache', async () => {
+		let response = await axios.get('http://localhost:9926/CacheOfHttp/2');
+		assert.equal(response.status, 200);
+		assert.equal(response.data.id, '2');
+		assert.equal(response.data.name, 'name2');
+	});
 });

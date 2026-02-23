@@ -64,6 +64,7 @@ import harperLogger from '../utility/logging/harper_logger.js';
 import { throttle } from '../server/throttle.ts';
 import { RocksDatabase } from '@harperfast/rocksdb-js';
 import { LMDBTransaction, ImmediateTransaction as ImmediateLMDBTransaction } from './LMDBTransaction';
+import { contentTypes } from '#js/server/serverHelpers/contentTypes';
 
 const { sortBy } = lodash;
 const { validateAttribute } = lmdbProcessRows;
@@ -3976,7 +3977,25 @@ export function makeTable(options) {
 										throw new ServerError(updatedRecord.body || 'Error from source', updatedRecord.status);
 									} // there are definitely more status codes to handle
 								} else {
-									updatedRecord = updatedRecord.body;
+									const headers = {};
+									const sourceHeaders = updatedRecord.headers;
+									for (let name of ['Cache-Control', 'ETag', 'Last-Modified', 'Date']) {
+										if (sourceHeaders.has?.(name)) {
+											headers[name] = sourceHeaders.get(name);
+										}
+									}
+									const contentType = sourceHeaders.get?.('Content-Type');
+									if (contentType === 'application/json' && updatedRecord.json) {
+										updatedRecord = {
+											headers,
+											data: await updatedRecord.json(),
+										};
+									} else {
+										updatedRecord = {
+											headers,
+											body: createBlob(updatedRecord.body),
+										};
+									}
 								}
 							}
 							if (typeof updatedRecord.toJSON === 'function') updatedRecord = updatedRecord.toJSON();

@@ -163,6 +163,14 @@ tables.CacheOfResource.sourcedFrom({
 	},
 });
 
+// test transparent HTTP caching straight through
+tables.CacheOfHttp.sourcedFrom({
+	async get(target) {
+		const response = await fetch(`http://localhost:9926/FourProp/${target}`);
+		return response;
+	},
+});
+
 export class FourPropWithHistory extends tables.FourProp {
 	async subscribe(options) {
 		let context = this.getContext();

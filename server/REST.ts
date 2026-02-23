@@ -146,8 +146,11 @@ async function http(request: Context & Request, nextHandler) {
 			// deleted entries can have a timestamp of when they were deleted
 			if (httpOptions.lastModified && isFinite(lastModification))
 				headers.setIfNone('Last-Modified', new Date(lastModification).toUTCString());
-		} else if (responseData.status > 0 && responseData.headers) {
+		} else if (responseData.headers) {
 			// if response is a Response object, use it as the response
+			if (Object.isFrozen(responseData)) {
+				responseData = Object.assign({}, responseData);
+			}
 			// merge headers from response
 			const responseHeaders = mergeHeaders(responseData.headers, headers);
 			if (responseData.headers !== responseHeaders)
@@ -156,6 +159,7 @@ async function http(request: Context & Request, nextHandler) {
 				responseData.headers = responseHeaders;
 			// if data is provided, serialize it
 			if (responseData.data !== undefined) responseData.body = serialize(responseData.data, request, responseData);
+			responseData.status ??= 200;
 			return responseData;
 		} else if (isFinite(lastModification)) {
 			etagFloat[0] = lastModification;
