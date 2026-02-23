@@ -1,7 +1,5 @@
 import type { UserRoleDatabasePermissions } from '../security/user.ts';
 import type { Conditions, DirectCondition, Id, Select, Sort } from './ResourceInterface.ts';
-import { _assignPackageExport } from '../globals.js';
-import { Resource } from './Resource.ts';
 import { parseQuery } from './search.ts';
 
 export class RequestTarget extends URLSearchParams {
@@ -134,4 +132,3 @@ export class RequestTarget extends URLSearchParams {
 	}
 }
 export type RequestTargetOrId = RequestTarget | Id;
-_assignPackageExport('Resource', Resource);

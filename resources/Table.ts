@@ -1852,7 +1852,7 @@ export function makeTable(options) {
 							}
 						})()
 					);
-					updateIndices(id, existingRecord, recordToStore, { transaction });
+					updateIndices(id, existingRecord, recordToStore, transaction && { transaction });
 
 					writeCommit(true);
 					if (context.expiresAt) scheduleCleanup();
@@ -3354,7 +3354,7 @@ export function makeTable(options) {
 			})) {
 				await rest(); // yield to other async operations
 				if (auditRecord.tableId !== tableId) continue;
-				completion = removeAuditEntry(auditStore, auditRecord.localTime, auditRecord);
+				completion = removeAuditEntry(auditStore, auditRecord);
 			}
 			if (cleanupDeletedRecords) {
 				// this is separate procedure we can do if the records are not being cleaned up by the audit log. This shouldn't

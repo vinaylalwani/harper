@@ -142,7 +142,7 @@ const FAKE_JSON_1 = {
 
 const LOG_ROOT = '/yaml/log';
 
-const CONFIG_FILE_PATH = path.join(DIRNAME, 'yaml', 'harperdb-config.yaml');
+const CONFIG_FILE_PATH = path.join(DIRNAME, 'yaml', 'harper-config.yaml');
 const OLD_CONFIG_PATH = 'test-config/settings.js';
 const BAD_CONFIG_FILE_PATH = path.join(DIRNAME, 'yaml', 'harperdb.doesntexist');
 const BACKUP_FOLDER_PATH = path.join(DIRNAME, 'yaml/backup');
@@ -1205,7 +1205,7 @@ describe('Test configUtils module', () => {
 	});
 
 	describe('Test port conflict resolution with environment variables', () => {
-		const CONFIG_FILE_PATH = path.join(HDB_ROOT, hdbTerms.HDB_CONFIG_FILE);
+		const CONFIG_FILE_PATH = path.join(HDB_ROOT, hdbTerms.HARPER_CONFIG_FILE);
 
 		beforeEach(() => {
 			// Clean up any existing env vars
