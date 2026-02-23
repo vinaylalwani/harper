@@ -27,6 +27,10 @@ async function http(request: Context & Request, nextHandler) {
 	const headers = new Headers();
 	try {
 		request.responseHeaders = headers;
+		request.response = {
+			status: undefined,
+			headers,
+		};
 		const url = request.url.slice(1);
 
 		let target: RequestTarget;
@@ -139,10 +143,10 @@ async function http(request: Context & Request, nextHandler) {
 					throw new ServerError(`Method ${method} is not recognized`, 501);
 			}
 		});
-		let status = 200;
+		let status = request.response.status;
 		let lastModification = request.lastModified;
 		if (responseData == undefined) {
-			status = method === 'GET' || method === 'HEAD' ? 404 : 204;
+			status ??= method === 'GET' || method === 'HEAD' ? 404 : 204;
 			// deleted entries can have a timestamp of when they were deleted
 			if (httpOptions.lastModified && isFinite(lastModification))
 				headers.setIfNone('Last-Modified', new Date(lastModification).toUTCString());
@@ -163,7 +167,7 @@ async function http(request: Context & Request, nextHandler) {
 				if ('data' in responseData) responseData.body = serialize(responseData.data, request, responseData);
 				else responseData.body = serialize(responseData, request, responseData);
 			}
-			responseData.status ??= 200;
+			responseData.status ??= status ?? 200;
 			return responseData;
 		} else if (isFinite(lastModification)) {
 			etagFloat[0] = lastModification;
@@ -197,7 +201,7 @@ async function http(request: Context & Request, nextHandler) {
 		if (request.newLocation) headers.setIfNone('Location', request.newLocation);
 
 		const responseObject = {
-			status,
+			status: status ?? 200,
 			headers,
 			body: undefined,
 		};
@@ -216,19 +220,20 @@ async function http(request: Context & Request, nextHandler) {
 		}
 		return responseObject;
 	} catch (error) {
-		if (error.statusCode) {
-			if (error.statusCode === 500) harperLogger.warn(error);
+		let statusCode = error.statusCode ?? request.response.status;
+		if (statusCode) {
+			if (statusCode === 500) harperLogger.warn(error);
 			else harperLogger.info(error);
-		} else harperLogger.error(error);
-		if (error.statusCode === 405) {
-			if (error.method) error.message += ` to handle HTTP method ${error.method.toUpperCase() || ''}`;
-			if (error.allow) {
-				error.allow.push('trace', 'head', 'options');
-				headers.setIfNone('Allow', error.allow.map((method) => method.toUpperCase()).join(', '));
+			if (statusCode === 405) {
+				if (error.method) error.message += ` to handle HTTP method ${error.method.toUpperCase() || ''}`;
+				if (error.allow) {
+					error.allow.push('trace', 'head', 'options');
+					headers.setIfNone('Allow', error.allow.map((method) => method.toUpperCase()).join(', '));
+				}
 			}
-		}
+		} else harperLogger.error(error);
 		const responseObject = {
-			status: error.statusCode || 500, // use specified error status, or default to generic server error
+			status: statusCode || 500, // use specified error status, or default to generic server error
 			headers,
 			body: undefined,
 		};

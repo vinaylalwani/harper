@@ -431,6 +431,7 @@ function getHarperExports(scope: Scope) {
 		getContext,
 		transaction,
 		getUser,
+		getResponse,
 		authenticateUser,
 		contentTypes,
 		operation,
@@ -474,6 +475,12 @@ function checkAllowedModulePath(moduleUrl: string, containingFolder: string): bo
 
 function getContext() {
 	return contextStorage.getStore() ?? {};
+}
+function getUser() {
+	return contextStorage.getStore()?.user;
+}
+function getResponse() {
+	return contextStorage.getStore()?.response;
 }
 
 export function preventFunctionConstructor() {
