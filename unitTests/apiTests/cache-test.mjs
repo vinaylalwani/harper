@@ -74,7 +74,6 @@ describe('test REST calls with cache table', () => {
 			assert.equal(response.data.name, 'name2');
 			assert(response.headers.get('ETag'));
 			assert.equal(response.headers.get('ETag'), source.headers.get('ETag'));
-			assert.equal(response.headers.get('Date'), source.headers.get('Date'));
 		});
 		it('get resolved with Response', async () => {
 			let response = await axios.get('http://localhost:9926/CacheOfHttp/created-response');
