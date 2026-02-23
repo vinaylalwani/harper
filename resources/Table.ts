@@ -3977,18 +3977,35 @@ export function makeTable(options) {
 										throw new ServerError(updatedRecord.body || 'Error from source', updatedRecord.status);
 									} // there are definitely more status codes to handle
 								} else {
-									const headers = {};
+									let headers: any;
 									const sourceHeaders = updatedRecord.headers;
-									for (let name of ['Cache-Control', 'ETag', 'Last-Modified', 'Date']) {
-										if (sourceHeaders.has?.(name)) {
-											headers[name] = sourceHeaders.get(name);
+									if (sourceHeaders[Symbol.iterator]) {
+										headers = {};
+										for (let [name, value] of sourceHeaders) {
+											headers[name.toLowerCase()] = value;
 										}
+									} else {
+										headers = sourceHeaders; // just a plain object
 									}
 									const contentType = sourceHeaders.get?.('Content-Type');
+									let data: any;
 									if (contentType === 'application/json' && updatedRecord.json) {
+										// use native .json() if possible
+										data = await updatedRecord.json();
+									} else {
+										const contentTypeHandler = contentType && contentTypes.get(contentType);
+										if (contentTypeHandler?.deserialize) {
+											data = contentTypeHandler.deserialize(
+												await (contentType.startsWith('text/') ? updatedRecord.text() : updatedRecord.bytes())
+											);
+										}
+									}
+									if (data !== undefined) {
+										// we have structured data that we have parsed
+										delete headers['content-type']; // don't store the content type if we have already parsed it
 										updatedRecord = {
 											headers,
-											data: await updatedRecord.json(),
+											data,
 										};
 									} else {
 										updatedRecord = {
