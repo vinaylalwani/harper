@@ -269,7 +269,9 @@ function getHTTPServer(port, secure, isOperationsServer, isMtls) {
 					response.headers = new Headers(response.headers);
 				}
 
-				response.headers.set('Server', 'Harper');
+				if (!response.headers.has('Server')) {
+					response.headers.set('Server', 'Harper');
+				}
 
 				if (response.status === -1) {
 					// This means the HDB stack didn't handle the request, and we can then cascade the request
