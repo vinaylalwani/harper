@@ -132,6 +132,10 @@ function translateRolePermissions(role, schema) {
 	const perms = role.permission;
 	finalPermissions[terms.SYSTEM_SCHEMA_NAME] = perms[terms.SYSTEM_SCHEMA_NAME];
 	finalPermissions.structure_user = perms.structure_user;
+	// Preserve operation_user allowlist and its pre-expanded Set so the gate check in
+	// verifyPerms still has access after role.permission is replaced with fullRolePerms.
+	finalPermissions.operation_user = perms.operation_user;
+	finalPermissions._expandedOperationUser = perms._expandedOperationUser;
 	const structureUser =
 		Array.isArray(role.permission.structure_user) || role.permission.structure_user === true
 			? role.permission.structure_user
