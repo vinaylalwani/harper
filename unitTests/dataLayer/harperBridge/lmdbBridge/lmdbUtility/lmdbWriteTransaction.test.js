@@ -1,10 +1,10 @@
 'use strict';
 
-const testUtils = require('../../../../testUtils.js');
+const testUtils = require('../../../../testUtils');
 testUtils.preTestPrep();
 const path = require('path');
 const TRANSACTIONS_NAME = 'transactions';
-const BASE_PATH = testUtils.getMockLMDBPath();
+const BASE_PATH = testUtils.setupTestDBPath();
 const BASE_TRANSACTIONS_PATH = path.join(BASE_PATH, TRANSACTIONS_NAME);
 
 const rewire = require('rewire');
@@ -38,9 +38,6 @@ const LMDBInsertTransactionObject = require('#js/dataLayer/harperBridge/lmdbBrid
 const LMDBUpdateTransactionObject = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/LMDBUpdateTransactionObject');
 const LMDBUpsertTransactionObject = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/LMDBUpsertTransactionObject');
 const LMDBDeleteTransactionObject = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/LMDBDeleteTransactionObject');
-
-const orig_clustering_setting = env_mngr.get('CLUSTERING');
-const orig_disable_txn_setting = env_mngr.get('DISABLE_TRANSACTION_LOG');
 
 const CREATE_TABLE_OBJ = new CreateTableObject('dev', 'test', 'id');
 
@@ -80,12 +77,12 @@ describe('test lmdbWriteTransaction module', () => {
 	describe('test createTransactionObject function', () => {
 		before(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 		});
 
 		after(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 		});
 
 		it('test for insert operation no user on operation', async () => {
@@ -258,7 +255,7 @@ describe('test lmdbWriteTransaction module', () => {
 			await env.close();
 			try {
 				await fs.remove(BASE_PATH);
-			} catch (error) {}
+			} catch {}
 			global.lmdb_map = undefined;
 		});
 

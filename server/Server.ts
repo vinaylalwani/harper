@@ -73,7 +73,7 @@ export const server: Server = {
 				? Promise.reject(new Error('Replication not implemented.'))
 				: Promise.resolve({ message: '' });
 		},
-		monitorNodeCAs(listener: () => void) {
+		monitorNodeCAs(_listener: () => void) {
 			throw new Error('Replication not implemented.');
 		},
 		sendOperationToNode() {

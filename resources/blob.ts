@@ -20,6 +20,7 @@ import {
 	open,
 	readFileSync,
 	read,
+	readSync,
 	unlink,
 	readdirSync,
 	existsSync,
@@ -27,6 +28,7 @@ import {
 	write,
 	statSync,
 	writeFile,
+	type FSWatcher,
 } from 'node:fs';
 import type { StatsFs } from 'node:fs';
 import { createDeflate, deflate } from 'node:zlib';
@@ -38,9 +40,10 @@ import { join, dirname } from 'path';
 import logger from '../utility/logging/logger.js';
 import type { LMDBStore } from 'lmdb';
 import { asyncSerialization, hasAsyncSerialization } from '../server/serverHelpers/contentTypes.ts';
-import { HAS_BLOBS, readAuditEntry } from './auditStore.ts';
+import { HAS_BLOBS } from './auditStore.ts';
 import { getHeapStatistics } from 'node:v8';
 import { setTimeout as delay, setImmediate as rest } from 'node:timers/promises';
+import { RocksDatabase } from '@harperfast/rocksdb-js';
 
 type StorageInfo = {
 	storageIndex: number;
@@ -73,7 +76,6 @@ let currentBlobCallback: (blob: Blob) => Blob | void;
 export const Blob = global.Blob || polyfillBlob(); // use the global Blob class if it exists (it doesn't on Node v16)
 let encodeForStorageForRecordId: number = undefined; // only enable encoding of the file path if we are saving to the DB, not for serialization to external clients, and only for one record
 let promisedWrites: Array<Promise<void>>;
-let promisedReads: Array<Promise<void>>;
 let currentStore: any; // the root store of the database we are currently encoding for
 export let blobsWereEncoded = false; // keep track of whether blobs were encoded with file paths
 // the header is 8 bytes
@@ -85,7 +87,6 @@ const FILE_READ_TIMEOUT = 60000;
 function InstanceOfBlobWithNoConstructor() {}
 InstanceOfBlobWithNoConstructor.prototype = Blob.prototype;
 
-let warnedSaveDeprecation = false;
 // @ts-ignore
 /**
  * A blob that is backed by a file, and can be saved to the database as a reference
@@ -100,6 +101,7 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 	size: number;
 	declare finished: Promise<void>;
 	declare saveBeforeCommit: boolean;
+	declare saveInRecord: boolean; // for indicating that we want the blob to be saved in the record
 	#onError: ((error: Error) => void)[];
 	#onSize: ((size: number) => void)[];
 	constructor(options?: BlobCreationOptions) {
@@ -191,15 +193,15 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 					if (writeFinished) {
 						throw new Error(`Incomplete blob for ${filePath}`);
 					}
-					return new Promise((resolve, reject) => {
-						if (
-							store.attemptLock(lockKey, 0, () => {
-								writeFinished = true;
-								return resolve(readContents());
-							})
-						) {
+					return new Promise((resolve) => {
+						const callback = () => {
 							writeFinished = true;
-							store.unlock(lockKey, 0);
+							return resolve(readContents());
+						};
+						const lockAcquired = store.tryLock(lockKey, callback);
+						if (lockAcquired) {
+							writeFinished = true;
+							store.unlock(lockKey);
 							return resolve(readContents());
 						}
 					});
@@ -249,8 +251,8 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 		let fd: number;
 		let position = 0;
 		let totalContentRead = 0;
-		let watcher: any;
-		let timer: any;
+		let watcher: FSWatcher;
+		let timer: NodeJS.Timeout;
 		let isBeingWritten: boolean;
 		let previouslyFinishedWriting = false;
 		const blob = this;
@@ -336,24 +338,25 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 								if (size > totalContentRead) {
 									if (checkIfIsBeingWritten()) {
 										// the file is not finished being written, watch the file for changes to resume reading
-										if (watcher) {
-											// already watching, but add a timer to make sure we don't wait forever
+										// set up a watcher to be notified of file changes
+										watcher = watch(filePath, { persistent: false }, () => {
+											watcher.close();
+											watcher = null;
+											clearTimeout(timer); // clear it
+											readMore(resolve, reject);
+										});
+										// immediately try to read again in case there was a change before we started watching,
+										// readSync should be fine here, the data should be in memory
+										if (readSync(fd, buffer, 0, buffer.length, position) > 0) {
+											// never mind with the watcher, let's read more data
+											watcher.close();
+											watcher = null;
+											readMore(resolve, reject);
+										} else {
+											// set a timer for the watcher too
 											timer = setTimeout(() => {
 												onError(new Error(`File read timed out reading from ${filePath}`));
 											}, FILE_READ_TIMEOUT).unref();
-										} else {
-											// set up a watcher to be notified of file changes
-											watcher = watch(filePath, { persistent: false }, () => {
-												watcher.close();
-												watcher = null;
-												if (timer) {
-													// if we are waiting for a timeout, that means we finished another read and we can proceed with the next one=
-													clearTimeout(timer); // clear it
-													timer = null;
-													readMore(resolve, reject);
-												}
-											});
-											readMore(resolve, reject); // immediately try to read again in case there was a change before we started watching
 										}
 									} else {
 										if (previouslyFinishedWriting) {
@@ -417,10 +420,10 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 			if (isBeingWritten === undefined) {
 				const store = storageInfo.store;
 				const lockKey = storageInfo.fileId + ':blob';
-				isBeingWritten = !store.attemptLock(lockKey, 0, () => {
+				isBeingWritten = !store.tryLock(lockKey, () => {
 					isBeingWritten = false;
 				});
-				if (!isBeingWritten) store.unlock(lockKey, 0);
+				if (!isBeingWritten) store.unlock(lockKey);
 			}
 			return isBeingWritten;
 		}
@@ -449,16 +452,6 @@ class FileBackedBlob extends InstanceOfBlobWithNoConstructor {
 			throw new Error('Can not slice a streaming blob that is not backed by a file');
 		}
 		return slicedBlob;
-	}
-	save(): Promise<void> {
-		if (!warnedSaveDeprecation) {
-			warnedSaveDeprecation = true;
-			logger.warn?.(
-				`save() method on Blob is deprecated, use the 'saveBeforeCommit' flag on the Blob constructor instead`
-			);
-		}
-		this.saveBeforeCommit = true;
-		return Promise.resolve();
 	}
 	get written() {
 		return storageInfoForBlob.get(this)?.saving ?? Promise.resolve();
@@ -527,7 +520,13 @@ export function saveBlob(blob: FileBackedBlob, deleteOnFailure = false) {
 		storageInfo.store = currentStore;
 	}
 	storageInfo.deleteOnFailure = deleteOnFailure;
-
+	if (blob.saveInRecord) {
+		if (!storageInfo.contentBuffer) {
+			// TODO: Add support for this: https://github.com/HarperFast/harper/issues/141
+			throw new Error('Cannot publish a message with a streamed blob');
+		}
+		return storageInfo; // nothing more to do if it supposed to be saved in the record
+	}
 	generateFilePath(storageInfo);
 	if (storageInfo.source) writeBlobWithStream(blob, storageInfo.source, storageInfo);
 	else if (storageInfo.contentBuffer) writeBlobWithBuffer(blob, storageInfo);
@@ -546,7 +545,7 @@ function writeBlobWithStream(blob: Blob, stream: NodeJS.ReadableStream, storageI
 	storageInfo.saving = new Promise((resolve, reject) => {
 		// pipe the stream to the file
 		const lockKey = fileId + ':blob';
-		if (!store.attemptLock(lockKey, 0)) {
+		if (!store.tryLock(lockKey)) {
 			throw new Error(`Unable to get lock for blob file ${fileId}`);
 		}
 		const writeStream = createWriteStream(filePath, { autoClose: false, flags: 'w' });
@@ -577,7 +576,7 @@ function writeBlobWithStream(blob: Blob, stream: NodeJS.ReadableStream, storageI
 		function finished(error?: Error) {
 			const fd = writeStream.fd;
 			if (error) {
-				store.unlock(lockKey, 0);
+				store.unlock(lockKey);
 				if (fd) {
 					close(fd);
 					writeStream.fd = null; // do not close the same fd twice, that is very dangerous because it might represent a new fd
@@ -612,7 +611,7 @@ function writeBlobWithStream(blob: Blob, stream: NodeJS.ReadableStream, storageI
 					write(fd, createHeader(size), 0, HEADER_SIZE, 0, finished);
 					return; // not finished yet, wait for this write and then we are finished
 				}
-				store.unlock(lockKey, 0);
+				store.unlock(lockKey);
 				if (flush) {
 					// we just use fdatasync because we really aren't that concerned with flushing file metadata
 					fdatasync(fd, (error) => {
@@ -814,7 +813,7 @@ function getNextStorageIndex(blobStoragePaths: string[], fileId: number) {
 async function createFrequencyTableForStoragePaths(blobStoragePaths: string[]) {
 	if (!statfs) return; // statfs is not available on all older node versions
 	const availableSpaces = await Promise.all(
-		blobStoragePaths.map(async (path, index) => {
+		blobStoragePaths.map(async (path) => {
 			let stats: StatsFs;
 			try {
 				stats = await statfs(path);
@@ -905,7 +904,7 @@ export function decodeBlobsWithWrites(callback: () => void, store?: LMDBStore, b
 	currentBlobCallback = undefined;
 	const finished = promisedWrites.length < 2 ? promisedWrites[0] : Promise.all(promisedWrites);
 	promisedWrites = undefined;
-	// eslint-disable-next-line no-unsafe-finally
+
 	return finished;
 }
 
@@ -974,17 +973,29 @@ export function findBlobsInObject(object: any, callback: (blob: Blob) => void) {
  * @param record
  * @param store
  */
-export function startPreCommitBlobsForRecord(record: any, store: LMDBStore) {
-	let completion;
+export function startPreCommitBlobsForRecord(record: any, store: LMDBStore | RocksDatabase, saveInRecord?: boolean) {
+	let blobsNeedingSaving = [];
 	for (const key in record) {
 		const value = record[key];
-		if (value instanceof FileBackedBlob && value.saveBeforeCommit) {
+		if (value instanceof FileBackedBlob && (saveInRecord || value.saveBeforeCommit)) {
 			currentStore = store;
-			const saving = saveBlob(value, true).saving ?? Promise.resolve();
-			completion = completion ? Promise.all(completion, saving) : saving;
+			if (saveInRecord) {
+				value.saveInRecord = true;
+			}
+			blobsNeedingSaving.push(value);
 		}
 	}
-	return completion;
+	if (blobsNeedingSaving.length > 0) {
+		// we do have blobs, start saving once the returned function is called
+		return () => {
+			currentStore = store;
+			return Promise.all(
+				blobsNeedingSaving.map((blob) => {
+					return saveBlob(blob, true).saving ?? Promise.resolve();
+				})
+			);
+		};
+	}
 }
 
 const copyingUnpacker = new Packr({ copyBuffers: true, mapsAsObjects: true });
@@ -1033,7 +1044,10 @@ addExtension({
 			if (storageInfo.storageBuffer) {
 				return storageInfo.storageBuffer;
 			}
-			if (storageInfo.contentBuffer?.length < FILE_STORAGE_THRESHOLD) {
+			if (
+				storageInfo.contentBuffer &&
+				(storageInfo.contentBuffer?.length < FILE_STORAGE_THRESHOLD || blob.saveInRecord)
+			) {
 				options.size = storageInfo.contentBuffer.length;
 				return pack([options, storageInfo.contentBuffer]);
 			}
@@ -1209,10 +1223,10 @@ export async function cleanupOrphans(database: any, databaseName?: string) {
 		}
 		logger.warn?.('Checking for references to potential orphaned blobs in the audit log');
 		// search the audit store for references
-		for (const { value } of auditStore.getRange({ start: 1, snapshot: false, lazy: true })) {
+		for (const auditRecord of auditStore.getRange({ start: 1, snapshot: false, lazy: true })) {
 			try {
-				const auditRecord = readAuditEntry(value);
 				const primaryStore = auditStore.tableStores[auditRecord.tableId];
+				if (!primaryStore) continue;
 				const entry = primaryStore?.getEntry(auditRecord.recordId);
 				if (!entry || entry.version !== auditRecord.version || !entry.value) {
 					checkObjectForReferences(auditRecord.getValue(primaryStore));
@@ -1231,7 +1245,7 @@ export async function cleanupOrphans(database: any, databaseName?: string) {
 			try {
 				await unlinkPromised(path);
 			} catch (error) {
-				logger.warn?.('Error deleting file', error);
+				logger.debug?.('Error deleting file', error);
 			}
 		}
 		logger.warn?.('Finished deleting', pathsToCheck.size, 'orphaned blobs');

@@ -1,5 +1,6 @@
 import { Readable } from 'stream';
 import * as harperLogger from '../../utility/logging/harper_logger.js';
+import { when } from '../../utility/when.ts';
 import JSONbig from 'json-bigint-fixes';
 const JSONbigint = JSONbig({ useNativeBigInt: true });
 const BUFFER_SIZE = 10000;
@@ -209,13 +210,6 @@ class JSONStream extends Readable {
 function handleError(error) {
 	console.error(error);
 	return JSON.stringify(errorToString(error));
-}
-
-function when(promise, callback, errback) {
-	if (promise?.then) {
-		return errback ? promise.then(callback, errback) : promise.then(callback);
-	}
-	return callback(promise);
 }
 
 export function stringify(value) {

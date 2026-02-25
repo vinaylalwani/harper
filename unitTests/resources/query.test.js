@@ -1,9 +1,12 @@
+require('../testUtils');
 const assert = require('assert');
-const { getMockLMDBPath } = require('../testUtils.js');
+const { setupTestDBPath } = require('../testUtils');
 const { parseQuery } = require('#src/resources/search');
 const { table } = require('#src/resources/databases');
 const { transaction } = require('#src/resources/transaction');
+const { RequestTarget } = require('#src/resources/RequestTarget');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
+const { RocksDatabase } = require('@harperfast/rocksdb-js');
 let x = 532532;
 function random(max) {
 	x = (x * 16843009 + 3014898611) >>> 0;
@@ -18,7 +21,7 @@ describe('Querying through Resource API', () => {
 		long_str += 'testing';
 	}
 	before(async function () {
-		getMockLMDBPath();
+		setupTestDBPath();
 		setMainIsWorker(true); // TODO: Should be default until changed
 		let relationship_attribute = {
 			name: 'related',
@@ -149,7 +152,7 @@ describe('Querying through Resource API', () => {
 		await last;
 		// rewrite one of them to ensure the prototype doesn't get messed up
 		const id12 = await QueryTable.get('id-12');
-		await QueryTable.put(id12.toJSON());
+		await QueryTable.put(id12);
 	});
 	// This test should be working. My local reproduction works fine with the code changes. I'm sure this has to do with how I created the tables and records in the `before()` maybe?
 	it('should properly evaluate an `and` operation', async function () {
@@ -382,7 +385,6 @@ describe('Querying through Resource API', () => {
 
 		it('Query by simple join with nested partial select', async function () {
 			let results = [];
-			let start_count = QueryTable.primaryStore.readCount;
 			for await (let record of QueryTable.search({
 				conditions: [{ attribute: ['related', 'name'], value: 'related name 1' }],
 				select: ['id', { name: 'related', select: ['name', { name: 'relatedToMany', select: ['id'] }] }, 'name'],
@@ -400,7 +402,6 @@ describe('Querying through Resource API', () => {
 
 		it('Query by simple join with nested partial select using parser', async function () {
 			let results = [];
-			let start_count = QueryTable.primaryStore.readCount;
 			for await (let record of QueryTable.search(
 				parseQuery('related.name=related name 1&select(id,related[select(name,relatedToMany{id})])')
 			)) {
@@ -525,7 +526,6 @@ describe('Querying through Resource API', () => {
 
 		it('Query by joined condition with many-to-one and multiple joined condition', async function () {
 			let results = [];
-			let start_count = RelatedTable.primaryStore.readCount;
 			for await (let record of QueryTable.search({
 				conditions: [
 					{ attribute: ['related', 'name'], comparator: 'greater_than_equal', value: 'related name 3' },
@@ -934,7 +934,7 @@ describe('Querying through Resource API', () => {
 		});
 		it('Does not allow search when no value is provided', async function () {
 			assert.throws(() => {
-				for (let record of QueryTable.search({
+				for (let _record of QueryTable.search({
 					conditions: [{ attribute: 'name', descending: true }],
 				})) {
 				}
@@ -942,7 +942,7 @@ describe('Querying through Resource API', () => {
 		});
 		it('Sort on non-indexed property', async function () {
 			assert.throws(() => {
-				for (let record of QueryTable.search({
+				for (let _record of QueryTable.search({
 					sort: { attribute: 'notIndexed', descending: true },
 				})) {
 				}
@@ -1367,7 +1367,7 @@ describe('Querying through Resource API', () => {
 	});
 	it('Parsed query data in a table and select with special properties and star', async function () {
 		let results = [];
-		for await (let record of QueryTable.search({ url: '?id=ge=id-90&select($id,$updatedtime,*)' })) {
+		for await (let record of QueryTable.search(new RequestTarget('?id=ge=id-90&select($id,$updatedtime,*)'))) {
 			results.push(record);
 		}
 
@@ -1382,7 +1382,9 @@ describe('Querying through Resource API', () => {
 
 	it('Parsed nested query data in a table', async function () {
 		let results = [];
-		for await (let record of QueryTable.search({ url: '?(id=ge=id-90&id=le=id-93)|(name=name-95&id=ge=id-94)' })) {
+		for await (let record of QueryTable.search(
+			new RequestTarget('?(id=ge=id-90&id=le=id-93)|(name=name-95&id=ge=id-94)')
+		)) {
 			results.push(record);
 		}
 		assert.equal(results.length, 5);
@@ -1391,7 +1393,9 @@ describe('Querying through Resource API', () => {
 	});
 	it('Parsed nested query data in a table with brackets', async function () {
 		let results = [];
-		for await (let record of QueryTable.search({ url: '?[id=ge=id-90&id=le=id-93]|[name=name-95&id=ge=id-94]' })) {
+		for await (let record of QueryTable.search(
+			new RequestTarget('?[id=ge=id-90&id=le=id-93]|[name=name-95&id=ge=id-94]')
+		)) {
 			results.push(record);
 		}
 		assert.equal(results.length, 5);
@@ -1400,9 +1404,9 @@ describe('Querying through Resource API', () => {
 	});
 	it('Parsed nested query data in a table with joined sort', async function () {
 		let results = [];
-		for await (let record of QueryTable.search({
-			url: '?(id>id-80&id<=id-93)|(name=name-95&id>id-94)&sort(-related.name)',
-		})) {
+		for await (let record of QueryTable.search(
+			new RequestTarget('?(id>id-80&id<=id-93)|(name=name-95&id>id-94)&sort(-related.name)')
+		)) {
 			results.push(record);
 		}
 		assert.equal(results.length, 15);
@@ -1412,9 +1416,9 @@ describe('Querying through Resource API', () => {
 	});
 	it('Parsed query data in a table with one-to-many joined sort that is not primary', async function () {
 		let results = [];
-		for await (let record of RelatedTable.search({
-			url: '?name=related name 3&sort(-relatedToMany.name)&select(id,relatedToMany)',
-		})) {
+		for await (let record of RelatedTable.search(
+			new RequestTarget('?name=related name 3&sort(-relatedToMany.name)&select(id,relatedToMany)')
+		)) {
 			results.push(record);
 		}
 		assert.equal(results.length, 1);
@@ -1425,9 +1429,9 @@ describe('Querying through Resource API', () => {
 	});
 	it('Parsed query data in a table with many-to-many joined sort that is not primary', async function () {
 		let results = [];
-		for await (let record of QueryTable.search({
-			url: '?id=id-14&sort(-manyToMany.name)&select(id,manyToMany)',
-		})) {
+		for await (let record of QueryTable.search(
+			new RequestTarget('?id=id-14&sort(-manyToMany.name)&select(id,manyToMany)')
+		)) {
 			results.push(record);
 		}
 		assert.equal(results.length, 1);
@@ -1438,9 +1442,9 @@ describe('Querying through Resource API', () => {
 	});
 	it('Parsed query data in a table with many-to-many joined sort that has missing entries and multiple sorts', async function () {
 		let results = [];
-		for await (let record of QueryTable.search({
-			url: '?id=id-12|id=id-24&sort(-id,-manyToMany.name)&select(id,manyToMany,manyToManyIds)',
-		})) {
+		for await (let record of QueryTable.search(
+			new RequestTarget('?id=id-12|id=id-24&sort(-id,-manyToMany.name)&select(id,manyToMany,manyToManyIds)')
+		)) {
 			results.push(record);
 		}
 		assert.equal(results.length, 2);
@@ -1454,9 +1458,7 @@ describe('Querying through Resource API', () => {
 
 	it('Parsed query data in a table with not equal to null', async function () {
 		let results = [];
-		for await (let record of QueryTable.search({
-			url: '?sparse!=null',
-		})) {
+		for await (let record of QueryTable.search(new RequestTarget('?sparse!=null'))) {
 			results.push(record);
 		}
 		assert.equal(results.length, 17);
@@ -1466,9 +1468,7 @@ describe('Querying through Resource API', () => {
 	});
 	it('Parsed query with boolean equal to true', async function () {
 		let results = [];
-		for await (let record of RelatedTable.search({
-			url: '?aFlag==true',
-		})) {
+		for await (let record of RelatedTable.search(new RequestTarget('?aFlag==true'))) {
 			results.push(record);
 		}
 		assert.equal(results.length, 2);
@@ -1478,9 +1478,7 @@ describe('Querying through Resource API', () => {
 	});
 	it('Parsed query with boolean equal to false', async function () {
 		let results = [];
-		for await (let record of RelatedTable.search({
-			url: '?aFlag==false',
-		})) {
+		for await (let record of RelatedTable.search(new RequestTarget('?aFlag==false'))) {
 			results.push(record);
 		}
 		assert.equal(results.length, 3);
@@ -1493,12 +1491,7 @@ describe('Querying through Resource API', () => {
 		let context = {};
 		await RelatedTable.get(1, context); // This will set the lastModified on the context
 		assert(isFinite(context.lastModified));
-		for await (let record of RelatedTable.search(
-			{
-				url: '?aFlag==true',
-			},
-			context
-		)) {
+		for await (let record of RelatedTable.search(new RequestTarget('?aFlag==true'), context)) {
 			results.push(record);
 		}
 		assert(!isFinite(context.lastModified));
@@ -1658,6 +1651,7 @@ describe('Querying through Resource API', () => {
 		assert.equal(results.length, 2);
 	});
 	it('Too many read transactions should fail, but work afterwards', async function () {
+		if (QueryTable.primaryStore instanceof RocksDatabase) return; // not valid for Rocks
 		this.timeout(10000);
 		let resolvers = [];
 		await assert.rejects(async () => {

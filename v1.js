@@ -13,6 +13,7 @@ exports.Context = undefined;
 exports.FileAndURLPathConfig = undefined;
 exports.FilesOption = undefined;
 exports.FilesOptionObject = undefined;
+exports.IterableEventQueue = undefined;
 exports.Query = undefined;
 exports.RecordObject = undefined;
 exports.RequestTarget = undefined;
@@ -20,6 +21,8 @@ exports.RequestTargetOrId = undefined;
 exports.Resource = undefined;
 exports.ResourceInterface = undefined;
 exports.Scope = undefined;
+exports.Session = undefined;
+exports.SourceContext = undefined;
 exports.SubscriptionRequest = undefined;
 exports.User = undefined;
 

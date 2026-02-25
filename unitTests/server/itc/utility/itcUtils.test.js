@@ -8,10 +8,9 @@ const itc_utils = require('#js/server/threads/itc');
 
 describe('Test itcUtils module', () => {
 	const sandbox = sinon.createSandbox();
-	let log_warn_stub;
 
 	before(() => {
-		log_warn_stub = sandbox.stub(hdb_logger, 'warn');
+		sandbox.stub(hdb_logger, 'warn');
 	});
 
 	after(() => {

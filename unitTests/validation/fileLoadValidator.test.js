@@ -25,13 +25,6 @@ const LONG_STRING =
  *  Unit tests for validation/fileLoadValidator.js
  */
 describe('Test fileLoadValidator module', () => {
-	let obj_no_schema = {
-		operation: 'csv_data_load',
-		action: 'insert',
-		table: 'fordogs',
-		data: 'id, type\n1, English Pointer\n',
-	};
-
 	let obj_no_table = {
 		operation: '',
 		action: 'insert',
@@ -255,15 +248,10 @@ describe('Test fileLoadValidator module', () => {
 		let post_validate_checks;
 		let validate_result = '';
 		let check_glob_schema_stub;
-		let file_size_stub;
-		let max_csv_file_size_rewire;
-		let fs_access_stub;
-		let logger_stub;
 
 		before(() => {
-			logger_stub = sinon.stub(log, 'error');
-			file_size_stub = sinon.stub(fs, 'statSync');
-			max_csv_file_size_rewire = file_load_validator.__get__('MAX_FILE_SIZE');
+			sinon.stub(log, 'error');
+			sinon.stub(fs, 'statSync');
 			check_glob_schema_stub = sinon.stub(common_utils, 'checkGlobalSchemaTable');
 			post_validate_checks = file_load_validator.__get__('postValidateChecks');
 		});

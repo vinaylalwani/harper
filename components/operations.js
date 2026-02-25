@@ -2,11 +2,9 @@
 
 const path = require('node:path');
 const { isMainThread } = require('node:worker_threads');
-
 const fs = require('fs-extra');
 const fg = require('fast-glob');
 const normalize = require('normalize-path');
-
 const validator = require('./operationsValidation.js');
 const log = require('../utility/logging/harper_logger.js');
 const hdbTerms = require('../utility/hdbTerms.ts');

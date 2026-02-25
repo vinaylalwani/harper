@@ -19,7 +19,6 @@ const signalling = require('#js/utility/signalling');
 let insert = require('#js/dataLayer/insert');
 const logger = require('#js/utility/logging/harper_logger');
 const schema_metadata_validator = require('#js/validation/schemaMetadataValidator');
-const util = require('util');
 const { cloneDeep } = require('lodash');
 const harperBridge = require('#js/dataLayer/harperBridge/harperBridge');
 
@@ -78,9 +77,6 @@ function deleteSchemaTableStruc() {
 describe.skip('Test schema module', function () {
 	let signal_schema_change_stub;
 	let insert_stub;
-	let logger_error_stub;
-	let logger_info_stub;
-	let attr_validator_stub;
 	global.hdb_schema = {};
 	let sandbox = sinon.createSandbox();
 
@@ -89,8 +85,8 @@ describe.skip('Test schema module', function () {
 		env.setProperty('HDB_ROOT', HDB_ROOT_TEST);
 		insert_stub = sinon.stub(insert, 'insert');
 		signal_schema_change_stub = sinon.stub(signalling, 'signalSchemaChange');
-		logger_error_stub = sinon.stub(logger, 'error');
-		logger_info_stub = sinon.stub(logger, 'info');
+		sinon.stub(logger, 'error');
+		sinon.stub(logger, 'info');
 	});
 
 	afterEach(function () {
@@ -218,13 +214,12 @@ describe.skip('Test schema module', function () {
 	 * Tests for createTableStructure function.
 	 */
 	describe('Create table structure', function () {
-		let harper_bridge_stub;
 		let schema_exists_stub;
 		let schema_table_exists_stub;
 
 		before(() => {
 			schema_exists_stub = sandbox.stub(schema_metadata_validator, 'checkSchemaExists').resolves(true);
-			harper_bridge_stub = sinon.stub(harperBridge, 'createTable');
+			sinon.stub(harperBridge, 'createTable');
 			schema_table_exists_stub = sinon.stub(schema_metadata_validator, 'checkSchemaTableExists').resolves(true);
 			global.hdb_schema = {};
 		});
@@ -347,8 +342,8 @@ describe.skip('Test schema module', function () {
 		beforeEach(() => {
 			schema_describe_rw = schema.__set__('schemaMetadataValidator', {
 				schema_describe: {
-					describeSchema: async (describe_schema_object) => ({ ...GLOBAL_SCHEMA_FAKE.dogsrule }),
-					describeTable: async (describe_table_object) => ({ ...GLOBAL_SCHEMA_FAKE.dogsrule.catsdrool }),
+					describeSchema: async (_describe_schema_object) => ({ ...GLOBAL_SCHEMA_FAKE.dogsrule }),
+					describeTable: async (_describe_table_object) => ({ ...GLOBAL_SCHEMA_FAKE.dogsrule.catsdrool }),
 				},
 				checkSchemaExists: check_exists_stub,
 			});
@@ -361,8 +356,8 @@ describe.skip('Test schema module', function () {
 		it('Test that bridge stub is called as expected and success msg is returned', async () => {
 			let schema_describe_rw = schema.__set__('schemaMetadataValidator', {
 				schema_describe: {
-					describeSchema: async (describe_schema_object) => ({ ...GLOBAL_SCHEMA_FAKE }),
-					describeTable: async (describe_table_object) => ({ ...GLOBAL_SCHEMA_FAKE.dogsrule }),
+					describeSchema: async (_describe_schema_object) => ({ ...GLOBAL_SCHEMA_FAKE }),
+					describeTable: async (_describe_table_object) => ({ ...GLOBAL_SCHEMA_FAKE.dogsrule }),
 				},
 				checkSchemaExists: async (schema_name) => {
 					global.hdb_schema[schema_name] = { ...GLOBAL_SCHEMA_FAKE[schema_name] };
@@ -432,13 +427,13 @@ describe.skip('Test schema module', function () {
 		beforeEach(() => {
 			schema_describe_rw = schema.__set__('schemaMetadataValidator', {
 				schema_describe: {
-					describeSchema: async (describe_schema_object) => ({ ...GLOBAL_SCHEMA_FAKE.dogsrule }),
-					describeTable: async (describe_table_object) => ({ ...GLOBAL_SCHEMA_FAKE.dogsrule.catsdrool }),
+					describeSchema: async (_describe_schema_object) => ({ ...GLOBAL_SCHEMA_FAKE.dogsrule }),
+					describeTable: async (_describe_table_object) => ({ ...GLOBAL_SCHEMA_FAKE.dogsrule.catsdrool }),
 				},
 				checkSchemaExists: async (schema_name) => {
 					global.hdb_schema[schema_name] = { ...GLOBAL_SCHEMA_FAKE[schema_name] };
 				},
-				checkSchemaTableExists: async (schema_name, table_name) => {
+				checkSchemaTableExists: async (schema_name, _table_name) => {
 					global.hdb_schema[schema_name] = { ...GLOBAL_SCHEMA_FAKE[schema_name] };
 				},
 			});
@@ -509,10 +504,10 @@ describe.skip('Test schema module', function () {
 		beforeEach(() => {
 			schema_describe_rw = schema.__set__('schemaMetadataValidator', {
 				schema_describe: {
-					describeSchema: async (describe_schema_object) => {
+					describeSchema: async (_describe_schema_object) => {
 						({ ...GLOBAL_SCHEMA_FAKE.dogsrule });
 					},
-					describeTable: async (describe_table_object) => ({ ...GLOBAL_SCHEMA_FAKE.dogsrule.catsdrool }),
+					describeTable: async (_describe_table_object) => ({ ...GLOBAL_SCHEMA_FAKE.dogsrule.catsdrool }),
 				},
 				checkSchemaExists: async (schema_name) => {
 					global.hdb_schema[schema_name] = { ...GLOBAL_SCHEMA_FAKE[schema_name] };
@@ -621,13 +616,6 @@ describe.skip('Test schema module', function () {
 		let bridge_create_attr_stub;
 		let attribute_structure_fake = { message: 'inserted 1 of 1 records', skipped_hashes: '', inserted_hashes: '' };
 		sinon.stub(process, 'pid').value('8877');
-		let payload_fake = {
-			type: 'clustering_payload',
-			pid: process.pid,
-			clustering_type: 'broadcast',
-			id: attribute_structure_fake.id,
-			body: CREATE_ATTR_OBJECT_TEST,
-		};
 
 		let get_db_stub = sandbox.stub().returns({ dogsrule: { catsdrool: { attributes: [] } } });
 

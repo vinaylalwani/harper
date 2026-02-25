@@ -142,10 +142,9 @@ const FAKE_JSON_1 = {
 
 const LOG_ROOT = '/yaml/log';
 
-const CONFIG_FILE_PATH = path.join(DIRNAME, 'yaml', 'harperdb-config.yaml');
+const CONFIG_FILE_PATH = path.join(DIRNAME, 'yaml', 'harper-config.yaml');
 const OLD_CONFIG_PATH = 'test-config/settings.js';
 const BAD_CONFIG_FILE_PATH = path.join(DIRNAME, 'yaml', 'harperdb.doesntexist');
-
 const BACKUP_FOLDER_PATH = path.join(DIRNAME, 'yaml/backup');
 const EMPTY_GET_VALUE = 'Empty parameter sent to getConfigValue';
 const UNINIT_GET_CONFIG_ERR = 'Unable to get config value because config is uninitialized';
@@ -193,6 +192,11 @@ describe('Test configUtils module', () => {
 				analytics: {
 					aggregatePeriod: 60,
 					replicate: false,
+				},
+				applications: {
+					lockdown: 'freeze',
+					containment: 'vm',
+					dependencyContainment: false,
 				},
 				componentsRoot: path.join(DIRNAME, '/test_custom_functions'),
 				localStudio: {
@@ -290,6 +294,9 @@ describe('Test configUtils module', () => {
 				authentication_refreshtokentimeout: '31d',
 				analytics_aggregateperiod: 60,
 				analytics_replicate: false,
+				applications_containment: 'vm',
+				applications_dependencycontainment: false,
+				applications_lockdown: 'freeze',
 				componentsroot: path.join(DIRNAME, '/test_custom_functions'),
 				localstudio_enabled: true,
 				logging_auditauthevents_logfailed: false,
@@ -381,6 +388,9 @@ describe('Test configUtils module', () => {
 			authentication_enablesessions: true,
 			authentication_operationtokentimeout: '1d',
 			authentication_refreshtokentimeout: '30d',
+			applications_containment: 'vm',
+			applications_dependencycontainment: false,
+			applications_lockdown: 'freeze',
 			http_cors: false,
 			http_corsaccesslist: [null],
 			http_compressionthreshold: 0,
@@ -1195,7 +1205,7 @@ describe('Test configUtils module', () => {
 	});
 
 	describe('Test port conflict resolution with environment variables', () => {
-		const CONFIG_FILE_PATH = path.join(HDB_ROOT, hdbTerms.HDB_CONFIG_FILE);
+		const CONFIG_FILE_PATH = path.join(HDB_ROOT, hdbTerms.HARPER_CONFIG_FILE);
 
 		beforeEach(() => {
 			// Clean up any existing env vars

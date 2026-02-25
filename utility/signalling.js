@@ -1,7 +1,6 @@
 'use strict';
 
 const hdbTerms = require('./hdbTerms.ts');
-const hdbUtils = require('./common_utils.js');
 const hdbLogger = require('../utility/logging/harper_logger.js');
 const ITCEventObject = require('../server/itc/utility/ITCEventObject.js');
 let serverItcHandlers;

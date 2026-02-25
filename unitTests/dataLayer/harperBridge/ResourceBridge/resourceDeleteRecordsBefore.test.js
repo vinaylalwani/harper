@@ -1,14 +1,13 @@
 'use strict';
 
-const testUtils = require('../../../testUtils.js');
+const testUtils = require('../../../testUtils');
 testUtils.preTestPrep();
 const path = require('path');
 
 const SYSTEM_FOLDER_NAME = 'system';
 const SCHEMA_NAME = 'schema';
-const BASE_PATH = testUtils.getMockLMDBPath();
+const BASE_PATH = testUtils.setupTestDBPath();
 const BASE_SCHEMA_PATH = path.join(BASE_PATH, SCHEMA_NAME);
-const BASE_TXN_PATH = path.join(BASE_PATH, 'transactions');
 const SYSTEM_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, SYSTEM_FOLDER_NAME);
 const DEV_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, 'dev');
 
@@ -16,7 +15,6 @@ let test_data = require('../../../testData');
 
 const rewire = require('rewire');
 const environment_utility = rewire('#js/utility/lmdb/environmentUtility');
-const write_utility = require('#js/utility/lmdb/writeUtility');
 const SearchObject = require('#js/dataLayer/SearchObject');
 const harper_bridge = require('#js/dataLayer/harperBridge/harperBridge');
 const { createTable, createSchema, createRecords, searchByValue, dropTable } = harper_bridge;
@@ -24,7 +22,6 @@ const hdb_terms = require('#src/utility/hdbTerms');
 const assert = require('assert');
 const fs = require('fs-extra');
 const systemSchema = require('../../../../json/systemSchema');
-const ReadAuditLogObject = require('#js/dataLayer/ReadAuditLogObject');
 const { promisify } = require('util');
 const sleep = promisify(setTimeout);
 
@@ -87,7 +84,7 @@ describe('Test ResourceBridge deleteRecordsBefore', () => {
 
 			timestamps = [];
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 			await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -170,7 +167,7 @@ describe('Test ResourceBridge deleteRecordsBefore', () => {
 			await hdb_attribute_env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 		});
 
 		it('Test delete where table has no records', async () => {

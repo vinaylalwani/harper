@@ -54,16 +54,29 @@ export interface ResourceInterface<Record extends object = any>
 
 	doesExist(): boolean;
 	wasLoadedFromSource(): boolean | void;
+
+	getCurrentUser(): User | undefined;
+}
+
+export interface Session {
+	id?: any;
+	user?: User;
+	update: (updatedSession: any) => unknown;
+	delete: (id: any) => Promise<void>;
 }
 
 export interface Context {
 	/**	 The user making the request */
 	user?: User;
+	/** Check the username and password against the core user table to verify user identity */
+	login: (username: string, password: string) => Promise<string>;
+	/** Describes the current cookie-based session if it is present and grants the capacity to delete it. authentication.enableSessions must be turned on in the harperdb-config.yaml  */
+	session?: Session;
 	/**	 The database transaction object */
 	transaction?: DatabaseTransaction;
-	/**	 If the operation that will be performed with this context should check user authorization */
-	authorize?: number;
-	/**	 The last modification time of any data that has been accessed with this context */
+	/**	 If the operation that will be performed with this context should check user authorization	 */
+	authorize?: boolean;
+	/**	 The last modification time of any data that has been accessed with this context	 */
 	lastModified?: number;
 	/**	 The time	at which a saved record should expire */
 	expiresAt?: number;
@@ -87,6 +100,7 @@ export interface Context {
 	nodeName?: string;
 	resourceCache?: Map<Id, any>;
 	_freezeRecords?: boolean; // until v5, we conditionally freeze records for back-compat
+	timestamp?: number;
 }
 
 export interface SourceContext<TRequestContext = Context, Record extends object = any> {
@@ -157,7 +171,7 @@ export interface SubSelect {
 }
 export type Select = (string | SubSelect)[];
 
-export interface SubscriptionRequest {
+export interface SubscriptionRequest extends RequestTarget {
 	/** The starting time of events to return (defaults to now) */
 	startTime?: number;
 	/** The count of previously recorded events to return */
@@ -168,7 +182,7 @@ export interface SubscriptionRequest {
 	includeDescendants?: boolean;
 	supportsTransactions?: boolean;
 	rawEvents?: boolean;
-	listener: Listener;
+	listener?: Listener;
 }
 
 export type Query = RequestTarget; // for back-compat

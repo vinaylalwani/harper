@@ -2,11 +2,14 @@ import { getDatabases } from './databases.ts';
 import { alterRole, addRole } from '../security/role.js';
 import { parseDocument } from 'yaml';
 import { isEqual } from 'lodash';
+
 const USERS_NOT_DBS = ['super_user', 'structure_user'];
+
 /**
  * This is the component for handling role declarations in the Harper system. This will read roles.yaml for role
  * definitions and ensure that they are created in the system database.
  */
+// eslint-disable-next-line no-unused-vars
 export function start({ ensureTable }) {
 	return {
 		handleFile,

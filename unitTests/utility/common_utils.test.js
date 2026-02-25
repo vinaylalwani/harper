@@ -7,8 +7,6 @@ const assert = require('assert');
 const chai = require('chai');
 const cu = require('#js/utility/common_utils');
 const testUtils = require('../testUtils.js');
-const stream = require('stream');
-const papa_parse = require('papaparse');
 // try to move to /bin directory so our properties reader doesn't explode.
 testUtils.changeProcessToBinDir();
 const rewire = require('rewire');
@@ -16,53 +14,6 @@ const cu_rewire = rewire('#js/utility/common_utils');
 const { expect } = chai;
 const ALL_SPACES = '     ';
 const SEP = require('path').sep;
-
-const USERS = new Map([
-	[
-		'HDB_ADMIN',
-		{
-			active: true,
-			role: {
-				id: 'd2742e06-e7cc-4a90-9f10-205ac5fa5621',
-				permission: {
-					super_user: true,
-				},
-				role: 'super_user',
-			},
-			username: 'HDB_ADMIN',
-		},
-	],
-	[
-		'sgoldberg',
-		{
-			active: true,
-			role: {
-				id: 'd2742e06-e7cc-4a90-9f10-205ac5fa5621',
-				permission: {
-					super_user: true,
-				},
-				role: 'super_user',
-			},
-			username: 'sgoldberg',
-		},
-	],
-	[
-		'cluster_test',
-		{
-			active: true,
-			role: {
-				id: '916c9ce1-1411-4341-9c0a-7b7bd182a4c9',
-				permission: {
-					cluster_user: true,
-				},
-				role: 'cluster_user3',
-			},
-			username: 'cluster_test',
-		},
-	],
-]);
-
-const CLUSTER_USER_NAME = 'cluster_test';
 
 describe('Test common_utils module', () => {
 	describe(`Test errorizeMessage`, function () {
@@ -616,66 +567,3 @@ describe('Test common_utils module', () => {
 		expect(c).to.equal('52y 27d 20h 27m 14s');
 	});
 });
-
-// TODO: Commented this out for now due to it breaking tests on the CI server.  Will revisit later.
-// https://harperdb.atlassian.net/browse/CORE-273
-/*
-describe('Test isHarperRunning', () => {
-    let child;
-
-    // on run of harperdb, if hdb is not running it will output 2 data events. First for the dog, second for the successfully started
-    // we test to handle where it is already running to force a failure
-    // we test the 2nd event to make sure we get the success started message.
-    it('Should start HDB and return starting message', (done)=>{
-        child = spawn('node', ['harperdb']);
-        let x = 0;
-describe('Test isServerRunning', () => {
-    let ps_list_stub;
-
-    before(() => {
-        ps_list_stub = sinon.stub(ps_list, 'findPs');
-    });
-
-    after(() => {
-        sinon.resetHistory();
-        sinon.restore();
-    });
-
-    it('Test true is returned if ps list is returned', async () => {
-        ps_list_stub.resolves('a process');
-        const result = await cu_rewire.isServerRunning();
-        expect(result).to.be.true;
-    });
-
-    it('Test false is returned if no ps list is returned', async () => {
-        ps_list_stub.resolves('');
-        const result = await cu_rewire.isServerRunning();
-        expect(result).to.be.false;
-    });
-});
-
-
-describe('Test stopProcess', () => {
-    let user_info_stub;
-    let find_ps_stub;
-    let process_kill_stub;
-
-    before(() => {
-        user_info_stub = sinon.stub(os, 'userInfo');
-        find_ps_stub = sinon.stub(ps_list, 'findPs');
-        process_kill_stub = sinon.stub(process, 'kill');
-    });
-
-    after(() => {
-        sinon.resetHistory();
-        sinon.restore();
-    });
-
-    it('Test process kil is called for process', async () => {
-        user_info_stub.returns({ uid: 123 });
-        find_ps_stub.resolves([{ pid: 5839, uid: 123 }]);
-        await cu_rewire.stopProcess('test123abc.js');
-        expect(process_kill_stub.args[0][0]).to.equal(5839);
-    });
-});
-*/

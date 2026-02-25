@@ -14,13 +14,14 @@ const { handleHDBError } = require('../utility/errors/hdbError.js');
 const { HTTP_STATUS_CODES, HDB_ERROR_MSGS } = require('../utility/errors/commonErrors.js');
 const { server } = require('../server/Server.ts');
 const { getBackupDirPath } = require('./configHelpers.ts');
+const { PACKAGE_ROOT } = require('../utility/packageUtils');
 
 const { DATABASES_PARAM_CONFIG, CONFIG_PARAMS, CONFIG_PARAM_MAP } = hdbTerms;
 const UNINIT_GET_CONFIG_ERR = 'Unable to get config value because config is uninitialized';
 const CONFIG_INIT_MSG = 'Config successfully initialized';
 const BACKUP_ERR = 'Error backing up config file';
 const EMPTY_GET_VALUE = 'Empty parameter sent to getConfigValue';
-const DEFAULT_CONFIG_FILE_PATH = path.join(__dirname, '../../static', hdbTerms.HDB_DEFAULT_CONFIG_FILE);
+const DEFAULT_CONFIG_FILE_PATH = path.join(PACKAGE_ROOT, 'static', hdbTerms.HDB_DEFAULT_CONFIG_FILE);
 
 const CONFIGURE_SUCCESS_RESPONSE =
 	'Configuration successfully set. You must restart Harper for new config settings to take effect.';
@@ -134,7 +135,7 @@ function createConfigFile(args, skipFsValidation = false) {
 
 	// Create new config file and write config doc to it.
 	const hdbRoot = configDoc.getIn(['rootPath']);
-	const configFilePath = path.join(hdbRoot, hdbTerms.HDB_CONFIG_FILE);
+	const configFilePath = path.join(hdbRoot, hdbTerms.HARPER_CONFIG_FILE);
 	fs.createFileSync(configFilePath);
 	if (configDoc.errors?.length > 0) {
 		throw handleHDBError(
@@ -234,7 +235,13 @@ function getConfigValue(param) {
 
 function getConfigFilePath(bootPropsFilePath = hdbUtils.getPropsFilePath()) {
 	const cmdArgs = hdbUtils.getEnvCliRootPath();
-	if (cmdArgs) return resolvePath(path.join(cmdArgs, hdbTerms.HDB_CONFIG_FILE));
+	if (cmdArgs) {
+		let harperConfigPath = resolvePath(path.join(cmdArgs, hdbTerms.HARPER_CONFIG_FILE));
+		if (fs.existsSync(harperConfigPath)) return harperConfigPath;
+		if (fs.existsSync(resolvePath(path.join(cmdArgs, hdbTerms.HDB_CONFIG_FILE))))
+			return resolvePath(path.join(cmdArgs, hdbTerms.HDB_CONFIG_FILE));
+		return harperConfigPath;
+	}
 	const hdbProperties = PropertiesReader(bootPropsFilePath);
 	return resolvePath(hdbProperties.get(hdbTerms.HDB_SETTINGS_NAMES.SETTINGS_PATH_KEY));
 }
@@ -477,7 +484,11 @@ function updateConfigValue(
 
 	// Old root/path is used just in case they are updating the operations api root.
 	const oldHdbRoot = getConfigValue(CONFIG_PARAM_MAP.hdb_root);
-	const oldConfigPath = path.join(oldHdbRoot, hdbTerms.HDB_CONFIG_FILE);
+	let oldConfigPath = path.join(oldHdbRoot, hdbTerms.HARPER_CONFIG_FILE);
+	if (!fs.existsSync(oldConfigPath) && fs.existsSync(path.join(oldHdbRoot, hdbTerms.HDB_CONFIG_FILE))) {
+		oldConfigPath = path.join(oldHdbRoot, hdbTerms.HDB_CONFIG_FILE);
+	}
+
 	const configDoc = parseYamlDoc(oldConfigPath);
 	let schemasArgs;
 
@@ -589,10 +600,13 @@ function updateConfigValue(
 	// Validates config doc and if required sets default values for some parameters.
 	validateConfig(configDoc);
 	const hdbRoot = configDoc.getIn(['rootPath']);
-	const configFileLocation = path.join(hdbRoot, hdbTerms.HDB_CONFIG_FILE);
+	let configFileLocation = path.join(hdbRoot, hdbTerms.HARPER_CONFIG_FILE);
+	if (!fs.existsSync(configFileLocation) && fs.existsSync(path.join(hdbRoot, hdbTerms.HDB_CONFIG_FILE))) {
+		configFileLocation = path.join(hdbRoot, hdbTerms.HDB_CONFIG_FILE);
+	}
 
-	// Creates a backup of config before new config is written to disk.
 	if (createBackup === true) {
+		// Creates a backup of config before new config is written to disk.
 		backupConfigFile(oldConfigPath, hdbRoot);
 	}
 
@@ -614,7 +628,7 @@ function backupConfigFile(configPath, hdbRoot) {
 	try {
 		const backupFolderPath = path.join(
 			getBackupDirPath(hdbRoot),
-			`${new Date(Date.now()).toISOString().replaceAll(':', '-')}-${hdbTerms.HDB_CONFIG_FILE}.bak`
+			`${new Date(Date.now()).toISOString().replaceAll(':', '-')}-${hdbTerms.HARPER_CONFIG_FILE}.bak`
 		);
 		fs.copySync(configPath, backupFolderPath);
 		logger.trace(`Config file: ${configPath} backed up to: ${backupFolderPath}`);
@@ -740,6 +754,7 @@ function getConfiguration() {
 
  */
 async function setConfiguration(setConfigJson) {
+	// eslint-disable-next-line no-unused-vars
 	const { operation, hdb_user, hdbAuthHeader, ...configFields } = setConfigJson;
 	try {
 		updateConfigValue(undefined, undefined, configFields, true);
@@ -922,7 +937,7 @@ function deleteConfigFromFile(param) {
 	const configDoc = parseYamlDoc(configFilePath);
 	configDoc.deleteIn(param);
 	const hdbRoot = configDoc.getIn(['rootPath']);
-	const configFileLocation = path.join(hdbRoot, hdbTerms.HDB_CONFIG_FILE);
+	const configFileLocation = path.join(hdbRoot, hdbTerms.HARPER_CONFIG_FILE);
 	fs.writeFileSync(configFileLocation, String(configDoc));
 }
 

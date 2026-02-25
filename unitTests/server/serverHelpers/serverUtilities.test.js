@@ -7,20 +7,18 @@ const assert = require('assert');
 const sinon = require('sinon');
 const sandbox = sinon.createSandbox();
 const { TEST_JSON_SUPER_USER, TEST_JSON_NON_SU } = require('../../test_data');
-
 const serverUtilities = require('#src/server/serverHelpers/serverUtilities');
 const operation_function_caller = require('#js/utility/OperationFunctionCaller');
 const logger = require('#js/utility/logging/harper_logger');
-const terms = require('#src/utility/hdbTerms');
 
 const test_func_data = { data: 'this is data', more_data: 'this is more data' };
 const test_error = 'This is bad!';
 
-async function test_func(test_values) {
+async function test_func(_test_values) {
 	return test_func_data;
 }
 
-async function test_func_error(test_values) {
+async function test_func_error(_test_values) {
 	throw new Error(test_error);
 }
 
@@ -357,12 +355,11 @@ describe('Test serverUtilities.js module ', () => {
 		};
 
 		let info_log_stub;
-		let error_log_stub;
 		let op_func_caller_stub;
 
 		before(() => {
 			info_log_stub = sandbox.stub(logger, 'info').callsFake(() => {});
-			error_log_stub = sandbox.stub(logger, 'error').callsFake(() => {});
+			sandbox.stub(logger, 'error').callsFake(() => {});
 			op_func_caller_stub = sandbox.stub(operation_function_caller, 'callOperationFunctionAsAwait').callThrough();
 		});
 

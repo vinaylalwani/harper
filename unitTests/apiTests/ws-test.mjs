@@ -1,20 +1,17 @@
 'use strict';
 
-import { assert, expect } from 'chai';
+import { assert } from 'chai';
 import axios from 'axios';
 import { pack, unpack } from 'msgpackr';
 import { EventSource } from 'eventsource';
-import { getVariables, callOperation } from './utility.js';
 import { WebSocket } from 'ws';
 import { setupTestApp } from './setupTestApp.mjs';
-const { authorization, url } = getVariables();
 
 describe('test WebSockets connections and messaging', () => {
-	let available_records;
 	let ws1, ws2;
 	before(async function () {
 		this.timeout(5000);
-		available_records = await setupTestApp();
+		await setupTestApp();
 		ws1 = new WebSocket('ws://localhost:9926/Echo');
 
 		await new Promise((resolve, reject) => {
@@ -89,6 +86,7 @@ describe('test WebSockets connections and messaging', () => {
 		assert.equal(message.data, 'hello again');
 	});
 	it('default subscribe on WS', async function () {
+		this.timeout(5000);
 		ws2 = new WebSocket('ws://localhost:9926/SimpleRecord/5');
 		await new Promise((resolve, reject) => {
 			ws2.on('open', resolve);

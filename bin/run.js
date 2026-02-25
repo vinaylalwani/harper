@@ -25,7 +25,7 @@ const keys = require('../security/keys.js');
 const { startHTTPThreads } = require('../server/threads/socketRouter.ts');
 const hdbInfoController = require('../dataLayer/hdbInfoController.js');
 const hdbTerms = require('../utility/hdbTerms.ts');
-const { getHdbPid } = require('../utility/processManagement/processManagement.js');
+const { getHdbPid, isProcessRunning } = require('../utility/processManagement/processManagement.js');
 const { PACKAGE_ROOT } = require('../utility/packageUtils');
 
 let pmUtils;
@@ -108,6 +108,26 @@ async function initialize(calledByInstall = false, calledByMain = false) {
 		}
 	}
 
+	// if this process is Harper restarting, the parent could still be compacting RocksDB on exit,
+	// so we need to wait for the parent to exit
+	if (process.env.HARPER_PARENT_PROCESS_PID) {
+		const prevProcessPid = parseInt(process.env.HARPER_PARENT_PROCESS_PID);
+		delete process.env.HARPER_PARENT_PROCESS_PID;
+		if (isProcessRunning(prevProcessPid)) {
+			hdbLogger.info(`Previous process ${prevProcessPid} is still running, waiting up to 15 seconds...`);
+			// check if the previous process is still running, and if so, wait up to 15 seconds before timing out
+			const timeout = setTimeout(() => {
+				console.error(`Previous process ${prevProcessPid} is still running, exiting.`);
+				process.exit(1);
+			}, 15000);
+			while (isProcessRunning(prevProcessPid)) {
+				await new Promise((resolve) => setTimeout(resolve, 100));
+			}
+			hdbLogger.info(`Previous process ${prevProcessPid} has exited`);
+			clearTimeout(timeout);
+		}
+	}
+
 	// Check to see if Harper is already running by checking for a pid file
 	// If found confirm it matches a currently running processes
 	let hdbPid = getHdbPid();
@@ -164,7 +184,10 @@ async function main(calledByInstall = false) {
 	try {
 		cmdArgs = minimist(process.argv);
 		if (cmdArgs.ROOTPATH) {
-			configUtils.updateConfigObject('settings_path', path.join(cmdArgs.ROOTPATH, terms.HDB_CONFIG_FILE));
+			let harperConfigPath = path.join(cmdArgs.ROOTPATH, hdbTerms.HARPER_CONFIG_FILE);
+			if (!fs.existsSync(harperConfigPath) && fs.existsSync(path.join(cmdArgs.ROOTPATH, hdbTerms.HARPER_CONFIG_FILE)))
+				harperConfigPath = path.join(cmdArgs.ROOTPATH, hdbTerms.HDB_CONFIG_FILE);
+			configUtils.updateConfigObject('settings_path', harperConfigPath);
 		}
 		await initialize(calledByInstall, true);
 
@@ -270,6 +293,25 @@ function startupLog(portResolutions) {
 			: 'disabled'
 	}`;
 	logMsg += `, unix socket: ${env.get(CONFIG_PARAMS.OPERATIONSAPI_NETWORK_DOMAINSOCKET)}\n`;
+	if (env.get(CONFIG_PARAMS.OPERATIONSAPI_NETWORK_PORT)) {
+		logMsg +=
+			pad('') +
+			'http://' +
+			env.get(CONFIG_PARAMS.NODE_HOSTNAME) +
+			':' +
+			env.get(CONFIG_PARAMS.OPERATIONSAPI_NETWORK_PORT) +
+			'/\n';
+	}
+	if (env.get(CONFIG_PARAMS.OPERATIONSAPI_NETWORK_SECUREPORT)) {
+		logMsg +=
+			'\n' +
+			pad('') +
+			'https://' +
+			env.get(CONFIG_PARAMS.NODE_HOSTNAME) +
+			':' +
+			env.get(CONFIG_PARAMS.OPERATIONSAPI_NETWORK_SECUREPORT) +
+			'/\n';
+	}
 
 	// MQTT Log
 	logMsg += pad('MQTT:');
@@ -311,19 +353,24 @@ function startupLog(portResolutions) {
 	// portResolutions is a Map of port to protocol name and component name built in threadServer.js
 	// we iterate through the map to build a log for REST and for any components that are using custom ports
 	let comps = {};
+	let restHostnames = [];
 	let restLog = `${pad('REST:')}`;
 	for (const [key, values] of portResolutions) {
 		for (const value of values) {
 			const name = value.name;
-			if (name === 'rest') {
-				restLog += `${value.protocol_name}: ${key}, `;
+			const pair = `${value.protocol_name}: ${key}, `;
+			if (!restLog.includes(pair) && name === 'rest') {
+				restLog += pair;
+				if (value.protocol_name === 'HTTP' || value.protocol_name === 'HTTPS') {
+					restHostnames.push(`${value.protocol_name.toLowerCase()}://${env.get(CONFIG_PARAMS.NODE_HOSTNAME)}:${key}/`);
+				}
 			}
 
 			if (components.includes(name)) {
 				if (comps[name]) {
-					comps[name] += `${value.protocol_name}: ${key}, `;
+					comps[name] += pair;
 				} else {
-					comps[name] = `${value.protocol_name}: ${key}, `;
+					comps[name] = pair;
 				}
 			}
 		}
@@ -333,6 +380,9 @@ function startupLog(portResolutions) {
 	if (restLog.length > padding + 1) {
 		restLog = restLog.slice(0, -2);
 		logMsg += `${restLog}\n`;
+		for (const restHostname of restHostnames) {
+			logMsg += pad('') + restHostname + '\n';
+		}
 	}
 
 	let appPortsLog = env.get(CONFIG_PARAMS.HTTP_PORT) ? `HTTP: ${env.get(CONFIG_PARAMS.HTTP_PORT)}, ` : '';

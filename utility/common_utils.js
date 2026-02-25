@@ -10,7 +10,6 @@ const terms = require('./hdbTerms.ts');
 const { PACKAGE_ROOT } = require('./packageUtils.js');
 const papaParse = require('papaparse');
 const moment = require('moment');
-const { inspect } = require('util');
 const isNumber = require('is-number');
 const minimist = require('minimist');
 const https = require('https');
@@ -423,7 +422,7 @@ function stringifyProps(propReaderObject, comments) {
 			} else if (!isEmptyOrZeroLength(key)) {
 				lines += key + '=' + value + os.EOL;
 			}
-		} catch (e) {
+		} catch {
 			log.error(`Found bad property during upgrade with key ${key} and value: ${value}`);
 		}
 	});

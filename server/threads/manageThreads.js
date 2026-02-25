@@ -24,7 +24,6 @@ const THREAD_INFO = 'thread_info';
 const ADDED_PORT = 'added-port';
 const ACKNOWLEDGEMENT = 'ack';
 let getThreadInfo;
-let mainThreadPort = parentPort;
 _assignPackageExport('threads', connectedPorts);
 
 module.exports = {
@@ -140,6 +139,8 @@ function startWorker(path, options = {}) {
 
 	const execArgv = [
 		'--enable-source-maps',
+		'--experimental-vm-modules', // used for giving applications their own top level scope
+		'--disable-warning=ExperimentalWarning', // yeah, yeah, we know it is experimental
 		'--expose-internals', // expose Node.js internal utils so jsLoader can use `decorateErrorStack()`
 	];
 	if (envMgr.get(hdbTerms.CONFIG_PARAMS.THREADS_HEAPSNAPSHOTNEARLIMIT))
@@ -167,7 +168,7 @@ function startWorker(path, options = {}) {
 	});
 	// now that we have the new thread ids, we can finishing connecting the channel and notify the existing
 	// worker of the new port with thread id.
-	for (let { port1, existingPort: existingPort } of channelsToConnect) {
+	for (let { port1, existingPort } of channelsToConnect) {
 		existingPort.postMessage(
 			{
 				type: ADDED_PORT,
@@ -189,7 +190,7 @@ function startWorker(path, options = {}) {
 		// way)
 		harperLogger.error(`Worker index ${options.workerIndex} error:`, error);
 	});
-	worker.on('exit', (code) => {
+	worker.on('exit', (_code) => {
 		workers.splice(workers.indexOf(worker), 1);
 		if (!worker.wasShutdown && options.autoRestart !== false) {
 			// if this wasn't an intentional shutdown, restart now (unless we have tried too many times)
@@ -480,7 +481,7 @@ if (parentPort && workerData?.addPorts) {
 		});
 	}, REPORTING_INTERVAL).unref();
 	getThreadInfo = () =>
-		new Promise((resolve, reject) => {
+		new Promise((resolve) => {
 			// request thread info from the parent thread and wait for it to response with info on all the threads
 			parentPort.on('message', receiveThreadInfo);
 			parentPort.postMessage({ type: REQUEST_THREAD_INFO });

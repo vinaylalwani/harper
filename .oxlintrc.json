@@ -4,6 +4,7 @@
 	"categories": {},
 	"rules": {
 		"no-undef": "error",
+		"no-unused-vars": "error",
 		"no-console": "off",
 		"no-constant-condition": "off",
 		"prefer-const": "off",
@@ -29,6 +30,7 @@
 		"es2024": true
 	},
 	"globals": {
+		"Compartment": "readonly",
 		"server": "readonly",
 		"databases": "readonly",
 		"tables": "readonly",
@@ -36,7 +38,8 @@
 		"lockdown": "readonly",
 		"threads": "readonly",
 		"Resource": "readonly",
-		"headersTest": "readonly"
+		"headersTest": "readonly",
+		"logger": "readonly"
 	},
 	"ignorePatterns": ["unitTests/security/jsLoader/fixtures"]
 }

@@ -1,4 +1,6 @@
 'use strict';
+
+// eslint-disable-next-line no-unused-vars
 const lmdbTerms = require('../utility/lmdb/terms.js');
 
 /**

@@ -106,7 +106,7 @@ function authAndEnsureUserOnRequest(req, resp, done) {
 		});
 }
 
-async function handlePostRequest(req, res, bypassAuth = false) {
+async function handlePostRequest(req, res, _bypassAuth = false) {
 	let operation_function;
 
 	try {

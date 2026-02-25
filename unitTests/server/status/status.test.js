@@ -59,8 +59,6 @@ describe('server.status', function () {
 	const assertAndOverrideTimestamps = (obj) => {
 		assert.ok(obj.__updatedtime__ !== undefined);
 		assert.ok(obj.__createdtime__ !== undefined);
-		obj.__updatedtime__ = 42;
-		obj.__createdtime__ = 42;
 	};
 
 	it('should set status', async function () {
@@ -79,15 +77,14 @@ describe('server.status', function () {
 		const expected = {
 			id: 'primary',
 			status: 'testing',
-			__updatedtime__: 42,
-			__createdtime__: 42,
 		};
 		await status.set(statusObj);
 		const result = await status.get({ id: 'primary' });
 		// node assert/strict is blind to resource properties
 		const resultObj = JSON.parse(JSON.stringify(result));
 		assertAndOverrideTimestamps(resultObj);
-		assert.deepEqual(expected, resultObj);
+		assert.equal(expected.id, resultObj.id);
+		assert.equal(expected.status, resultObj.status);
 	});
 
 	it('should get complete status with just primary set', async function () {

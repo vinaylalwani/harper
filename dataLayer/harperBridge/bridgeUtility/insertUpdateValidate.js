@@ -2,7 +2,6 @@
 
 const hdbUtils = require('../../../utility/common_utils.js');
 const log = require('../../../utility/logging/harper_logger.js');
-const insertValidator = require('../../../validation/insertValidator.js');
 const { getDatabases } = require('../../../resources/databases.ts');
 const { ClientError } = require('../../../utility/errors/hdbError.js');
 

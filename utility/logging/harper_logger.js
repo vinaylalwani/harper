@@ -39,9 +39,6 @@ const OUTPUTS = {
 	STDERR: 'stdErr',
 };
 
-// Install log is created in harperdb/logs because the hdb folder doesn't exist initially during the install process.
-const INSTALL_LOG_LOCATION = join(PACKAGE_ROOT, `logs`);
-
 // Location of default config YAML.
 const DEFAULT_CONFIG_FILE = join(PACKAGE_ROOT, 'static', hdbTerms.HDB_DEFAULT_CONFIG_FILE);
 
@@ -200,11 +197,11 @@ class HarperLogger extends Console {
 	withTag(tag) {
 		return loggerWithTag(tag, true, this);
 	}
-	forComponent(name) {
+	forComponent(_name) {
 		// to be replaced
 		return this;
 	}
-	hasComponent(name) {
+	hasComponent(_name) {
 		// to be replaced
 		return false;
 	}
@@ -241,9 +238,6 @@ module.exports = {
 	errorToString,
 	disableStdio,
 };
-function getLogFilePath() {
-	return logFilePath;
-}
 
 /**
  * We call this if stdio is not functional
@@ -281,7 +275,6 @@ module.exports.externalLogger = {
 	},
 };
 _assignPackageExport('logger', module.exports.externalLogger);
-let loggedFdErr;
 
 /**
  * Check if the current log level is at or below the given level.
@@ -309,13 +302,20 @@ function initLogSettings(forceInit = false) {
 				// This is here for situations where HDB isn't using a boot file
 				if (
 					!properties.ROOTPATH ||
-					(properties.ROOTPATH && !fs.pathExistsSync(join(properties.ROOTPATH, hdbTerms.HDB_CONFIG_FILE)))
+					(!fs.pathExistsSync(join(properties.ROOTPATH, hdbTerms.HARPER_CONFIG_FILE)) &&
+						!fs.pathExistsSync(join(properties.ROOTPATH, hdbTerms.HDB_CONFIG_FILE)))
 				)
 					throw err;
 			}
 
 			//if root path check for config file, if it exists - all good
 			// if root path and no config file just throw err
+			let configPath;
+			if (properties.ROOTPATH) {
+				configPath = join(properties.ROOTPATH, hdbTerms.HARPER_CONFIG_FILE);
+				if (!fs.pathExistsSync(configPath) && fs.pathExistsSync(join(properties.ROOTPATH, hdbTerms.HDB_CONFIG_FILE)))
+					configPath = join(properties.ROOTPATH, hdbTerms.HDB_CONFIG_FILE);
+			} else configPath = hdbProperties.get('settings_path');
 			let rotation;
 			({
 				level: logLevel,
@@ -325,9 +325,7 @@ function initLogSettings(forceInit = false) {
 				colorMode,
 				rotation,
 				toStream: logToStdstreams,
-			} = getLogConfig(
-				properties.ROOTPATH ? join(properties.ROOTPATH, hdbTerms.HDB_CONFIG_FILE) : hdbProperties.get('settings_path')
-			));
+			} = getLogConfig(configPath));
 
 			logName = hdbTerms.LOG_NAMES.HDB;
 			logFilePath = join(logRoot, logName);
@@ -345,7 +343,7 @@ function initLogSettings(forceInit = false) {
 				try {
 					const SegfaultHandler = require('segfault-handler');
 					SegfaultHandler.registerHandler(join(logRoot, 'crash.log'));
-				} catch (error) {
+				} catch {
 					// optional dependency, ok if we can't run it
 				}
 			}
@@ -607,10 +605,8 @@ function getFileLogger(path, rotation, isExternalInstance) {
 			}
 		}, 100);
 	}
-	let logCount = 0;
 	return logger;
 	function logToFile(log) {
-		logCount++;
 		let entry = `${new Date().toISOString()} ${log}${log.endsWith('\n') ? '' : '\n'}`;
 		if (logBuffer) {
 			// if we are currently in log buffer mode, we will add the entry to the buffer (there will be a timer to write it)
@@ -651,7 +647,7 @@ function getFileLogger(path, rotation, isExternalInstance) {
 	function closeLogFile() {
 		try {
 			fs.closeSync(logFD);
-		} catch (err) {}
+		} catch {}
 		logFD = null;
 		if (isExternalInstance) mainLogFd = null;
 	}
@@ -759,7 +755,7 @@ function getPropsFilePath() {
 	let homeDir = undefined;
 	try {
 		homeDir = os.homedir();
-	} catch (err) {
+	} catch {
 		// could get here in android
 		homeDir = process.env.HOME;
 	}
@@ -864,7 +860,7 @@ function setMainLogger(logger) {
 function closeLogFile() {
 	try {
 		fs.closeSync(mainLogFd);
-	} catch (err) {}
+	} catch {}
 	mainLogFd = null;
 }
 

@@ -6,11 +6,11 @@ export function start({ resources }) {
 	};
 }
 class Login extends Resource {
-	static async get(id, body, request) {
+	static async get(_id, _body, _request) {
 		// TODO: Return a login page
 	}
-	static async post(id, body, request) {
-		const { username, password, redirect } = body;
+	static async post(_id, body, request) {
+		const { username, password } = body;
 		return {
 			data: await request.login(username, password),
 		};

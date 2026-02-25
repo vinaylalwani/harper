@@ -7,6 +7,7 @@ import { getWorkerIndex } from '../server/threads/manageThreads.js';
 import { whenComponentsLoaded } from '../server/threads/threadServer.js';
 import { server } from '../server/Server.ts';
 import { RequestTarget } from '../resources/RequestTarget';
+import { cloneDeep } from 'lodash';
 
 const AWAITING_ACKS_HIGH_WATER_MARK = 100;
 const DurableSession = table({
@@ -45,7 +46,7 @@ if (getWorkerIndex() === 0) {
 			if (message.user?.username) message.user = await server.getUser(message.user.username);
 			try {
 				await publish(message, data, message);
-			} catch (error) {
+			} catch {
 				warn('Failed to publish will', data);
 			}
 			LastWill.delete(will.id);
@@ -102,7 +103,7 @@ export async function getSession({
 		if (sessionId) {
 			// connecting with a clean session and session id is how durable sessions are deleted
 			const sessionResource = await DurableSession.get(sessionId);
-			if (sessionResource) sessionResource.delete();
+			if (sessionResource) DurableSession.delete(sessionId);
 		}
 		session = new SubscriptionsSession(sessionId, user);
 	}
@@ -149,11 +150,10 @@ class SubscriptionsSession {
 		this.user = user;
 	}
 	async addSubscription(subscriptionRequest, needsAck, filter?) {
-		const { topic, rh: retainHandling, startTime: startTime } = subscriptionRequest;
+		const { topic, rh: retainHandling, startTime } = subscriptionRequest;
 		const searchIndex = topic.indexOf('?');
-		let search, path;
+		let path;
 		if (searchIndex > -1) {
-			search = topic.slice(searchIndex);
 			path = topic.slice(0, searchIndex);
 		} else path = topic;
 		if (!path) throw new Error('No topic provided');
@@ -168,15 +168,6 @@ class SubscriptionsSession {
 		} else {
 			omitCurrent = retainHandling === 2;
 		}
-		const request = {
-			search,
-			async: true,
-			user: this.user,
-			startTime,
-			omitCurrent,
-			target: '',
-			checkPermission: this.user?.role?.permission ?? {},
-		};
 		if (startTime) trace('Resuming subscription from', topic, 'from', startTime);
 		const entry = resources.getMatch(path, 'mqtt');
 		if (!entry) {
@@ -186,20 +177,22 @@ class SubscriptionsSession {
 			notFoundError.statusCode = 404;
 			throw notFoundError;
 		}
-		request.url = entry.relativeURL;
+		let url = entry.relativeURL;
+		let isCollection;
+		let onlyChildren;
 		let hashIndex: number;
-		if (request.url.indexOf('+') > -1 || (hashIndex = request.url.indexOf('#')) > -1) {
-			const path = request.url.slice(1); // remove leading slash
+		if (url.indexOf('+') > -1 || (hashIndex = url.indexOf('#')) > -1) {
+			const path = url.slice(1); // remove leading slash
 			hashIndex--; // adjust accordingly
 			if (hashIndex > -1 && hashIndex !== path.length - 1)
 				throw new Error('Multi-level wildcards can only be used at the end of a topic');
 			// treat as a collection to get all children, but we will need to filter out any that are not direct children or matching the pattern
-			request.isCollection = true; // used by Resource to determine if the resource should be treated as a collection
+			isCollection = true; // used by Resource to determine if the resource should be treated as a collection
 			if (path.indexOf('+') === path.length - 1) {
 				// if it is only a trailing single-level wildcard, we can treat it as a shallow wildcard
 				// and use the optimized onlyChildren option, which will be faster, and does not require any filtering
-				request.onlyChildren = true;
-				request.url = '/' + path.slice(0, path.length - 1);
+				onlyChildren = true;
+				url = '/' + path.slice(0, path.length - 1);
 			} else {
 				// otherwise we have a potentially complex wildcard, so we will need to filter out any that are not direct children or matching the pattern
 				const matchingPath = path.split('/');
@@ -237,25 +230,31 @@ class SubscriptionsSession {
 					};
 				}
 				const firstWildcard = matchingPath.indexOf('+');
-				request.url =
-					'/' + (firstWildcard > -1 ? matchingPath.slice(0, firstWildcard) : matchingPath).concat('').join('/');
+				url = '/' + (firstWildcard > -1 ? matchingPath.slice(0, firstWildcard) : matchingPath).concat('').join('/');
 			}
-		} else request.isCollection = false; // must explicitly turn this off so topics that end in a slash are not treated as collections
-
+		} else isCollection = false; // must explicitly turn this off so topics that end in a slash are not treated as collections
+		const request = new RequestTarget(url);
+		Object.assign(request, {
+			isCollection,
+			onlyChildren,
+			startTime,
+			omitCurrent,
+			checkPermission: this.user?.role?.permission ?? {},
+		});
 		const resourcePath = entry.path;
 		const resource = entry.Resource;
-		const subscription = await transaction(request, async () => {
-			const context = this.createContext();
-			context.topic = topic;
-			context.retainHandling = retainHandling;
-			context.isCollection = request.isCollection;
+		const context = this.createContext();
+		context.topic = topic;
+		context.retainHandling = retainHandling;
+		context.isCollection = request.isCollection;
+		const subscription = await transaction(context, async () => {
 			const subscription = await resource.subscribe(request, context);
 			if (!subscription) {
 				return; // if no subscription, nothing to return
 			}
 			if (!subscription[Symbol.asyncIterator])
 				throw new Error(`Subscription is not (async) iterable for topic ${topic}`);
-			const result = (async () => {
+			const _result = (async () => {
 				for await (const update of subscription) {
 					try {
 						let messageId;
@@ -359,7 +358,7 @@ class SubscriptionsSession {
 			try {
 				if (!clientTerminated) {
 					const will = await LastWill.get(this.sessionId);
-					if (will?.doesExist()) {
+					if (will) {
 						await publish(will, will.data, context);
 					}
 				}
@@ -387,8 +386,7 @@ class SubscriptionsSession {
 }
 function publish(message, data, context) {
 	const { topic, retain } = message;
-	message.data = data;
-	message.async = true;
+	message = { ...message, data, async: true };
 	context.authorize = true;
 	const entry = resources.getMatch(topic, 'mqtt');
 	if (!entry)
@@ -413,7 +411,7 @@ export class DurableSubscriptionsSession extends SubscriptionsSession {
 	sessionRecord: any;
 	constructor(sessionId, user, record?) {
 		super(sessionId, user);
-		this.sessionRecord = record || { id: sessionId, subscriptions: [] };
+		this.sessionRecord = cloneDeep(record) || { id: sessionId, subscriptions: [] };
 	}
 	async resume() {
 		// resuming a session, we need to resume each subscription
@@ -460,7 +458,7 @@ export class DurableSubscriptionsSession extends SubscriptionsSession {
 							}
 							subscription.acks.push(update.timestamp);
 							trace('Received ack', topic, update.timestamp);
-							this.sessionRecord.update();
+							DurableSession.put(this.sessionRecord);
 							return;
 						}
 					}
@@ -473,13 +471,13 @@ export class DurableSubscriptionsSession extends SubscriptionsSession {
 				subscription.startTime = update.timestamp;
 			}
 		}
-		this.sessionRecord.update();
+		DurableSession.put(this.sessionRecord);
 		// TODO: Increment the timestamp for the corresponding subscription, possibly recording any interim unacked messages
 	}
 
 	async addSubscription(subscription, needsAck) {
 		await this.resumeSubscription(subscription, needsAck);
-		const { qos, startTime: startTime } = subscription;
+		const { qos, startTime } = subscription;
 		if (qos > 0 && !startTime) this.saveSubscriptions();
 		return subscription.qos;
 	}

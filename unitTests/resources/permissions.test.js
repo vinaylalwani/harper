@@ -1,12 +1,14 @@
+require('../testUtils');
 const assert = require('assert');
-const { getMockLMDBPath } = require('../testUtils.js');
+const { setupTestDBPath } = require('../testUtils');
 const { table } = require('#src/resources/databases');
+const { RequestTarget } = require('#src/resources/RequestTarget');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
 // might want to enable an iteration with NATS being assigned as a source
 describe('Permissions through Resource API', () => {
 	let TestTable, restricted_user, authorized_role, attribute_authorized_role;
 	before(async function () {
-		getMockLMDBPath();
+		setupTestDBPath();
 		setMainIsWorker(true); // TODO: Should be default until changed
 		let RelatedTable = table({
 			table: 'RelatedTestTable',
@@ -28,8 +30,13 @@ describe('Permissions through Resource API', () => {
 			],
 		});
 		for (let i = 0; i < 10; i++) {
-			RelatedTable.put({ id: 'related-id-' + i, name: 'related name-' + i });
-			TestTable.put({ id: 'id-' + i, name: i > 0 ? 'name-' + i : null, prop1: 'test', relatedId: 'related-id-' + i });
+			await RelatedTable.put({ id: 'related-id-' + i, name: 'related name-' + i });
+			await TestTable.put({
+				id: 'id-' + i,
+				name: i > 0 ? 'name-' + i : null,
+				prop1: 'test',
+				relatedId: 'related-id-' + i,
+			});
 		}
 		restricted_user = {
 			role: {
@@ -110,9 +117,9 @@ describe('Permissions through Resource API', () => {
 		};
 	});
 	it('Can not get without permission', async function () {
-		let caught_error, result;
+		let caught_error;
 		try {
-			result = TestTable.get('id-2', {
+			await TestTable.get('id-2', {
 				user: restricted_user,
 				authorize: true,
 			});
@@ -122,9 +129,9 @@ describe('Permissions through Resource API', () => {
 		assert(caught_error.message.includes('Unauthorized access'));
 	});
 	it('Can not write without permission', async function () {
-		let caught_error, result;
+		let caught_error;
 		try {
-			result = TestTable.put(
+			await TestTable.put(
 				'id-2',
 				{ name: 'new record' },
 				{
@@ -138,7 +145,7 @@ describe('Permissions through Resource API', () => {
 		assert(caught_error.message.includes('Unauthorized access'));
 		caught_error = null;
 		try {
-			result = TestTable.delete('id-2', {
+			await TestTable.delete('id-2', {
 				user: restricted_user,
 				authorize: true,
 			});
@@ -164,7 +171,7 @@ describe('Permissions through Resource API', () => {
 			authorize: true,
 			id: 'id-2',
 		};
-		let result = TestTable.get(request, request);
+		let result = await TestTable.get(request, request);
 		assert.equal(result.name, 'name-2');
 		assert.equal(result.prop1, undefined);
 		assert.equal(result.related, undefined);
@@ -172,11 +179,11 @@ describe('Permissions through Resource API', () => {
 	it('Can query with select with (limited) permission', async function () {
 		const request = {
 			user: attribute_authorized_role,
-			authorize: true,
-			url: '?id=id-2&select(name,related)',
 		};
+		const target = new RequestTarget('?id=id-2&select(name,related)');
+		target.checkPermission = true;
 		let results = [];
-		for await (let result of TestTable.get(request, request)) {
+		for await (let result of TestTable.search(target, request)) {
 			results.push(result);
 		}
 		assert.equal(results[0].name, 'name-2');
@@ -187,11 +194,11 @@ describe('Permissions through Resource API', () => {
 	it('Can query with selecting inaccessible attributes with (limited) permission', async function () {
 		const request = {
 			user: attribute_authorized_role,
-			authorize: true,
-			url: '?id=id-2&select(name,prop1,related{name})',
 		};
+		const target = new RequestTarget('?id=id-2&select(name,prop1,related{name})');
+		target.checkPermission = true;
 		let results = [];
-		for await (let result of TestTable.get(request, request)) {
+		for await (let result of TestTable.search(target, request)) {
 			results.push(result);
 		}
 		assert.equal(results[0].name, 'name-2');
@@ -200,7 +207,7 @@ describe('Permissions through Resource API', () => {
 		assert.equal(results[0].related.name, undefined);
 	});
 	it('Can write with permission', async function () {
-		let result = TestTable.put(
+		await TestTable.put(
 			'id-2',
 			{ name: 'new record' },
 			{
@@ -214,9 +221,9 @@ describe('Permissions through Resource API', () => {
 		});
 	});
 	it('Can not write with restricted attribute', async function () {
-		let caught_error, result;
+		let caught_error;
 		try {
-			result = TestTable.put(
+			await TestTable.put(
 				'id-2',
 				{ name: 'new record', prop1: 'change' },
 				{

@@ -5,12 +5,14 @@
  * All variables should use a JSDoc comment to explain what it is, and any objects should be marked as `as const` for better type checking.
  */
 
-/** Harper Root Config File */
+/** Old Harper Root Config File */
 export const HDB_CONFIG_FILE = 'harperdb-config.yaml';
+/** Harper Root Config File */
+export const HARPER_CONFIG_FILE = 'harper-config.yaml';
 /** Harper Default Config File */
 export const HDB_DEFAULT_CONFIG_FILE = 'defaultConfig.yaml';
 /** Harper Root Directory Name */
-export const HDB_ROOT_DIR_NAME = 'hdb';
+export const HDB_ROOT_DIR_NAME = 'harper';
 /** Harper Component Config File */
 export const HDB_COMPONENT_CONFIG_FILE = 'config.yaml';
 
@@ -150,8 +152,10 @@ export const INSTALL_PROMPTS = {
 	OPERATIONSAPI_ROOT: 'OPERATIONSAPI_ROOT',
 	ROOTPATH: 'ROOTPATH',
 	NODE_HOSTNAME: 'NODE_HOSTNAME',
+	REPLICATION_HOSTNAME: 'REPLICATION_HOSTNAME',
 	HDB_CONFIG: 'HDB_CONFIG',
 	DEFAULTS_MODE: 'DEFAULTS_MODE',
+	STORAGE_ENGINE: 'STORAGE_ENGINE',
 } as const;
 
 /** Insert operation max character size */
@@ -430,6 +434,10 @@ export const CONFIG_PARAMS = {
 	AUTHENTICATION_REFRESHTOKENTIMEOUT: 'authentication_refreshTokenTimeout',
 	AUTHENTICATION_HASHFUNCTION: 'authentication_hashFunction',
 	CUSTOMFUNCTIONS_NETWORK_HTTPS: 'customFunctions_network_https',
+	APPLICATIONS_CONTAINMENT: 'applications_containment',
+	APPLICATIONS_LOCKDOWN: 'applications_lockdown',
+	APPLICATIONS_DEPENDENCYCONTAINMENT: 'applications_dependencyContainment',
+	APPLICATIONS_PACKAGEMANAGERPREFIX: 'applications_packageManagerPrefix',
 	THREADS: 'threads',
 	THREADS_COUNT: 'threads_count',
 	THREADS_DEBUG: 'threads_debug',
@@ -533,7 +541,9 @@ export const CONFIG_PARAMS = {
 		'replication_mtls_certificateVerification_ocsp_failureMode',
 	REPLICATION_SHARD: 'replication_shard',
 	REPLICATION_BLOBTIMEOUT: 'replication_blobTimeout',
-	REPLICATION_FAILOVER: 'replication_failOver',
+	REPLICATION_FAILOVER: 'replication_failover',
+	REPLICATION_BLOBCONCURRENCY: 'replication_blobConcurrency',
+	REPLICATION_RECORDCONCURRENCY: 'replication_recordConcurrency',
 	ROOTPATH: 'rootPath',
 	SERIALIZATION_BIGINT: 'serialization_bigInt',
 	STORAGE_WRITEASYNC: 'storage_writeAsync',
@@ -560,6 +570,7 @@ export const CONFIG_PARAMS = {
 	STORAGE_RECLAMATION_THRESHOLD: 'storage_reclamation_threshold',
 	STORAGE_RECLAMATION_INTERVAL: 'storage_reclamation_interval',
 	STORAGE_RECLAMATION_EVICTIONFACTOR: 'storage_reclamation_evictionFactor',
+	STORAGE_ENGINE: 'storage_engine',
 	DATABASES: 'databases',
 	IGNORE_SCRIPTS: 'ignoreScripts',
 	MQTT_NETWORK_PORT: 'mqtt_network_port',

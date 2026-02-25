@@ -38,7 +38,7 @@ describe('Test export.js', () => {
 		sandbox.restore();
 		try {
 			fs.removeSync(TMP_TEST_DIR);
-		} catch (e) {
+		} catch {
 			//empty catch for a weird issue on windows when removing a folder that does not exist
 		}
 	});
@@ -55,7 +55,7 @@ describe('Test export.js', () => {
 					await rm(file_name, { force: true });
 					file_name = undefined;
 				}
-			} catch (e) {
+			} catch {
 				//no-op, this is ok.
 			}
 		});
@@ -282,7 +282,7 @@ describe('Test export.js', () => {
 					await rm(file_name, { force: true });
 					file_name = undefined;
 				}
-			} catch (e) {
+			} catch {
 				//no-op, this is ok.
 			}
 		});
@@ -508,7 +508,7 @@ describe('Test export.js', () => {
 				',"{""name"":""object"",""number"":1,""array"":[1,""two""]}","[1,2,""three""]","Harper",1618335194930,,1618335194930,,"bc56cf62-5ad1-4519-b1c6-26742b02e9d5",' +
 				EOL +
 				',,,,1618335194930,"[{""number"":1},{""number"":""two"",""count"":2}]",1618335194930,,"dce07e2f-fa32-4ceb-b4a4-4270fefe51cf",';
-			const result = await hdb_export.export_to_s3(export_obj_test);
+			await hdb_export.export_to_s3(export_obj_test);
 
 			// Get the stream passed to the S3 upload method.
 			const pass_through = upload_stub.args[0][0].params.Body;
@@ -530,11 +530,9 @@ describe('Test export.js', () => {
 		});
 
 		it('Nominal call export JSON to S3', async () => {
-			const expected_body =
-				'[{"lastname":"Dog","object":null,"array":null,"firstname":"Harper","__createdtime__":1618335194929,"object_array":null,"__updatedtime__":1618335194929,"address":"1 North Street","id":"8d9cd1b2-3e38-40cb-a340-c5d33e66dbb7","one":"only one"},{"lastname":null,"object":{"name":"object","number":1,"array":[1,"two"]},"array":[1,2,"three"],"firstname":"Harper","__createdtime__":1618335194930,"object_array":null,"__updatedtime__":1618335194930,"address":null,"id":"bc56cf62-5ad1-4519-b1c6-26742b02e9d5","one":null},{"lastname":null,"object":null,"array":null,"firstname":null,"__createdtime__":1618335194930,"object_array":[{"number":1},{"number":"two","count":2}],"__updatedtime__":1618335194930,"address":null,"id":"dce07e2f-fa32-4ceb-b4a4-4270fefe51cf","one":null}]';
 			let export_object_clone = testUtils.deepClone(export_obj_test);
 			export_object_clone.format = 'json';
-			const result = await hdb_export.export_to_s3(export_object_clone);
+			await hdb_export.export_to_s3(export_object_clone);
 
 			expect(upload_stub.args[0][0].params.Bucket).to.equal('harperdb-integration-test-data/non_public_folder');
 			expect(upload_stub.args[0][0].params.Key).to.equal('test_special.json');

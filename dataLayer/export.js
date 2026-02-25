@@ -24,7 +24,6 @@ const LOCAL_JSON_EXPORT_MSG = 'Successfully exported JSON locally.';
 const LOCAL_CSV_EXPORT_MSG = 'Successfully exported CSV locally.';
 // Size is number of records
 const S3_JSON_EXPORT_CHUNK_SIZE = 1000;
-const LOCAL_JSON_EXPORT_SIZE = 1000;
 
 // Promisified function
 const pSearchByHash = search.searchByHash;
@@ -245,7 +244,6 @@ async function export_to_s3(exportObject) {
 		throw err;
 	}
 
-	let s3UploadResults = undefined;
 	let s3 = await AWSConnector.getS3AuthObj(
 		exportObject.s3.aws_access_key_id,
 		exportObject.s3.aws_secret_access_key,

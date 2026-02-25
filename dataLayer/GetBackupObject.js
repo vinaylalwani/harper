@@ -9,10 +9,10 @@ class GetBackupObject {
 	/**
 	 * @param {string} schema
 	 * @param {string} table
-	 * @param {string} searchType
-	 * @param {[string|number]} searchValues
+	 * @param {string} _searchType
+	 * @param {[string|number]} _searchValues
 	 */
-	constructor(schema, table, searchType = undefined, searchValues = undefined) {
+	constructor(schema, table, _searchType = undefined, _searchValues = undefined) {
 		this.operation = OPERATIONS_ENUM.GET_BACKUP;
 		this.schema = schema;
 		this.table = table;

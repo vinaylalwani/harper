@@ -10,7 +10,7 @@ let averageEventCycleTime = 0;
  * Throttle function to limit the number of calls to a function so that the event queue doesn't get overwhelmed.
  * @param fn
  * @param onLimitExceeded
- * @param limit
+ * @param maxQueueTimeLimit
  */
 export function throttle(
 	fn: (...args: any) => any,
@@ -39,19 +39,19 @@ export function throttle(
 			});
 		}
 		queuedCalls = [];
-		waitForNextCycle(performance.now(), args);
+		waitForNextCycle(performance.now());
 		return fn(...args);
 	};
-	function waitForNextCycle(startTime: number, args: any) {
+	function waitForNextCycle(startTime: number) {
 		setImmediate(() => {
 			const now = performance.now();
 			// get the decaying/running average of the event cycle time
 			averageEventCycleTime = (averageEventCycleTime * 4 + now - startTime) / 5;
 			const nextCall = queuedCalls.shift();
 			if (nextCall) {
-				const { args: nextArgs, fn: nextFunction } = nextCall;
+				const { fn: nextFunction } = nextCall;
 				nextFunction();
-				waitForNextCycle(now, nextArgs);
+				waitForNextCycle(now);
 			} else {
 				queuedCalls = null;
 			}

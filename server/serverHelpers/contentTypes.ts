@@ -176,7 +176,7 @@ function tryJSONParse(input) {
 	try {
 		if (input?.[0] === 123) return JSONParse(input);
 		else return input;
-	} catch (error) {
+	} catch {
 		return input;
 	}
 }

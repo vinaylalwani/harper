@@ -1,10 +1,10 @@
 'use strict';
 
-const testUtils = require('../../../../testUtils.js');
+const testUtils = require('../../../../testUtils');
 testUtils.preTestPrep();
 const path = require('path');
 const SYSTEM_FOLDER_NAME = 'system';
-const BASE_PATH = testUtils.getMockLMDBPath();
+const BASE_PATH = testUtils.setupTestDBPath();
 const SYSTEM_SCHEMA_PATH = path.join(BASE_PATH, SYSTEM_FOLDER_NAME);
 const DEV_SCHEMA_PATH = path.join(BASE_PATH, 'dev');
 const TRANSACTIONS_NAME = 'transactions';
@@ -64,7 +64,7 @@ const INSERT_OBJECT_TEST = {
 describe('test lmdbDropTable module', () => {
 	let date_stub;
 	before(async () => {
-		await fs.remove(testUtils.getMockLMDBPath());
+		await fs.remove(testUtils.setupTestDBPath());
 		date_stub = sandbox.stub(Date, 'now').returns(TIMESTAMP);
 	});
 
@@ -78,7 +78,7 @@ describe('test lmdbDropTable module', () => {
 		let hdb_attribute_env;
 		before(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 			await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -147,7 +147,7 @@ describe('test lmdbDropTable module', () => {
 			await hdb_table_env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 		});
 
 		it('test invalid schema', async () => {
@@ -200,7 +200,7 @@ describe('test lmdbDropTable module', () => {
 		let hdb_attribute_env;
 		before(async () => {
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 			await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -257,7 +257,7 @@ describe('test lmdbDropTable module', () => {
 			await hdb_table_env.close();
 
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 		});
 
 		it('test invalid schema', async () => {
@@ -377,7 +377,7 @@ describe('test deleteAttributesFromSystem function', () => {
 		delete_attributes_from_system = lmdb_drop_table.__get__('deleteAttributesFromSystem');
 
 		global.lmdb_map = undefined;
-		await fs.remove(testUtils.getMockLMDBPath());
+		await fs.remove(testUtils.setupTestDBPath());
 		await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 		await fs.mkdirp(DEV_SCHEMA_PATH);
 
@@ -451,13 +451,13 @@ describe('test deleteAttributesFromSystem function', () => {
 		hdb_attribute_env.close();
 
 		global.lmdb_map = undefined;
-		await fs.remove(testUtils.getMockLMDBPath());
+		await fs.remove(testUtils.setupTestDBPath());
 	});
 
 	it('test removing all attributes', async () => {
 		sandbox.restore();
-		let search_by_value_spy = sandbox.spy(lmdb_drop_table.__get__('searchByValue'));
-		let delete_records_spy = sandbox.spy(lmdb_drop_table.__get__('deleteRecords'));
+		sandbox.spy(lmdb_drop_table.__get__('searchByValue'));
+		sandbox.spy(lmdb_drop_table.__get__('deleteRecords'));
 
 		let search_obj = new SearchObject('system', 'hdb_attribute', 'schema_table', 'dev.test', undefined, ['*']);
 		let results = await testUtils.assertErrorAsync(search_by_value, [search_obj], undefined);

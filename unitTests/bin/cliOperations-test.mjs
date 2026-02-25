@@ -8,7 +8,6 @@ import { buildRequest, cliOperations } from '#js/bin/cliOperations';
 // operation" and then proceeds to exit with a code of 0, making it look like the whole test suite is passing even
 // if there are failures!
 describe.skip('test CLI operations', () => {
-	let available_records;
 	let sandbox;
 	let log_spy;
 	let error_log_spy;
@@ -16,7 +15,7 @@ describe.skip('test CLI operations', () => {
 	before(async function () {
 		sandbox = sinon.createSandbox();
 		this.timeout(5000);
-		available_records = await setupTestApp();
+		await setupTestApp();
 		sandbox.stub(fs, 'exists').resolves(true);
 		log_spy = sandbox.spy(console, 'log');
 		error_log_spy = sandbox.spy(console, 'error');

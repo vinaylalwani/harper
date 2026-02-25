@@ -66,11 +66,11 @@ export class HierarchicalNavigableSmallWorld {
 			if (options.optimizeRouting !== undefined) this.optimizeRouting = options.optimizeRouting;
 		}
 	}
-	index(primaryKey: Id, vector: number[], existingVector?: number[]) {
+	index(primaryKey: Id, vector: number[], existingVector?: number[], options: any = {}) {
 		// first get the node id for the primary key; we use internal node ids for better efficiency,
 		// but we must use a safe key that won't collide with the node ids
 		const safeKey = typeof primaryKey === 'number' ? [KEY_PREFIX, primaryKey] : primaryKey;
-		let nodeId = this.indexStore.get(safeKey);
+		let nodeId = this.indexStore.getSync(safeKey, options);
 		// if the node id is not found, create a new node (and store it in the index store)
 		// (note that we don't need to check if the node id is already in the index store,
 		// because we use internal node ids for better efficiency, and we use a safe key
@@ -84,6 +84,7 @@ export class HierarchicalNavigableSmallWorld {
 					limit: 1,
 					start: Infinity,
 					end: 0,
+					transaction: options.transaction,
 				})) {
 					if (typeof key === 'number') largestNodeId = key;
 				}
@@ -94,19 +95,19 @@ export class HierarchicalNavigableSmallWorld {
 				);
 			}
 			nodeId = Number(Atomics.add(this.idIncrementer, 0, 1n));
-			this.indexStore.put(safeKey, nodeId);
+			this.indexStore.put(safeKey, nodeId, options);
 		}
 		const updatedNodes = new Map<number, Node>();
 		let oldNode: Node;
 		// If this is the first entry, create it as the entry point
-		let entryPointId = this.indexStore.get(ENTRY_POINT);
+		let entryPointId = this.indexStore.getSync(ENTRY_POINT, options);
 		if (existingVector) {
 			// If we are updating an existing entry, we need to update the entry point
 			// if the new entry is closer to the entry point than the old one
-			oldNode = { ...this.indexStore.get(nodeId) };
+			oldNode = { ...this.indexStore.getSync(nodeId, options) };
 		} else oldNode = {} as Node;
 		if (vector) {
-			let entryPoint = entryPointId && this.indexStore.get(entryPointId);
+			let entryPoint = entryPointId && this.indexStore.getSync(entryPointId, options);
 			if (entryPoint == null) {
 				const level = Math.floor(-Math.log(Math.random()) * this.mL);
 				const node = {
@@ -117,12 +118,12 @@ export class HierarchicalNavigableSmallWorld {
 				for (let i = 0; i <= level; i++) {
 					node[i] = [];
 				}
-				this.indexStore.put(nodeId, node);
+				this.indexStore.put(nodeId, node, options);
 				if (typeof nodeId !== 'number') {
 					throw new Error('Invalid nodeId: ' + nodeId);
 				}
 				logger.debug?.('setting entry point to', nodeId);
-				this.indexStore.put(ENTRY_POINT, nodeId);
+				this.indexStore.put(ENTRY_POINT, nodeId, options);
 				return;
 			}
 
@@ -135,7 +136,7 @@ export class HierarchicalNavigableSmallWorld {
 					throw new Error('Invalid nodeId: ' + nodeId);
 				}
 				logger.debug?.('setting entry point to', nodeId);
-				this.indexStore.put(ENTRY_POINT, nodeId);
+				this.indexStore.put(ENTRY_POINT, nodeId, options);
 			}
 
 			// For each level from top to bottom
@@ -205,7 +206,7 @@ export class HierarchicalNavigableSmallWorld {
 
 					for (const { fromId, toId } of connectionsToBeReplaced) {
 						let from = updateNode(fromId);
-						if (!from) from = updateNode(fromId, this.indexStore.get(fromId));
+						if (!from) from = updateNode(fromId, this.indexStore.getSync(fromId, options));
 						for (let i = 0; i < from[l].length; i++) {
 							if (from[l][i].id === toId) {
 								if (Object.isFrozen(from[l])) {
@@ -233,18 +234,22 @@ export class HierarchicalNavigableSmallWorld {
 						oldConnections.splice(oldPosition, 1);
 					} else {
 						// add new connection since this is truly a new connection now
-						this.addConnection(id, updateNode(id, node), nodeId, l, distance, updateNode);
+						this.addConnection(id, updateNode(id, node), nodeId, l, distance, updateNode, options);
 					}
 				}
 			}
 
 			// Store the new element
-			this.indexStore.put(nodeId, {
-				vector,
-				level,
-				primaryKey,
-				...connections,
-			});
+			this.indexStore.put(
+				nodeId,
+				{
+					vector,
+					level,
+					primaryKey,
+					...connections,
+				},
+				options
+			);
 		} else {
 			// removal of this node, but first make sure we have a valid entry point
 			if (entryPointId === nodeId) {
@@ -270,17 +275,17 @@ export class HierarchicalNavigableSmallWorld {
 				}
 				if (entryPointId === undefined) {
 					// no nodes left in index
-					this.indexStore.remove(ENTRY_POINT);
+					this.indexStore.remove(ENTRY_POINT, options);
 				} else {
 					// set the new entry point
 					if (typeof entryPointId !== 'number') {
 						throw new Error('Invalid nodeId: ' + entryPointId);
 					}
 					logger.debug?.('setting entry point to', entryPointId);
-					this.indexStore.put(ENTRY_POINT, entryPointId);
+					this.indexStore.put(ENTRY_POINT, entryPointId, options);
 				}
 			}
-			this.indexStore.remove(nodeId);
+			this.indexStore.remove(nodeId, options);
 		}
 		const needsReindexing = new Map();
 		// remove connections to this node that are no longer valid
@@ -289,7 +294,7 @@ export class HierarchicalNavigableSmallWorld {
 				const oldConnections = oldNode[l];
 				for (const { id: neighborId } of oldConnections) {
 					// get and copy the neighbor node so we can modify it
-					const neighborNode = updateNode(neighborId, this.indexStore.get(neighborId));
+					const neighborNode = updateNode(neighborId, this.indexStore.getSync(neighborId, options));
 					if (!neighborNode) continue;
 					for (let l2 = 0; l2 <= l; l2++) {
 						// remove the connection to this node from the neighbor node
@@ -297,7 +302,7 @@ export class HierarchicalNavigableSmallWorld {
 							return nid !== nodeId;
 						});
 						if (neighborNode[l2]?.length === 0) {
-							logger.info?.('node was left orphaned, will reindex', neighborId);
+							logger.trace?.('node was left orphaned, will reindex', neighborId);
 							needsReindexing.set(neighborNode.primaryKey, neighborNode.vector);
 						}
 					}
@@ -315,19 +320,19 @@ export class HierarchicalNavigableSmallWorld {
 			return updatedNode;
 		}
 		for (const [id, updatedNode] of updatedNodes) {
-			this.indexStore.put(id, updatedNode);
+			this.indexStore.put(id, updatedNode, options);
 		}
 		for (const [key, vector] of needsReindexing) {
 			this.index(key, vector, vector);
 		}
-		this.checkSymmetry(nodeId, this.indexStore.get(nodeId));
+		this.checkSymmetry(nodeId, this.indexStore.getSync(nodeId, options), options);
 	}
 
 	private getEntryPoint() {
 		// Get entry point
-		const entryPointId = this.indexStore.get(ENTRY_POINT);
+		const entryPointId = this.indexStore.getSync(ENTRY_POINT);
 		if (entryPointId === undefined) return;
-		const node = this.indexStore.get(entryPointId);
+		const node = this.indexStore.getSync(entryPointId);
 		return { id: entryPointId, ...node };
 	}
 
@@ -378,7 +383,7 @@ export class HierarchicalNavigableSmallWorld {
 				if (visited.has(neighborId) || neighborId === undefined) continue;
 				visited.add(neighborId);
 
-				const neighbor = this.indexStore.get(neighborId);
+				const neighbor = this.indexStore.getSync(neighborId);
 				if (!neighbor) continue;
 				this.nodesVisitedCount++;
 				const distance = distanceFunction(queryVector, neighbor.vector);
@@ -466,7 +471,7 @@ export class HierarchicalNavigableSmallWorld {
 			distance: candidate.distance,
 		}));
 	}
-	private checkSymmetry(id, node) {
+	private checkSymmetry(id, node, options) {
 		if (!node) return;
 		let l = 0;
 		let connections: Candidate[];
@@ -474,7 +479,7 @@ export class HierarchicalNavigableSmallWorld {
 			// verify that the level is not empty, otherwise this means we have an orphaned node
 			if (connections.length === 0) break;
 			for (const { id: neighbor } of connections) {
-				const neighborNode = this.indexStore.get(neighbor);
+				const neighborNode = this.indexStore.getSync(neighbor, options);
 				if (!neighborNode) {
 					logger.info?.('could not find neighbor node', neighborNode);
 					continue;
@@ -494,7 +499,8 @@ export class HierarchicalNavigableSmallWorld {
 		toId: number,
 		level: number,
 		distance: number,
-		updateNode: (id: number, node?: Node) => any
+		updateNode: (id: number, node?: Node) => any,
+		options: any
 	) {
 		if (!node[level]) {
 			node[level] = [];
@@ -521,7 +527,7 @@ export class HierarchicalNavigableSmallWorld {
 			node[level] = keptConnections;
 			// For removed connections, ensure there's still a path to them
 			for (const removed of removedConnections) {
-				let removedNode = updateNode(removed.id) ?? this.indexStore.get(removed.id);
+				let removedNode = updateNode(removed.id) ?? this.indexStore.getSync(removed.id, options);
 				if (removedNode) {
 					// Remove the reverse connection if it exists
 					if (removedNode[level]) {
@@ -540,8 +546,8 @@ export class HierarchicalNavigableSmallWorld {
 			node[level] = [...node[level], { id: toId, distance }]; // add
 		}
 
-		//this.indexStore.put(fromId, node);
-		//this.checkSymmetry(fromId, node);
+		//this.indexStore.put(fromId, node, options);
+		//this.checkSymmetry(fromId, node, options);
 	}
 	validateConnectivity(startLevel: number = 0) {
 		const entryPoint = this.getEntryPoint();
@@ -554,7 +560,7 @@ export class HierarchicalNavigableSmallWorld {
 
 		while (queue.length > 0) {
 			const currentId = queue.shift()!;
-			const current = this.indexStore.get(currentId);
+			const current = this.indexStore.getSync(currentId);
 
 			for (let level = startLevel; level <= current.level; level++) {
 				for (const { id: neighborId } of current[level] || []) {

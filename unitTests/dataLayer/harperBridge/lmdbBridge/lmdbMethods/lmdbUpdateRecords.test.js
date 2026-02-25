@@ -1,12 +1,12 @@
 'use strict';
 
-const testUtils = require('../../../../testUtils.js');
+const testUtils = require('../../../../testUtils');
 testUtils.preTestPrep();
 const path = require('path');
 const SYSTEM_FOLDER_NAME = 'system';
 const SCHEMA_NAME = 'schema';
 const TRANSACTIONS_NAME = 'transactions';
-const BASE_PATH = testUtils.getMockLMDBPath();
+const BASE_PATH = testUtils.setupTestDBPath();
 const BASE_TXN_PATH = path.join(BASE_PATH, TRANSACTIONS_NAME);
 const BASE_SCHEMA_PATH = path.join(BASE_PATH, SCHEMA_NAME);
 const SYSTEM_SCHEMA_PATH = path.join(BASE_SCHEMA_PATH, SYSTEM_FOLDER_NAME);
@@ -29,7 +29,6 @@ const verify_txn = require('../_verifyTxns');
 
 let insert_date = new Date();
 insert_date.setMinutes(insert_date.getMinutes() - 10);
-const INSERT_TIMESTAMP = insert_date.getTime();
 
 const LMDBInsertTransactionObject = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/LMDBInsertTransactionObject');
 const LMDBUpdateTransactionObject = require('#js/dataLayer/harperBridge/lmdbBridge/lmdbUtility/LMDBUpdateTransactionObject');
@@ -131,29 +130,20 @@ const TABLE_SYSTEM_DATA_TEST_A = {
 const sandbox = sinon.createSandbox();
 
 describe('Test lmdbUpdateRecords module', () => {
-	let date_stub;
 	let hdb_schema_env;
 	let hdb_table_env;
 	let hdb_attribute_env;
 	before(() => {
-		//date_stub = sandbox.stub(Date, 'now').returns(TIMESTAMP);
 		env_manager.setProperty(hdb_terms.CONFIG_PARAMS.LOGGING_AUDITLOG, true);
-	});
-
-	after(() => {
-		//date_stub.restore();
 	});
 
 	describe('Test lmdbUpdateRecords function', () => {
 		let m_time;
-		let insert_m_time;
 		let m_time_stub;
 		let expected_timestamp_txn;
 		let expected_hashes_txn;
 
 		beforeEach(async () => {
-			//date_stub.restore();
-			//date_stub = sandbox.stub(Date, 'now').returns(INSERT_TIMESTAMP);
 			global.hdb_schema = {
 				[SCHEMA_TABLE_TEST.schema]: {
 					[SCHEMA_TABLE_TEST.name]: {
@@ -168,7 +158,7 @@ describe('Test lmdbUpdateRecords module', () => {
 			};
 
 			global.lmdb_map = undefined;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 			await fs.mkdirp(SYSTEM_SCHEMA_PATH);
 
 			hdb_schema_env = await environment_utility.createEnvironment(SYSTEM_SCHEMA_PATH, systemSchema.hdb_schema.name);
@@ -188,7 +178,6 @@ describe('Test lmdbUpdateRecords module', () => {
 			await lmdb_create_table(TABLE_SYSTEM_DATA_TEST_A, CREATE_TABLE_OBJ_TEST_A);
 
 			m_time = TIMESTAMP;
-			insert_m_time = m_time;
 			m_time_stub = sandbox.stub(lmdb_common, 'getNextMonotonicTime').returns(m_time);
 
 			let insert_obj = testUtils.deepClone(INSERT_OBJECT_TEST);
@@ -203,9 +192,6 @@ describe('Test lmdbUpdateRecords module', () => {
 			insert_obj.records.forEach((record) => {
 				expected_hashes_txn[record[HASH_ATTRIBUTE_NAME]] = [m_time];
 			});
-
-			//date_stub.restore();
-			//date_stub = sandbox.stub(Date, 'now').returns(TIMESTAMP);
 
 			m_time_stub.restore();
 			m_time = TIMESTAMP;
@@ -233,7 +219,7 @@ describe('Test lmdbUpdateRecords module', () => {
 
 			global.lmdb_map = undefined;
 			delete global.hdb_schema;
-			await fs.remove(testUtils.getMockLMDBPath());
+			await fs.remove(testUtils.setupTestDBPath());
 		});
 
 		it('Test updating 1 row', async () => {

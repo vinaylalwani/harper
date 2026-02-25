@@ -51,7 +51,7 @@ export async function startHTTPThreads(threadCount = 2, dynamicThreads?: boolean
 		for (let i = 0; i < threadCount; i++) {
 			startHTTPWorker(i, threadCount);
 		}
-		return Promise.all(workersReady);
+		await Promise.all(workersReady);
 	} finally {
 		threadsHaveStarted();
 	}
@@ -124,7 +124,7 @@ export function startSocketServer(port = 0, sessionAffinityIdentifier?) {
 		// error
 		try {
 			if (existsSync(port)) unlinkSync(port);
-		} catch (error) {}
+		} catch {}
 	}
 	// at some point we may want to actually read from the https connections
 	let workerStrategy;

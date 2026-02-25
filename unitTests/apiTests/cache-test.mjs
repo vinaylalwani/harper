@@ -29,6 +29,7 @@ describe('test REST calls with cache table', () => {
 		let response = await axios('http://localhost:9926/FourProp/3');
 		let data = response.data;
 		data.name = 'name change';
+		delete data.nameTitle; // don't send a computed property
 		response = await axios.put('http://localhost:9926/FourProp/3', data);
 		assert.equal(response.status, 204);
 		response = await axios('http://localhost:9926/SimpleCache/3');
@@ -42,7 +43,7 @@ describe('test REST calls with cache table', () => {
 		assert.equal(response.status, 204);
 		let start_count = tables.CacheOfResource.sourceGetsPerformed;
 		response = await axios('http://localhost:9926/CacheOfResource/33', {
-			validateStatus: function (status) {
+			validateStatus: function (_status) {
 				return true;
 			},
 		});
@@ -57,7 +58,7 @@ describe('test REST calls with cache table', () => {
 		assert.equal(response.status, 204);
 		start_count = tables.CacheOfResource.sourceGetsPerformed;
 		response = await axios('http://localhost:9926/CacheOfResource/33', {
-			validateStatus: function (status) {
+			validateStatus: function (_status) {
 				return true;
 			},
 		});
