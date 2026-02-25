@@ -19,7 +19,7 @@ import { appendHeader, Headers } from './serverHelpers/Headers.ts';
 import { Blob } from '../resources/blob.ts';
 import { recordAction, recordActionBinary } from '../resources/analytics/write.ts';
 import { Readable } from 'node:stream';
-import { server } from './Server.ts';
+import { HttpOptions, server } from './Server.ts';
 import { setPortServerMap, SERVERS } from './serverRegistry.ts';
 import { getComponentName } from '../components/componentLoader.ts';
 import { throttle } from './throttle.ts';
@@ -34,13 +34,13 @@ const websocketServers = {};
 const httpServers = {},
 	httpChain = {},
 	httpResponders = [];
-let httpOptions: any = {};
+let httpOptions: HttpOptions = {};
 export const suppressHandleApplicationWarning = true;
 export function handleApplication(scope: Scope) {
-	httpOptions = scope.options.getAll();
+	httpOptions = scope.options.getAll() as HttpOptions;
 	scope.options.on('change', (_key) => {
 		// TODO: Check to see if the key is something we can or can't handle
-		httpOptions = scope.options.getAll();
+		httpOptions = scope.options.getAll() as HttpOptions;
 	});
 }
 export function getHttpOptions() {
