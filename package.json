@@ -32,6 +32,7 @@
 	"scripts": {
 		"build": "tsc --project tsconfig.build.json",
 		"build:watch": "npm run build -- --watch --incremental",
+		"package": "npm run build; npm shrinkwrap && npm pack",
 		"lint": "oxlint --deny-warnings .",
 		"lint:required": "oxlint --quiet .",
 		"lint:fix": "npm run lint -- --fix",
