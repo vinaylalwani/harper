@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  publish-harperfast-npm-package:
+  publish-harper-npm-package:
     runs-on: ubuntu-latest
     outputs:
       harper-version: ${{ steps.version-components.outputs.version }}
@@ -22,7 +22,7 @@ jobs:
       - name: Get release build
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release download ${{ github.event.release.tag_name }} --pattern "harperfast-harper-*.tgz"
+        run: gh release download ${{ github.event.release.tag_name }} --pattern "harper-*.tgz"
       - name: Get version components
         id: version-components
         uses: matt-usurp/validate-semver@v2
@@ -39,9 +39,9 @@ jobs:
       - name: Publish package to NPM registry
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_KEY }}
-        run: npm publish --access=public --tag=${{ steps.package-tag.outputs.packageTag }} harperfast-harper-*.tgz
+        run: npm publish --access=public --tag=${{ steps.package-tag.outputs.packageTag }} harper-*.tgz
 
-  publish-harper-npm-package:
+  publish-harperfast-npm-package:
     runs-on: ubuntu-latest
     outputs:
       harper-version: ${{ steps.version-components.outputs.version }}
@@ -54,20 +54,20 @@ jobs:
       - name: Get release build
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release download ${{ github.event.release.tag_name }} --pattern "harperfast-harper-*.tgz"
+        run: gh release download ${{ github.event.release.tag_name }} --pattern "harper-*.tgz"
       - name: Get version components
         id: version-components
         uses: matt-usurp/validate-semver@v2
         with:
           version: ${{ github.event.release.tag_name }}
-      - name: Rename package to 'harper'
+      - name: Rename package to '@harperfast/harper'
         run: |
           mkdir package
-          tar -xvf harperfast-harper-${{ steps.version-components.outputs.version }}.tgz -C package --strip-components=1
+          tar -xvf harper-${{ steps.version-components.outputs.version }}.tgz -C package --strip-components=1
           pushd package
-          npm pkg set name=harper
+          npm pkg set name=@harperfast/harper
           popd
-          tar -czvf harper-${{ steps.version-components.outputs.version }}.tgz package
+          tar -czvf harperfast-harper-${{ steps.version-components.outputs.version }}.tgz package
       - name: Set package tag
         id: package-tag
         run: |
@@ -96,13 +96,13 @@ jobs:
           payload: |
             {
               "channel": "#development-ci",
-              "text": "Harper v${{ needs.publish-npm-package.outputs.harper-version }} has been published to NPM",
+              "text": "Harper v${{ needs.publish-harper-npm-package.outputs.harper-version }} has been published to NPM",
               "blocks": [
                 {
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": "Harper v${{ needs.publish-npm-package.outputs.harper-version }} release"
+                    "text": "Harper v${{ needs.publish-harper-npm-package.outputs.harper-version }} release"
                   }
                 },
                 {
@@ -118,7 +118,11 @@ jobs:
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "<https://www.npmjs.com/package/@harperfast/harper/v/${{ needs.publish-npm-package.outputs.harper-version }}|@harperfast/harper@${{ needs.publish-npm-package.outputs.harper-version }}>"
+                      "text": "<https://www.npmjs.com/package/harper/v/${{ needs.publish-harper-npm-package.outputs.harper-version }}|harper@${{ needs.publish-harper-npm-package.outputs.harper-version }}>"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "<https://www.npmjs.com/package/@harperfast/harperfast/v/${{ needs.publish-harperfast-npm-package.outputs.harper-version }}|@harperfast/harper@${{ needs.publish-harperfast-npm-package.outputs.harper-version }}>"
                     }
                   ]
                 }
@@ -139,13 +143,13 @@ jobs:
           payload: |
             {
               "channel": "#development-ci",
-              "text": "Harper v${{ needs.publish-npm-package.outputs.harper-version }} NPM publish failed",
+              "text": "Harper v${{ needs.publish-harper-npm-package.outputs.harper-version }} NPM publish failed",
               "blocks": [
                 {
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": "Harper v${{ needs.publish-npm-package.outputs.harper-version }} release"
+                    "text": "Harper v${{ needs.publish-harper-npm-package.outputs.harper-version }} release"
                   }
                 },
                 {
