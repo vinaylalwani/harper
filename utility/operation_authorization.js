@@ -37,6 +37,7 @@ const status = require('../server/status/index.ts');
 const PermissionResponseObject = require('../security/data_objects/PermissionResponseObject.js');
 const { handleHDBError, hdbErrors } = require('../utility/errors/hdbError.js');
 const { HDB_ERROR_MSGS, HTTP_STATUS_CODES } = hdbErrors;
+const regDeprecated = require('../resources/registrationDeprecated.ts');
 
 const requiredPermissions = new Map();
 const DELETE_PERM = 'delete';
@@ -165,6 +166,7 @@ requiredPermissions.set(functionsOperations.packageComponent.name, new permissio
 requiredPermissions.set(functionsOperations.deployComponent.name, new permission(true, []));
 
 //Below are functions that are currently open to all roles
+requiredPermissions.set(regDeprecated.getRegistrationInfo.name, new permission(false, []));
 requiredPermissions.set(user.userInfo.name, new permission(false, []));
 //DescribeAll will only return the schema values a user has permissions for
 requiredPermissions.set(schemaDescribe.describeAll.name, new permission(false, []));
