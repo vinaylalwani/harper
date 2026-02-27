@@ -844,9 +844,7 @@ describe('Test role_validation module ', () => {
 				test_role.permission.operations = 'read_only';
 				const test_result = customValidate_rw(test_role, getAddRoleConstraints());
 				expect(test_result.statusCode).to.equal(400);
-				expect(test_result.http_resp_msg.main_permissions).to.include(
-					TEST_ROLE_PERMS_ERROR.OPERATIONS_MUST_BE_ARRAY
-				);
+				expect(test_result.http_resp_msg.main_permissions).to.include(TEST_ROLE_PERMS_ERROR.OPERATIONS_MUST_BE_ARRAY);
 			});
 
 			it('ERROR - operations as boolean true (not array) returns validation error', () => {
@@ -854,9 +852,7 @@ describe('Test role_validation module ', () => {
 				test_role.permission.operations = true;
 				const test_result = customValidate_rw(test_role, getAddRoleConstraints());
 				expect(test_result.statusCode).to.equal(400);
-				expect(test_result.http_resp_msg.main_permissions).to.include(
-					TEST_ROLE_PERMS_ERROR.OPERATIONS_MUST_BE_ARRAY
-				);
+				expect(test_result.http_resp_msg.main_permissions).to.include(TEST_ROLE_PERMS_ERROR.OPERATIONS_MUST_BE_ARRAY);
 			});
 
 			it('ERROR - operations with invalid op name returns validation error', () => {

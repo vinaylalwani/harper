@@ -1564,9 +1564,7 @@ describe('Test operations permissions', function () {
 			// Error message uses the API name (terms.OPERATIONS_ENUM.INSERT = 'insert'), not the internal
 			// function name (write.insert.name = 'insertData'), because that's what users put in operations.
 			assert.ok(
-				JSON.stringify(result).includes(
-					TEST_OPERATION_AUTH_ERROR.OP_NOT_IN_OPERATIONS(terms.OPERATIONS_ENUM.INSERT)
-				)
+				JSON.stringify(result).includes(TEST_OPERATION_AUTH_ERROR.OP_NOT_IN_OPERATIONS(terms.OPERATIONS_ENUM.INSERT))
 			);
 		});
 

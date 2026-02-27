@@ -220,9 +220,7 @@ suite('operations RBAC', (ctx: ContextWithHarper) => {
 			strictEqual(res.status, 403);
 			const body = (await res.json()) as any;
 			ok(
-				body.unauthorized_access?.[0]?.includes(
-					"'insert' is not permitted for this role's operations configuration"
-				),
+				body.unauthorized_access?.[0]?.includes("'insert' is not permitted for this role's operations configuration"),
 				`Unexpected denial reason: ${JSON.stringify(body.unauthorized_access)}`
 			);
 		});
