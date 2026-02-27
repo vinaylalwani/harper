@@ -168,7 +168,7 @@ export async function startCrlServer(
 						'Cache-Control': 'no-cache',
 					});
 					res.end(crl);
-				} catch (error) {
+				} catch {
 					res.writeHead(500);
 					res.end('Internal Server Error');
 				}

@@ -25,148 +25,153 @@ import {
 
 const HTTPS_PORT = 9927;
 
-// The last test stops the OCSP responder to verify caching, so it must
-// run after all other tests that need the responder
-suite('OCSP Certificate Verification', (ctx: ContextWithHarper) => {
-	let ocspResponder: OcspResponderContext | null = null;
+// The last test stops the OCSP responder to verify caching, so tests must run sequentially.
+// Tests CANNOT run concurrently because the caching test stops the responder that earlier tests need.
+suite(
+	'OCSP Certificate Verification',
+	{ concurrency: 1 }, // Explicit: tests must run in order
+	(ctx: ContextWithHarper) => {
+		let ocspResponder: OcspResponderContext | null = null;
+		let certsPath: string; // Track separately for cleanup even if responder is stopped
 
-	before(async () => {
-		// 1. Create temp directory for certificates
-		const certsPath = await mkdtemp(join(tmpdir(), 'harper-ocsp-test-'));
+		before(async () => {
+			// 1. Create temp directory for certificates
+			certsPath = await mkdtemp(join(tmpdir(), 'harper-ocsp-test-'));
 
-		// 2. Setup OCSP responder (picks port, generates certs, starts responder with retry)
-		ocspResponder = await setupOcspResponderWithCerts(certsPath);
+			// 2. Setup OCSP responder (picks port, generates certs, starts responder with retry)
+			ocspResponder = await setupOcspResponderWithCerts(certsPath);
 
-		// 3. Setup Harper with CA certificate configuration
-		await setupHarper(ctx, {
-			config: {
-				http: {
-					mtls: {
-						certificateVerification: {
-							failureMode: 'fail-closed',
-							ocsp: {
-								enabled: true,
-								timeout: 5000,
-								cacheTtl: 3600000,
+			// 3. Setup Harper with CA certificate configuration
+			await setupHarper(ctx, {
+				config: {
+					http: {
+						mtls: {
+							certificateVerification: {
+								failureMode: 'fail-closed',
+								ocsp: {
+									enabled: true,
+									timeout: 5000,
+									cacheTtl: 3600000,
+								},
 							},
 						},
 					},
+					tls: {
+						certificateAuthority: ocspResponder.certs.ca,
+					},
 				},
-				tls: {
-					certificateAuthority: ocspResponder.certs.ca,
-				},
-			},
-		});
-	});
-
-	after(async () => {
-		// 1. Stop OCSP responder
-		if (ocspResponder) {
-			await stopOcspResponder(ocspResponder);
-		}
-
-		// 2. Teardown Harper (before removing certs in case Harper is using them)
-		await teardownHarper(ctx);
-
-		// 3. Cleanup certificates (owned by OCSP responder context)
-		if (ocspResponder) {
-			await rm(ocspResponder.certsPath, { recursive: true, force: true, maxRetries: 3 });
-		}
-	});
-
-	test('should accept valid certificate with OCSP check', async () => {
-		return new Promise<void>((resolve, reject) => {
-			// Hit a known non-existent route - the test validates TLS handshake success,
-			// not route existence. Test Harper has no routes configured, so we expect 404.
-			const req = https.request(
-				`https://${ctx.harper.hostname}:${HTTPS_PORT}/cert-test-nonexistent`,
-				{
-					cert: readFileSync(ocspResponder!.certs.valid.cert),
-					key: readFileSync(ocspResponder!.certs.valid.key),
-					ca: readFileSync(ocspResponder!.certs.ca),
-					rejectUnauthorized: false, // Harper uses self-signed server cert
-				},
-				(res) => {
-					// TLS handshake succeeded - expect 404 since route doesn't exist
-					ok(res.statusCode === 404, `Expected 404 (TLS succeeded, route not found). Got: ${res.statusCode}`);
-					res.resume(); // Consume response data
-					res.on('end', () => resolve());
-				}
-			);
-
-			req.on('error', (err) => reject(new Error(`Request failed: ${err.message}`)));
-			req.end();
-		});
-	});
-
-	test('should reject revoked certificate with OCSP check', async () => {
-		return new Promise<void>((resolve, reject) => {
-			const req = https.request(
-				`https://${ctx.harper.hostname}:${HTTPS_PORT}/`,
-				{
-					cert: readFileSync(ocspResponder!.certs.revoked.cert),
-					key: readFileSync(ocspResponder!.certs.revoked.key),
-					ca: readFileSync(ocspResponder!.certs.ca),
-					rejectUnauthorized: false,
-				},
-				(res) => {
-					res.resume();
-					// Expect application-level rejection (certificate verification in Harper)
-					ok(res.statusCode === 401, `Expected 401 for revoked cert, got: ${res.statusCode}`);
-					res.on('end', () => resolve());
-				}
-			);
-
-			req.on('error', (err: any) => {
-				// TLS-level errors mean our cert verification code wasn't reached
-				reject(new Error(`Expected application-level rejection (401), got TLS error: ${err.code || err.message}`));
 			});
-
-			req.end();
 		});
-	});
 
-	test('should cache OCSP responses', async () => {
-		// Read certificates once before stopping responder
-		const validCert = readFileSync(ocspResponder!.certs.valid.cert);
-		const validKey = readFileSync(ocspResponder!.certs.valid.key);
-		const ca = readFileSync(ocspResponder!.certs.ca);
+		after(async () => {
+			// 1. Stop OCSP responder (if not already stopped by caching test)
+			if (ocspResponder) {
+				await stopOcspResponder(ocspResponder);
+			}
 
-		const makeRequest = () =>
-			new Promise<number>((resolve, reject) => {
+			// 2. Teardown Harper (before removing certs in case Harper is using them)
+			await teardownHarper(ctx);
+
+			// 3. Cleanup certificates (always cleanup, even if responder was stopped early)
+			await rm(certsPath, { recursive: true, force: true, maxRetries: 3 });
+		});
+
+		test('should accept valid certificate with OCSP check', async () => {
+			return new Promise<void>((resolve, reject) => {
+				// Hit a known non-existent route - the test validates TLS handshake success,
+				// not route existence. Test Harper has no routes configured, so we expect 404.
 				const req = https.request(
 					`https://${ctx.harper.hostname}:${HTTPS_PORT}/cert-test-nonexistent`,
 					{
-						cert: validCert,
-						key: validKey,
-						ca,
+						cert: readFileSync(ocspResponder!.certs.valid.cert),
+						key: readFileSync(ocspResponder!.certs.valid.key),
+						ca: readFileSync(ocspResponder!.certs.ca),
+						rejectUnauthorized: false, // Harper uses self-signed server cert
+					},
+					(res) => {
+						// TLS handshake succeeded - expect 404 since route doesn't exist
+						ok(res.statusCode === 404, `Expected 404 (TLS succeeded, route not found). Got: ${res.statusCode}`);
+						res.resume(); // Consume response data
+						res.on('end', () => resolve());
+					}
+				);
+
+				req.on('error', (err) => reject(new Error(`Request failed: ${err.message}`)));
+				req.end();
+			});
+		});
+
+		test('should reject revoked certificate with OCSP check', async () => {
+			return new Promise<void>((resolve, reject) => {
+				const req = https.request(
+					`https://${ctx.harper.hostname}:${HTTPS_PORT}/`,
+					{
+						cert: readFileSync(ocspResponder!.certs.revoked.cert),
+						key: readFileSync(ocspResponder!.certs.revoked.key),
+						ca: readFileSync(ocspResponder!.certs.ca),
 						rejectUnauthorized: false,
 					},
 					(res) => {
 						res.resume();
-						// statusCode is always defined on http.IncomingMessage for responses
-						res.on('end', () => resolve(res.statusCode!));
+						// Expect application-level rejection (certificate verification in Harper)
+						ok(res.statusCode === 401, `Expected 401 for revoked cert, got: ${res.statusCode}`);
+						res.on('end', () => resolve());
 					}
 				);
-				req.on('error', reject);
+
+				req.on('error', (err: any) => {
+					// TLS-level errors mean our cert verification code wasn't reached
+					reject(new Error(`Expected application-level rejection (401), got TLS error: ${err.code || err.message}`));
+				});
+
 				req.end();
 			});
+		});
 
-		// First request - populates cache
-		const status1 = await makeRequest();
-		ok(status1 === 404, 'First request should succeed with 404 (TLS succeeded, route not found)');
+		test('should cache OCSP responses', async () => {
+			// Read certificates once before stopping responder
+			const validCert = readFileSync(ocspResponder!.certs.valid.cert);
+			const validKey = readFileSync(ocspResponder!.certs.valid.key);
+			const ca = readFileSync(ocspResponder!.certs.ca);
 
-		// Stop OCSP responder to prove caching works
-		if (ocspResponder) {
-			await stopOcspResponder(ocspResponder);
-			ocspResponder = null;
-		}
+			const makeRequest = () =>
+				new Promise<number>((resolve, reject) => {
+					const req = https.request(
+						`https://${ctx.harper.hostname}:${HTTPS_PORT}/cert-test-nonexistent`,
+						{
+							cert: validCert,
+							key: validKey,
+							ca,
+							rejectUnauthorized: false,
+						},
+						(res) => {
+							res.resume();
+							// statusCode is always defined on http.IncomingMessage for responses
+							res.on('end', () => resolve(res.statusCode!));
+						}
+					);
+					req.on('error', reject);
+					req.end();
+				});
 
-		// Second request - should succeed using cached OCSP response
-		const status2 = await makeRequest();
-		ok(status2 === 404, 'Second request should succeed with cache (OCSP responder stopped)');
-	});
-});
+			// First request - populates cache
+			const status1 = await makeRequest();
+			ok(status1 === 404, 'First request should succeed with 404 (TLS succeeded, route not found)');
+
+			// Stop OCSP responder to prove caching works.
+			// Set to null so after() hook knows responder is already stopped.
+			// Cert cleanup still happens via certsPath tracked at suite level.
+			if (ocspResponder) {
+				await stopOcspResponder(ocspResponder);
+				ocspResponder = null;
+			}
+
+			// Second request - should succeed using cached OCSP response
+			const status2 = await makeRequest();
+			ok(status2 === 404, 'Second request should succeed with cache (OCSP responder stopped)');
+		});
+	}
+);
 
 suite('OCSP Certificate Verification - Disabled', (ctx: ContextWithHarper) => {
 	let certsPath: string;
