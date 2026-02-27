@@ -1,11 +1,11 @@
 /**
- * operation_user RBAC integration tests.
+ * operations RBAC integration tests.
  *
- * Tests the `operation_user` permission field on roles, which provides an
+ * Tests the `operations` permission field on roles, which provides an
  * operation-level allowlist enabling non-super_user roles to call specific
  * operations (including SU-only ones) without full super_user access.
  *
- * Dual gate: operation_user restricts which ops are reachable, and table
+ * Dual gate: operations restricts which ops are reachable, and table
  * CRUD permissions still apply for data operations — both must pass.
  */
 import { suite, test, before, after } from 'node:test';
@@ -33,7 +33,7 @@ const STANDARD_USER_ROLE = 'standard_user_ops_role';
 const STANDARD_USER_USER = 'standard_user_user';
 const STANDARD_USER_PASS = 'Test1234!';
 
-suite('operation_user RBAC', (ctx: ContextWithHarper) => {
+suite('operations RBAC', (ctx: ContextWithHarper) => {
 	before(async () => {
 		await setupHarper(ctx, { config: {}, env: {} });
 
@@ -61,13 +61,13 @@ suite('operation_user RBAC', (ctx: ContextWithHarper) => {
 			],
 		});
 
-		// Create read_only_ops_role: operation_user restricts to read-only ops,
+		// Create read_only_ops_role: operations restricts to read-only ops,
 		// with explicit READ permission on the test table (dual gate)
 		await op({
 			operation: 'add_role',
 			role: READ_ONLY_ROLE,
 			permission: {
-				operation_user: ['read_only'],
+				operations: ['read_only'],
 				[DATABASE]: {
 					tables: {
 						[TABLE]: {
@@ -87,7 +87,7 @@ suite('operation_user RBAC', (ctx: ContextWithHarper) => {
 			operation: 'add_role',
 			role: SU_OPS_ROLE,
 			permission: {
-				operation_user: ['get_configuration', 'system_information', 'list_users'],
+				operations: ['get_configuration', 'system_information', 'list_users'],
 			},
 		});
 
@@ -96,7 +96,7 @@ suite('operation_user RBAC', (ctx: ContextWithHarper) => {
 			operation: 'add_role',
 			role: COMBINED_ROLE,
 			permission: {
-				operation_user: ['read_only', 'get_configuration'],
+				operations: ['read_only', 'get_configuration'],
 				[DATABASE]: {
 					tables: {
 						[TABLE]: {
@@ -117,7 +117,7 @@ suite('operation_user RBAC', (ctx: ContextWithHarper) => {
 			operation: 'add_role',
 			role: STANDARD_USER_ROLE,
 			permission: {
-				operation_user: ['standard_user', 'get_configuration', 'system_information'],
+				operations: ['standard_user', 'get_configuration', 'system_information'],
 				[DATABASE]: {
 					tables: {
 						[TABLE]: {
@@ -210,7 +210,7 @@ suite('operation_user RBAC', (ctx: ContextWithHarper) => {
 			strictEqual(res.status, 200);
 		});
 
-		test('insert is denied (not in operation_user list)', async () => {
+		test('insert is denied (not in operations list)', async () => {
 			const res = await callOp(READ_ONLY_USER, READ_ONLY_PASS, {
 				operation: 'insert',
 				schema: DATABASE,
@@ -221,13 +221,13 @@ suite('operation_user RBAC', (ctx: ContextWithHarper) => {
 			const body = (await res.json()) as any;
 			ok(
 				body.unauthorized_access?.[0]?.includes(
-					"'insert' is not permitted for this role's operation_user configuration"
+					"'insert' is not permitted for this role's operations configuration"
 				),
 				`Unexpected denial reason: ${JSON.stringify(body.unauthorized_access)}`
 			);
 		});
 
-		test('update is denied (not in operation_user list)', async () => {
+		test('update is denied (not in operations list)', async () => {
 			const res = await callOp(READ_ONLY_USER, READ_ONLY_PASS, {
 				operation: 'update',
 				schema: DATABASE,
@@ -237,7 +237,7 @@ suite('operation_user RBAC', (ctx: ContextWithHarper) => {
 			strictEqual(res.status, 403);
 		});
 
-		test('delete is denied (not in operation_user list)', async () => {
+		test('delete is denied (not in operations list)', async () => {
 			const res = await callOp(READ_ONLY_USER, READ_ONLY_PASS, {
 				operation: 'delete',
 				schema: DATABASE,
@@ -247,7 +247,7 @@ suite('operation_user RBAC', (ctx: ContextWithHarper) => {
 			strictEqual(res.status, 403);
 		});
 
-		test('get_configuration is denied (SU-only op not in operation_user list)', async () => {
+		test('get_configuration is denied (SU-only op not in operations list)', async () => {
 			const res = await callOp(READ_ONLY_USER, READ_ONLY_PASS, {
 				operation: 'get_configuration',
 			});
@@ -258,28 +258,28 @@ suite('operation_user RBAC', (ctx: ContextWithHarper) => {
 	// -- su_ops_role tests --
 
 	suite('su_ops_role', () => {
-		test('get_configuration is allowed (SU-only op granted via operation_user)', async () => {
+		test('get_configuration is allowed (SU-only op granted via operations)', async () => {
 			const res = await callOp(SU_OPS_USER, SU_OPS_PASS, {
 				operation: 'get_configuration',
 			});
 			strictEqual(res.status, 200);
 		});
 
-		test('system_information is allowed (SU-only op granted via operation_user)', async () => {
+		test('system_information is allowed (SU-only op granted via operations)', async () => {
 			const res = await callOp(SU_OPS_USER, SU_OPS_PASS, {
 				operation: 'system_information',
 			});
 			strictEqual(res.status, 200);
 		});
 
-		test('list_users is allowed (SU-only op granted via operation_user)', async () => {
+		test('list_users is allowed (SU-only op granted via operations)', async () => {
 			const res = await callOp(SU_OPS_USER, SU_OPS_PASS, {
 				operation: 'list_users',
 			});
 			strictEqual(res.status, 200);
 		});
 
-		test('insert is denied (not in operation_user list)', async () => {
+		test('insert is denied (not in operations list)', async () => {
 			const res = await callOp(SU_OPS_USER, SU_OPS_PASS, {
 				operation: 'insert',
 				schema: DATABASE,
@@ -289,14 +289,14 @@ suite('operation_user RBAC', (ctx: ContextWithHarper) => {
 			strictEqual(res.status, 403);
 		});
 
-		test('restart is denied (SU-only op not in operation_user list)', async () => {
+		test('restart is denied (SU-only op not in operations list)', async () => {
 			const res = await callOp(SU_OPS_USER, SU_OPS_PASS, {
 				operation: 'restart',
 			});
 			strictEqual(res.status, 403);
 		});
 
-		test('search_by_hash is denied (not in operation_user list)', async () => {
+		test('search_by_hash is denied (not in operations list)', async () => {
 			const res = await callOp(SU_OPS_USER, SU_OPS_PASS, {
 				operation: 'search_by_hash',
 				schema: DATABASE,
@@ -311,12 +311,12 @@ suite('operation_user RBAC', (ctx: ContextWithHarper) => {
 	// -- role validation tests --
 
 	suite('add_role validation', () => {
-		test('non-array operation_user is rejected with 400', async () => {
+		test('non-array operations is rejected with 400', async () => {
 			const res = await callOp(ctx.harper.admin.username, ctx.harper.admin.password, {
 				operation: 'add_role',
 				role: 'bad_role_1',
 				permission: {
-					operation_user: true,
+					operations: true,
 				},
 			});
 			strictEqual(res.status, 400);
@@ -324,12 +324,12 @@ suite('operation_user RBAC', (ctx: ContextWithHarper) => {
 			ok(JSON.stringify(body).includes('must be an array'), `Unexpected response: ${JSON.stringify(body)}`);
 		});
 
-		test('invalid operation name in operation_user is rejected with 400', async () => {
+		test('invalid operation name in operations is rejected with 400', async () => {
 			const res = await callOp(ctx.harper.admin.username, ctx.harper.admin.password, {
 				operation: 'add_role',
 				role: 'bad_role_2',
 				permission: {
-					operation_user: ['bogus_nonexistent_op'],
+					operations: ['bogus_nonexistent_op'],
 				},
 			});
 			strictEqual(res.status, 400);
@@ -337,12 +337,12 @@ suite('operation_user RBAC', (ctx: ContextWithHarper) => {
 			ok(JSON.stringify(body).includes('bogus_nonexistent_op'), `Unexpected response: ${JSON.stringify(body)}`);
 		});
 
-		test('valid operation_user with read_only group is accepted', async () => {
+		test('valid operations with read_only group is accepted', async () => {
 			const res = await callOp(ctx.harper.admin.username, ctx.harper.admin.password, {
 				operation: 'add_role',
 				role: 'valid_role_1',
 				permission: {
-					operation_user: ['read_only'],
+					operations: ['read_only'],
 				},
 			});
 			strictEqual(res.status, 200);
@@ -363,14 +363,14 @@ suite('operation_user RBAC', (ctx: ContextWithHarper) => {
 			strictEqual(res.status, 200);
 		});
 
-		test('get_configuration is allowed (SU-only bypass via operation_user)', async () => {
+		test('get_configuration is allowed (SU-only bypass via operations)', async () => {
 			const res = await callOp(COMBINED_USER, COMBINED_PASS, {
 				operation: 'get_configuration',
 			});
 			strictEqual(res.status, 200);
 		});
 
-		test('insert is denied (not in operation_user list despite table existing in perms)', async () => {
+		test('insert is denied (not in operations list despite table existing in perms)', async () => {
 			const res = await callOp(COMBINED_USER, COMBINED_PASS, {
 				operation: 'insert',
 				schema: DATABASE,
@@ -380,7 +380,7 @@ suite('operation_user RBAC', (ctx: ContextWithHarper) => {
 			strictEqual(res.status, 403);
 		});
 
-		test('restart is denied (SU-only op not in operation_user list)', async () => {
+		test('restart is denied (SU-only op not in operations list)', async () => {
 			const res = await callOp(COMBINED_USER, COMBINED_PASS, {
 				operation: 'restart',
 			});
@@ -447,14 +447,14 @@ suite('operation_user RBAC', (ctx: ContextWithHarper) => {
 			strictEqual(res.status, 200);
 		});
 
-		test('restart is denied (SU-only op not in operation_user list)', async () => {
+		test('restart is denied (SU-only op not in operations list)', async () => {
 			const res = await callOp(STANDARD_USER_USER, STANDARD_USER_PASS, {
 				operation: 'restart',
 			});
 			strictEqual(res.status, 403);
 		});
 
-		test('drop_database is denied (SU-only op not in operation_user list)', async () => {
+		test('drop_database is denied (SU-only op not in operations list)', async () => {
 			const res = await callOp(STANDARD_USER_USER, STANDARD_USER_PASS, {
 				operation: 'drop_database',
 				database: DATABASE,
@@ -466,7 +466,7 @@ suite('operation_user RBAC', (ctx: ContextWithHarper) => {
 	// -- regression: admin super_user behavior unchanged --
 
 	suite('admin (super_user) regression', () => {
-		test('admin can insert (no operation_user restriction)', async () => {
+		test('admin can insert (no operations restriction)', async () => {
 			const res = await callOp(ctx.harper.admin.username, ctx.harper.admin.password, {
 				operation: 'insert',
 				schema: DATABASE,

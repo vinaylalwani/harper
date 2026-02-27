@@ -24,7 +24,7 @@ const STRUCTURE_USER_ENUM = {
 	STRUCTURE_USER: 'structure_user',
 };
 
-const OPERATION_USER_KEY = 'operation_user';
+const OPERATIONS_KEY = 'operations';
 
 const ROLE_TYPES = Object.values(terms.ROLE_TYPES_ENUM);
 const ATTR_PERMS_KEY = 'attribute_permissions';
@@ -128,12 +128,12 @@ function customValidate(object, constraints) {
 				continue;
 			}
 
-			// validate operation_user: must be an array of valid operation names and/or group names
-			if (item === OPERATION_USER_KEY) {
+			// validate operations: must be an array of valid operation names and/or group names
+			if (item === OPERATIONS_KEY) {
 				const opUserPerm = object.permission[item];
 
 				if (!Array.isArray(opUserPerm)) {
-					addPermError(HDB_ERROR_MSGS.OPERATION_USER_MUST_BE_ARRAY, validationErrors);
+					addPermError(HDB_ERROR_MSGS.OPERATIONS_MUST_BE_ARRAY, validationErrors);
 					continue;
 				}
 
@@ -142,7 +142,7 @@ function customValidate(object, constraints) {
 				for (let k = 0; k < opUserPerm.length; k++) {
 					const opPerm = opUserPerm[k];
 					if (!validOps.has(opPerm) && !validGroups.has(opPerm)) {
-						addPermError(HDB_ERROR_MSGS.INVALID_OPERATION_USER_OP(opPerm), validationErrors);
+						addPermError(HDB_ERROR_MSGS.INVALID_OPERATIONS_OP(opPerm), validationErrors);
 					}
 				}
 				continue;

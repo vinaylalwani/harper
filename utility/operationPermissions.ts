@@ -1,8 +1,8 @@
 import { OPERATIONS_ENUM } from './hdbTerms.ts';
 
 /**
- * Predefined operation permission groups for use with `operation_user` role permissions.
- * Group names can be included in the `operation_user` array alongside individual operation names.
+ * Predefined operation permission groups for use with `operations` role permissions.
+ * Group names can be included in the `operations` array alongside individual operation names.
  */
 export const OPERATION_PERMISSION_GROUPS = {
 	/**
@@ -30,9 +30,9 @@ export const OPERATION_PERMISSION_GROUPS = {
 	],
 	/**
 	 * Elevated read-only access to server configuration, logs, and component views.
-	 * All ops here are SU-only and granted via the operation_user SU bypass.
+	 * All ops here are SU-only and granted via the operations SU bypass.
 	 * Combine with `read_only` for a full studio/dashboard read role:
-	 * `operation_user: ['read_only', 'admin_read']`
+	 * `operations: ['read_only', 'admin_read']`
 	 */
 	admin_read: [
 		OPERATIONS_ENUM.GET_CONFIGURATION,
@@ -79,12 +79,12 @@ export const OPERATION_PERMISSION_GROUPS = {
 } as const;
 
 /**
- * Expands an operation_user array into a Set of individual operation names,
+ * Expands an operations array into a Set of individual operation names,
  * resolving group names (e.g. 'read_only') to their member operations.
  */
-export function expandOperationUserPerms(operationUser: readonly string[]): Set<string> {
+export function expandOperationsPerms(operations: readonly string[]): Set<string> {
 	const allowedOps = new Set<string>();
-	for (const item of operationUser) {
+	for (const item of operations) {
 		const group = OPERATION_PERMISSION_GROUPS[item as keyof typeof OPERATION_PERMISSION_GROUPS];
 		if (group) {
 			for (const op of group) allowedOps.add(op);

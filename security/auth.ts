@@ -172,7 +172,7 @@ export async function authentication(request, nextHandler) {
 			const cachedUser = authorizationCache.get(authorization);
 			if (cachedUser?.role) {
 				// Shallow-clone so verifyPerms's `role.permission = fullRolePerms` reassignment
-				// doesn't mutate the cache entry (defense-in-depth; operation_user and other
+				// doesn't mutate the cache entry (defense-in-depth; operations and other
 				// meta-permission fields are now preserved through translation in permissionsTranslator).
 				newUser = { ...cachedUser, role: { ...cachedUser.role, permission: { ...cachedUser.role.permission } } };
 			} else if (cachedUser) {

@@ -2,7 +2,7 @@
 
 const assert = require('assert');
 const terms = require('#src/utility/hdbTerms');
-const { OPERATION_PERMISSION_GROUPS, expandOperationUserPerms } = require('#src/utility/operationPermissions');
+const { OPERATION_PERMISSION_GROUPS, expandOperationsPerms } = require('#src/utility/operationPermissions');
 
 describe('operationPermissions', function () {
 	describe('OPERATION_PERMISSION_GROUPS', function () {
@@ -64,9 +64,9 @@ describe('operationPermissions', function () {
 		});
 	});
 
-	describe('expandOperationUserPerms()', function () {
+	describe('expandOperationsPerms()', function () {
 		it('expands a group name to its member operations', function () {
-			const result = expandOperationUserPerms(['read_only']);
+			const result = expandOperationsPerms(['read_only']);
 			assert.ok(result instanceof Set);
 			assert.ok(result.has(terms.OPERATIONS_ENUM.SEARCH));
 			assert.ok(result.has(terms.OPERATIONS_ENUM.SQL));
@@ -75,7 +75,7 @@ describe('operationPermissions', function () {
 		});
 
 		it('group does not include write operations', function () {
-			const result = expandOperationUserPerms(['read_only']);
+			const result = expandOperationsPerms(['read_only']);
 			assert.ok(!result.has(terms.OPERATIONS_ENUM.INSERT));
 			assert.ok(!result.has(terms.OPERATIONS_ENUM.UPDATE));
 			assert.ok(!result.has(terms.OPERATIONS_ENUM.DELETE));
@@ -83,13 +83,13 @@ describe('operationPermissions', function () {
 		});
 
 		it('passes through an individual operation name directly', function () {
-			const result = expandOperationUserPerms([terms.OPERATIONS_ENUM.RESTART]);
+			const result = expandOperationsPerms([terms.OPERATIONS_ENUM.RESTART]);
 			assert.ok(result.has(terms.OPERATIONS_ENUM.RESTART));
 			assert.equal(result.size, 1);
 		});
 
 		it('combines a group and individual operations into a union set', function () {
-			const result = expandOperationUserPerms([
+			const result = expandOperationsPerms([
 				'read_only',
 				terms.OPERATIONS_ENUM.RESTART,
 				terms.OPERATIONS_ENUM.LIST_USERS,
@@ -100,7 +100,7 @@ describe('operationPermissions', function () {
 		});
 
 		it('returns an empty set for an empty array', function () {
-			const result = expandOperationUserPerms([]);
+			const result = expandOperationsPerms([]);
 			assert.equal(result.size, 0);
 		});
 	});

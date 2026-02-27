@@ -24,7 +24,7 @@ const readLog = require('../utility/logging/readLog.js');
 const commonUtils = require('./common_utils.js');
 const restart = require('../bin/restart.js');
 const terms = require('./hdbTerms.ts');
-const { expandOperationUserPerms } = require('./operationPermissions.ts');
+const { expandOperationsPerms } = require('./operationPermissions.ts');
 const permsTranslator = require('../security/permissionsTranslator.js');
 const systemInformation = require('../utility/environment/systemInformation.js');
 const tokenAuthentication = require('../security/tokenAuthentication.ts');
@@ -97,7 +97,7 @@ class permission {
 	constructor(requiresSu, perms, apiName) {
 		this.requires_su = requiresSu;
 		this.perms = perms;
-		// snake_case API operation name (from OPERATIONS_ENUM) for operation_user allowlist checks.
+		// snake_case API operation name (from OPERATIONS_ENUM) for operations allowlist checks.
 		// Undefined for ops that aren't user-addressable (SQL sub-ops, internal-only ops).
 		this.api_name = apiName;
 	}
@@ -447,26 +447,26 @@ function verifyPerms(requestJson, operation) {
 		);
 	}
 
-	// operation_user is an optional allowlist on the role. When present, it acts as a two-gate check:
+	// operations is an optional allowlist on the role. When present, it acts as a two-gate check:
 	// Gate 1 — operation allowlist: only ops explicitly listed (or expanded from a group) are reachable.
 	//           Any unlisted op is denied here, before table CRUD checks even run.
 	// Gate 2 — SU bypass: if the op passed gate 1 and is normally restricted to super_user, the explicit
 	//           listing is treated as a deliberate admin grant and allowed immediately (return null).
 	//           Non-SU ops that pass gate 1 fall through to the normal table CRUD checks below.
 	const permission = requestJson.hdb_user?.role?.permission;
-	const operationUser = permission?.operation_user;
-	if (operationUser !== undefined) {
-		// _expandedOperationUser is pre-built at cache-load time (O(1) lookup).
+	const operations = permission?.operations;
+	if (operations !== undefined) {
+		// _expandedOperations is pre-built at cache-load time (O(1) lookup).
 		// Fall back to on-demand expansion for inline-asserted roles (e.g. impersonation via hdb_user in body).
-		const allowedOps = permission._expandedOperationUser ?? expandOperationUserPerms(operationUser);
+		const allowedOps = permission._expandedOperations ?? expandOperationsPerms(operations);
 		// op is the internal camelCase function name; allowedOps contains snake_case API names.
 		// Resolve via the api_name stored on the permission entry (set at registration time).
 		const opApiName = requiredPermissions.get(op)?.api_name ?? op;
 		// Gate 1: op not in allowlist — deny regardless of table CRUD permissions.
 		if (!allowedOps.has(opApiName)) {
-			return permsResponse.handleUnauthorizedItem(HDB_ERROR_MSGS.OP_NOT_IN_OPERATION_USER(opApiName));
+			return permsResponse.handleUnauthorizedItem(HDB_ERROR_MSGS.OP_NOT_IN_OPERATIONS(opApiName));
 		}
-		// Gate 2: op is SU-only but was explicitly granted via operation_user — allow without super_user.
+		// Gate 2: op is SU-only but was explicitly granted via operations — allow without super_user.
 		// Without this, the SU check further below would still deny it even though it passed gate 1.
 		// TODO: ops registered with both requires_su AND non-empty CRUD perms (currently only getBackup)
 		// have their table-level CRUD check bypassed here. Should fall through for those instead of

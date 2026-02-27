@@ -810,81 +810,81 @@ describe('Test role_validation module ', () => {
 			);
 		});
 
-		describe('operation_user permission validation', () => {
-			it('NOMINAL - operation_user with group name [read_only] returns null', () => {
+		describe('operations permission validation', () => {
+			it('NOMINAL - operations with group name [read_only] returns null', () => {
 				const test_role = TEST_ADD_ROLE_OBJECT();
-				test_role.permission.operation_user = ['read_only'];
+				test_role.permission.operations = ['read_only'];
 				const test_result = customValidate_rw(test_role, getAddRoleConstraints());
 				expect(test_result).to.equal(null);
 			});
 
-			it('NOMINAL - operation_user with individual valid op names returns null', () => {
+			it('NOMINAL - operations with individual valid op names returns null', () => {
 				const test_role = TEST_ADD_ROLE_OBJECT();
-				test_role.permission.operation_user = ['search', 'restart', 'get_configuration'];
+				test_role.permission.operations = ['search', 'restart', 'get_configuration'];
 				const test_result = customValidate_rw(test_role, getAddRoleConstraints());
 				expect(test_result).to.equal(null);
 			});
 
-			it('NOMINAL - operation_user mixing group and individual ops returns null', () => {
+			it('NOMINAL - operations mixing group and individual ops returns null', () => {
 				const test_role = TEST_ADD_ROLE_OBJECT();
-				test_role.permission.operation_user = ['read_only', 'restart', 'list_users'];
+				test_role.permission.operations = ['read_only', 'restart', 'list_users'];
 				const test_result = customValidate_rw(test_role, getAddRoleConstraints());
 				expect(test_result).to.equal(null);
 			});
 
-			it('NOMINAL - operation_user without schema perms (ops-only role) returns null', () => {
+			it('NOMINAL - operations without schema perms (ops-only role) returns null', () => {
 				const test_role = TEST_ADD_ROLE_OBJECT();
-				test_role.permission = { operation_user: ['read_only', 'get_configuration'] };
+				test_role.permission = { operations: ['read_only', 'get_configuration'] };
 				const test_result = customValidate_rw(test_role, getAddRoleConstraints());
 				expect(test_result).to.equal(null);
 			});
 
-			it('ERROR - operation_user as string (not array) returns validation error', () => {
+			it('ERROR - operations as string (not array) returns validation error', () => {
 				const test_role = TEST_ADD_ROLE_OBJECT();
-				test_role.permission.operation_user = 'read_only';
+				test_role.permission.operations = 'read_only';
 				const test_result = customValidate_rw(test_role, getAddRoleConstraints());
 				expect(test_result.statusCode).to.equal(400);
 				expect(test_result.http_resp_msg.main_permissions).to.include(
-					TEST_ROLE_PERMS_ERROR.OPERATION_USER_MUST_BE_ARRAY
+					TEST_ROLE_PERMS_ERROR.OPERATIONS_MUST_BE_ARRAY
 				);
 			});
 
-			it('ERROR - operation_user as boolean true (not array) returns validation error', () => {
+			it('ERROR - operations as boolean true (not array) returns validation error', () => {
 				const test_role = TEST_ADD_ROLE_OBJECT();
-				test_role.permission.operation_user = true;
+				test_role.permission.operations = true;
 				const test_result = customValidate_rw(test_role, getAddRoleConstraints());
 				expect(test_result.statusCode).to.equal(400);
 				expect(test_result.http_resp_msg.main_permissions).to.include(
-					TEST_ROLE_PERMS_ERROR.OPERATION_USER_MUST_BE_ARRAY
+					TEST_ROLE_PERMS_ERROR.OPERATIONS_MUST_BE_ARRAY
 				);
 			});
 
-			it('ERROR - operation_user with invalid op name returns validation error', () => {
+			it('ERROR - operations with invalid op name returns validation error', () => {
 				const bogus_op = 'bogus_op';
 				const test_role = TEST_ADD_ROLE_OBJECT();
-				test_role.permission.operation_user = [bogus_op];
+				test_role.permission.operations = [bogus_op];
 				const test_result = customValidate_rw(test_role, getAddRoleConstraints());
 				expect(test_result.statusCode).to.equal(400);
 				expect(test_result.http_resp_msg.main_permissions).to.include(
-					TEST_ROLE_PERMS_ERROR.INVALID_OPERATION_USER_OP(bogus_op)
+					TEST_ROLE_PERMS_ERROR.INVALID_OPERATIONS_OP(bogus_op)
 				);
 			});
 
-			it('ERROR - operation_user with mix of valid and invalid ops — error for invalid only', () => {
+			it('ERROR - operations with mix of valid and invalid ops — error for invalid only', () => {
 				const bogus_op = 'totally_fake_op';
 				const test_role = TEST_ADD_ROLE_OBJECT();
-				test_role.permission.operation_user = ['read_only', bogus_op];
+				test_role.permission.operations = ['read_only', bogus_op];
 				const test_result = customValidate_rw(test_role, getAddRoleConstraints());
 				expect(test_result.statusCode).to.equal(400);
 				expect(test_result.http_resp_msg.main_permissions.length).to.equal(1);
 				expect(test_result.http_resp_msg.main_permissions).to.include(
-					TEST_ROLE_PERMS_ERROR.INVALID_OPERATION_USER_OP(bogus_op)
+					TEST_ROLE_PERMS_ERROR.INVALID_OPERATIONS_OP(bogus_op)
 				);
 			});
 
-			it('ERROR - super_user role with operation_user rejected by SU constraint', () => {
+			it('ERROR - super_user role with operations rejected by SU constraint', () => {
 				const test_role = TEST_ADD_ROLE_OBJECT();
-				test_role.permission = { super_user: true, operation_user: ['read_only'] };
+				test_role.permission = { super_user: true, operations: ['read_only'] };
 				const test_result = customValidate_rw(test_role, getAddRoleConstraints());
 				expect(test_result.statusCode).to.equal(400);
 				expect(test_result.http_resp_msg.main_permissions).to.include(

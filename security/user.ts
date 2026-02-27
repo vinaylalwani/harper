@@ -45,9 +45,9 @@ export interface UserRoleNamedPermissions extends Partial<CRUDPermissions> {
 	super_user?: boolean;
 	cluster_user?: boolean;
 	structure_user?: boolean | string[];
-	operation_user?: string[];
-	/** Pre-expanded Set built from operation_user at cache-load time. Not persisted. */
-	_expandedOperationUser?: Set<string>;
+	operations?: string[];
+	/** Pre-expanded Set built from operations at cache-load time. Not persisted. */
+	_expandedOperations?: Set<string>;
 }
 
 export interface UserRoleDatabasePermissions {
@@ -104,7 +104,7 @@ const harperLogger = require('../utility/logging/harper_logger.js');
 const password = require('../utility/password.js');
 const { server } = require('../server/Server.js');
 const terms = require('../utility/hdbTerms.js');
-const { expandOperationUserPerms } = require('../utility/operationPermissions.js');
+const { expandOperationsPerms } = require('../utility/operationPermissions.js');
 
 server.getUser = (username: string, password?: string | null): Promise<User> => {
 	return findAndValidateUser(username, password, password != null);
@@ -322,7 +322,7 @@ async function listUsers(): Promise<Map<string, User>> {
 		user = _.cloneDeep(user);
 		user.role = roleMapObj[user.role];
 		appendSystemTablesToRole(user.role);
-		cacheExpandedOperationUserPerms(user.role);
+		cacheExpandedOperationsPerms(user.role);
 		userMap.set(user.username, user);
 	}
 
@@ -360,13 +360,13 @@ function appendSystemTablesToRole(userRole: UserRole) {
 }
 
 /**
- * Pre-expands operation_user into a Set at cache-load time so verifyPerms can do an O(1) lookup
+ * Pre-expands operations into a Set at cache-load time so verifyPerms can do an O(1) lookup
  * instead of allocating and expanding on every request.
  * @param userRole - Role of the user found during auth.
  */
-function cacheExpandedOperationUserPerms(userRole: UserRole) {
-	if (!userRole?.permission?.operation_user) return;
-	userRole.permission._expandedOperationUser = expandOperationUserPerms(userRole.permission.operation_user);
+function cacheExpandedOperationsPerms(userRole: UserRole) {
+	if (!userRole?.permission?.operations) return;
+	userRole.permission._expandedOperations = expandOperationsPerms(userRole.permission.operations);
 }
 
 async function setUsersWithRolesCache(cache = undefined) {
@@ -406,7 +406,7 @@ async function findAndValidateUser(username: string, pw?: string | null, validat
 	if (userTmp.refresh_token) user.refresh_token = userTmp.refresh_token;
 	// Shallow-clone the role and its permission so that verifyPerms can replace
 	// requestJson.hdb_user.role.permission with translated perms without mutating the cache.
-	// The _expandedOperationUser Set and operation_user array are shared by reference (read-only).
+	// The _expandedOperations Set and operations array are shared by reference (read-only).
 	if (userTmp.role) user.role = { ...userTmp.role, permission: { ...userTmp.role.permission } };
 
 	if (validatePassword === true) {
