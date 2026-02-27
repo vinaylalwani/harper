@@ -115,8 +115,7 @@ export type OperationDefinition = {
 
 /**
  * Register an operation function with the server.
- * @param operationName
- * @param operationFunction
+ * @param operationDefinition
  */
 server.registerOperation = (operationDefinition: OperationDefinition) => {
 	OPERATION_FUNCTION_MAP.set(operationDefinition.name, new OperationFunctionObject(operationDefinition.execute));
