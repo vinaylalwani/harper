@@ -1675,11 +1675,11 @@ export function makeTable(options) {
 									if (auditedVersion === txnTime) {
 										precedesExisting = precedesExistingVersion(
 											txnTime,
-											{ version: auditedVersion, localTime: localTime, key: id },
+											{ version: auditedVersion, localTime: localTime, key: id, nodeId: auditRecord.nodeId },
 											options?.nodeId
 										);
 										if (precedesExisting === 0) {
-											return writeCommit(false); // treat a tie as a duplicate and drop it
+											return; // treat a tie as a duplicate and drop it
 										}
 										if (precedesExisting > 0) {
 											// if the existing version is older, we can skip this update
@@ -3823,6 +3823,9 @@ export function makeTable(options) {
 				// existing entry to the node name of the update
 				const nodeNameToId = server.replication?.exportIdMapping(auditStore);
 				let existingNodeId = existingEntry.nodeId;
+				if (nodeId === existingNodeId) {
+					return 0; // early match for a tie
+				}
 				let updatedNodeName, existingNodeName;
 				for (const node_name in nodeNameToId) {
 					if (nodeNameToId[node_name] === nodeId) updatedNodeName = node_name;
