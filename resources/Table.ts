@@ -64,6 +64,7 @@ import harperLogger from '../utility/logging/harper_logger.js';
 import { throttle } from '../server/throttle.ts';
 import { RocksDatabase } from '@harperfast/rocksdb-js';
 import { LMDBTransaction, ImmediateTransaction as ImmediateLMDBTransaction } from './LMDBTransaction';
+import { contentTypes } from '../server/serverHelpers/contentTypes';
 
 const { sortBy } = lodash;
 const { validateAttribute } = lmdbProcessRows;
@@ -3933,7 +3934,42 @@ export function makeTable(options) {
 										throw new ServerError(updatedRecord.body || 'Error from source', updatedRecord.status);
 									} // there are definitely more status codes to handle
 								} else {
-									updatedRecord = updatedRecord.body;
+									let headers: any;
+									const sourceHeaders = updatedRecord.headers;
+									if (sourceHeaders[Symbol.iterator]) {
+										headers = {};
+										for (let [name, value] of sourceHeaders) {
+											headers[name.toLowerCase()] = value;
+										}
+									} else {
+										headers = sourceHeaders; // just a plain object
+									}
+									const contentType = sourceHeaders.get?.('Content-Type');
+									let data: any;
+									if (contentType === 'application/json' && updatedRecord.json) {
+										// use native .json() if possible
+										data = await updatedRecord.json();
+									} else {
+										const contentTypeHandler = contentType && contentTypes.get(contentType);
+										if (contentTypeHandler?.deserialize) {
+											data = contentTypeHandler.deserialize(
+												await (contentType.startsWith('text/') ? updatedRecord.text() : updatedRecord.bytes())
+											);
+										}
+									}
+									if (data !== undefined) {
+										// we have structured data that we have parsed
+										delete headers['content-type']; // don't store the content type if we have already parsed it
+										updatedRecord = {
+											headers,
+											data,
+										};
+									} else {
+										updatedRecord = {
+											headers,
+											body: createBlob(updatedRecord.body),
+										};
+									}
 								}
 							}
 							if (typeof updatedRecord.toJSON === 'function') updatedRecord = updatedRecord.toJSON();

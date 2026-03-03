@@ -412,7 +412,7 @@ function getGlobalObject(scope: Scope) {
 		logger: scope.logger ?? logger,
 		resources: scope.resources,
 		config: scope.options.getRoot() ?? {},
-		fetch: secureOnlyFetch,
+		fetch: APPLICATIONS_LOCKDOWN === 'ses' ? secureOnlyFetch : fetch,
 		console,
 		global: appGlobal,
 		harper: getHarperExports(scope),
@@ -432,7 +432,8 @@ function getHarperExports(scope: Scope) {
 		RequestTarget,
 		getContext,
 		transaction,
-		getUser: server.getUser,
+		getResponse,
+		getUser,
 		authenticateUser: server.authenticateUser,
 		operation: server.operation,
 		contentTypes,
@@ -477,6 +478,12 @@ function checkAllowedModulePath(moduleUrl: string, containingFolder: string): bo
 
 function getContext() {
 	return contextStorage.getStore() ?? {};
+}
+function getUser() {
+	return contextStorage.getStore()?.user;
+}
+function getResponse() {
+	return contextStorage.getStore()?.response;
 }
 
 export function preventFunctionConstructor() {
