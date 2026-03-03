@@ -4,17 +4,16 @@ const { ResourceBridge } = require('./ResourceBridge.ts');
 const envMngr = require('../../utility/environment/environmentManager.js');
 envMngr.initSync();
 
-let harperBridge;
+let harperBridge; // ResourceBridge
 
 /**
  *
- * @returns {LMDBBridge|undefined}
+ * @returns {ResourceBridge|undefined}
  */
 function getBridge() {
-	if (harperBridge) {
-		return harperBridge;
+	if (!harperBridge) {
+		harperBridge = new ResourceBridge();
 	}
-	harperBridge = new ResourceBridge();
 	return harperBridge;
 }
 
