@@ -22,6 +22,7 @@ module.exports = {
 	alterRole,
 	dropRole,
 	listRoles,
+	getRoleByName,
 };
 
 function scrubRoleDetails(role) {
@@ -193,6 +194,20 @@ async function dropRole(role) {
 
 	signalling.signalUserChange(new UserEventMsg(process.pid));
 	return `${roleName[0].role} successfully deleted`;
+}
+
+async function getRoleByName(roleName) {
+	const roles = Array.from(
+		(await pSearchSearchByValue({
+			schema: 'system',
+			table: 'hdb_role',
+			attribute: 'role',
+			value: roleName,
+			get_attributes: ['*'],
+		})) || []
+	);
+
+	return roles.length > 0 ? roles[0] : null;
 }
 
 async function listRoles() {

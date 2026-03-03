@@ -2,7 +2,11 @@
 
 const assert = require('assert');
 const terms = require('#src/utility/hdbTerms');
-const { OPERATION_PERMISSION_GROUPS, expandOperationsPerms, validateOperations } = require('#src/utility/operationPermissions');
+const {
+	OPERATION_PERMISSION_GROUPS,
+	expandOperationsPerms,
+	validateOperations,
+} = require('#src/utility/operationPermissions');
 
 describe('operationPermissions', function () {
 	describe('OPERATION_PERMISSION_GROUPS', function () {

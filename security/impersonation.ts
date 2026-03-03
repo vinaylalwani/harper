@@ -4,13 +4,15 @@ import { getUsersWithRolesCache } from './user.ts';
 import { validateOperations } from '../utility/operationPermissions.ts';
 import { ClientError } from '../utility/errors/hdbError.js';
 import harperLogger from '../utility/logging/harper_logger.js';
+import { getRoleByName } from './role.js';
 
 /**
  * Applies impersonation to a request. The authenticated user must be a super_user.
  * Returns a new User object with downgraded permissions based on the impersonate payload.
  *
  * Mode A (inline role): `impersonate.role` is present — builds a synthetic user with the given permissions.
- * Mode B (existing user): only `impersonate.username` is present — looks up the user from cache.
+ * Mode B (existing user): `impersonate.username` is present (no role/role_name) — looks up the user from cache.
+ * Mode C (existing role): `impersonate.role_name` is present (no role) — looks up the role by name and builds a synthetic user.
  */
 export async function applyImpersonation(authenticatedUser: User, payload: ImpersonatePayload): Promise<User> {
 	// Gate: only super_user can impersonate
@@ -25,6 +27,9 @@ export async function applyImpersonation(authenticatedUser: User, payload: Imper
 	if (payload.role) {
 		// Mode A: inline permissions
 		impersonatedUser = buildInlineUser(authenticatedUser, payload);
+	} else if (payload.role_name) {
+		// Mode C: look up existing role by name
+		impersonatedUser = await lookupRole(authenticatedUser, payload);
 	} else {
 		// Mode B: look up existing user by username
 		impersonatedUser = await lookupUser(payload.username!);
@@ -34,6 +39,7 @@ export async function applyImpersonation(authenticatedUser: User, payload: Imper
 	enforceDowngrade(impersonatedUser);
 
 	// Tag for audit trail
+	impersonatedUser._impersonated = true;
 	impersonatedUser._impersonatedBy = authenticatedUser.username;
 
 	harperLogger.info(
@@ -50,10 +56,11 @@ function validatePayload(payload: ImpersonatePayload): void {
 
 	const hasRole = payload.role !== undefined;
 	const hasUsername = typeof payload.username === 'string' && payload.username.length > 0;
+	const hasRoleName = typeof payload.role_name === 'string' && payload.role_name.length > 0;
 
-	if (!hasRole && !hasUsername) {
+	if (!hasRole && !hasUsername && !hasRoleName) {
 		throw new ClientError(
-			"Invalid impersonate payload: must include either 'username' (string) or 'role' with 'permission'"
+			"Invalid impersonate payload: must include 'username', 'role_name', or 'role' with 'permission'"
 		);
 	}
 
@@ -114,10 +121,36 @@ async function lookupUser(username: string): Promise<User> {
 	const cloned: User = {
 		...cachedUser,
 		role: cachedUser.role
-			? { ...cachedUser.role, permission: { ...cachedUser.role.permission } }
+			? {
+					...cachedUser.role,
+					permission: { ...cachedUser.role.permission },
+					id: `_impersonated_${username}`,
+				}
 			: cachedUser.role,
 	};
 	return cloned;
+}
+
+async function lookupRole(authenticatedUser: User, payload: ImpersonatePayload): Promise<User> {
+	const role = await getRoleByName(payload.role_name);
+
+	if (!role) {
+		throw new ClientError(`Impersonation target role '${payload.role_name}' not found`, 404);
+	}
+
+	const username = payload.username || authenticatedUser.username;
+
+	return {
+		username,
+		active: true,
+		role: {
+			permission: { ...role.permission },
+			role: role.role,
+			id: `_impersonated_${username}`,
+			__updatedtime__: Date.now(),
+			__createdtime__: Date.now(),
+		},
+	};
 }
 
 function enforceDowngrade(user: User): void {

@@ -99,6 +99,7 @@ export interface ImpersonatePayload {
 	role?: {
 		permission: Partial<userSchema.UserRoleNamedPermissions & userSchema.UserRoleDatabasePermissions>;
 	};
+	role_name?: string;
 }
 
 interface BaseOperationRequestBody {
