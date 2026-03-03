@@ -31,6 +31,7 @@ export type Entry = {
 	residencyId: number;
 	size: number;
 	deref?: () => any;
+	additionalAuditRefs?: Array<{ version: number; nodeId: number }>;
 };
 
 // these are matched by lmdb-js for timestamp replacement. the first byte here is used to xor with the first byte of the date as a double so that it ends up less than 32 for easier identification (otherwise dates start with 66)
@@ -54,6 +55,7 @@ export const HAS_RESIDENCY_ID = 32;
 export const HAS_NODE_ID = 64;
 export const PENDING_LOCAL_TIME = 1;
 export const HAS_STRUCTURE_UPDATE = 0x100;
+export const HAS_ADDITIONAL_AUDIT_REFS = 0x80;
 
 const TRACKED_WRITE_TYPES = new Set(['put', 'patch', 'delete', 'message', 'publish']);
 // For now we use this as the private property mechanism for mapping records to entries.
@@ -65,7 +67,8 @@ let lastValueEncoding,
 	metadataInNextEncoding = -1,
 	expiresAtNextEncoding = -1,
 	residencyIdAtNextEncoding = 0,
-	nodeIdAtNextEncoding = -1;
+	nodeIdAtNextEncoding = -1,
+	additionalAuditRefsNextEncoding: Array<{ version: number; nodeId: number }> | undefined;
 // tracking metadata with a singleton works better than trying to alter response of getEntry/get and coordinating that across caching layers
 export let lastMetadata: Entry | null = null;
 export class RecordEncoder extends Encoder {
@@ -105,6 +108,7 @@ export class RecordEncoder extends Encoder {
 				const expiresAt = expiresAtNextEncoding;
 				const residencyId = residencyIdAtNextEncoding;
 				const nodeId = nodeIdAtNextEncoding;
+				const additionalAuditRefs = additionalAuditRefsNextEncoding;
 				if (metadata >= 0) {
 					valueStart += 4; // make room for metadata bytes
 					metadataInNextEncoding = -1; // reset indicator to mean no metadata
@@ -119,6 +123,10 @@ export class RecordEncoder extends Encoder {
 					if (nodeId >= 0) {
 						valueStart += 4; // make room for node id
 						nodeIdAtNextEncoding = -1; // reset indicator to mean no node id
+					}
+					if (additionalAuditRefs && additionalAuditRefs.length > 0) {
+						valueStart += 1 + additionalAuditRefs.length * 12; // 1 byte for count + 8 bytes version + 4 bytes nodeId per ref
+						additionalAuditRefsNextEncoding = undefined;
 					}
 				}
 				const encoded = superEncode.call(this, record, options | 2048 | valueStart); // encode with 8 bytes reserved space for txnId
@@ -139,6 +147,7 @@ export class RecordEncoder extends Encoder {
 					position += 8;
 				}
 				if (blobsWereEncoded) metadata |= HAS_BLOBS;
+				if (additionalAuditRefs && additionalAuditRefs.length > 0) metadata |= HAS_ADDITIONAL_AUDIT_REFS;
 				if (metadata >= 0) {
 					dataView.setUint32(position, metadata | (ACTION_32_BIT << 24)); // use the extended action byte
 					position += 4;
@@ -152,6 +161,16 @@ export class RecordEncoder extends Encoder {
 					}
 					if (nodeId >= 0) {
 						dataView.setUint32(position, nodeId);
+						position += 4;
+					}
+					if (additionalAuditRefs && additionalAuditRefs.length > 0) {
+						encoded[position++] = additionalAuditRefs.length;
+						for (const ref of additionalAuditRefs) {
+							dataView.setFloat64(position, ref.version);
+							position += 8;
+							dataView.setUint32(position, ref.nodeId);
+							position += 4;
+						}
 					}
 				}
 				return encoded;
@@ -223,7 +242,7 @@ export class RecordEncoder extends Encoder {
 					localTime = getTimestamp();
 					nextByte = buffer[position];
 				}
-				let expiresAt, residencyId, nodeId;
+				let expiresAt, residencyId, nodeId, additionalAuditRefs;
 				if (nextByte < 32) {
 					if (nextByte === ACTION_32_BIT) {
 						const dataView =
@@ -254,6 +273,20 @@ export class RecordEncoder extends Encoder {
 						nodeId = dataView.getUint32(position);
 						position += 4;
 					}
+					if (metadataFlags & HAS_ADDITIONAL_AUDIT_REFS) {
+						// we need to read the additional audit refs
+						const dataView =
+							buffer.dataView || (buffer.dataView = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength));
+						const count = buffer[position++];
+						additionalAuditRefs = [];
+						for (let i = 0; i < count; i++) {
+							const version = dataView.getFloat64(position);
+							position += 8;
+							const refNodeId = dataView.getUint32(position);
+							position += 4;
+							additionalAuditRefs.push({ version, nodeId: refNodeId });
+						}
+					}
 				}
 
 				const value = decodeFromDatabase(
@@ -270,6 +303,7 @@ export class RecordEncoder extends Encoder {
 					expiresAt,
 					residencyId,
 					nodeId,
+					additionalAuditRefs,
 					size: end - start,
 					value,
 				};
@@ -322,6 +356,7 @@ export function handleLocalTimeForGets(store, rootStore) {
 				entry.localTime = lastMetadata.localTime;
 				entry.residencyId = lastMetadata.residencyId;
 				entry.nodeId = lastMetadata.nodeId;
+				entry.additionalAuditRefs = lastMetadata.additionalAuditRefs;
 				entry.size = lastMetadata.size;
 				if (lastMetadata.expiresAt >= 0) {
 					entry.expiresAt = lastMetadata.expiresAt;
@@ -389,6 +424,7 @@ export function handleLocalTimeForGets(store, rootStore) {
 				if (isRocksDB) entry.version = lastMetadata.localTime;
 				entry.residencyId = lastMetadata.residencyId;
 				entry.nodeId = lastMetadata.nodeId;
+				entry.additionalAuditRefs = lastMetadata.additionalAuditRefs;
 				entry.size = lastMetadata.size;
 				if (lastMetadata.expiresAt >= 0) entry.expiresAt = lastMetadata.expiresAt;
 				lastMetadata = null;
@@ -522,6 +558,11 @@ export function recordUpdater(store, tableId, auditStore) {
 				nodeIdAtNextEncoding = nodeId;
 				metadataInNextEncoding |= HAS_NODE_ID;
 			} // else nodeIdAtNextEncoding = -1;
+			const additionalAuditRefs = options?.additionalAuditRefs;
+			if (additionalAuditRefs && additionalAuditRefs.length > 0) {
+				additionalAuditRefsNextEncoding = additionalAuditRefs;
+				metadataInNextEncoding |= HAS_ADDITIONAL_AUDIT_REFS;
+			} // else additionalAuditRefsNextEncoding = undefined;
 			if (previousResidencyId !== residencyId) {
 				extendedType |= HAS_PREVIOUS_RESIDENCY_ID;
 				if (!previousResidencyId) previousResidencyId = 0;
@@ -559,6 +600,7 @@ export function recordUpdater(store, tableId, auditStore) {
 				}
 				const structureVersion = store.encoder.structures.length + (store.encoder.typedStructs?.length ?? 0);
 				const nodeId = options?.nodeId ?? server.replication?.getThisNodeId(auditStore) ?? 0;
+				logger.debug('recording audit entry', { id, newVersion, previousVersion: existingEntry?.version, nodeId });
 				if (resolveRecord && existingEntry?.localTime) {
 					const replacingId = existingEntry?.localTime;
 					const replacingEntry = auditStore.get(replacingId, tableId, id);
@@ -624,6 +666,9 @@ export function recordUpdater(store, tableId, auditStore) {
 			throw error;
 		}
 	};
+}
+export function setAdditionalAuditRefs(refs: Array<{ version: number; nodeId: number }> | undefined) {
+	additionalAuditRefsNextEncoding = refs;
 }
 export function removeEntry(store: any, entry: any, existingVersion?: number) {
 	if (!entry) return;

@@ -52,6 +52,7 @@ import {
 	type RecordObject,
 	type Entry,
 	entryMap,
+	setAdditionalAuditRefs,
 } from './RecordEncoder.ts';
 import { recordAction, recordActionBinary } from './analytics/write.ts';
 import { rebuildUpdateBefore } from './crdt.ts';
@@ -1645,6 +1646,8 @@ export function makeTable(options) {
 					let residencyId: number | undefined;
 					if (options?.residencyId != undefined) residencyId = options.residencyId;
 					const expiresAt = context?.expiresAt ?? (expirationMs ? expirationMs + Date.now() : -1);
+					let additionalAuditRefs: Array<{ version: number; nodeId: number }> = []; // track additional audit refs to store
+
 					if (precedesExisting <= 0) {
 						// This block is to handle the case of saving an update where the transaction timestamp is older than the
 						// existing timestamp, which means that we received updates out of order, and must resequence the application
@@ -1654,7 +1657,7 @@ export function makeTable(options) {
 							// incremental CRDT updates are only available with audit logging on
 							let localTime = existingEntry.localTime;
 							let auditedVersion = existingEntry.version;
-							logger.trace?.(
+							logger.debug?.(
 								'Applying CRDT update to record with id: ',
 								id,
 								'txn time',
@@ -1667,6 +1670,18 @@ export function makeTable(options) {
 
 							let nodeId = existingEntry.nodeId;
 							const succeedingUpdates = []; // record the "future" updates, as we need to apply the updates in reverse order
+							const auditRefsToVisit: Array<{ localTime: number; nodeId: number }> =
+								existingEntry.additionalAuditRefs ? [...existingEntry.additionalAuditRefs.map(ref => ({ localTime: ref.version, nodeId: ref.nodeId }))] : [];
+
+							// Collect any existing audit refs that should be preserved (those older than current transaction)
+							if (existingEntry.additionalAuditRefs) {
+								for (const ref of existingEntry.additionalAuditRefs) {
+									if (ref.version <= txnTime) {
+										additionalAuditRefs.push(ref);
+									}
+								}
+							}
+
 							while (localTime > txnTime || (auditedVersion >= txnTime && localTime > 0)) {
 								const auditRecord = auditStore.get(localTime, tableId, id, nodeId);
 								if (!auditRecord) break;
@@ -1679,15 +1694,21 @@ export function makeTable(options) {
 											options?.nodeId
 										);
 										if (precedesExisting === 0) {
+											logger.debug?.(
+												'The transaction time is equal to the existing version, treating as duplicate',
+												id
+											);
 											return; // treat a tie as a duplicate and drop it
 										}
 										if (precedesExisting > 0) {
 											// if the existing version is older, we can skip this update
 											localTime = auditRecord.previousVersion;
+											nodeId = auditRecord.previousNodeId;
 											continue;
 										}
 									}
 									if (auditRecord.type === 'patch') {
+										logger.debug?.('out of order patch will be applied', id, auditRecord);
 										// record patches so we can reply in order
 										succeedingUpdates.push(auditRecord);
 										auditRecordToStore = recordUpdate; // use the original update for the audit record
@@ -1698,6 +1719,22 @@ export function makeTable(options) {
 								}
 								localTime = auditRecord.previousVersion;
 								nodeId = auditRecord.previousNodeId;
+
+								// Check if we need to scan additional audit refs from this record
+								if (!localTime && auditRefsToVisit.length > 0) {
+									const nextRef = auditRefsToVisit.shift();
+									if (nextRef) {
+										localTime = nextRef.localTime;
+										nodeId = nextRef.nodeId;
+										logger.debug?.('Following additional audit ref to continue scanning', { localTime, nodeId });
+									}
+								}
+							}
+
+							// Add a reference to the older audit record if we had out-of-order writes
+							if (localTime > 0 && localTime < txnTime) {
+								additionalAuditRefs.push({ version: localTime, nodeId });
+								logger.debug?.('Adding additional audit ref for out-of-order write', { version: localTime, nodeId });
 							}
 							if (!localTime) {
 								// if we reached the end of the audit trail, we can just apply the update
@@ -1820,6 +1857,7 @@ export function makeTable(options) {
 								originatingOperation: context?.originatingOperation,
 								transaction,
 								tableToTrack: databaseName === 'system' ? null : options?.replay ? null : tableName, // don't track analytics on system tables
+								additionalAuditRefs: additionalAuditRefs.length > 0 ? additionalAuditRefs : undefined,
 							},
 							type,
 							false,
