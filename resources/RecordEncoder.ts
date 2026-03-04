@@ -13,6 +13,7 @@ import {
 	HAS_ORIGINATING_OPERATION,
 	HAS_BLOBS,
 	ACTION_32_BIT,
+	HAS_ADDITIONAL_AUDIT_REFS as HAS_ADDITIONAL_AUDIT_REFS_AUDIT,
 } from './auditStore.ts';
 import * as harperLogger from '../utility/logging/harper_logger.js';
 import './blob.ts';
@@ -563,6 +564,10 @@ export function recordUpdater(store, tableId, auditStore) {
 				additionalAuditRefsNextEncoding = additionalAuditRefs;
 				metadataInNextEncoding |= HAS_ADDITIONAL_AUDIT_REFS;
 			} // else additionalAuditRefsNextEncoding = undefined;
+			const previousAdditionalAuditRefs = existingEntry?.additionalAuditRefs;
+			if (previousAdditionalAuditRefs && previousAdditionalAuditRefs.length > 0) {
+				extendedType |= HAS_ADDITIONAL_AUDIT_REFS_AUDIT;
+			}
 			if (previousResidencyId !== residencyId) {
 				extendedType |= HAS_PREVIOUS_RESIDENCY_ID;
 				if (!previousResidencyId) previousResidencyId = 0;
@@ -622,6 +627,7 @@ export function recordUpdater(store, tableId, auditStore) {
 								previousResidencyId,
 								expiresAt,
 								structureVersion,
+								previousAdditionalAuditRefs,
 							},
 							{ ifVersion: ifVersion, transaction: options.transaction, nodeId }
 						);
@@ -645,6 +651,7 @@ export function recordUpdater(store, tableId, auditStore) {
 						expiresAt,
 						structureVersion,
 						originatingOperation: options?.originatingOperation,
+						previousAdditionalAuditRefs,
 					},
 					{
 						// turn off append flag, as we are concerned this may be related to db corruption issues
