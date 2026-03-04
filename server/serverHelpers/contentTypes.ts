@@ -252,7 +252,7 @@ export function registerMultipartParser(app: FastifyInstance, maxBodySize: numbe
 		{ parseAs: 'buffer' },
 		(req: any, payload: Buffer, done: (err: Error | null, body?: any) => void) => {
 			let body: any = null;
-			let payloadBuffer: Buffer | null = null;
+			let payloadBuffer: Buffer | Readable | null = null;
 			let pending = 2;
 			let completed = false;
 
@@ -268,7 +268,6 @@ export function registerMultipartParser(app: FastifyInstance, maxBodySize: numbe
 					return;
 				}
 				body.payload = payloadBuffer;
-				body.file = () => Promise.resolve(payloadBuffer);
 				done(null, body);
 			}
 
@@ -295,15 +294,8 @@ export function registerMultipartParser(app: FastifyInstance, maxBodySize: numbe
 					});
 					stream.on('error', (err: Error) => busboy.destroy(err));
 				} else if (name === 'payload') {
-					// TODO: pass the stream through as a prop on the body or possibly stream it to
-					// a temporary file instead of buffering the entire payload in memory
-					const chunks: Buffer[] = [];
-					stream.on('data', (chunk: Buffer) => chunks.push(chunk));
-					stream.on('end', () => {
-						payloadBuffer = Buffer.concat(chunks);
-						maybeDone();
-					});
-					stream.on('error', (err: Error) => busboy.destroy(err));
+					payloadBuffer = stream;
+					maybeDone();
 				} else {
 					stream.resume();
 					pending--;

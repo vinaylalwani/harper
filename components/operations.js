@@ -1,5 +1,7 @@
 'use strict';
 
+import { Readable } from 'node:stream';
+
 const path = require('node:path');
 const { isMainThread } = require('node:worker_threads');
 const fs = require('fs-extra');
@@ -385,13 +387,11 @@ async function deployComponent(req /* FastifyRequest<{ Body?: OperationRequestBo
 	}
 
 	const payload /* Buffer | string | Readable | undefined */ =
-		typeof req.file === 'function'
-			? await req.file()
-			: req.payload
-				? Buffer.isBuffer(req.payload)
-					? req.payload
-					: Buffer.from(req.payload, 'base64')
-				: undefined;
+		req.payload instanceof Readable
+			? req.payload
+			: Buffer.isBuffer(req.payload)
+				? req.payload
+				: Buffer.from(req.payload, 'base64');
 
 	const application = new Application({
 		name: req.project,
