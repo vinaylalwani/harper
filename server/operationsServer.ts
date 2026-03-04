@@ -12,7 +12,7 @@ import requestTimePlugin from './serverHelpers/requestTimePlugin.js';
 import guidePath from 'path';
 import { PACKAGE_ROOT } from '../utility/packageUtils.js';
 import globalSchema from '../utility/globalSchema.js';
-import commonUtils from '../utility/common_utils.js';
+import * as commonUtils from '../utility/common_utils.js';
 import * as userSchema from '../security/user.ts';
 import { server as serverRegistration, type ServerOptions } from '../server/Server.ts';
 import {
@@ -22,9 +22,9 @@ import {
 	serverErrorHandler,
 	reqBodyValidationHandler,
 } from './serverHelpers/serverHandlers.js';
-import { registerContentHandlers } from './serverHelpers/contentTypes.ts';
+import { registerContentHandlers, registerMultipartParser } from './serverHelpers/contentTypes.ts';
 import type { OperationFunctionName } from './serverHelpers/serverUtilities.ts';
-import type { ParsedSqlObject } from '../sqlTranslator/index.js';
+import type { ParsedSQLObject } from '../sqlTranslator/index.js';
 import { generateJsonApi } from '../resources/openApi.ts';
 import { Resources } from '../resources/Resources.ts';
 import { ServerError } from '../utility/errors/hdbError.js';
@@ -103,7 +103,7 @@ interface BaseOperationRequestBody {
 	password?: string;
 	payload?: string;
 	sql?: string;
-	parsedSqlObject?: ParsedSqlObject;
+	parsedSqlObject?: ParsedSQLObject;
 	[key: string]: unknown;
 }
 
@@ -163,6 +163,8 @@ function buildServer(isHttps: boolean, resources: Resources): FastifyInstance {
 		},
 	});
 	registerContentHandlers(app);
+
+	registerMultipartParser(app, REQ_MAX_BODY_SIZE);
 
 	// Add a simple health check
 	app.get('/health', () => 'Harper is running.');

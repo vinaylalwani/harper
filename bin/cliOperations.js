@@ -3,11 +3,11 @@
 const envMgr = require('../utility/environment/environmentManager.js');
 envMgr.initSync();
 const terms = require('../utility/hdbTerms.ts');
-const { httpRequest } = require('../utility/common_utils.js');
+const { httpRequest, buildMultipartRequest } = require('../utility/common_utils.js');
 const path = require('path');
 const fs = require('fs-extra');
 const YAML = require('yaml');
-const { packageDirectory } = require('../components/packageComponent.ts');
+const { packageDirectoryStream } = require('../components/packageComponent.ts');
 const { encode } = require('cbor-x');
 const { getHdbPid } = require('../utility/processManagement/processManagement.js');
 const { initConfig } = require('../config/configUtils.js');
@@ -69,6 +69,7 @@ const SUPPORTED_OPS = [
 const OP_ALIASES = { deploy: 'deploy_component', package: 'package_component' };
 
 module.exports = { cliOperations, buildRequest };
+
 const PREPARE_OPERATION = {
 	deploy_component: async (req) => {
 		if (req.package) {
@@ -76,8 +77,8 @@ const PREPARE_OPERATION = {
 		}
 
 		const projectPath = process.cwd();
-		req.payload = await packageDirectory(projectPath, { skip_node_modules: true, ...req });
-		req.cborEncode = true;
+		req.payloadStream = packageDirectoryStream(projectPath, { skip_node_modules: true, ...req });
+		req.multipartDeploy = true;
 		if (!req.project) req.project = path.basename(projectPath);
 	},
 };
@@ -162,11 +163,16 @@ async function cliOperations(req) {
 		if (target?.username) {
 			options.headers.Authorization = `Basic ${Buffer.from(`${target.username}:${target.password}`).toString('base64')}`;
 		}
-		if (req.cborEncode) {
+		let requestBody = req;
+		if (req.multipartDeploy) {
+			const { stream, contentType } = buildMultipartRequest(req);
+			options.headers['Content-Type'] = contentType;
+			requestBody = stream;
+		} else if (req.cborEncode) {
 			options.headers['Content-Type'] = 'application/cbor';
-			req = encode(req);
+			requestBody = encode(req);
 		}
-		let response = await httpRequest(options, req);
+		const response = await httpRequest(options, requestBody);
 
 		let responseData;
 		try {

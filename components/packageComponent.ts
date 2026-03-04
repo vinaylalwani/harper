@@ -1,6 +1,33 @@
 import { join } from 'path';
+import { Readable } from 'stream';
 import tar from 'tar-fs';
 import { createGzip } from 'node:zlib';
+
+/**
+ * Package a directory into a tarball stream.
+ * Use this when streaming is preferred to avoid buffering the entire archive in memory.
+ */
+export function packageDirectoryStream(
+	directory: string,
+	options: { skip_node_modules?: boolean; skip_symlinks?: boolean } = { skip_node_modules: false, skip_symlinks: false }
+): Readable {
+	return tar
+		.pack(directory, {
+			dereference: !options.skip_symlinks,
+			ignore: options.skip_node_modules
+				? (name: string) => {
+						return name.includes('node_modules') || name.includes(join('cache', 'webpack'));
+					}
+				: undefined,
+			map: (header) => {
+				if (header.type === 'directory') {
+					header.mode = 0o755;
+				}
+				return header;
+			},
+		})
+		.pipe(createGzip());
+}
 
 /**
  * Package a directory into a tarball, base64 encoded

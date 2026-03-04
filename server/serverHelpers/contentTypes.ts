@@ -12,8 +12,11 @@ import * as YAML from 'yaml';
 import logger from '../../utility/logging/logger.js';
 import { Blob } from '../../resources/blob.ts';
 import { Transform } from 'json2csv';
+import type { FastifyInstance } from 'fastify';
 // TODO: Only load this if fastify is loaded
 import fp from 'fastify-plugin';
+import Busboy from '@fastify/busboy';
+
 const SERIALIZATION_BIGINT = envMgr.get(CONFIG_PARAMS.SERIALIZATION_BIGINT) !== false;
 const JSONStringify = SERIALIZATION_BIGINT ? stringify : JSON.stringify;
 const JSONParse = SERIALIZATION_BIGINT ? parse : JSON.parse;
@@ -228,6 +231,91 @@ export function registerContentHandlers(app) {
 			done(error);
 		}
 	});
+}
+
+/**
+ * Registers a content type parser for multipart requests with a Fastify app.
+ * Expects: Part 1 "request" = CBOR-encoded operation body, Part 2 "payload" (e.g. tar.gz file)
+ *
+ * Used by the `deploy_component` operation to handle large payloads..
+ *
+ * Uses @fastify/busboy directly rather than @fastify/multipart because we need req.body populated
+ * (from the CBOR-encoded first part) before preValidation runs—the multipart plugin defers parsing
+ * to the handler and does not set `req.body`.
+ *
+ * @param app - Fastify instance
+ * @param maxBodySize - Max request body size in bytes (default 1GB)
+ */
+export function registerMultipartParser(app: FastifyInstance, maxBodySize: number = 1024 * 1024 * 1024) {
+	app.addContentTypeParser(
+		'multipart/form-data',
+		{ parseAs: 'buffer' },
+		(req: any, payload: Buffer, done: (err: Error | null, body?: any) => void) => {
+			let body: any = null;
+			let payloadBuffer: Buffer | null = null;
+			let pending = 2;
+			let completed = false;
+
+			function finalize() {
+				if (completed) return;
+				completed = true;
+				if (!body) {
+					done(new Error('Invalid deploy multipart: missing "request" part'));
+					return;
+				}
+				if (!payloadBuffer) {
+					done(new Error('Invalid deploy multipart: missing "payload" part'));
+					return;
+				}
+				body.payload = payloadBuffer;
+				body.file = () => Promise.resolve(payloadBuffer);
+				done(null, body);
+			}
+
+			function maybeDone() {
+				if (--pending === 0) finalize();
+			}
+
+			const busboy = Busboy({
+				headers: req.headers,
+				limits: { fileSize: maxBodySize },
+			});
+
+			busboy.on('file', (name: string, stream: any) => {
+				if (name === 'request') {
+					const chunks: Buffer[] = [];
+					stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+					stream.on('end', () => {
+						try {
+							body = decode(Buffer.concat(chunks));
+						} catch (err) {
+							busboy.destroy(err as Error);
+						}
+						maybeDone();
+					});
+					stream.on('error', (err: Error) => busboy.destroy(err));
+				} else if (name === 'payload') {
+					// TODO: pass the stream through as a prop on the body or possibly stream it to
+					// a temporary file instead of buffering the entire payload in memory
+					const chunks: Buffer[] = [];
+					stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+					stream.on('end', () => {
+						payloadBuffer = Buffer.concat(chunks);
+						maybeDone();
+					});
+					stream.on('error', (err: Error) => busboy.destroy(err));
+				} else {
+					stream.resume();
+					pending--;
+				}
+			});
+
+			busboy.on('error', (err: Error) => done(err));
+			busboy.on('finish', () => maybeDone());
+
+			Readable.from(payload).pipe(busboy);
+		}
+	);
 }
 
 const registerFastifySerializers = fp(

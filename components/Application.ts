@@ -122,9 +122,15 @@ export async function extractApplication(application: Application) {
 	let tarball: Readable;
 	if (application.payload) {
 		// Given a payload, create a Readable from the Buffer or string
-		tarball = Readable.from(
-			application.payload instanceof Buffer ? application.payload : Buffer.from(application.payload, 'base64')
-		);
+		if (application.payload instanceof Buffer) {
+			tarball = Readable.from(application.payload);
+		} else if (application.payload instanceof String) {
+			tarball = Readable.from(Buffer.from(application.payload, 'base64'));
+		} else if (application.payload instanceof Readable) {
+			tarball = application.payload;
+		} else {
+			throw new Error(`Invalid payload type: ${typeof application.payload}`);
+		}
 	} else {
 		// Given a package, there are a a couple options
 		const parentDirPath = dirname(application.dirPath);
@@ -381,14 +387,14 @@ export async function installApplication(application: Application) {
 
 interface ApplicationOptions {
 	name: string;
-	payload?: Buffer | string;
+	payload?: Buffer | string | Readable;
 	packageIdentifier?: string;
 	install?: { command?: string; timeout?: number };
 }
 
 export class Application {
 	name: string;
-	payload?: Buffer | string;
+	payload?: Buffer | string | Readable;
 	packageIdentifier?: string;
 	install?: { command?: string; timeout?: number };
 	dirPath: string;

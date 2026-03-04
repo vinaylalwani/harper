@@ -14,6 +14,8 @@ const isNumber = require('is-number');
 const minimist = require('minimist');
 const https = require('https');
 const http = require('http');
+const { encode } = require('cbor-x');
+const { PassThrough } = require('stream');
 
 const ISO_DATE =
 	/^((\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z))|(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d([+-][0-2]\d:[0-5]\d|Z))|(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d([+-][0-2]\d:[0-5]\d|Z)))$/;
@@ -823,8 +825,12 @@ function httpRequest(options, data) {
 			reject(err);
 		});
 
-		req.write(data instanceof Buffer ? data : JSON.stringify(data));
-		req.end();
+		if (data && typeof data.pipe === 'function') {
+			data.pipe(req);
+		} else {
+			req.write(data instanceof Buffer ? data : JSON.stringify(data));
+			req.end();
+		}
 	});
 }
 
@@ -865,3 +871,46 @@ function convertToMS(interval) {
 	return seconds * 1000;
 }
 const hdbErrors = require('./errors/commonErrors.js');
+
+/**
+ * Builds a streaming multipart/form-data request body: first part is CBOR-encoded
+ * request (without payload), second part is the raw payload stream (piped through).
+ * @param {object} req - Request object (payload will be removed)
+ * @returns {{ stream: import('stream').Readable, contentType: string }}
+ */
+export function buildMultipartRequest(req /* FastifyRequest<{ Body?: OperationRequestBody }> */) {
+	const boundary = `----harper-request-${Date.now().toString(36)}`;
+
+	// remove `payload` because you can't have a `payload` and a `payloadStream`
+	delete req.payload;
+
+	// remove `payloadStream` because we're streaming it instead of encoding it
+	const { payloadStream } = req;
+	delete req.payloadStream;
+
+	const requestPart = encode(req);
+	const preamble = Buffer.concat([
+		Buffer.from(`--${boundary}\r\n`, 'utf8'),
+		Buffer.from(`Content-Disposition: form-data; name="request"; filename="request.cbor"\r\n`, 'utf8'),
+		Buffer.from(`Content-Type: application/cbor\r\n\r\n`, 'utf8'),
+		Buffer.isBuffer(requestPart) ? requestPart : Buffer.from(requestPart),
+		Buffer.from('\r\n', 'utf8'),
+		Buffer.from(`--${boundary}\r\n`, 'utf8'),
+		Buffer.from(`Content-Disposition: form-data; name="payload"; filename="package.tar.gz"\r\n`, 'utf8'),
+		Buffer.from(`Content-Type: application/gzip\r\n\r\n`, 'utf8'),
+	]);
+
+	const multipartStream = new PassThrough();
+	multipartStream.write(preamble);
+	payloadStream.pipe(multipartStream, { end: false });
+	payloadStream.on('end', () => {
+		multipartStream.write(Buffer.from(`\r\n--${boundary}--\r\n`, 'utf8'));
+		multipartStream.end();
+	});
+	payloadStream.on('error', (err) => multipartStream.destroy(err));
+
+	return {
+		stream: multipartStream,
+		contentType: `multipart/form-data; boundary=${boundary}`,
+	};
+}

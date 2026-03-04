@@ -347,7 +347,7 @@ async function packageComponent(req) {
  * @param req
  * @returns {Promise<string>}
  */
-async function deployComponent(req) {
+async function deployComponent(req /* FastifyRequest<{ Body?: OperationRequestBody }> */) {
 	if (req.project) {
 		req.project = path.parse(req.project).name;
 	} else if (req.package) {
@@ -384,9 +384,18 @@ async function deployComponent(req) {
 		await configUtils.addConfig(req.project, applicationConfig);
 	}
 
+	const payload /* Buffer | string | Readable | undefined */ =
+		typeof req.file === 'function'
+			? await req.file()
+			: req.payload
+				? Buffer.isBuffer(req.payload)
+					? req.payload
+					: Buffer.from(req.payload, 'base64')
+				: undefined;
+
 	const application = new Application({
 		name: req.project,
-		payload: req.payload,
+		payload,
 		packageIdentifier: req.package,
 		install: {
 			command: req.install_command,

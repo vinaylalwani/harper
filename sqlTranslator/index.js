@@ -29,7 +29,7 @@ alasqlFunctionImporter(alasql);
 let UNAUTHORIZED_RESPONSE = 403;
 const SQL_INSERT_ERROR_MSG = 'There was a problem performing this insert. Please check the logs and try again.';
 
-class ParsedSQLObject {
+export class ParsedSQLObject {
 	constructor() {
 		this.ast = undefined;
 		this.variant = undefined;
