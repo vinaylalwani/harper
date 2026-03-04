@@ -185,7 +185,8 @@ async function cliOperations(req) {
 			responseLog = YAML.stringify(responseData).trim()
 		}
 
-		if (response.statusCode < 200 || response.statusCode >= 300) {
+		const { statusCode } = response;
+		if (statusCode < 200 || (statusCode >= 300 && statusCode !== 304)) {
 			const errorPrefix = responseLog.startsWith('error:') ? '' : 'error: ';
 			console.error(`${errorPrefix}${responseLog}`);
 			process.exit(1);
