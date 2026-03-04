@@ -1670,8 +1670,9 @@ export function makeTable(options) {
 
 							let nodeId = existingEntry.nodeId;
 							const succeedingUpdates = []; // record the "future" updates, as we need to apply the updates in reverse order
-							const auditRefsToVisit: Array<{ localTime: number; nodeId: number }> =
-								existingEntry.additionalAuditRefs ? [...existingEntry.additionalAuditRefs.map(ref => ({ localTime: ref.version, nodeId: ref.nodeId }))] : [];
+							const auditRefsToVisit: Array<{ localTime: number; nodeId: number }> = existingEntry.additionalAuditRefs
+								? existingEntry.additionalAuditRefs.map((ref) => ({ localTime: ref.version, nodeId: ref.nodeId }))
+								: [];
 
 							// Collect any existing audit refs that should be preserved (those older than current transaction)
 							if (existingEntry.additionalAuditRefs) {
@@ -1681,6 +1682,7 @@ export function makeTable(options) {
 									}
 								}
 							}
+							let addedAuditRef = false;
 
 							while (localTime > txnTime || (auditedVersion >= txnTime && localTime > 0)) {
 								const auditRecord = auditStore.get(localTime, tableId, id, nodeId);
@@ -1714,8 +1716,17 @@ export function makeTable(options) {
 										auditRecordToStore = recordUpdate; // use the original update for the audit record
 									} else if (auditRecord.type === 'put' || auditRecord.type === 'delete') {
 										// There is newer full record update, so this incremental update is completely superseded
-										return writeCommit(false);
+										return;
 									}
+								}
+								if (!addedAuditRef) {
+									addedAuditRef = true;
+									// Add a reference to this older audit record if we had out-of-order writes
+									additionalAuditRefs.push({ version: txnTime, nodeId: options?.nodeId });
+									logger.debug?.('Adding additional audit ref for out-of-order write', {
+										version: txnTime,
+										nodeId: options?.nodeId,
+									});
 								}
 								localTime = auditRecord.previousVersion;
 								nodeId = auditRecord.previousNodeId;
@@ -1731,11 +1742,6 @@ export function makeTable(options) {
 								}
 							}
 
-							// Add a reference to the older audit record if we had out-of-order writes
-							if (localTime > 0 && localTime < txnTime) {
-								additionalAuditRefs.push({ version: localTime, nodeId });
-								logger.debug?.('Adding additional audit ref for out-of-order write', { version: localTime, nodeId });
-							}
 							if (!localTime) {
 								// if we reached the end of the audit trail, we can just apply the update
 								logger.debug?.(
@@ -1845,7 +1851,7 @@ export function makeTable(options) {
 							id,
 							storeRecord ? recordToStore : undefined,
 							storeRecord ? existingEntry : { ...existingEntry, value: undefined },
-							txnTime,
+							Math.max(txnTime, existingEntry?.version ?? 0),
 							omitLocalRecord ? INVALIDATED : 0,
 							audit,
 							{
