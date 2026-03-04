@@ -835,6 +835,14 @@ function applyRuntimeEnvVarConfig(configDoc, configFilePath, options = {}) {
 		// Apply env vars with source tracking and drift detection
 		applyRuntimeEnvConfig(configObj, rootPath, options);
 
+		// If securePort was set to the same value as port, auto-null port to avoid clashing
+		if (configObj.http?.port && configObj.http?.port === configObj.http?.securePort) {
+			configObj.http.port = null;
+		}
+		if (configObj.operationsApi?.network?.port && configObj.operationsApi?.network?.port === configObj.operationsApi?.network?.securePort) {
+			configObj.operationsApi.network.port = null;
+		}
+
 		// Update the YAML document's contents
 		// We update only the 'contents' property to preserve the Document instance and its methods
 		const mergedDoc = YAML.parseDocument(YAML.stringify(configObj), { simpleKeys: true });
