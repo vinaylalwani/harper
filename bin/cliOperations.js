@@ -167,13 +167,6 @@ async function cliOperations(req) {
 			req = encode(req);
 		}
 		let response = await httpRequest(options, req);
-		if (response.statusCode < 200 || response.statusCode >= 300) {
-			let errorDetail;
-			try { errorDetail = JSON.parse(response.body)?.error ?? response.body; }
-			catch { errorDetail = response.body; }
-			console.error(`Error: ${errorDetail}`);
-			process.exit(1);
-		}
 
 		let responseData;
 		try {
@@ -185,22 +178,31 @@ async function cliOperations(req) {
 			};
 		}
 
+		let responseLog;
 		if (req.json) {
-			console.log(JSON.stringify(responseData, null, 2));
+			responseLog = JSON.stringify(responseData, null, 2)
 		} else {
-			console.log(YAML.stringify(responseData).trim());
+			responseLog = YAML.stringify(responseData).trim()
 		}
+
+		if (response.statusCode < 200 || response.statusCode >= 300) {
+			const errorPrefix = responseLog.startsWith('error:') ? '' : 'error: ';
+			console.error(`${errorPrefix}${responseLog}`);
+			process.exit(1);
+		}
+
+		console.log(responseLog);
 
 		return responseData;
 	} catch (err) {
 		if (err.code === 'ENOENT' || err.code === 'ECONNREFUSED') {
-			console.error(`Error: Failed to connect to Harper (${err.code}): ${err.message}`);
+			console.error(`error: Failed to connect to Harper (${err.code}): ${err.message}`);
 		} else if (err.code === 'EACCES') {
-			console.error(`Error: Permission denied accessing the domain socket: ${err.message}`);
+			console.error(`error: Permission denied accessing the domain socket: ${err.message}`);
 		} else if (err.code === 'ENOTFOUND') {
-			console.error(`Error: Host not found: "${err.hostname}" ${err.message}`);
+			console.error(`error: Host not found: "${err.hostname}" ${err.message}`);
 		} else {
-			console.error(`Error: ${err.message ?? err}`);
+			console.error(`error: ${err.message ?? err}`);
 		}
 		process.exit(1);
 	}
