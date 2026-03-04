@@ -143,12 +143,12 @@ async function cliOperations(req) {
 		initConfig();
 		if (!getHdbPid()) {
 			console.error('Harper must be running to perform this operation');
-			process.exit();
+			process.exit(1);
 		}
 
 		if (!fs.existsSync(envMgr.get(terms.CONFIG_PARAMS.OPERATIONSAPI_NETWORK_DOMAINSOCKET))) {
 			console.error('No domain socket found, unable to perform this operation');
-			process.exit();
+			process.exit(1);
 		}
 	}
 	await PREPARE_OPERATION[req.operation]?.(req);
@@ -167,6 +167,13 @@ async function cliOperations(req) {
 			req = encode(req);
 		}
 		let response = await httpRequest(options, req);
+		if (response.statusCode < 200 || response.statusCode >= 300) {
+			let errorDetail;
+			try { errorDetail = JSON.parse(response.body)?.error ?? response.body; }
+			catch { errorDetail = response.body; }
+			console.error(`Error: ${errorDetail}`);
+			process.exit(1);
+		}
 
 		let responseData;
 		try {
@@ -186,14 +193,15 @@ async function cliOperations(req) {
 
 		return responseData;
 	} catch (err) {
-		let errMsg = 'Error: ';
-		if (err?.response?.data?.error) {
-			errMsg += err.response.data.error;
-		} else if (err?.response?.data) {
-			errMsg += err?.response?.data;
+		if (err.code === 'ENOENT' || err.code === 'ECONNREFUSED') {
+			console.error(`Error: Failed to connect to Harper (${err.code}): ${err.message}`);
+		} else if (err.code === 'EACCES') {
+			console.error(`Error: Permission denied accessing the domain socket: ${err.message}`);
+		} else if (err.code === 'ENOTFOUND') {
+			console.error(`Error: Host not found: "${err.hostname}" ${err.message}`);
 		} else {
-			return console.error(err);
+			console.error(`Error: ${err.message ?? err}`);
 		}
-		console.error(errMsg);
+		process.exit(1);
 	}
 }
