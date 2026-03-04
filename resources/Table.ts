@@ -1683,65 +1683,74 @@ export function makeTable(options) {
 								}
 							}
 							let addedAuditRef = false;
-
-							while (localTime > txnTime || (auditedVersion >= txnTime && localTime > 0)) {
-								const auditRecord = auditStore.get(localTime, tableId, id, nodeId);
-								if (!auditRecord) break;
-								auditedVersion = auditRecord.version;
-								if (auditedVersion >= txnTime) {
-									if (auditedVersion === txnTime) {
-										precedesExisting = precedesExistingVersion(
-											txnTime,
-											{ version: auditedVersion, localTime: localTime, key: id, nodeId: auditRecord.nodeId },
-											options?.nodeId
-										);
-										if (precedesExisting === 0) {
-											logger.debug?.(
-												'The transaction time is equal to the existing version, treating as duplicate',
-												id
+							let nextRef: { localTime: number; nodeId: number };
+							do {
+								while (localTime > txnTime || (auditedVersion >= txnTime && localTime > 0)) {
+									const auditRecord = auditStore.get(localTime, tableId, id, nodeId);
+									if (!auditRecord) break;
+									auditedVersion = auditRecord.version;
+									if (auditedVersion >= txnTime) {
+										if (auditedVersion === txnTime) {
+											precedesExisting = precedesExistingVersion(
+												txnTime,
+												{ version: auditedVersion, localTime: localTime, key: id, nodeId: auditRecord.nodeId },
+												options?.nodeId
 											);
-											return; // treat a tie as a duplicate and drop it
+											if (precedesExisting === 0) {
+												logger.debug?.(
+													'The transaction time is equal to the existing version, treating as duplicate',
+													id
+												);
+												return; // treat a tie as a duplicate and drop it
+											}
+											if (precedesExisting > 0) {
+												// if the existing version is older, we can skip this update
+												localTime = auditRecord.previousVersion;
+												nodeId = auditRecord.previousNodeId;
+												continue;
+											}
 										}
-										if (precedesExisting > 0) {
-											// if the existing version is older, we can skip this update
-											localTime = auditRecord.previousVersion;
-											nodeId = auditRecord.previousNodeId;
-											continue;
+										if (auditRecord.type === 'patch') {
+											logger.debug?.('out of order patch will be applied', id, auditRecord);
+											// record patches so we can reply in order
+											succeedingUpdates.push(auditRecord);
+											auditRecordToStore = recordUpdate; // use the original update for the audit record
+										} else if (auditRecord.type === 'put' || auditRecord.type === 'delete') {
+											// There is newer full record update, so this incremental update is completely superseded
+											return;
 										}
 									}
-									if (auditRecord.type === 'patch') {
-										logger.debug?.('out of order patch will be applied', id, auditRecord);
-										// record patches so we can reply in order
-										succeedingUpdates.push(auditRecord);
-										auditRecordToStore = recordUpdate; // use the original update for the audit record
-									} else if (auditRecord.type === 'put' || auditRecord.type === 'delete') {
-										// There is newer full record update, so this incremental update is completely superseded
-										return;
+									if (!addedAuditRef) {
+										addedAuditRef = true;
+										// Add a reference to this older audit record if we had out-of-order writes
+										additionalAuditRefs.push({ version: txnTime, nodeId: options?.nodeId });
+										logger.debug?.('Adding additional audit ref for out-of-order write', {
+											version: txnTime,
+											nodeId: options?.nodeId,
+										});
 									}
-								}
-								if (!addedAuditRef) {
-									addedAuditRef = true;
-									// Add a reference to this older audit record if we had out-of-order writes
-									additionalAuditRefs.push({ version: txnTime, nodeId: options?.nodeId });
-									logger.debug?.('Adding additional audit ref for out-of-order write', {
-										version: txnTime,
-										nodeId: options?.nodeId,
-									});
-								}
-								localTime = auditRecord.previousVersion;
-								nodeId = auditRecord.previousNodeId;
+									// Collect any additional audit refs from this audit record to traverse other branches
+									if (auditRecord.previousAdditionalAuditRefs) {
+										for (const ref of auditRecord.previousAdditionalAuditRefs) {
+											auditRefsToVisit.push({ localTime: ref.version, nodeId: ref.nodeId });
+											logger.debug?.('Adding audit ref from audit record to visit queue', {
+												version: ref.version,
+												nodeId: ref.nodeId,
+											});
+										}
+									}
 
+									localTime = auditRecord.previousVersion;
+									nodeId = auditRecord.previousNodeId;
+								}
 								// Check if we need to scan additional audit refs from this record
-								if (!localTime && auditRefsToVisit.length > 0) {
-									const nextRef = auditRefsToVisit.shift();
-									if (nextRef) {
-										localTime = nextRef.localTime;
-										nodeId = nextRef.nodeId;
-										logger.debug?.('Following additional audit ref to continue scanning', { localTime, nodeId });
-									}
+								nextRef = auditRefsToVisit.shift();
+								if (nextRef) {
+									localTime = auditedVersion = nextRef.localTime;
+									nodeId = nextRef.nodeId;
+									logger.debug?.('Following additional audit ref to continue scanning', { localTime, nodeId });
 								}
-							}
-
+							} while (nextRef);
 							if (!localTime) {
 								// if we reached the end of the audit trail, we can just apply the update
 								logger.debug?.(
