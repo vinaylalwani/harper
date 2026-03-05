@@ -351,7 +351,12 @@ function startMonitoringTxns() {
 				);
 				// reset the transaction
 				try {
-					txn.commit();
+					const result = txn.commit();
+					if (result?.then) {
+						result.catch((error) => {
+							harperLogger.debug?.(`Error committing timed out transaction: ${error.message}`);
+						});
+					}
 				} catch (error) {
 					harperLogger.debug?.(`Error committing timed out transaction: ${error.message}`);
 				}
