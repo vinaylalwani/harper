@@ -249,8 +249,8 @@ export function registerContentHandlers(app) {
 export function registerMultipartParser(app: FastifyInstance, maxBodySize: number = 1024 * 1024 * 1024) {
 	app.addContentTypeParser(
 		'multipart/form-data',
-		{ parseAs: 'buffer' },
-		(req: any, payload: Buffer, done: (err: Error | null, body?: any) => void) => {
+		{ bodyLimit: maxBodySize },
+		(req: any, payload: NodeJS.ReadableStream, done: (err: Error | null, body?: any) => void) => {
 			let body: any = null;
 			let payloadBuffer: Buffer | Readable | null = null;
 			let pending = 2;
@@ -305,7 +305,7 @@ export function registerMultipartParser(app: FastifyInstance, maxBodySize: numbe
 			busboy.on('error', (err: Error) => done(err));
 			busboy.on('finish', () => maybeDone());
 
-			Readable.from(payload).pipe(busboy);
+			payload.pipe(busboy);
 		}
 	);
 }
