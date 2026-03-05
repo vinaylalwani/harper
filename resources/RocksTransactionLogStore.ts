@@ -225,7 +225,7 @@ export class RocksTransactionLogStore extends EventEmitter {
 						}
 						// find the earliest one that is not done
 						const next = result.value;
-						if (!earliest || earliest.timestamp < next.timestamp) {
+						if (!earliest || earliest.timestamp > next.timestamp) {
 							earliest = next;
 							earliestIndex = i;
 						}
