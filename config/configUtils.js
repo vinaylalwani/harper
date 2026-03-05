@@ -839,7 +839,10 @@ function applyRuntimeEnvVarConfig(configDoc, configFilePath, options = {}) {
 		if (configObj.http?.port && configObj.http?.port === configObj.http?.securePort) {
 			configObj.http.port = null;
 		}
-		if (configObj.operationsApi?.network?.port && configObj.operationsApi?.network?.port === configObj.operationsApi?.network?.securePort) {
+		if (
+			configObj.operationsApi?.network?.port &&
+			configObj.operationsApi?.network?.port === configObj.operationsApi?.network?.securePort
+		) {
 			configObj.operationsApi.network.port = null;
 		}
 
