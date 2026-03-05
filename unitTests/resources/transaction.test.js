@@ -289,10 +289,14 @@ describe('Transactions', () => {
 			for (let i = 5; i > 0; i--) {
 				// Apply in reverse order (5, 4, 3, 2, 1)
 				promises.push(
-					TxnTest.patch(64, {
-						['prop' + i]: 'value' + i,
-						count: { __op__: 'add', value: 1 }
-					}, { timestamp: now + (i * 10) })
+					TxnTest.patch(
+						64,
+						{
+							['prop' + i]: 'value' + i,
+							count: { __op__: 'add', value: 1 },
+						},
+						{ timestamp: now + i * 10 }
+					)
 				);
 			}
 
@@ -333,12 +337,11 @@ describe('Transactions', () => {
 			assert.equal(record.prop1, 'value1');
 			assert.equal(record.prop2, 'value2');
 
-			// Verify older audit refs are still preserved
 			let entry2 = TxnTest.primaryStore.getEntry(65);
-			if (initialRefsLength > 0) {
-				assert(entry2.additionalAuditRefs, 'Additional audit refs should be preserved');
-				assert(entry2.additionalAuditRefs.length >= initialRefsLength, 'Older refs should be maintained');
-			}
+			// Verify older audit refs are still preserved
+			let auditRecord = TxnTest.auditStore.getSync(entry2.version, TxnTest.tableId, 65);
+			assert(auditRecord, 'Entry should exist for the older version');
+			assert(auditRecord.previousAdditionalAuditRefs, 'Additional audit refs should be preserved');
 		});
 
 		it('Can merge replication updates', async function () {
