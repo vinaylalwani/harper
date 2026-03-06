@@ -121,12 +121,12 @@ async function harper() {
 				console.warn(
 					`It appears you are running Harper in an application directory, but did not specify the path. I'll go ahead and run the application for you since that's probably what you meant. But to avoid this warning in the future, run applications in the current directory like this: "harper ${service} ."`
 				);
-				process.env.RUN_HDB_APP = path.resolve('.');
+				process.env.RUN_HDB_APP = process.cwd();
 			} else if (fs.existsSync(hdbTerms.HARPER_CONFIG_FILE) || fs.existsSync(hdbTerms.HDB_CONFIG_FILE)) {
 				console.warn(
 					`It appears you are running Harper in a root data directory, but did not specify the path. I'll go ahead and run Harper with its root path set to "." for you since that's probably what you meant. But to avoid this warning in the future, run it like this: "harper ${service} ."`
 				);
-				process.env.ROOTPATH = path.resolve('.');
+				process.env.ROOTPATH = process.cwd();
 			}
 		}
 		// fall through
