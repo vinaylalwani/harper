@@ -52,7 +52,6 @@ import {
 	type RecordObject,
 	type Entry,
 	entryMap,
-	setAdditionalAuditRefs,
 } from './RecordEncoder.ts';
 import { recordAction, recordActionBinary } from './analytics/write.ts';
 import { rebuildUpdateBefore } from './crdt.ts';
