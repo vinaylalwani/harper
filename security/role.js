@@ -8,6 +8,7 @@ const signalling = require('../utility/signalling.js');
 const util = require('util');
 const terms = require('../utility/hdbTerms.ts');
 const hdbUtils = require('../utility/common_utils.js');
+const { databases } = require('../resources/databases.ts');
 const pSearchSearchByValue = search.searchByValue;
 const pSearchSearchByHash = search.searchByHash;
 const pDeleteDelete = util.promisify(delete_.delete);
@@ -197,17 +198,10 @@ async function dropRole(role) {
 }
 
 async function getRoleByName(roleName) {
-	const roles = Array.from(
-		(await pSearchSearchByValue({
-			schema: 'system',
-			table: 'hdb_role',
-			attribute: 'role',
-			value: roleName,
-			get_attributes: ['*'],
-		})) || []
-	);
-
-	return roles.length > 0 ? roles[0] : null;
+	for await (const role of databases.system.hdb_role.search([{ attribute: 'role', value: roleName }])) {
+		return role;
+	}
+	return null;
 }
 
 async function listRoles() {
