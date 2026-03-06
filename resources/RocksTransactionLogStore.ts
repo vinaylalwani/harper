@@ -256,6 +256,7 @@ export class RocksTransactionLogStore extends EventEmitter {
 						logs.splice(index, 1);
 						iterators.splice(index, 1);
 						nextEntries.splice(index, 1);
+						options.excludeLogs.push(logName);
 					}
 				},
 			};
