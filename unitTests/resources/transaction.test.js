@@ -326,7 +326,6 @@ describe('Transactions', () => {
 			await TxnTest.patch(65, { prop1: 'value1' }, { timestamp: now + 50 });
 
 			let entry1 = TxnTest.primaryStore.getEntry(65);
-			let initialRefsLength = entry1.additionalAuditRefs ? entry1.additionalAuditRefs.length : 0;
 
 			// Apply another in-order update
 			await TxnTest.patch(65, { prop2: 'value2' }, { timestamp: now + 150 });
