@@ -167,6 +167,7 @@ export function makeTable(options) {
 	let propertyResolvers: any;
 	let hasRelationships = false;
 	let runningRecordExpiration: boolean;
+	const isRocksDB = primaryStore instanceof RocksDatabase;
 	type BigInt64ArrayAndMaxSafeId = BigInt64Array & { maxSafeId: number };
 	let idIncrementer: BigInt64ArrayAndMaxSafeId;
 	let replicateToCount;
@@ -1719,7 +1720,7 @@ export function makeTable(options) {
 											return;
 										}
 									}
-									if (!addedAuditRef) {
+									if (!addedAuditRef && isRocksDB) {
 										addedAuditRef = true;
 										// Add a reference to this older audit record if we had out-of-order writes
 										additionalAuditRefs.push({ version: txnTime, nodeId: options?.nodeId });
@@ -1859,7 +1860,9 @@ export function makeTable(options) {
 							id,
 							storeRecord ? recordToStore : undefined,
 							storeRecord ? existingEntry : { ...existingEntry, value: undefined },
-							Math.max(txnTime, existingEntry?.version ?? 0),
+							isRocksDB
+								? Math.max(txnTime, existingEntry?.version ?? 0) // RocksDB uses a singular version/local time, so it must be most recent
+								: txnTime,
 							omitLocalRecord ? INVALIDATED : 0,
 							audit,
 							{
@@ -1947,7 +1950,7 @@ export function makeTable(options) {
 							{ user: context?.user, nodeId: options?.nodeId, transaction, tableToTrack: tableName },
 							'delete'
 						);
-						if (!audit || primaryStore instanceof RocksDatabase) scheduleCleanup();
+						if (!audit || isRocksDB) scheduleCleanup();
 					} else {
 						removeEntry(primaryStore, existingEntry);
 					}
@@ -3081,7 +3084,7 @@ export function makeTable(options) {
 		 * @param options
 		 */
 		static getSize() {
-			if (primaryStore instanceof RocksDatabase) {
+			if (isRocksDB) {
 				return primaryStore.getDBIntProperty('rocksdb.estimate-live-data-size') ?? 0;
 			}
 			const stats = primaryStore.getStats();
@@ -3626,7 +3629,7 @@ export function makeTable(options) {
 		// to evaluate if prefetching is a good idea.
 		// First, the caller can tell us. If the record is in our local cache, we use that as indication
 		// that we can get the value very quickly without a page fault.
-		if (sync || primaryStore instanceof RocksDatabase) return whenPrefetched();
+		if (sync || isRocksDB) return whenPrefetched();
 		// Next, we allow for non-prefetch mode where we can execute some gets without prefetching,
 		// but we will limit the number before we do another prefetch
 		if (untilNextPrefetch > 0) {
@@ -3761,7 +3764,7 @@ export function makeTable(options) {
 	function txnForContext(context: Context) {
 		let transaction = context?.transaction;
 		if (transaction) {
-			if (!transaction.db && primaryStore instanceof RocksDatabase) {
+			if (!transaction.db && isRocksDB) {
 				// this is an uninitialized DatabaseTransaction, we can claim it
 				transaction.db = primaryStore;
 				if (context?.timestamp) transaction.timestamp = context.timestamp;
@@ -3774,18 +3777,14 @@ export function makeTable(options) {
 				const nextTxn = transaction.next;
 				if (!nextTxn) {
 					// no next one, then add our database
-					transaction = transaction.next =
-						primaryStore instanceof RocksDatabase ? new DatabaseTransaction() : new LMDBTransaction();
+					transaction = transaction.next = isRocksDB ? new DatabaseTransaction() : new LMDBTransaction();
 					transaction.db = primaryStore;
 					return transaction;
 				}
 				transaction = nextTxn;
 			} while (true);
 		} else {
-			transaction =
-				primaryStore instanceof RocksDatabase
-					? new ImmediateTransaction(primaryStore)
-					: new ImmediateLMDBTransaction(primaryStore);
+			transaction = isRocksDB ? new ImmediateTransaction(primaryStore) : new ImmediateLMDBTransaction(primaryStore);
 			if (context) {
 				context.transaction = transaction;
 				if (context.timestamp) transaction.timestamp = context.timestamp;
@@ -4251,7 +4250,7 @@ export function makeTable(options) {
 
 								try {
 									let count = 0;
-									let removeDeletedRecords = !audit || primaryStore instanceof RocksDatabase;
+									let removeDeletedRecords = !audit || isRocksDB;
 									// iterate through all entries to find expired records and deleted records
 									for (const entry of primaryStore.getRange({
 										start: false,

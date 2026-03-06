@@ -234,13 +234,14 @@ describe('Transactions', () => {
 			assert.equal(record.name, 'newer');
 			assert.equal(record.value, 'test');
 			assert.equal(record.count, 5);
-
+			if (process.env.HARPER_STORAGE_ENGINE === 'lmdb') return;
 			// Verify additional audit refs were stored
 			assert(entry.additionalAuditRefs, 'Additional audit refs should be stored');
 			assert(entry.additionalAuditRefs.length > 0, 'Should have at least one additional audit ref');
 		});
 
 		it('Traverse multiple audit logs using additional refs', async function () {
+			if (process.env.HARPER_STORAGE_ENGINE === 'lmdb') return;
 			const context = {};
 			await transaction(context, () => {
 				TxnTest.put(63, { name: 'original', count: 0 }, context);
