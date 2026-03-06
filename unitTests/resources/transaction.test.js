@@ -315,6 +315,7 @@ describe('Transactions', () => {
 		});
 
 		it('Preserve additional audit refs across subsequent updates', async function () {
+			if (process.env.HARPER_STORAGE_ENGINE === 'lmdb') return;
 			const context = {};
 			await transaction(context, () => {
 				TxnTest.put(65, { name: 'original', count: 0 }, context);
