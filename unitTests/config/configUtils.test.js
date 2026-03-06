@@ -1295,6 +1295,103 @@ describe('Test configUtils module', () => {
 			expect(configJson.http.securePort).to.equal(defaultPort);
 		});
 
+		it('should auto-null operationsApi port when HARPER_SET_CONFIG sets securePort to same value', () => {
+			const defaultPort = 9925;
+			const testArgs = {
+				ROOTPATH: HDB_ROOT,
+				OPERATIONSAPI_NETWORK_PORT: defaultPort,
+			};
+
+			// Set securePort to the same as the default port WITHOUT explicitly nulling port
+			process.env.HARPER_SET_CONFIG = JSON.stringify({
+				operationsApi: {
+					network: {
+						securePort: defaultPort,
+					},
+				},
+			});
+
+			// This should not throw a validation error — port should be auto-nulled
+			config_utils_rw.createConfigFile(testArgs);
+
+			const configDoc = YAML.parseDocument(fs.readFileSync(CONFIG_FILE_PATH, 'utf8'));
+			const configJson = configDoc.toJSON();
+
+			expect(configJson.operationsApi.network.port).to.be.null;
+			expect(configJson.operationsApi.network.securePort).to.equal(defaultPort);
+		});
+
+		it('should auto-null http port when HARPER_SET_CONFIG sets securePort to same value', () => {
+			const defaultPort = 9926;
+			const testArgs = {
+				ROOTPATH: HDB_ROOT,
+				HTTP_PORT: defaultPort,
+			};
+
+			// Set securePort to the same as the default port WITHOUT explicitly nulling port
+			process.env.HARPER_SET_CONFIG = JSON.stringify({
+				http: {
+					securePort: defaultPort,
+				},
+			});
+
+			// This should not throw a validation error — port should be auto-nulled
+			config_utils_rw.createConfigFile(testArgs);
+
+			const configDoc = YAML.parseDocument(fs.readFileSync(CONFIG_FILE_PATH, 'utf8'));
+			const configJson = configDoc.toJSON();
+
+			expect(configJson.http.port).to.be.null;
+			expect(configJson.http.securePort).to.equal(defaultPort);
+		});
+
+		it('should auto-null operationsApi port when HARPER_DEFAULT_CONFIG sets securePort to same value', () => {
+			const defaultPort = 9925;
+			const testArgs = {
+				ROOTPATH: HDB_ROOT,
+				OPERATIONSAPI_NETWORK_PORT: defaultPort,
+			};
+
+			// Set securePort to the same as the default port WITHOUT explicitly nulling port
+			process.env.HARPER_DEFAULT_CONFIG = JSON.stringify({
+				operationsApi: {
+					network: {
+						securePort: defaultPort,
+					},
+				},
+			});
+
+			config_utils_rw.createConfigFile(testArgs);
+
+			const configDoc = YAML.parseDocument(fs.readFileSync(CONFIG_FILE_PATH, 'utf8'));
+			const configJson = configDoc.toJSON();
+
+			expect(configJson.operationsApi.network.port).to.be.null;
+			expect(configJson.operationsApi.network.securePort).to.equal(defaultPort);
+		});
+
+		it('should auto-null http port when HARPER_DEFAULT_CONFIG sets securePort to same value', () => {
+			const defaultPort = 9926;
+			const testArgs = {
+				ROOTPATH: HDB_ROOT,
+				HTTP_PORT: defaultPort,
+			};
+
+			process.env.HARPER_DEFAULT_CONFIG = JSON.stringify({
+				http: {
+					securePort: defaultPort,
+				},
+			});
+
+			config_utils_rw.createConfigFile(testArgs);
+
+			const configDoc = YAML.parseDocument(fs.readFileSync(CONFIG_FILE_PATH, 'utf8'));
+			const configJson = configDoc.toJSON();
+
+			expect(configJson.http.port).to.be.null;
+			expect(configJson.http.securePort).to.equal(defaultPort);
+		});
+
 		it('should allow explicitly setting port to null with HARPER_DEFAULT_CONFIG', () => {
 			const defaultPort = 9925;
 			const testArgs = {

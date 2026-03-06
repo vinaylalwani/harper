@@ -7,7 +7,7 @@ import { encode } from 'cbor-x';
 import analytics from '#src/resources/analytics/write';
 import { bypassAuth } from '#src/security/auth';
 import { bypassAuth as bypassAuthMQTT } from '#src/server/mqtt';
-import * as environmentManager from '#js/utility/environment/environmentManager';
+import environmentManager from '#js/utility/environment/environmentManager';
 const { setProperty } = environmentManager;
 const config = {};
 
@@ -81,7 +81,7 @@ export async function setupTestApp() {
 		tables.Related.clear();
 		tables.SubObject.clear();
 	} else {
-		const { startHTTPThreads } = require('#src/server/threads/socketRouter');
+		const { startHTTPThreads } = await import('#src/server/threads/socketRouter');
 		serverStarted = await startHTTPThreads(config.threads || 0);
 	}
 	try {
@@ -139,6 +139,6 @@ export async function setupTestApp() {
 }
 
 export async function addThreads() {
-	const { startHTTPThreads } = require('#src/server/threads/socketRouter');
+	const { startHTTPThreads } = await import('#src/server/threads/socketRouter');
 	await startHTTPThreads(2);
 }
