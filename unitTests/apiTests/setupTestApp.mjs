@@ -81,7 +81,7 @@ export async function setupTestApp() {
 		tables.Related.clear();
 		tables.SubObject.clear();
 	} else {
-		const { startHTTPThreads } = require('#src/server/threads/socketRouter');
+		const { startHTTPThreads } = await import('#src/server/threads/socketRouter');
 		serverStarted = await startHTTPThreads(config.threads || 0);
 	}
 	try {
@@ -139,6 +139,6 @@ export async function setupTestApp() {
 }
 
 export async function addThreads() {
-	const { startHTTPThreads } = require('#src/server/threads/socketRouter');
+	const { startHTTPThreads } = await import('#src/server/threads/socketRouter');
 	await startHTTPThreads(2);
 }
