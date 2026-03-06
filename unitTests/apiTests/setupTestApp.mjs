@@ -7,7 +7,7 @@ import { encode } from 'cbor-x';
 import analytics from '#src/resources/analytics/write';
 import { bypassAuth } from '#src/security/auth';
 import { bypassAuth as bypassAuthMQTT } from '#src/server/mqtt';
-import * as environmentManager from '#js/utility/environment/environmentManager';
+import environmentManager from '#js/utility/environment/environmentManager';
 const { setProperty } = environmentManager;
 const config = {};
 

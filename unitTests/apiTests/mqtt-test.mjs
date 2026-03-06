@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { decode } from 'cbor-x';
 import { callOperation } from './utility.js';
 import { setupTestApp } from './setupTestApp.mjs';
-import * as environmentManager from '#js/utility/environment/environmentManager';
+import environmentManager from '#js/utility/environment/environmentManager';
 const { get: env_get, setProperty } = environmentManager;
 import { connect } from 'mqtt';
 import { readFileSync } from 'fs';
