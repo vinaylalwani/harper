@@ -327,8 +327,6 @@ describe('Transactions', () => {
 			await TxnTest.patch(65, { name: 'newer' }, { timestamp: now + 100 });
 			await TxnTest.patch(65, { prop1: 'value1' }, { timestamp: now + 50 });
 
-			let entry1 = TxnTest.primaryStore.getEntry(65);
-
 			// Apply another in-order update
 			await TxnTest.patch(65, { prop2: 'value2' }, { timestamp: now + 150 });
 
