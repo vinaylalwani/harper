@@ -78,6 +78,22 @@ export const OPERATION_PERMISSION_GROUPS = {
 	],
 } as const;
 
+const validOps: Set<string> = new Set(Object.values(OPERATIONS_ENUM));
+const validGroups: Set<string> = new Set(Object.keys(OPERATION_PERMISSION_GROUPS));
+
+/**
+ * Validates that every entry in an operations array is a known operation name or group name.
+ * Returns the first invalid entry, or null if all entries are valid.
+ */
+export function validateOperations(operations: readonly unknown[]): string | null {
+	for (const op of operations) {
+		if (typeof op !== 'string' || (!validOps.has(op) && !validGroups.has(op))) {
+			return String(op);
+		}
+	}
+	return null;
+}
+
 /**
  * Expands an operations array into a Set of individual operation names,
  * resolving group names (e.g. 'read_only') to their member operations.
