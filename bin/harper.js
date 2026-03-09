@@ -127,7 +127,6 @@ async function harper() {
 			return require('./run.js').main();
 		default:
 			const cliApiOp = cliOperations.buildRequest();
-			if (cliApiOp.operation) service = SERVICE_ACTIONS_ENUM.OPERATION;
 			logger.trace('calling cli operations with:', cliApiOp);
 			await cliOperations.cliOperations(cliApiOp);
 			return
