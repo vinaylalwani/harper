@@ -95,9 +95,7 @@
 		}
 	},
 	"exports": {
-		".": "./index.js",
-		"./v1": "./v1.js",
-		"./v2": "./v2.js"
+		".": "./dist/index.js"
 	},
 	"devDependencies": {
 		"@harperdb/code-guidelines": "^0.0.6",

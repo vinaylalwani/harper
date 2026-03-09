@@ -2,7 +2,11 @@
 
 const assert = require('assert');
 const terms = require('#src/utility/hdbTerms');
-const { OPERATION_PERMISSION_GROUPS, expandOperationsPerms } = require('#src/utility/operationPermissions');
+const {
+	OPERATION_PERMISSION_GROUPS,
+	expandOperationsPerms,
+	validateOperations,
+} = require('#src/utility/operationPermissions');
 
 describe('operationPermissions', function () {
 	describe('OPERATION_PERMISSION_GROUPS', function () {
@@ -102,6 +106,39 @@ describe('operationPermissions', function () {
 		it('returns an empty set for an empty array', function () {
 			const result = expandOperationsPerms([]);
 			assert.equal(result.size, 0);
+		});
+	});
+
+	describe('validateOperations()', function () {
+		it('returns null for valid individual operations', function () {
+			assert.strictEqual(validateOperations([terms.OPERATIONS_ENUM.INSERT, terms.OPERATIONS_ENUM.SEARCH]), null);
+		});
+
+		it('returns null for valid group names', function () {
+			assert.strictEqual(validateOperations(['read_only', 'admin_read']), null);
+		});
+
+		it('returns null for a mix of operations and group names', function () {
+			assert.strictEqual(validateOperations(['read_only', terms.OPERATIONS_ENUM.RESTART]), null);
+		});
+
+		it('returns null for an empty array', function () {
+			assert.strictEqual(validateOperations([]), null);
+		});
+
+		it('returns the invalid entry for an unknown operation', function () {
+			assert.strictEqual(validateOperations(['totally_fake_op']), 'totally_fake_op');
+		});
+
+		it('returns the first invalid entry when multiple are invalid', function () {
+			const result = validateOperations([terms.OPERATIONS_ENUM.INSERT, 'bad_one', 'bad_two']);
+			assert.strictEqual(result, 'bad_one');
+		});
+
+		it('returns a stringified value for non-string entries', function () {
+			assert.strictEqual(validateOperations([123]), '123');
+			assert.strictEqual(validateOperations([null]), 'null');
+			assert.strictEqual(validateOperations([undefined]), 'undefined');
 		});
 	});
 });

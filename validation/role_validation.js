@@ -1,7 +1,7 @@
 const validate = require('validate.js'),
 	validator = require('./validationWrapper.js'),
 	terms = require('../utility/hdbTerms.ts'),
-	{ OPERATION_PERMISSION_GROUPS } = require('../utility/operationPermissions.ts'),
+	{ validateOperations } = require('../utility/operationPermissions.ts'),
 	{ handleHDBError, hdbErrors } = require('../utility/errors/hdbError.js');
 
 const { HDB_ERROR_MSGS, HTTP_STATUS_CODES } = hdbErrors;
@@ -137,13 +137,9 @@ function customValidate(object, constraints) {
 					continue;
 				}
 
-				const validOps = new Set(Object.values(terms.OPERATIONS_ENUM));
-				const validGroups = new Set(Object.keys(OPERATION_PERMISSION_GROUPS));
-				for (let k = 0; k < opUserPerm.length; k++) {
-					const opPerm = opUserPerm[k];
-					if (!validOps.has(opPerm) && !validGroups.has(opPerm)) {
-						addPermError(HDB_ERROR_MSGS.INVALID_OPERATIONS_OP(opPerm), validationErrors);
-					}
+				const invalidOp = validateOperations(opUserPerm);
+				if (invalidOp !== null) {
+					addPermError(HDB_ERROR_MSGS.INVALID_OPERATIONS_OP(invalidOp), validationErrors);
 				}
 				continue;
 			}
