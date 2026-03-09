@@ -44,7 +44,8 @@ export class RocksTransactionLogStore extends EventEmitter {
 			// do not record transaction entries on retry
 			return;
 		}
-		const log = this.logById(options.nodeId) ?? this.logById(options.viaNodeId) ?? this.log;
+		const nodeId = options.nodeId;
+		const log = nodeId ? (this.nodeLogs?.[nodeId] ?? this.loadLogs()[nodeId]) : this.log;
 		let entryBinary: Uint8Array;
 		if (auditRecord instanceof Uint8Array) entryBinary = auditRecord;
 		else {
