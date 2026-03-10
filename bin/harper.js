@@ -57,6 +57,8 @@ async function harper() {
 	}
 
 	switch (service) {
+		case SERVICE_ACTIONS_ENUM.HELP:
+			return HELP;
 		case SERVICE_ACTIONS_ENUM.START:
 			return require('./run.js').launch();
 		case SERVICE_ACTIONS_ENUM.INSTALL:
@@ -130,8 +132,6 @@ async function harper() {
 			logger.trace('calling cli operations with:', cliApiOp);
 			await cliOperations.cliOperations(cliApiOp);
 			return
-		case SERVICE_ACTIONS_ENUM.HELP:
-			return HELP;
 	}
 }
 exports.harper = harper;
