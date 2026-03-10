@@ -3,7 +3,7 @@ import { spawn, ChildProcess } from 'node:child_process';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm } from 'node:fs/promises';
 import { type SuiteContext, type TestContext } from 'node:test';
 import { getNextAvailableLoopbackAddress, releaseLoopbackAddress } from './loopbackAddressPool.ts';
 
@@ -13,6 +13,7 @@ export const OPERATIONS_API_PORT = 9925;
 export const DEFAULT_ADMIN_USERNAME = 'admin';
 export const DEFAULT_ADMIN_PASSWORD = 'Abc1234!';
 const DEFAULT_STARTUP_TIMEOUT_MS = parseInt(process.env.HARPER_INTEGRATION_TEST_STARTUP_TIMEOUT_MS, 10) || 30000;
+const LOG_DIR = process.env.HARPER_INTEGRATION_TEST_LOG_DIR;
 
 /**
  * Options for setting up a Harper instance.
@@ -51,6 +52,8 @@ export interface HarperContext {
 	hostname: string;
 	/** Child process for the Harper instance */
 	process: ChildProcess;
+	/** Absolute path to the log directory for this suite (only set when HARPER_INTEGRATION_TEST_LOG_DIR is configured) */
+	logDir?: string;
 }
 
 /**
@@ -79,6 +82,13 @@ function getHarperScript(): string {
 		`Harper installation script not found at ${harperScript}. Don't forget to build the project (\`npm run build\`) before running integration tests.`
 	);
 	return harperScript;
+}
+
+/**
+ * Sanitizes a string for use as a filesystem directory name.
+ */
+function sanitizeForFilesystem(name: string): string {
+	return name.replace(/[^a-zA-Z0-9_-]/g, '_').replace(/_+/g, '_').substring(0, 100);
 }
 
 /**
@@ -179,7 +189,22 @@ export async function startHarper(ctx: ContextWithHarper, options?: SetupHarperO
 	);
 	const installDir = ctx.harper?.installDir ?? (await mkdtemp(installDirPrefix));
 
-	const loopbackAddress = ctx.hostname ?? (await getNextAvailableLoopbackAddress());
+	const loopbackAddress = ctx.harper?.hostname ?? (await getNextAvailableLoopbackAddress());
+
+	// Set up per-suite log directory when HARPER_INTEGRATION_TEST_LOG_DIR is configured
+	let logDir: string | undefined;
+	if (LOG_DIR) {
+		const suiteName = sanitizeForFilesystem(ctx.name || 'unknown');
+		logDir = join(LOG_DIR, `${suiteName}-${loopbackAddress}`);
+		await mkdir(logDir, { recursive: true });
+	}
+
+	// Point Harper's log directory to the suite log dir so hdb.log is preserved for upload
+	const config = { ...(options?.config || {}) };
+	if (logDir) {
+		config.logging = { ...config.logging, root: logDir };
+	}
+
 	const harperProcess = await runHarperCommand(
 		[
 			`--ROOTPATH=${installDir}`,
@@ -192,7 +217,7 @@ export async function startHarper(ctx: ContextWithHarper, options?: SetupHarperO
 			`--HTTP_PORT=${loopbackAddress}:${HTTP_PORT}`,
 			`--OPERATIONSAPI_NETWORK_PORT=${loopbackAddress}:${OPERATIONS_API_PORT}`,
 			'--LOGGING_LEVEL=debug',
-			'--HARPER_SET_CONFIG=' + JSON.stringify(options?.config || {}),
+			'--HARPER_SET_CONFIG=' + JSON.stringify(config),
 		],
 		options?.env || {},
 		'successfully started'
@@ -208,6 +233,7 @@ export async function startHarper(ctx: ContextWithHarper, options?: SetupHarperO
 		operationsAPIURL: `http://${loopbackAddress}:${OPERATIONS_API_PORT}`,
 		hostname: loopbackAddress,
 		process: harperProcess,
+		logDir,
 	};
 
 	return ctx;
@@ -218,7 +244,6 @@ export async function startHarper(ctx: ContextWithHarper, options?: SetupHarperO
  *
  * This function stops the Harper instance, releases the loopback address,
  * and removes the installation directory.
- *
  * @param ctx - The test context with Harper instance details
  *
  * @example
@@ -235,7 +260,7 @@ export async function startHarper(ctx: ContextWithHarper, options?: SetupHarperO
  * ```
  */
 export async function teardownHarper(ctx: ContextWithHarper): Promise<void> {
-	await new Promise((resolve) => {
+	await new Promise<void>((resolve) => {
 		let timer: NodeJS.Timeout;
 		ctx.harper.process.on('exit', () => {
 			resolve();
@@ -246,7 +271,7 @@ export async function teardownHarper(ctx: ContextWithHarper): Promise<void> {
 			try {
 				ctx.harper.process.kill('SIGKILL');
 			} catch {
-				// possible that the process terminated but the exit event hasn't reached us yet
+				// possible that the process terminated but the exit event hasn't fired yet
 			}
 			resolve();
 		}, 200);
