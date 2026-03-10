@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn, ChildProcess } from 'node:child_process';
+import { createWriteStream, existsSync, rmSync, type WriteStream } from 'node:fs';
 import { join } from 'node:path';
-import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { mkdtemp, mkdir, rm } from 'node:fs/promises';
 import { type SuiteContext, type TestContext } from 'node:test';
@@ -88,30 +88,59 @@ function getHarperScript(): string {
  * Sanitizes a string for use as a filesystem directory name.
  */
 function sanitizeForFilesystem(name: string): string {
-	return name.replace(/[^a-zA-Z0-9_-]/g, '_').replace(/_+/g, '_').substring(0, 100);
+	return name
+		.replace(/[^a-zA-Z0-9_-]/g, '_')
+		.replace(/_+/g, '_')
+		.substring(0, 100);
+}
+
+interface RunHarperCommandOptions {
+	args: string[];
+	env: any;
+	completionMessage?: string;
+	/** When set, stdout and stderr are written to files in this directory */
+	logDir?: string;
 }
 
 /**
  * Runs a Harper CLI command and captures output.
  *
- * @param args - Additional arguments to pass to the command
+ * When `logDir` is provided, stdout and stderr are also written to files
+ * (`stdout.log` and `stderr.log`) in that directory.
+ *
  * @throws {AssertionError} If the command exits with a non-zero status code
  */
-function runHarperCommand(args: string[], env: any, completionMessage?: string): Promise<ChildProcess> {
+function runHarperCommand({ args, env, completionMessage, logDir }: RunHarperCommandOptions): Promise<ChildProcess> {
 	const harperScript = getHarperScript();
 	const proc = spawn('node', ['--trace-warnings', harperScript, ...args], {
 		env: { ...process.env, ...env },
 	});
+
+	let stdoutStream: WriteStream | undefined;
+	let stderrStream: WriteStream | undefined;
+	if (logDir) {
+		stdoutStream = createWriteStream(join(logDir, 'stdout.log'));
+		stderrStream = createWriteStream(join(logDir, 'stderr.log'));
+	}
+
 	return new Promise((resolve, reject) => {
 		let stdout = '';
 		let stderr = '';
 		let timer = setTimeout(() => {
-			reject(`Harper process timed out after ${DEFAULT_STARTUP_TIMEOUT_MS}ms`);
+			let errorMessage = `Harper process timed out after ${DEFAULT_STARTUP_TIMEOUT_MS}ms`;
+			if (stdout) {
+				errorMessage += `\n\nstdout:\n${stdout}`;
+			}
+			if (stderr) {
+				errorMessage += `\n\nstderr:\n${stderr}`;
+			}
+			reject(errorMessage);
 			proc.kill();
 		}, DEFAULT_STARTUP_TIMEOUT_MS);
 
 		proc.stdout?.on('data', (data: Buffer) => {
 			const dataString = data.toString();
+			stdoutStream?.write(data);
 			if (completionMessage && dataString.includes(completionMessage)) {
 				clearTimeout(timer);
 				resolve(proc);
@@ -120,8 +149,15 @@ function runHarperCommand(args: string[], env: any, completionMessage?: string):
 		});
 
 		proc.stderr?.on('data', (data: Buffer) => {
+			stderrStream?.write(data);
 			stderr += data.toString();
 		});
+
+		proc.on('exit', () => {
+			stdoutStream?.end();
+			stderrStream?.end();
+		});
+
 		proc.on('error', (error) => {
 			reject(error);
 		});
@@ -195,7 +231,7 @@ export async function startHarper(ctx: ContextWithHarper, options?: SetupHarperO
 	let logDir: string | undefined;
 	if (LOG_DIR) {
 		const suiteName = sanitizeForFilesystem(ctx.name || 'unknown');
-		logDir = join(LOG_DIR, `${suiteName}-${loopbackAddress}`);
+		logDir = join(LOG_DIR, `${suiteName}-${sanitizeForFilesystem(loopbackAddress)}`);
 		await mkdir(logDir, { recursive: true });
 	}
 
@@ -203,10 +239,19 @@ export async function startHarper(ctx: ContextWithHarper, options?: SetupHarperO
 	const config = { ...(options?.config || {}) };
 	if (logDir) {
 		config.logging = { ...config.logging, root: logDir };
+
+		// Clean up log directory on successful exit — only keep logs when tests fail
+		process.on('exit', (code) => {
+			if (code === 0) {
+				try {
+					rmSync(logDir, { recursive: true, force: true });
+				} catch {}
+			}
+		});
 	}
 
-	const harperProcess = await runHarperCommand(
-		[
+	const harperProcess = await runHarperCommand({
+		args: [
 			`--ROOTPATH=${installDir}`,
 			'--DEFAULTS_MODE=dev',
 			`--HDB_ADMIN_USERNAME=${DEFAULT_ADMIN_USERNAME}`,
@@ -219,9 +264,10 @@ export async function startHarper(ctx: ContextWithHarper, options?: SetupHarperO
 			'--LOGGING_LEVEL=debug',
 			'--HARPER_SET_CONFIG=' + JSON.stringify(config),
 		],
-		options?.env || {},
-		'successfully started'
-	);
+		env: options?.env || {},
+		completionMessage: 'successfully started',
+		logDir,
+	});
 
 	ctx.harper = {
 		installDir,
