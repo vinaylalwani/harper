@@ -1,61 +1,104 @@
+import type { ExtendedIterable } from '@harperfast/extended-iterable';
 import type { User } from '../security/user.ts';
 import type { OperationFunctionName } from '../server/serverHelpers/serverUtilities.ts';
-import { DatabaseTransaction } from './DatabaseTransaction.ts';
-import { IterableEventQueue } from './IterableEventQueue.ts';
+import type { DatabaseTransaction } from './DatabaseTransaction.ts';
+import type { IterableEventQueue } from './IterableEventQueue.ts';
 import type { Entry, RecordObject } from './RecordEncoder.ts';
-import { RequestTarget } from './RequestTarget.ts';
+import type { RequestTarget } from './RequestTarget.ts';
 
 export interface ResourceInterface<Record extends object = any>
 	extends Partial<RecordObject>, Pick<UpdatableRecord<Record>, 'addTo' | 'subtractFrom'> {
-	allowRead(user: User, target: RequestTarget, context: Context): boolean | Promise<boolean>;
-	get?(
-		target?: RequestTargetOrId
-	):
-		| (Record & Partial<RecordObject>)
-		| Promise<Record & Partial<RecordObject>>
-		| AsyncIterable<Record & Partial<RecordObject>>
-		| Promise<AsyncIterable<Record & Partial<RecordObject>>>;
-	search?(target: RequestTarget): AsyncIterable<Record & Partial<RecordObject>>;
-
 	allowCreate(user: User, record: Promise<Record & RecordObject>, context: Context): boolean | Promise<boolean>;
-	create?(
-		newRecord: Partial<Record & RecordObject>,
-		target: RequestTargetOrId
-	): void | (Record & Partial<RecordObject>) | Promise<Record & Partial<RecordObject>>;
-	post?(
-		target: RequestTargetOrId,
-		newRecord: Partial<Record & RecordObject>
-	): void | (Record & Partial<RecordObject>) | Promise<Record & Partial<RecordObject>>;
+	create(newRecord: Partial<Record & RecordObject>, target: RequestTargetOrId): Promise<Record & Partial<RecordObject>>;
+	post(target: RequestTargetOrId, newRecord: Partial<Record & RecordObject>): Promise<Record & Partial<RecordObject>>;
+
+	allowRead(user: User, target: RequestTarget, context: Context): boolean | Promise<boolean>;
+	get(
+		target?: RequestTargetOrId
+	): Promise<Record & Partial<RecordObject>> | ExtendedIterable<Record & Partial<RecordObject>>;
+	search(target: RequestTarget): ExtendedIterable<Record & Partial<RecordObject>>;
 
 	allowUpdate(user: User, record: Promise<Record & RecordObject>, context: Context): boolean | Promise<boolean>;
-	put?(
-		record: Record & RecordObject,
-		target?: RequestTargetOrId
-	): void | (Record & Partial<RecordObject>) | Promise<void | (Record & Partial<RecordObject>)>;
-	patch?(
-		record: Partial<Record & RecordObject>,
-		target: RequestTargetOrId
-	): void | (Record & Partial<RecordObject>) | Promise<void | (Record & Partial<RecordObject>)>;
-	update?(updates: Record & RecordObject, fullUpdate: true): ResourceInterface<Record & Partial<RecordObject>>;
-	update?(
+	update(updates: Record & RecordObject, fullUpdate: true): ResourceInterface<Record & Partial<RecordObject>>;
+	update(
 		updates: Partial<Record & RecordObject>,
 		fullUpdate?: boolean
 	):
 		| ResourceInterface<Record & Partial<RecordObject>>
 		| Promise<ResourceInterface<Record & Partial<RecordObject>> | UpdatableRecord<Record & Partial<RecordObject>>>;
+	put(record: Record & RecordObject, target?: RequestTargetOrId): Promise<void>;
+	patch(record: Partial<Record & RecordObject>, target: RequestTargetOrId): Promise<void>;
 
 	allowDelete(user: User, target: RequestTarget, context: Context): boolean | Promise<boolean>;
-	delete?(target: RequestTargetOrId): boolean | Promise<boolean>;
+	delete(target: RequestTargetOrId): Promise<boolean>;
 
 	invalidate(target: RequestTargetOrId): void | Promise<void>;
 
-	publish?(target: RequestTargetOrId, record: Record, options?: any): void;
-	subscribe?(request: SubscriptionRequest): AsyncIterable<Record> | Promise<AsyncIterable<Record>>;
+	subscribe(request: SubscriptionRequest): AsyncIterable<Record> | Promise<AsyncIterable<Record>>;
+	publish(target: RequestTargetOrId, record: Record, options?: any): void;
 
 	doesExist(): boolean;
 	wasLoadedFromSource(): boolean | void;
 
 	getCurrentUser(): User | undefined;
+}
+
+export interface ResourceStaticInterface<Record extends object = any> {
+	new (identifier?: Id, source?: ResourceStaticInterface<Record>): ResourceInterface<Record>;
+
+	loadAsInstance?: boolean;
+
+	getNewId(): Id;
+	coerceId(id: Id): Id;
+
+	create(idPrefix: Id, record: Record, context: Context): Promise<Id>;
+	create(record: Record, context: Context): Promise<Id>;
+	create(idPrefix: any, record: Record, context?: Context): Promise<Id>;
+	post(target: RequestTargetOrId, dataOrContext?: Record | Context, context?: Context): Promise<Record>;
+	post(target: RequestTargetOrId, dataOrContext?: Record[] | Context, context?: Context): Promise<Record>;
+	post(target: RequestTargetOrId, dataOrContext?: Record | Context, context?: Context): Promise<Record>;
+
+	get(
+		target: RequestTargetOrId,
+		dataOrContext?: Record | Context,
+		context?: Context
+	): Promise<Record> | ExtendedIterable<Record>;
+	search(target: RequestTargetOrId, dataOrContext?: Record | Context, context?: Context): ExtendedIterable<Record>;
+	query(target: RequestTargetOrId, dataOrContext?: Record | Context, context?: Context): ExtendedIterable<Record>;
+
+	update(target: RequestTargetOrId, dataOrContext?: Record | Context, context?: Context): Promise<Record>;
+	put(target: RequestTargetOrId, dataOrContext?: Record | Context, context?: Context): Promise<void>;
+	put(target: RequestTargetOrId, dataOrContext?: Record[] | Context, context?: Context): Promise<void>;
+	patch(target: RequestTargetOrId, dataOrContext?: Record | Context, context?: Context): Promise<void>;
+
+	delete(target: RequestTargetOrId, dataOrContext?: Record | Context, context?: Context): Promise<void>;
+
+	invalidate(target: RequestTargetOrId, dataOrContext?: Record | Context, context?: Context): Promise<Record> | Record;
+
+	connect(target: RequestTargetOrId, dataOrContext?: Record | Context, context?: Context): IterableEventQueue;
+	subscribe(target: RequestTargetOrId, dataOrContext?: Record | Context, context?: Context): AsyncIterable<Record>;
+	publish(target: RequestTargetOrId, dataOrContext?: Record | Context, context?: Context): void;
+
+	copy(
+		target: RequestTargetOrId,
+		dataOrContext?: Record | Context,
+		context?: Context
+	): Promise<Record> | Record | void | Promise<void>;
+	move(
+		target: RequestTargetOrId,
+		dataOrContext?: Record | Context,
+		context?: Context
+	): Promise<Record> | Record | void | Promise<void>;
+
+	parseQuery(search: string, query: RequestTarget): RequestTarget | Query | URLSearchParams | undefined;
+	parsePath(path: string, context: Context, query: URLSearchParams): string | { property: string; id: string };
+	isCollection: boolean;
+
+	getResource(
+		target: RequestTargetOrId,
+		request: Context | SourceContext,
+		resourceOptions: any
+	): Promise<ResourceInterface> | ResourceInterface;
 }
 
 export interface Session {

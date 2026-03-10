@@ -6,7 +6,7 @@ import { getWorkerIndex } from '../server/threads/manageThreads';
 import { HTTP_STATUS_CODES } from '../utility/errors/commonErrors.js';
 import { ClientError } from '../utility/errors/hdbError.js';
 import harperLogger from '../utility/logging/harper_logger.js';
-import { Attribute } from './Table.ts';
+import type { Attribute, TableInterface } from './TableInterface.ts';
 import { FileEntry } from '../components/EntryHandler.ts';
 
 const dataLoaderLogger = harperLogger.forComponent('dataLoader');
@@ -15,7 +15,7 @@ const dataLoaderLogger = harperLogger.forComponent('dataLoader');
 const DATA_LOADER_HASH_TABLE = 'hdb_dataloader_hash';
 
 /** Lazy-initialized cache for the hash tracking table */
-let _hashTrackingTable: ReturnType<typeof table>;
+let _hashTrackingTable: TableInterface;
 
 /**
  * Computes a deterministic hash of a record's content for tracking data file changes.
@@ -42,7 +42,7 @@ export function computeRecordHash(record: Record<string, any>): string {
  * Gets or creates the hash tracking table in the system database.
  * Lazy-initializes the table on first access.
  */
-function getHashTrackingTable(databasesRef: Databases) {
+function getHashTrackingTable(databasesRef: Databases): TableInterface {
 	// Always check databasesRef first (important for testing with mocks)
 	if (databasesRef.system && databasesRef.system[DATA_LOADER_HASH_TABLE]) {
 		return databasesRef.system[DATA_LOADER_HASH_TABLE];

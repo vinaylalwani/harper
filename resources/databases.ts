@@ -1,7 +1,8 @@
 import { EventEmitter } from 'node:events';
+import type { DBI, LMDBRootDatabase, RocksDatabaseEx, RocksRootDatabase } from './DatabaseInterface.ts';
 import { initSync, getHdbBasePath, get as envGet } from '../utility/environment/environmentManager.js';
 import { INTERNAL_DBIS_NAME } from '../utility/lmdb/terms.js';
-import { open, compareKeys, type Database, type RootDatabase } from 'lmdb';
+import { open, compareKeys } from 'lmdb';
 import { join, extname, basename } from 'path';
 import { existsSync, readdirSync, readFileSync, mkdirSync } from 'node:fs';
 import { unlink } from 'node:fs/promises';
@@ -31,6 +32,7 @@ import { totalmem } from 'node:os';
 import { RocksIndexStore } from './RocksIndexStore.ts';
 import { when } from '../utility/when.ts';
 import { isProcessRunning } from '../utility/processManagement/processManagement.js';
+import type { Attribute, TableInterface, TableStaticInterface } from './TableInterface.ts';
 
 function createOpenDBIObject(dupSort = false, isPrimary = false) {
 	return new OpenDBIObject(dupSort, isPrimary);
@@ -52,13 +54,8 @@ export const NON_REPLICATING_SYSTEM_TABLES = [
 	'hdb_info',
 ];
 
-export type Table = ReturnType<typeof makeTable> & {
-	indexingOperation?: any;
-	origin?: string;
-	schemaVersion?: number;
-};
 export interface Tables {
-	[tableName: string]: Table;
+	[tableName: string]: TableInterface & TableStaticInterface;
 	[DEFINED_TABLES]?: Set<string>;
 }
 export interface Databases {
@@ -66,35 +63,6 @@ export interface Databases {
 }
 
 // note: technically `Database` is either a `LMDBStore` or a `CachingStore`
-interface LMDBDatabase extends Database {
-	customIndex?: any;
-	isIndexing?: boolean;
-	indexNulls?: boolean;
-}
-interface LMDBRootDatabase extends RootDatabase {
-	auditStore?: LMDBRootDatabase;
-	databaseName?: string;
-	dbisDb?: LMDBDatabase;
-	isLegacy?: boolean;
-	needsDeletion?: boolean;
-	path?: string;
-	status?: 'open' | 'closed';
-}
-
-interface RocksDatabaseEx extends RocksDatabase {
-	customIndex?: any;
-	env: Record<string, any>;
-	isLegacy?: boolean;
-	isIndexing?: boolean;
-	indexNulls?: boolean;
-	getEntry?: (id: string | number | (string | number)[] | Buffer, options?: any) => { value: any };
-}
-
-interface RocksRootDatabase extends RocksDatabaseEx {
-	auditStore?: RocksDatabaseEx;
-	databaseName?: string;
-	dbisDb?: RocksDatabaseEx;
-}
 
 export type RootDatabaseKind = LMDBRootDatabase | RocksRootDatabase;
 
@@ -803,19 +771,19 @@ function openIndex(dbiKey: string, rootStore: RootDatabaseKind, attribute: any) 
 
 /**
  * This can be called to ensure that the specified table exists and if it does not exist, it should be created.
- * @param tableName
- * @param databaseName
- * @param customPath
- * @param expiration
- * @param eviction
- * @param scanInterval
- * @param attributes
- * @param audit
- * @param sealed
- * @param splitSegments
- * @param replicate
+ * @param tableDefinition.tableName
+ * @param tableDefinition.databaseName
+ * @param tableDefinition.customPath
+ * @param tableDefinition.expiration
+ * @param tableDefinition.eviction
+ * @param tableDefinition.scanInterval
+ * @param tableDefinition.attributes
+ * @param tableDefinition.audit
+ * @param tableDefinition.sealed
+ * @param tableDefinition.splitSegments
+ * @param tableDefinition.replicate
  */
-export function table<TableResourceType>(tableDefinition: TableDefinition): TableResourceType {
+export function table<TableResourceType = TableInterface>(tableDefinition: TableDefinition): TableResourceType {
 	let {
 		table: tableName,
 		database: databaseName,
@@ -1129,7 +1097,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 }
 const MAX_OUTSTANDING_INDEXING = 1000;
 const MIN_OUTSTANDING_INDEXING = 10;
-async function runIndexing(Table, attributes, indicesToRemove) {
+async function runIndexing(Table: TableStaticInterface, attributes: Attribute[], indicesToRemove: DBI[]) {
 	try {
 		logger.info(`Indexing ${Table.tableName} attributes`, attributes);
 		await signalling.signalSchemaChange(

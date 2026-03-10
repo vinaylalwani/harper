@@ -5,12 +5,10 @@
  */
 
 import { CONFIG_PARAMS, OPERATIONS_ENUM, SYSTEM_TABLE_NAMES, SYSTEM_SCHEMA_NAME } from '../utility/hdbTerms.ts';
-import { type Database } from 'lmdb';
 import { getIndexedValues } from '../utility/lmdb/commonUtility.js';
 import lodash from 'lodash';
 import { ExtendedIterable, SKIP } from '@harperfast/extended-iterable';
 import type {
-	ResourceInterface,
 	SubscriptionRequest,
 	Id,
 	Context,
@@ -19,6 +17,14 @@ import type {
 	SubSelect,
 	RequestTargetOrId,
 } from './ResourceInterface.ts';
+import type {
+	TableInterface,
+	TableStaticInterface,
+	Attribute,
+	ExpirationOptions,
+	IntermediateSourceOptions,
+	ExpirationParam,
+} from './TableInterface.ts';
 import type { User } from '../security/user.ts';
 import lmdbProcessRows from '../dataLayer/harperBridge/lmdbBridge/lmdbUtility/lmdbProcessRows.js';
 import { Resource, transformForSelect } from './Resource.ts';
@@ -69,21 +75,6 @@ import { contentTypes } from '../server/serverHelpers/contentTypes';
 const { sortBy } = lodash;
 const { validateAttribute } = lmdbProcessRows;
 
-export type Attribute = {
-	name: string;
-	type: 'ID' | 'Int' | 'Float' | 'Long' | 'String' | 'Boolean' | 'Date' | 'Bytes' | 'Any' | 'BigInt' | 'Blob' | string;
-	assignCreatedTime?: boolean;
-	assignUpdatedTime?: boolean;
-	nullable?: boolean;
-	expiresAt?: boolean;
-	isPrimaryKey?: boolean;
-	indexed?: unknown;
-	relationship?: unknown;
-	computed?: unknown;
-	properties?: Array<Attribute>;
-	elements?: Attribute;
-};
-
 type MaybePromise<T> = T | Promise<T>;
 
 const NULL_WITH_TIMESTAMP = new Uint8Array(9);
@@ -105,23 +96,6 @@ const FULL_PERMISSIONS = {
 	delete: true,
 	isSuperUser: true,
 };
-export interface Table {
-	primaryStore: Database;
-	auditStore: Database;
-	indices: {};
-	databasePath: string;
-	tableName: string;
-	databaseName: string;
-	attributes: Attribute[];
-	primaryKey: string;
-	splitSegments?: boolean;
-	replicate?: boolean;
-	subscriptions: Map<any, Function[]>;
-	expirationMS: number;
-	indexingOperations?: Promise<void>;
-	source?: new () => ResourceInterface;
-	Transaction: ReturnType<typeof makeTable>;
-}
 type ResidencyDefinition = number | string[] | void;
 
 /**
@@ -129,7 +103,7 @@ type ResidencyDefinition = number | string[] | void;
  * Instances of the returned class are Resource instances, intended to provide a consistent view or transaction of the table
  * @param options
  */
-export function makeTable(options) {
+export function makeTable(options): TableStaticInterface {
 	const {
 		primaryKey,
 		indices,
@@ -213,7 +187,7 @@ export function makeTable(options) {
 			return this.addTo(property, -value);
 		}
 	}
-	class TableResource<Record extends object = any> extends Resource<Record> {
+	class TableResource<Record extends object = any> extends Resource<Record> implements TableInterface<Record> {
 		#record: any; // the stored/frozen record from the database and stored in the cache (should not be modified directly)
 		#changes: any; // the changes to the record that have been made (should not be modified directly)
 		#version?: number; // version of the record
@@ -256,7 +230,10 @@ export function makeTable(options) {
 		 * @param options
 		 * @returns
 		 */
-		static sourcedFrom(source, options) {
+		static sourcedFrom<Record extends object = any>(
+			source: TableInterface<Record> & TableStaticInterface<Record>,
+			options?: ExpirationOptions & IntermediateSourceOptions
+		) {
 			// define a source for retrieving invalidated entries for caching purposes
 			if (options) {
 				this.sourceOptions = options;
@@ -623,7 +600,7 @@ export function makeTable(options) {
 				});
 			}
 		}
-		static getNewId(): any {
+		static getNewId(): Id {
 			const type = primaryKeyAttribute?.type;
 			// the default Resource behavior is to return a GUID, but for a table we can return incrementing numeric keys if the type is (or can be) numeric
 			if (type === 'String' || type === 'ID') return super.getNewId();
@@ -797,7 +774,7 @@ export function makeTable(options) {
 		 * @param expirationTime Time in seconds until records expire (are stale)
 		 * @param evictionTime Time in seconds until records are evicted (removed)
 		 */
-		static setTTLExpiration(expiration: number | { expiration: number; eviction?: number; scanInterval?: number }) {
+		static setTTLExpiration(expiration: ExpirationParam) {
 			// we set up a timer to remove expired entries. we only want the timer/reaper to run in one thread,
 			// so we use the first one
 			if (typeof expiration === 'number') {
@@ -930,10 +907,15 @@ export function makeTable(options) {
 		 * This retrieves the data of this resource.
 		 * @param target - If included, is an identifier/query that specifies the requested target to retrieve and query
 		 */
-		get(target: RequestTargetOrId): Record | AsyncIterable<Record> | Promise<Record | AsyncIterable<Record>>;
+		get(target: RequestTargetOrId): ExtendedIterable<Record> | Promise<Record>;
 		get(
 			target?: RequestTargetOrId
-		): TableResource<Record> | undefined | Record | AsyncIterable<Record> | Promise<Record | AsyncIterable<Record>> {
+		):
+			| TableResource<Record>
+			| undefined
+			| Record
+			| ExtendedIterable<Record>
+			| Promise<Record | ExtendedIterable<Record>> {
 			const constructor: Resource = this.constructor;
 			if (typeof target === 'string' && constructor.loadAsInstance !== false) return this.getProperty(target);
 			if (isSearchTarget(target)) {

@@ -22,11 +22,14 @@ exports.RequestTarget = undefined;
 exports.RequestTargetOrId = undefined;
 exports.Resource = undefined;
 exports.ResourceInterface = undefined;
+exports.ResourceStaticInterface = undefined;
 exports.Scope = undefined;
 exports.Session = undefined;
 exports.SourceContext = undefined;
 exports.SubscriptionRequest = undefined;
 exports.Table = undefined;
+exports.TableInterface = undefined;
+exports.TableStaticInterface = undefined;
 exports.User = undefined;
 
 // these are all overwritten by the globals, but need to be here so that Node's static

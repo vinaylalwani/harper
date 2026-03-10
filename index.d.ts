@@ -13,14 +13,19 @@ export type {
 	SubscriptionRequest,
 	RequestTargetOrId,
 } from './resources/ResourceInterface.ts';
-export { ResourceInterface } from './resources/ResourceInterface.ts';
+export type { ResourceInterface, ResourceStaticInterface } from './resources/ResourceInterface.ts';
+export type {
+	TableInterface,
+	TableInterface as Table,
+	TableStaticInterface,
+	Attribute,
+} from './resources/TableInterface.ts';
 export type { User } from './security/user.ts';
 export type { RecordObject } from './resources/RecordEncoder.ts';
 export type { IterableEventQueue } from './resources/IterableEventQueue.ts';
 export { RequestTarget } from './resources/RequestTarget.ts';
 export { server } from './server/Server';
-export { tables, databases, type Table } from './resources/databases.ts';
-export type { Attribute } from './resources/Table.ts';
+export { tables, databases } from './resources/databases.ts';
 
 export { Scope } from './components/Scope.ts';
 export type { FilesOption, FilesOptionObject } from './components/deriveGlobOptions.ts';

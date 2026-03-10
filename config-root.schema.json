@@ -288,7 +288,7 @@
 					"type": "boolean",
 					"description": "Attempt fail-over to different node when unreachable. Default: true"
 				},
-				"shard": { "type": "integer", "description": "Shard id for this instance." },
+				"shard": { "type": ["integer", "null"], "description": "Shard id for this instance." },
 				"logging": { "$ref": "#/definitions/loggerConfig" }
 			}
 		},

@@ -1,7 +1,8 @@
+import type { TableInterface } from '../TableInterface.ts';
 import { parentPort, threadId } from 'worker_threads';
 import { onMessageByType } from '../../server/threads/manageThreads.js';
 import { getDatabases, table } from '../databases.ts';
-import type { Databases, Table, Tables } from '../databases.ts';
+import type { Databases, Tables } from '../databases.ts';
 import harperLogger from '../../utility/logging/harper_logger.js';
 import { stat } from 'node:fs/promises';
 const { getLogFilePath, forComponent } = harperLogger;
@@ -246,7 +247,7 @@ function getHostNodeId(hostname: string) {
 	return nodeId;
 }
 
-function storeMetric(table: Table, metric: Metric) {
+function storeMetric(table: TableInterface, metric: Metric) {
 	const nodeId = getHostNodeId(server.hostname);
 	const metricValue = {
 		id: [getNextMonotonicTime(), nodeId],
@@ -297,7 +298,7 @@ export function diffResourceUsage(lastResourceUsage: ResourceUsage, resourceUsag
 
 /** storeTableSizeMetrics returns the cumulative size of the tables
  */
-function storeTableSizeMetrics(analyticsTable: Table, dbName: string, tables: Tables): number {
+function storeTableSizeMetrics(analyticsTable: TableInterface, dbName: string, tables: Tables): number {
 	let dbUsedSize = 0;
 	for (const [tableName, table] of Object.entries(tables)) {
 		const fullTableName = `${dbName}.${tableName}`;
@@ -315,7 +316,7 @@ function storeTableSizeMetrics(analyticsTable: Table, dbName: string, tables: Ta
 	return dbUsedSize;
 }
 
-function storeDBSizeMetrics(analyticsTable: Table, databases: Databases) {
+function storeDBSizeMetrics(analyticsTable: TableInterface, databases: Databases) {
 	for (const [db, tables] of Object.entries(databases)) {
 		try {
 			const [firstTable] = Object.values(tables);
@@ -360,7 +361,7 @@ function storeDBSizeMetrics(analyticsTable: Table, databases: Databases) {
 	}
 }
 
-function storeVolumeMetrics(analyticsTable: Table, databases: Databases) {
+function storeVolumeMetrics(analyticsTable: TableInterface, databases: Databases) {
 	for (const [db, tables] of Object.entries(databases)) {
 		try {
 			const [firstTable] = Object.values(tables);
@@ -594,7 +595,7 @@ async function cleanup(AnalyticsTable, expiration) {
 const RAW_EXPIRATION = 3600000;
 const AGGREGATE_EXPIRATION = 31536000000; // one year
 
-let RawAnalyticsTable: Table;
+let RawAnalyticsTable: TableInterface;
 function getRawAnalyticsTable() {
 	return (
 		RawAnalyticsTable ||
@@ -619,7 +620,7 @@ function getRawAnalyticsTable() {
 	);
 }
 
-let AnalyticsTable: Table;
+let AnalyticsTable: TableInterface;
 function getAnalyticsTable() {
 	return (
 		AnalyticsTable ||

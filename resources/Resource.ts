@@ -1,6 +1,7 @@
+import type { ExtendedIterable } from '@harperfast/extended-iterable';
 import type { User } from '../security/user.ts';
 import type { RecordObject } from './RecordEncoder.js';
-import {
+import type {
 	ResourceInterface,
 	SubscriptionRequest,
 	Id,
@@ -314,10 +315,10 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 	static coerceId(id: string): number | string {
 		return id;
 	}
-	static parseQuery(search, query) {
+	static parseQuery(search: string, query: RequestTarget): RequestTarget | Query | URLSearchParams | undefined {
 		return parseQuery(search, query);
 	}
-	static parsePath(path, context, query) {
+	static parsePath(path: string, context: Context, query: URLSearchParams) {
 		const dotIndex = path.indexOf('.');
 		if (dotIndex > -1) {
 			// handle paths of the form /path/id.property
@@ -436,7 +437,7 @@ export class Resource<Record extends object = any> implements ResourceInterface<
 		| AsyncIterable<Record & Partial<RecordObject>>
 		| Promise<AsyncIterable<Record & Partial<RecordObject>>>;
 
-	search?(target: RequestTargetOrId): AsyncIterable<Record & Partial<RecordObject>>;
+	search?(target: RequestTargetOrId): ExtendedIterable<Record & Partial<RecordObject>>;
 
 	create?(
 		newRecord: Partial<Record & RecordObject>,
