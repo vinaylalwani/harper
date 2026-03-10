@@ -56,14 +56,9 @@ async function harper() {
 		service = process.argv[2].toLowerCase();
 	}
 
-	const cliApiOp = cliOperations.buildRequest();
-	if (cliApiOp.operation) service = SERVICE_ACTIONS_ENUM.OPERATION;
-
 	switch (service) {
-		case SERVICE_ACTIONS_ENUM.OPERATION:
-			logger.trace('calling cli operations with:', cliApiOp);
-			await cliOperations.cliOperations(cliApiOp);
-			return;
+		case SERVICE_ACTIONS_ENUM.HELP:
+			return HELP;
 		case SERVICE_ACTIONS_ENUM.START:
 			return require('./run.js').launch();
 		case SERVICE_ACTIONS_ENUM.INSTALL:
@@ -133,10 +128,10 @@ async function harper() {
 		case undefined: // run harperdb in the foreground in standard mode
 			return require('./run.js').main();
 		default:
-			console.warn(`The "${service}" command is not understood.`);
-		// fall through
-		case SERVICE_ACTIONS_ENUM.HELP:
-			return HELP;
+			const cliApiOp = cliOperations.buildRequest();
+			logger.trace('calling cli operations with:', cliApiOp);
+			await cliOperations.cliOperations(cliApiOp);
+			return
 	}
 }
 exports.harper = harper;

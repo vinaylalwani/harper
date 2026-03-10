@@ -12,60 +12,6 @@ const { encode } = require('cbor-x');
 const { getHdbPid } = require('../utility/processManagement/processManagement.js');
 const { initConfig } = require('../config/configUtils.js');
 
-const SUPPORTED_OPS = [
-	'describe_table',
-	'describe_all',
-	'describe_database',
-	'list_users',
-	'list_roles',
-	'drop_role',
-	'add_user',
-	'alter_user',
-	'drop_user',
-	'restart_service',
-	'restart',
-	'create_database',
-	'drop_database',
-	'create_table',
-	'drop_table',
-	'create_attribute',
-	'drop_attribute',
-	'search_by_id',
-	'insert',
-	'update',
-	'upsert',
-	'delete',
-	'search_by_value',
-	'csv_file_load',
-	'csv_url_load',
-	'add_component',
-	'deploy_component',
-	'package_component',
-	'drop_component',
-	'get_components',
-	'get_component_file',
-	'set_component_file',
-	'get_job',
-	'search_jobs_by_start_date',
-	'read_log',
-	'read_transaction_log',
-	'read_audit_log',
-	'delete_transaction_logs_before',
-	'purge_stream',
-	'delete_records_before',
-	'install_node_modules',
-	'set_configuration',
-	'get_configuration',
-	'create_authentication_tokens',
-	'refresh_operation_token',
-	'system_information',
-	'sql',
-	'get_status',
-	'set_status',
-	'clear_status',
-	'get_usage_licenses',
-];
-
 const OP_ALIASES = { deploy: 'deploy_component', package: 'package_component' };
 
 module.exports = { cliOperations, buildRequest };
@@ -88,9 +34,7 @@ const PREPARE_OPERATION = {
 function buildRequest() {
 	const req = {};
 	for (const arg of process.argv.slice(2)) {
-		if (SUPPORTED_OPS.includes(arg)) {
-			req.operation = arg;
-		} else if (OP_ALIASES.hasOwnProperty(arg)) {
+		if (OP_ALIASES.hasOwnProperty(arg)) {
 			req.operation = OP_ALIASES[arg];
 		} else if (arg.includes('=')) {
 			let [first, ...rest] = arg.split('=');
@@ -103,6 +47,9 @@ function buildRequest() {
 			}
 
 			req[first] = rest;
+		} else {
+			// operation should only be in the first arg
+			req.operation ??= arg;
 		}
 	}
 
