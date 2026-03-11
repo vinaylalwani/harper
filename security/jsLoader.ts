@@ -3,7 +3,6 @@ import { contextStorage, transaction } from '../resources/transaction.ts';
 import { RequestTarget } from '../resources/RequestTarget.ts';
 import { tables, databases } from '../resources/databases.ts';
 import { readFile } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
 import { dirname, isAbsolute } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { SourceTextModule, SyntheticModule, createContext, runInContext } from 'node:vm';
@@ -15,7 +14,7 @@ import * as child_process from 'node:child_process';
 import { CONFIG_PARAMS } from '../utility/hdbTerms.ts';
 import { contentTypes } from '../server/serverHelpers/contentTypes.ts';
 import type { CompartmentOptions } from 'ses';
-import { mkdirSync, readFileSync, writeFileSync, unlinkSync, existsSync, openSync, closeSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, unlinkSync, openSync, closeSync } from 'node:fs';
 import { join } from 'node:path';
 import { EventEmitter } from 'node:events';
 
@@ -492,7 +491,7 @@ class ExistingProcessWrapper extends EventEmitter {
 			try {
 				// Signal 0 checks if process exists without actually killing it
 				process.kill(pid, 0);
-			} catch (err) {
+			} catch {
 				// Process no longer exists
 				clearInterval(this.checkInterval);
 				this.emit('exit', null, null);
@@ -505,7 +504,7 @@ class ExistingProcessWrapper extends EventEmitter {
 		try {
 			process.kill(this.pid, signal);
 			return true;
-		} catch (err) {
+		} catch {
 			return false;
 		}
 	}
@@ -525,7 +524,7 @@ function isProcessRunning(pid: number): boolean {
 		// Signal 0 checks existence without killing
 		process.kill(pid, 0);
 		return true;
-	} catch (err) {
+	} catch {
 		return false;
 	}
 }
@@ -554,11 +553,11 @@ function acquirePidFileLock(pidFilePath: string, maxRetries = 100, retryDelay = 
 						// Stale PID file, try to remove it
 						try {
 							unlinkSync(pidFilePath);
-						} catch (unlinkErr) {
+						} catch {
 							// Another thread may have removed it, retry
 						}
 					}
-				} catch (readErr) {
+				} catch {
 					// Couldn't read file, another thread might be writing, retry
 				}
 
@@ -621,7 +620,7 @@ function createSpawn(spawnFunction: (...args: any) => child_process.ChildProcess
 		childProcess.on('exit', () => {
 			try {
 				unlinkSync(pidFilePath);
-			} catch (err) {
+			} catch {
 				// File may already be removed
 			}
 		});
