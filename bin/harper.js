@@ -131,7 +131,7 @@ async function harper() {
 			const cliApiOp = cliOperations.buildRequest();
 			logger.trace('calling cli operations with:', cliApiOp);
 			await cliOperations.cliOperations(cliApiOp);
-			return
+			return;
 	}
 }
 exports.harper = harper;
