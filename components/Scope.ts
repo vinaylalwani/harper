@@ -7,21 +7,13 @@ import type { Resources } from '../resources/Resources.ts';
 import type { FileAndURLPathConfig } from './Component.ts';
 import { FilesOption } from './deriveGlobOptions.ts';
 import { requestRestart } from './requestRestart.ts';
-import { scopedImport } from '../security/jsLoader.ts';
-import * as env from '../utility/environment/environmentManager.js';
-import { CONFIG_PARAMS } from '../utility/hdbTerms';
+import { ApplicationScope } from './ApplicationScope.ts';
 
 export class MissingDefaultFilesOptionError extends Error {
 	constructor() {
 		super('No default files option exists. Ensure `files` is specified in config.yaml');
 		this.name = 'MissingDefaultFilesOptionError';
 	}
-}
-
-export interface ApplicationContainment {
-	mode?: 'none' | 'vm' | 'compartment'; // option to set this from the scope
-	dependencyContainment?: boolean; // option to set this from the scope
-	verifyPath?: string;
 }
 
 /**
@@ -39,13 +31,13 @@ export class Scope extends EventEmitter {
 	#entryHandlers: EntryHandler[];
 	#logger: any;
 	#pendingInitialLoads: Set<Promise<void>>;
+	applicationScope: ApplicationScope;
 
 	options: OptionsWatcher;
 	resources: Resources;
 	server: Server;
 	ready: Promise<any[]>;
-	applicationContainment?: ApplicationContainment;
-	constructor(name: string, directory: string, configFilePath: string, resources: Resources, server: Server) {
+	constructor(name: string, directory: string, configFilePath: string, applicationScope: ApplicationScope) {
 		super();
 
 		this.#name = name;
@@ -53,8 +45,9 @@ export class Scope extends EventEmitter {
 		this.#configFilePath = configFilePath;
 		this.#logger = loggerWithTag(this.#name);
 
-		this.resources = resources;
-		this.server = server;
+		this.applicationScope = applicationScope;
+		this.resources = applicationScope.resources;
+		this.server = applicationScope.server;
 
 		this.#entryHandlers = [];
 		this.#pendingInitialLoads = new Set();
@@ -66,12 +59,6 @@ export class Scope extends EventEmitter {
 			.on('error', this.#handleError.bind(this))
 			.on('change', this.#optionsWatcherChangeListener.bind(this)())
 			.on('ready', this.#handleOptionsWatcherReady.bind(this));
-
-		this.applicationContainment = {
-			mode: env.get(CONFIG_PARAMS.APPLICATIONS_CONTAINMENT) ?? 'vm',
-			dependencyContainment: Boolean(env.get(CONFIG_PARAMS.APPLICATIONS_DEPENDENCYCONTAINMENT)),
-			verifyPath: directory,
-		};
 	}
 
 	get logger(): any {
@@ -307,15 +294,11 @@ export class Scope extends EventEmitter {
 	}
 
 	/**
-	 * The compartment that is used for this scope and any imports that it makes
-	 */
-	compartment?: Promise<any>;
-	/**
 	 * Import a file into the scope's sandbox.
 	 * @param filePath - The path of the file to import.
 	 * @returns A promise that resolves with the imported module or value.
 	 */
 	async import(filePath: string): Promise<unknown> {
-		return scopedImport(filePath, this);
+		return this.applicationScope.import(filePath);
 	}
 }

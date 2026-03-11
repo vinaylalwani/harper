@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, isAbsolute } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { SourceTextModule, SyntheticModule, createContext, runInContext } from 'node:vm';
-import { Scope } from '../components/Scope.ts';
+import { ApplicationScope } from '../components/ApplicationScope.ts';
 import logger from '../utility/logging/harper_logger.js';
 import { createRequire } from 'node:module';
 import * as env from '../utility/environment/environmentManager';
@@ -25,7 +25,7 @@ let lockedDown = false;
  * @param moduleUrl
  * @param scope
  */
-export async function scopedImport(filePath: string | URL, scope?: Scope) {
+export async function scopedImport(filePath: string | URL, scope?: ApplicationScope) {
 	if (!lockedDown && APPLICATIONS_LOCKDOWN && APPLICATIONS_LOCKDOWN !== 'none') {
 		lockedDown = true;
 		if (APPLICATIONS_LOCKDOWN === 'ses') {
@@ -76,7 +76,7 @@ export async function scopedImport(filePath: string | URL, scope?: Scope) {
 	}
 	const moduleUrl = (filePath instanceof URL ? filePath : pathToFileURL(filePath)).toString();
 	try {
-		const containmentMode = scope?.applicationContainment.mode;
+		const containmentMode = scope?.mode;
 		if (scope && containmentMode !== 'none') {
 			if (containmentMode === 'compartment') {
 				// use SES Compartments
@@ -110,7 +110,7 @@ export async function scopedImport(filePath: string | URL, scope?: Scope) {
 /**
  * Load a module using Node's vm.Module API with (not really secure) sandboxing
  */
-async function loadModuleWithVM(moduleUrl: string, scope: Scope) {
+async function loadModuleWithVM(moduleUrl: string, scope: ApplicationScope) {
 	const moduleCache = new Map<string, Promise<SourceTextModule | SyntheticModule>>();
 
 	// Create a secure context with limited globals
@@ -167,7 +167,7 @@ async function loadModuleWithVM(moduleUrl: string, scope: Scope) {
 			filename: url,
 			async importModuleDynamically(specifier: string, script) {
 				const resolvedUrl = resolveModule(specifier, script.sourceURL);
-				const useContainment = specifier.startsWith('.') || scope.applicationContainment.dependencyContainment;
+				const useContainment = specifier.startsWith('.') || scope.dependencyContainment;
 				const dynamicModule = await loadModuleWithCache(resolvedUrl, useContainment);
 				return dynamicModule;
 			},
@@ -213,7 +213,7 @@ async function loadModuleWithVM(moduleUrl: string, scope: Scope) {
 			return moduleCache.get(resolvedUrl)!;
 		}
 
-		const useContainment = specifier.startsWith('.') || scope.applicationContainment.dependencyContainment;
+		const useContainment = specifier.startsWith('.') || scope.dependencyContainment;
 		// Load the module
 		return await loadModuleWithCache(resolvedUrl, useContainment);
 	}
@@ -246,7 +246,7 @@ async function loadModuleWithVM(moduleUrl: string, scope: Scope) {
 				{ identifier: url, context }
 			);
 		} else if (usePrivateGlobal && url.startsWith('file://')) {
-			checkAllowedModulePath(url, scope.applicationContainment.verifyPath);
+			checkAllowedModulePath(url, scope.verifyPath);
 			// Load source text from file
 			const source = await readFile(new URL(url), { encoding: 'utf-8' });
 
@@ -286,7 +286,7 @@ async function loadModuleWithVM(moduleUrl: string, scope: Scope) {
 				}
 			}
 		} else {
-			checkAllowedModulePath(url, scope.applicationContainment.verifyPath);
+			checkAllowedModulePath(url, scope.verifyPath);
 			// For Node.js built-in modules (node:) and npm packages, use dynamic import
 			const importedModule = await import(url);
 			const exportNames = Object.keys(importedModule);
@@ -318,7 +318,7 @@ async function loadModuleWithVM(moduleUrl: string, scope: Scope) {
 	return entryModule.namespace;
 }
 
-async function getCompartment(scope: Scope, globals) {
+async function getCompartment(scope: ApplicationScope, globals) {
 	const { StaticModuleRecord } = await import('@endo/static-module-record');
 	require('ses');
 	const compartment: CompartmentOptions = new (Compartment as typeof CompartmentOptions)(
@@ -351,7 +351,7 @@ async function getCompartment(scope: Scope, globals) {
 					const moduleText = await readFile(new URL(moduleSpecifier), { encoding: 'utf-8' });
 					return new StaticModuleRecord(moduleText, moduleSpecifier);
 				} else {
-					checkAllowedModulePath(moduleSpecifier, scope.applicationContainment.verifyPath);
+					checkAllowedModulePath(moduleSpecifier, scope.verifyPath);
 					const moduleExports = await import(moduleSpecifier);
 					return {
 						imports: [],
@@ -398,7 +398,7 @@ function getDefaultJSGlobalNames() {
 /**
  * Get the set of global variables that should be available to modules that run in scoped compartments/contexts.
  */
-function getGlobalObject(scope: Scope) {
+function getGlobalObject(scope: ApplicationScope) {
 	const appGlobal = {};
 	// create the new global object, assigning all the global variables from this global
 	// except those that will be natural intrinsics of the new VM
@@ -411,7 +411,7 @@ function getGlobalObject(scope: Scope) {
 		server: scope.server ?? server,
 		logger: scope.logger ?? logger,
 		resources: scope.resources,
-		config: scope.options.getRoot() ?? {},
+		config: scope.config ?? {},
 		fetch: APPLICATIONS_LOCKDOWN === 'ses' ? secureOnlyFetch : fetch,
 		console,
 		global: appGlobal,
@@ -419,12 +419,12 @@ function getGlobalObject(scope: Scope) {
 	});
 	return appGlobal;
 }
-function getHarperExports(scope: Scope) {
+function getHarperExports(scope: ApplicationScope) {
 	return {
 		server: scope.server ?? server,
 		logger: scope.logger ?? logger,
 		resources: scope.resources,
-		config: scope.options.getRoot() ?? {},
+		config: scope.config ?? {},
 		Resource,
 		tables,
 		databases,

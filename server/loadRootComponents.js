@@ -26,7 +26,7 @@ async function loadRootComponents(isWorkerThread = false) {
 	await loadCertificates();
 	// the Harper root component
 	await loadComponent(dirname(configUtils.getConfigFilePath()), resources, 'hdb', {
-		isRoot: true,
+		applicationScope: null,
 		providedLoadedComponents: loadedComponents,
 	});
 	if (!process.env.HARPER_SAFE_MODE) {
