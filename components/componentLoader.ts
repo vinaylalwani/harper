@@ -30,7 +30,7 @@ import { getConfigObj, resolvePath } from '../config/configUtils.js';
 import { createReuseportFd } from '../server/serverHelpers/Request.ts';
 import { ErrorResource } from '../resources/ErrorResource.ts';
 import { Scope } from './Scope.ts';
-import { ApplicationScope, type ApplicationContainment } from './ApplicationScope.ts';
+import { ApplicationScope } from './ApplicationScope.ts';
 import { ComponentV1, processResourceExtensionComponent } from './ComponentV1.ts';
 import * as httpComponent from '../server/http.ts';
 import { Status } from '../server/status/index.ts';
