@@ -250,7 +250,7 @@ export async function loadComponent(
 		isRoot,
 		autoReload,
 	} = options;
-	applicationScope.verifyPath = componentDirectory;
+	applicationScope.verifyPath ??= componentDirectory;
 	if (providedLoadedComponents) loadedComponents = providedLoadedComponents;
 	try {
 		let config;
