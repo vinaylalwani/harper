@@ -3,7 +3,7 @@ import { type Server } from '../server/Server.ts';
 import { loggerWithTag } from '../utility/logging/harper_logger.js';
 import { scopedImport } from '../security/jsLoader.ts';
 import * as env from '../utility/environment/environmentManager.js';
-import { CONFIG_PARAMS } from '../utility/hdbTerms';
+import { CONFIG_PARAMS } from '../utility/hdbTerms.ts';
 
 export class MissingDefaultFilesOptionError extends Error {
 	constructor() {
