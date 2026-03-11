@@ -2,9 +2,12 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const { loadComponent, loadedPaths } = require('#src/components/componentLoader');
 const { PACKAGE_ROOT } = require('#js/utility/packageUtils');
+const fs = require('node:fs');
+const env = require('#src/utility/environment/environmentManager');
 
 describe('Global Variable Isolation in testJSWithDeps', function () {
 	let mockResources;
+	let pidsDir;
 
 	beforeEach(function () {
 		// Create mock resources
@@ -16,12 +19,24 @@ describe('Global Variable Isolation in testJSWithDeps', function () {
 		// Set a global variable in the parent context
 		global.globalVariableFromParent = 'parent-value';
 		loadedPaths.clear();
+
+		// Clean up pids directory
+		const basePath = env.getHdbBasePath();
+		pidsDir = path.join(basePath, 'pids');
+		if (fs.existsSync(pidsDir)) {
+			fs.rmSync(pidsDir, { recursive: true, force: true });
+		}
 	});
 
 	afterEach(function () {
 		// Clean up global variables
 		delete global.globalVariableFromParent;
 		delete global.globalVariableFromComponent;
+
+		// Clean up pids directory
+		if (fs.existsSync(pidsDir)) {
+			fs.rmSync(pidsDir, { recursive: true, force: true });
+		}
 	});
 	const componentDir = path.join(__dirname, 'fixtures', 'testJSWithDeps');
 
@@ -36,7 +51,7 @@ describe('Global Variable Isolation in testJSWithDeps', function () {
 
 		// The component's resources.js file asserts that globalVariableFromParent is undefined
 		// If the component loaded without throwing, it means global variables are properly isolated
-
+		assert.equal(mockResources.get('/'), undefined); // this will contain an error if it failed to load
 		// Verify the component's global variable didn't leak into our context
 		assert.equal(
 			typeof global.globalVariableFromComponent,
@@ -101,5 +116,69 @@ describe('Global Variable Isolation in testJSWithDeps', function () {
 		assert.equal(typeof mockResources.get('/TestComponent').get, 'function');
 		// assert(typeof mockResources.get('/my-component').get === 'function'); // this syntax doesn't seem to work
 		// with SES Compartments
+	});
+
+	it('should enforce process spawning restrictions', async function () {
+		await loadComponent(componentDir, mockResources, 'test-origin', {
+			applicationContainment: {
+				mode: 'vm',
+				dependencyContainment: false,
+				verifyPath: PACKAGE_ROOT,
+			},
+		});
+
+		const processSpawnTest = mockResources.get('/processSpawnTest');
+
+		// Test that disallowed commands throw
+		processSpawnTest.testSpawnDisallowed();
+
+		// Test that spawn without name throws
+		processSpawnTest.testSpawnWithoutName();
+	});
+
+	it('should allow fork with allowed commands', async function () {
+		await loadComponent(componentDir, mockResources, 'test-origin', {
+			applicationContainment: {
+				mode: 'vm',
+				dependencyContainment: false,
+				verifyPath: PACKAGE_ROOT,
+			},
+		});
+
+		const processSpawnTest = mockResources.get('/processSpawnTest');
+
+		// Test that fork works
+		const child = processSpawnTest.testFork();
+		assert(child.pid, 'Should return a child process with PID');
+
+		// Clean up
+		child.kill();
+	});
+
+	it('should reuse existing processes with same name', async function () {
+		this.timeout(10000); // Increase timeout for process spawning
+
+		await loadComponent(componentDir, mockResources, 'test-origin', {
+			applicationContainment: {
+				mode: 'vm',
+				dependencyContainment: false,
+				verifyPath: PACKAGE_ROOT,
+			},
+		});
+
+		const processSpawnTest = mockResources.get('/processSpawnTest');
+		const childProcessPath = path.join(componentDir, 'test-child-process.js');
+
+		// Test process reuse
+		const { child1, child2 } = processSpawnTest.testProcessReuse(childProcessPath);
+
+		// Verify both have same PID
+		assert.equal(child1.pid, child2.pid, 'Should reuse existing process');
+
+		// Verify exit event is emitted on wrapper
+		await new Promise((resolve) => {
+			child2.on('exit', resolve);
+			child1.kill();
+		});
 	});
 });
