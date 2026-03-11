@@ -468,7 +468,7 @@ function checkAllowedModulePath(moduleUrl: string, containingFolder: string): bo
 		if (path.startsWith(containingFolder)) {
 			return true;
 		}
-		throw new Error(`Can not load module outside of application folder`);
+		throw new Error(`Can not load module outside of application folder ${containingFolder}`);
 	}
 	let simpleName = moduleUrl.startsWith('node:') ? moduleUrl.slice(5) : moduleUrl;
 	simpleName = simpleName.split('/')[0];

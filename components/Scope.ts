@@ -1,9 +1,9 @@
 import { EventEmitter, once } from 'node:events';
-import { type Server } from '../server/Server.ts';
+import { server, type Server } from '../server/Server.ts';
 import { EntryHandler, type EntryHandlerEventMap, type onEntryEventHandler } from './EntryHandler.ts';
 import { OptionsWatcher, OptionsWatcherEventMap } from './OptionsWatcher.ts';
 import { loggerWithTag } from '../utility/logging/harper_logger.js';
-import type { Resources } from '../resources/Resources.ts';
+import { resources, type Resources } from '../resources/Resources.ts';
 import type { FileAndURLPathConfig } from './Component.ts';
 import { FilesOption } from './deriveGlobOptions.ts';
 import { requestRestart } from './requestRestart.ts';
@@ -31,11 +31,11 @@ export class Scope extends EventEmitter {
 	#entryHandlers: EntryHandler[];
 	#logger: any;
 	#pendingInitialLoads: Set<Promise<void>>;
-	applicationScope: ApplicationScope;
+	applicationScope?: ApplicationScope;
 
 	options: OptionsWatcher;
-	resources: Resources;
-	server: Server;
+	resources?: Resources;
+	server?: Server;
 	ready: Promise<any[]>;
 	constructor(name: string, directory: string, configFilePath: string, applicationScope: ApplicationScope) {
 		super();
@@ -46,8 +46,8 @@ export class Scope extends EventEmitter {
 		this.#logger = loggerWithTag(this.#name);
 
 		this.applicationScope = applicationScope;
-		this.resources = applicationScope.resources;
-		this.server = applicationScope.server;
+		this.resources = applicationScope?.resources ?? resources;
+		this.server = applicationScope?.server ?? server;
 
 		this.#entryHandlers = [];
 		this.#pendingInitialLoads = new Set();
@@ -299,6 +299,6 @@ export class Scope extends EventEmitter {
 	 * @returns A promise that resolves with the imported module or value.
 	 */
 	async import(filePath: string): Promise<unknown> {
-		return this.applicationScope.import(filePath);
+		return this.applicationScope ? this.applicationScope.import(filePath) : import(filePath);
 	}
 }

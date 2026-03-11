@@ -13,11 +13,7 @@ export class MissingDefaultFilesOptionError extends Error {
 }
 
 /**
- * This class is what is passed to the `handleApplication` function of an extension.
- *
- * It is imperative that the instance is "ready" before its passed to the `handleApplication` function
- * so that the developer can immediately start using `scope.options`, etc.
- *
+ * This class is used to represent the application scope for the VM context used for loading modules within an application
  */
 export class ApplicationScope {
 	logger: any;

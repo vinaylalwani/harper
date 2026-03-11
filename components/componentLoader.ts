@@ -219,6 +219,7 @@ function sequentiallyHandleApplication(scope: Scope, plugin: PluginModule) {
 }
 
 export interface LoadComponentOptions {
+	isRoot?: boolean;
 	applicationScope: ApplicationScope;
 	autoReload?: boolean;
 	applicationContainment?: ApplicationContainment;
@@ -242,10 +243,16 @@ export async function loadComponent(
 	const resolvedFolder = realpathSync(componentDirectory);
 	if (loadedPaths.has(resolvedFolder)) return loadedPaths.get(resolvedFolder);
 	loadedPaths.set(resolvedFolder, true);
-	const { providedLoadedComponents, applicationScope, autoReload } = options;
+
+	const {
+		providedLoadedComponents,
+		applicationScope = new ApplicationScope(basename(componentDirectory), resources, server),
+		isRoot,
+		autoReload,
+	} = options;
+	applicationScope.verifyPath = componentDirectory;
 	if (providedLoadedComponents) loadedComponents = providedLoadedComponents;
 	try {
-		const isRoot = !applicationScope;
 		let config;
 		let configPath = join(componentDirectory, 'harper-config.yaml'); // look for the specific harperdb-config.yaml first
 		if (!existsSync(configPath) && join(componentDirectory, 'harperdb-config.yaml')) {
@@ -288,7 +295,7 @@ export async function loadComponent(
 			// Initialize loading status for all components (applications and extensions)
 			componentLifecycle.loading(componentStatusName);
 
-			let subApplicationScope = applicationScope ?? new ApplicationScope(componentName, resources, server);
+			let subApplicationScope = isRoot ? new ApplicationScope(componentName, resources, server) : applicationScope;
 
 			let extensionModule: any;
 			const pkg = componentConfig.package;
@@ -324,10 +331,7 @@ export async function loadComponent(
 					const plugin = TRUSTED_RESOURCE_PLUGINS[componentName];
 					extensionModule =
 						typeof plugin === 'string'
-							? await scopedImport(
-									plugin.startsWith('@/') ? join(PACKAGE_ROOT, plugin.slice(1)) : plugin,
-									subApplicationScope
-								)
+							? await import(plugin.startsWith('@/') ? join(PACKAGE_ROOT, plugin.slice(1)) : plugin)
 							: plugin;
 				}
 
