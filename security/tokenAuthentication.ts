@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import fs from 'fs-extra';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import Joi from 'joi';
 import { validateBySchema } from '../validation/validationWrapper.js';

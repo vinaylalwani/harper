@@ -5,7 +5,7 @@ envMgr.initSync();
 const terms = require('../utility/hdbTerms.ts');
 const { httpRequest } = require('../utility/common_utils.js');
 const path = require('path');
-const fs = require('fs-extra');
+const fs = require('node:fs');
 const YAML = require('yaml');
 const { packageDirectory } = require('../components/packageComponent.ts');
 const { encode } = require('cbor-x');

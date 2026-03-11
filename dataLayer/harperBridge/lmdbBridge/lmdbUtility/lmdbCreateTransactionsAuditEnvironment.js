@@ -1,6 +1,6 @@
 'use strict';
 
-const fs = require('fs-extra');
+const fs = require('node:fs/promises');
 const environmentUtility = require('../../../../utility/lmdb/environmentUtility.js');
 const { getTransactionAuditStorePath } = require('../lmdbUtility/initializePaths.js');
 const lmdbTerms = require('../../../../utility/lmdb/terms.js');
@@ -19,7 +19,7 @@ async function createTransactionsAuditEnvironment(tableCreateObj) {
 	try {
 		//create transactions environment for table
 		let transactionPath = getTransactionAuditStorePath(tableCreateObj.schema, tableCreateObj.table);
-		await fs.mkdirp(transactionPath);
+		await fs.mkdir(transactionPath, { recursive: true });
 		env = await environmentUtility.createEnvironment(transactionPath, tableCreateObj.table, true);
 	} catch (e) {
 		e.message = `unable to create transactions audit environment for ${tableCreateObj.schema}.${tableCreateObj.table} due to: ${e.message}`;

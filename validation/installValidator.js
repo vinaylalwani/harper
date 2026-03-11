@@ -2,7 +2,7 @@
 
 const Joi = require('joi');
 const { string, number } = Joi.types();
-const fs = require('fs-extra');
+const fs = require('node:fs');
 const hdbTerms = require('../utility/hdbTerms.ts');
 const path = require('path');
 const validator = require('../validation/validationWrapper.js');

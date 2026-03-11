@@ -2,7 +2,8 @@
 
 const path = require('path');
 const { watch } = require('chokidar');
-const fs = require('fs-extra');
+const { writeFile, readFile } = require('node:fs/promises');
+const { readFileSync, statSync, existsSync } = require('node:fs');
 const forge = require('node-forge');
 const net = require('net');
 let { generateKeyPair, X509Certificate, createPrivateKey, randomBytes } = require('node:crypto');
@@ -45,7 +46,6 @@ exports.getCertAuthority = getCertAuthority;
 exports.certExtensions = certExtensions;
 exports.getCommonName = getCommonName;
 
-const { readFileSync, statSync } = require('node:fs');
 const { getTicketKeys, onMessageFromWorkers } = require('../server/threads/manageThreads.js');
 const { isMainThread } = require('worker_threads');
 const { TLSSocket } = require('node:tls');
@@ -285,7 +285,7 @@ function loadAndWatch(path, loadCert, type) {
 			logger.error?.(`Error loading ${type}:`, path, error);
 		}
 	};
-	if (fs.existsSync(path)) loadFile(path, statSync(path));
+	if (existsSync(path)) loadFile(path, statSync(path));
 	else logger.error?.(`${type} file not found:`, path);
 	watch(path, { persistent: false }).on('change', loadFile);
 }
@@ -506,7 +506,7 @@ async function generateCertAuthority(private_key, publicKey, writeKey = true) {
 	const keysPath = path.join(envManager.getHdbBasePath(), hdbTerms.LICENSE_KEY_DIR_NAME);
 	const privatePath = path.join(keysPath, certificatesTerms.PRIVATEKEY_PEM_NAME);
 	if (writeKey) {
-		await fs.writeFile(privatePath, pki.privateKeyToPem(private_key));
+		await writeFile(privatePath, pki.privateKeyToPem(private_key));
 	}
 
 	return caCert;
@@ -547,7 +547,7 @@ async function reviewSelfSignedCert() {
 
 		const tryToParseKey = (keyPath) => {
 			try {
-				const key = pki.privateKeyFromPem(fs.readFileSync(keyPath));
+				const key = pki.privateKeyFromPem(readFileSync(keyPath));
 				return { key, keyPath };
 			} catch (err) {
 				logger.warn?.(`Failed to parse private key from ${keyPath}:`, err.message);
@@ -590,10 +590,10 @@ async function reviewSelfSignedCert() {
 			({ privateKey } = await generateKeys());
 
 			// If there is an existing private key, we will save the new one with a unique name
-			if (fs.existsSync(path.join(keysPath, certificatesTerms.PRIVATEKEY_PEM_NAME)))
+			if (existsSync(path.join(keysPath, certificatesTerms.PRIVATEKEY_PEM_NAME)))
 				keyName = `privateKey${uuidv4().split('-')[0]}.pem`;
 
-			await fs.writeFile(path.join(keysPath, keyName), pki.privateKeyToPem(privateKey));
+			await writeFile(path.join(keysPath, keyName), pki.privateKeyToPem(privateKey));
 		}
 
 		const hdbCa = await generateCertAuthority(privateKey, pki.setRsaPublicKey(privateKey.n, privateKey.e), false);
@@ -879,7 +879,7 @@ function createTLSSelector(type, mtlsOptions) {
 async function getPrivateKeyByName(private_key_name) {
 	const private_key = privateKeys.get(private_key_name);
 	if (!private_key && private_key_name) {
-		return await fs.readFile(
+		return await readFile(
 			path.join(envManager.get(CONFIG_PARAMS.ROOTPATH), hdbTerms.LICENSE_KEY_DIR_NAME, private_key_name),
 			'utf8'
 		);

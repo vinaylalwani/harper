@@ -3,7 +3,7 @@
 const hdbTerms = require('../../../../utility/hdbTerms.ts');
 const lmdbCreateRecords = require('./lmdbCreateRecords.js');
 const InsertObject = require('../../../InsertObject.js');
-const fs = require('fs-extra');
+const fs = require('node:fs/promises');
 const { getSchemaPath } = require('../lmdbUtility/initializePaths.js');
 
 module.exports = lmdbCreateSchema;
@@ -27,5 +27,5 @@ async function lmdbCreateSchema(createSchemaObj) {
 	);
 
 	await lmdbCreateRecords(insertObject);
-	await fs.mkdirp(getSchemaPath(createSchemaObj.schema));
+	await fs.mkdir(getSchemaPath(createSchemaObj.schema), { recursive: true });
 }

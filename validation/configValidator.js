@@ -1,6 +1,6 @@
 'use strict';
 
-const fs = require('fs-extra');
+const fs = require('node:fs');
 const Joi = require('joi');
 const os = require('os');
 const { boolean, string, number, array } = Joi.types();

@@ -9,7 +9,7 @@ const { HDB_ERROR_MSGS, HTTP_STATUS_CODES } = hdbErrors;
 const envMngr = require('../utility/environment/environmentManager.js');
 envMngr.initSync();
 const { getDatabases } = require('../resources/databases.ts');
-const fs = require('fs-extra');
+const fs = require('node:fs/promises');
 
 module.exports = {
 	describeAll,

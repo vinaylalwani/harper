@@ -1,7 +1,7 @@
 'use strict';
 
 const Joi = require('joi');
-const fs = require('fs-extra');
+const fs = require('node:fs');
 const path = require('path');
 const validator = require('../validation/validationWrapper.js');
 const envMangr = require('../utility/environment/environmentManager.js');

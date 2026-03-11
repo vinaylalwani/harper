@@ -1,4 +1,4 @@
-import fs from 'fs-extra';
+import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import { exec } from 'node:child_process';
 import { setTimeout } from 'node:timers/promises';

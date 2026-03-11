@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import sinon from 'sinon';
-import fs from 'fs-extra';
+import fs from 'node:fs';
 import { setupTestApp } from '../apiTests/setupTestApp.mjs';
 import { buildRequest, cliOperations } from '#js/bin/cliOperations';
 
@@ -16,7 +16,7 @@ describe.skip('test CLI operations', () => {
 		sandbox = sinon.createSandbox();
 		this.timeout(5000);
 		await setupTestApp();
-		sandbox.stub(fs, 'exists').resolves(true);
+		sandbox.stub(fs, 'existsSync').resolves(true);
 		log_spy = sandbox.spy(console, 'log');
 		error_log_spy = sandbox.spy(console, 'error');
 	});
