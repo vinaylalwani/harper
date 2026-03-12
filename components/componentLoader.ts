@@ -220,7 +220,7 @@ function sequentiallyHandleApplication(scope: Scope, plugin: PluginModule) {
 
 export interface LoadComponentOptions {
 	isRoot?: boolean;
-	applicationScope: ApplicationScope;
+	applicationScope?: ApplicationScope;
 	autoReload?: boolean;
 	applicationContainment?: ApplicationContainment;
 	providedLoadedComponents?: Map<any, any>;
@@ -295,7 +295,7 @@ export async function loadComponent(
 			// Initialize loading status for all components (applications and extensions)
 			componentLifecycle.loading(componentStatusName);
 
-			let subApplicationScope = isRoot ? new ApplicationScope(componentName, resources, server) : applicationScope;
+			const subApplicationScope = isRoot ? new ApplicationScope(componentName, resources, server) : applicationScope;
 
 			let extensionModule: any;
 			const pkg = componentConfig.package;

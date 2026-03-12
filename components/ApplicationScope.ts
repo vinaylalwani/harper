@@ -23,7 +23,7 @@ export class ApplicationScope {
 	dependencyContainment?: boolean; // option to set this from the scope
 	verifyPath?: string;
 	config: any;
-	constructor(name: string, resources: Resources, server: Server) {
+	constructor(name: string, resources: Resources, server: Server, verifyPath?: string) {
 		this.logger = loggerWithTag(name);
 
 		this.resources = resources;
