@@ -27,6 +27,9 @@ applications:
   lockdown: freeze
   containment: vm
   dependencyContainment: false
+  allowedShellCommands:
+    - npm
+    - node
 componentsRoot: null
 localStudio:
   enabled: true

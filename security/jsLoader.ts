@@ -442,31 +442,15 @@ function getHarperExports(scope: Scope) {
 		contentTypes,
 	};
 }
-const ALLOWED_NODE_BUILTIN_MODULES = new Set([
-	'assert',
-	'http',
-	'https',
-	'path',
-	'url',
-	'util',
-	'stream',
-	'crypto',
-	'buffer',
-	'string_decoder',
-	'querystring',
-	'punycode',
-	'zlib',
-	'events',
-	'timers',
-	'process',
-	'child_process',
-	'async_hooks',
-	'console',
-	'perf_hooks',
-	'diagnostics_channel',
-	'fs',
-]);
-const ALLOWED_COMMANDS = new Set(['next', 'npm', 'node']);
+const ALLOWED_NODE_BUILTIN_MODULES = env.get(CONFIG_PARAMS.APPLICATIONS_ALLOWEDBUILTINMODULES)
+	? new Set(env.get(CONFIG_PARAMS.APPLICATIONS_ALLOWEDBUILTINMODULES))
+	: {
+			// if we don't have a list of allowed modules, allow everything
+			has() {
+				return true;
+			},
+		};
+const ALLOWED_COMMANDS = new Set(env.get(CONFIG_PARAMS.APPLICATIONS_ALLOWEDSPAWNCOMMANDS) ?? []);
 const REPLACED_BUILTIN_MODULES = {
 	child_process: {
 		exec: createSpawn(child_process.exec),
