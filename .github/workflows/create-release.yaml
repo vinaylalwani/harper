@@ -91,7 +91,7 @@ jobs:
         with:
           name: ${{ steps.tag-version.outputs.tagVersion }}
           tag_name: ${{ steps.tag-version.outputs.tagVersion }}
-          files: harperfast-harper-*.tgz
+          files: harper-*.tgz
           fail_on_unmatched_files: true
           generate_release_notes: true
           prerelease: ${{ steps.version-components.outputs.prerelease != '' }}
