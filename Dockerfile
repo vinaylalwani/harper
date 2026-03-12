@@ -27,7 +27,7 @@ USER harperdb
 # Install pnpm
 RUN wget -qO- https://get.pnpm.io/install.sh | ENV="$HOME/.bashrc" SHELL="$(which bash)" bash -
 
-COPY --from=build /usr/src/harper/harperfast-harper-*.tgz .
+COPY --from=build /usr/src/harper/harper-*.tgz .
 
 # Configure NPM
 ENV NPM_CONFIG_PREFIX=/home/harperdb/.npm-global
@@ -37,8 +37,8 @@ VOLUME /home/harperdb/harper
 
 # Install Harper globally
 RUN <<-EOF
-  npm install --global harperfast-harper-*.tgz
-  rm harperfast-harper-*.tgz
+  npm install --global harper-*.tgz
+  rm harper-*.tgz
   mkdir -p /home/harperdb/harper
   chown harperdb:harperdb /home/harperdb/harper
 EOF
