@@ -113,6 +113,7 @@ function openRocksDatabase(path: string, options: RocksDatabaseOptions & { dupSo
 		db = RocksDatabase.open(new RocksIndexStore(path, options)) as RocksDatabaseEx;
 	} else {
 		db = RocksDatabase.open(path, options) as RocksDatabaseEx;
+		db.encoder.name = options.name;
 	}
 	db.env = {};
 	return db;
@@ -847,7 +848,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 		if (attribute.expiresAt) attribute.indexed = true;
 	}
 	let hasChanges;
-	let txnCommit;
+	let releaseExclusiveLock: () => void;
 	if (Table) {
 		primaryKey = Table.primaryKey;
 		if (Table.primaryStore.rootStore.status === 'closed') {
@@ -891,10 +892,10 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 			attributesDbi = rootStore.dbisDb = rootStore.openDB(INTERNAL_DBIS_NAME, internalDbiInit);
 		}
 
-		startTxn(); // get an exclusive lock on the database so we can verify that we are the only thread creating the table (and assigning the table id)
+		exclusiveLock(); // get an exclusive lock on the database so we can verify that we are the only thread creating the table (and assigning the table id)
 		if (attributesDbi.getSync(dbiName)) {
 			// table was created while we were setting up
-			if (txnCommit) txnCommit();
+			if (releaseExclusiveLock) releaseExclusiveLock();
 			resetDatabases();
 			return table(tableDefinition);
 		}
@@ -969,7 +970,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 		const attribute = attributes.find((attribute) => attribute.name === attribute_name);
 		const removeIndex = !attribute?.indexed && value.indexed && !value.isPrimaryKey;
 		if (!attribute || removeIndex) {
-			startTxn();
+			exclusiveLock();
 			hasChanges = true;
 			if (!attribute) attributesDbi.remove(key);
 			if (removeIndex) {
@@ -1012,7 +1013,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 					if (replicate !== undefined) updatedPrimaryAttribute.replicate = replicate;
 					if (attribute.type) updatedPrimaryAttribute.type = attribute.type;
 					hasChanges = true; // send out notification of the change
-					startTxn();
+					exclusiveLock();
 					attributesDbi.put(dbiKey, updatedPrimaryAttribute);
 				}
 
@@ -1038,7 +1039,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 					attributeDescriptor.restartNumber < workerData?.restartNumber
 				) {
 					hasChanges = true;
-					startTxn();
+					exclusiveLock();
 					attributeDescriptor = attributesDbi.getSync(dbiKey);
 					if (
 						changed ||
@@ -1068,12 +1069,12 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 				indices[attribute.name] = dbi;
 			} else if (changed) {
 				hasChanges = true;
-				startTxn();
+				exclusiveLock();
 				attributesDbi.put(dbiKey, attribute);
 			}
 		}
 	} finally {
-		if (txnCommit) txnCommit();
+		if (releaseExclusiveLock) releaseExclusiveLock();
 	}
 	if (hasChanges) {
 		Table.schemaVersion++;
@@ -1102,15 +1103,24 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 	logger.trace(`${tableName} table loaded`);
 
 	return Table as TableResourceType;
-	function startTxn() {
-		if (txnCommit) return;
-		rootStore.transactionSync(() => {
-			return {
-				then(callback) {
-					txnCommit = callback;
-				},
+	// Acquire an exclusive lock for attribute updates
+	function exclusiveLock() {
+		if (releaseExclusiveLock) return;
+		if (rootStore instanceof RocksDatabase) {
+			while (!rootStore.tryLock('update-attributes')) {} // use a spin lock, we really need an synchronous exclusive lock here
+			releaseExclusiveLock = () => {
+				rootStore.unlock('update-attributes');
 			};
-		});
+		} else {
+			// we only need an exclusive transaction lock in lmdb
+			rootStore.transactionSync(() => {
+				return {
+					then(callback) {
+						releaseExclusiveLock = callback;
+					},
+				};
+			});
+		}
 	}
 }
 const MAX_OUTSTANDING_INDEXING = 1000;
