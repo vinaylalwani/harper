@@ -44,8 +44,7 @@ export class RocksTransactionLogStore extends EventEmitter {
 			// do not record transaction entries on retry
 			return;
 		}
-		const nodeId = options.nodeId;
-		const log = nodeId ? (this.nodeLogs?.[nodeId] ?? this.loadLogs()[nodeId]) : this.log;
+		const log = this.logById(options.nodeId) ?? this.logById(options.viaNodeId) ?? this.log;
 		let entryBinary: Uint8Array;
 		if (auditRecord instanceof Uint8Array) entryBinary = auditRecord;
 		else {
@@ -75,6 +74,10 @@ export class RocksTransactionLogStore extends EventEmitter {
 			options.transaction.logEntries.push(auditRecord);
 		}
 		log.addEntry(entryBinary, options.transaction.id);
+	}
+
+	logById(nodeId: number) {
+		return nodeId > -1 ? (this.nodeLogs?.[nodeId] ?? this.loadLogs()[nodeId]) : undefined;
 	}
 
 	putSync(suggestedKey: any, value: any, options: any) {
@@ -119,7 +122,11 @@ export class RocksTransactionLogStore extends EventEmitter {
 	}
 
 	loadLogs() {
-		this.nodeLogs ??= [];
+		if (this.nodeLogs) {
+			// listLogs should only be called one time, and then listen for changes to update
+			return this.nodeLogs;
+		}
+		this.nodeLogs = [];
 		for (const logName of this.rootStore.listLogs()) {
 			const log = this.rootStore.useLog(logName);
 			this.addLogToMaps(logName, log);
@@ -180,7 +187,6 @@ export class RocksTransactionLogStore extends EventEmitter {
 			const iterators: IterableIterator<TransactionEntry>[] = [];
 			const updateIterators = () => {
 				if (latestUpdates !== this.updates) {
-					latestUpdates = this.updates;
 					const latestLogs = (this.nodeLogs || this.loadLogs()).filter(
 						(log) => !options.excludeLogs?.includes(log.name)
 					);
@@ -189,11 +195,18 @@ export class RocksTransactionLogStore extends EventEmitter {
 							logs.push(log);
 							let queryOptions = options;
 							if (options.startByLog) {
+								// if the startByLog is provided, we use that
 								queryOptions = { ...options, start: options.startByLog.get(log.name) ?? 0 };
+							} else if (latestUpdates >= 0) {
+								// if this is not the first update, that means that this is a brand new log and if start wasn't specified
+								// that means we are taking all future requests, so we need to start at zero so we don't introduce a race
+								// condition of potentially missing an initial update
+								queryOptions = { ...options, start: options.start ?? 0 };
 							}
 							iterators.push(log.query(queryOptions));
 						}
 					}
+					latestUpdates = this.updates;
 					if (logs.length > latestLogs.length) {
 						for (let i = 0; i < logs.length; i++) {
 							let log = logs[i];
@@ -225,7 +238,7 @@ export class RocksTransactionLogStore extends EventEmitter {
 						}
 						// find the earliest one that is not done
 						const next = result.value;
-						if (!earliest || earliest.timestamp < next.timestamp) {
+						if (!earliest || earliest.timestamp > next.timestamp) {
 							earliest = next;
 							earliestIndex = i;
 						}
@@ -256,6 +269,7 @@ export class RocksTransactionLogStore extends EventEmitter {
 						logs.splice(index, 1);
 						iterators.splice(index, 1);
 						nextEntries.splice(index, 1);
+						options.excludeLogs.push(logName);
 					}
 				},
 			};
@@ -303,6 +317,7 @@ export class RocksTransactionLogStore extends EventEmitter {
 		let totalSize = 0;
 		const logs = [];
 		for (const log of this.loadLogs()) {
+			if (!log) continue;
 			const size = log.getLogFileSize();
 			totalSize += size;
 			logs.push({ name: log.name, size });

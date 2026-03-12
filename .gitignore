@@ -43,3 +43,4 @@ commits-to-pick.txt
 
 # npm run package Outputs
 harperfast-harper-*.tgz
+harper-*.tgz

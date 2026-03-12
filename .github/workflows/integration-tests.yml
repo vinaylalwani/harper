@@ -64,7 +64,7 @@ jobs:
         run: npm run build || true # we currently have type errors so just ignore that
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: harper-build-artifacts-node-${{ matrix.node-version }}
           path: |
@@ -95,7 +95,7 @@ jobs:
           package-manager-cache: false
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: harper-build-artifacts-node-${{ matrix.node-version }}
 
@@ -126,7 +126,7 @@ jobs:
 
       - name: Upload Harper logs
         if: steps.run-api-tests.outcome == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: harper-integration-api-test-logs-node-${{ matrix.node-version }}
           path: /tmp/hdb/log/hdb.log
@@ -155,10 +155,21 @@ jobs:
           package-manager-cache: false
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: harper-build-artifacts-node-${{ matrix.node-version }}
 
       - name: Run Integration Test Shard ${{ matrix.shard }}
+        env:
+          HARPER_INTEGRATION_TEST_LOG_DIR: /tmp/harper-integration-test-logs
         run: |
           npm run test:integration -- --shard=${{ matrix.shard }}/4
+
+      - name: Upload Harper server logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: harper-server-logs-node-${{ matrix.node-version }}-shard-${{ matrix.shard }}
+          path: /tmp/harper-integration-test-logs/
+          retention-days: 3
+          if-no-files-found: ignore
