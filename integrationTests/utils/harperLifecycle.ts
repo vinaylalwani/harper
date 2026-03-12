@@ -153,11 +153,6 @@ function runHarperCommand({ args, env, completionMessage, logDir }: RunHarperCom
 			stderr += data.toString();
 		});
 
-		proc.on('close', () => {
-			stdoutStream?.end();
-			stderrStream?.end();
-		});
-
 		proc.on('error', (error) => {
 			reject(error);
 		});
