@@ -47,6 +47,7 @@ export type AuditRecord = {
 	user?: string;
 	nodeId?: number;
 	previousNodeId?: number;
+	previousAdditionalAuditRefs?: Array<{ version: number; nodeId: number }>;
 	endTxn?: boolean;
 	structureVersion?: number;
 };
@@ -265,6 +266,7 @@ export const HAS_PREVIOUS_RESIDENCY_ID = 1024;
 export const HAS_ORIGINATING_OPERATION = 2048;
 export const HAS_EXPIRATION_EXTENDED_TYPE = 0x1000;
 export const HAS_BLOBS = 0x2000;
+export const HAS_ADDITIONAL_AUDIT_REFS = 0x4000;
 const EVENT_TYPES = {
 	put: PUT | HAS_RECORD,
 	[PUT]: 'put',
@@ -321,6 +323,7 @@ export function createAuditEntry(auditRecord: AuditRecord, start = 0) {
 		previousResidencyId,
 		expiresAt,
 		originatingOperation,
+		previousAdditionalAuditRefs,
 	} = auditRecord;
 	const action = EVENT_TYPES[type];
 	if (!action) {
@@ -354,6 +357,18 @@ export function createAuditEntry(auditRecord: AuditRecord, start = 0) {
 	}
 	if (extendedType & HAS_ORIGINATING_OPERATION) {
 		writeInt(ORIGINATING_OPERATIONS[originatingOperation]);
+	}
+	if (extendedType & HAS_ADDITIONAL_AUDIT_REFS) {
+		if (previousAdditionalAuditRefs && previousAdditionalAuditRefs.length > 0) {
+			ENTRY_HEADER[position++] = previousAdditionalAuditRefs.length;
+			for (const ref of previousAdditionalAuditRefs) {
+				ENTRY_DATAVIEW.setFloat64(position, ref.version);
+				position += 8;
+				writeInt(ref.nodeId);
+			}
+		} else {
+			ENTRY_HEADER[position++] = 0;
+		}
 	}
 
 	if (user) writeValue(user);
@@ -428,7 +443,7 @@ export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined): 
 		const recordIdEnd = (decoder.position += length);
 		// TODO: Once we support multiple format versions, we can conditionally read the version (and the previousResidencyId)
 		const version = decoder.readFloat64();
-		let residencyId, previousResidencyId, expiresAt, originatingOperation;
+		let residencyId, previousResidencyId, expiresAt, originatingOperation, previousAdditionalAuditRefs;
 		if (action & HAS_CURRENT_RESIDENCY_ID) {
 			residencyId = decoder.readInt();
 		}
@@ -441,6 +456,17 @@ export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined): 
 		if (action & HAS_ORIGINATING_OPERATION) {
 			const operationId = decoder.readInt();
 			originatingOperation = ORIGINATING_OPERATIONS[operationId];
+		}
+		if (action & HAS_ADDITIONAL_AUDIT_REFS) {
+			const count = buffer[decoder.position++];
+			if (count > 0) {
+				previousAdditionalAuditRefs = [];
+				for (let i = 0; i < count; i++) {
+					const refVersion = decoder.readFloat64();
+					const refNodeId = decoder.readInt();
+					previousAdditionalAuditRefs.push({ version: refVersion, nodeId: refNodeId });
+				}
+			}
 		}
 		length = decoder.readInt();
 		const usernameStart = decoder.position;
@@ -493,6 +519,7 @@ export function readAuditEntry(buffer: Uint8Array, start = 0, end = undefined): 
 			previousResidencyId,
 			expiresAt,
 			originatingOperation,
+			previousAdditionalAuditRefs,
 		};
 	} catch (error) {
 		harperLogger.error('Reading audit entry error', error, buffer);

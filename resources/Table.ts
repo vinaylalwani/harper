@@ -167,6 +167,7 @@ export function makeTable(options) {
 	let propertyResolvers: any;
 	let hasRelationships = false;
 	let runningRecordExpiration: boolean;
+	const isRocksDB = primaryStore instanceof RocksDatabase;
 	type BigInt64ArrayAndMaxSafeId = BigInt64Array & { maxSafeId: number };
 	let idIncrementer: BigInt64ArrayAndMaxSafeId;
 	let replicateToCount;
@@ -301,6 +302,7 @@ export function makeTable(options) {
 						isNotification: true,
 						ensureLoaded: false,
 						nodeId: event.nodeId,
+						viaNodeId: event.viaNodeId,
 						async: true,
 					};
 					const id = event.id;
@@ -1301,6 +1303,7 @@ export function makeTable(options) {
 							user: context?.user,
 							residencyId: options?.residencyId,
 							nodeId: options?.nodeId,
+							viaNodeId: options?.viaNodeId,
 							transaction,
 							tableToTrack: tableName,
 						},
@@ -1353,6 +1356,7 @@ export function makeTable(options) {
 							user: context.user,
 							residencyId: options.residencyId,
 							nodeId: options.nodeId,
+							viaNodeId: options?.viaNodeId,
 							expiresAt: options.expiresAt,
 							transaction,
 						},
@@ -1645,6 +1649,8 @@ export function makeTable(options) {
 					let residencyId: number | undefined;
 					if (options?.residencyId != undefined) residencyId = options.residencyId;
 					const expiresAt: number = context?.expiresAt ?? (expirationMs ? expirationMs + Date.now() : -1);
+					const additionalAuditRefs: Array<{ version: number; nodeId: number }> = []; // track additional audit refs to store
+
 					if (precedesExisting <= 0) {
 						// This block is to handle the case of saving an update where the transaction timestamp is older than the
 						// existing timestamp, which means that we received updates out of order, and must resequence the application
@@ -1654,7 +1660,7 @@ export function makeTable(options) {
 							// incremental CRDT updates are only available with audit logging on
 							let localTime = existingEntry.localTime;
 							let auditedVersion = existingEntry.version;
-							logger.trace?.(
+							logger.debug?.(
 								'Applying CRDT update to record with id: ',
 								id,
 								'txn time',
@@ -1667,38 +1673,87 @@ export function makeTable(options) {
 
 							let nodeId = existingEntry.nodeId;
 							const succeedingUpdates = []; // record the "future" updates, as we need to apply the updates in reverse order
-							while (localTime > txnTime || (auditedVersion >= txnTime && localTime > 0)) {
-								const auditRecord = auditStore.get(localTime, tableId, id, nodeId);
-								if (!auditRecord) break;
-								auditedVersion = auditRecord.version;
-								if (auditedVersion >= txnTime) {
-									if (auditedVersion === txnTime) {
-										precedesExisting = precedesExistingVersion(
-											txnTime,
-											{ version: auditedVersion, localTime: localTime, key: id, nodeId: auditRecord.nodeId },
-											options?.nodeId
-										);
-										if (precedesExisting === 0) {
-											return; // treat a tie as a duplicate and drop it
-										}
-										if (precedesExisting > 0) {
-											// if the existing version is older, we can skip this update
-											localTime = auditRecord.previousVersion;
-											continue;
-										}
-									}
-									if (auditRecord.type === 'patch') {
-										// record patches so we can reply in order
-										succeedingUpdates.push(auditRecord);
-										auditRecordToStore = recordUpdate; // use the original update for the audit record
-									} else if (auditRecord.type === 'put' || auditRecord.type === 'delete') {
-										// There is newer full record update, so this incremental update is completely superseded
-										return writeCommit(false);
+							const auditRefsToVisit: Array<{ localTime: number; nodeId: number }> = existingEntry.additionalAuditRefs
+								? existingEntry.additionalAuditRefs.map((ref) => ({ localTime: ref.version, nodeId: ref.nodeId }))
+								: [];
+
+							// Collect any existing audit refs that should be preserved (those older than current transaction)
+							if (existingEntry.additionalAuditRefs) {
+								for (const ref of existingEntry.additionalAuditRefs) {
+									if (ref.version <= txnTime) {
+										additionalAuditRefs.push(ref);
 									}
 								}
-								localTime = auditRecord.previousVersion;
-								nodeId = auditRecord.previousNodeId;
 							}
+							let addedAuditRef = false;
+							let nextRef: { localTime: number; nodeId: number };
+							do {
+								while (localTime > txnTime || (auditedVersion >= txnTime && localTime > 0)) {
+									const auditRecord = auditStore.get(localTime, tableId, id, nodeId);
+									if (!auditRecord) break;
+									auditedVersion = auditRecord.version;
+									if (auditedVersion >= txnTime) {
+										if (auditedVersion === txnTime) {
+											precedesExisting = precedesExistingVersion(
+												txnTime,
+												{ version: auditedVersion, localTime: localTime, key: id, nodeId: auditRecord.nodeId },
+												options?.nodeId
+											);
+											if (precedesExisting === 0) {
+												logger.debug?.(
+													'The transaction time is equal to the existing version, treating as duplicate',
+													id
+												);
+												return; // treat a tie as a duplicate and drop it
+											}
+											if (precedesExisting > 0) {
+												// if the existing version is older, we can skip this update
+												localTime = auditRecord.previousVersion;
+												nodeId = auditRecord.previousNodeId;
+												continue;
+											}
+										}
+										if (auditRecord.type === 'patch') {
+											logger.debug?.('out of order patch will be applied', id, auditRecord);
+											// record patches so we can reply in order
+											succeedingUpdates.push(auditRecord);
+											auditRecordToStore = recordUpdate; // use the original update for the audit record
+										} else if (auditRecord.type === 'put' || auditRecord.type === 'delete') {
+											// There is newer full record update, so this incremental update is completely superseded
+											return;
+										}
+									}
+									if (!addedAuditRef && isRocksDB) {
+										addedAuditRef = true;
+										// Add a reference to this older audit record if we had out-of-order writes
+										additionalAuditRefs.push({ version: txnTime, nodeId: options?.nodeId });
+										logger.debug?.('Adding additional audit ref for out-of-order write', {
+											version: txnTime,
+											nodeId: options?.nodeId,
+										});
+									}
+									// Collect any additional audit refs from this audit record to traverse other branches
+									if (auditRecord.previousAdditionalAuditRefs) {
+										for (const ref of auditRecord.previousAdditionalAuditRefs) {
+											auditRefsToVisit.push({ localTime: ref.version, nodeId: ref.nodeId });
+											logger.debug?.('Adding audit ref from audit record to visit queue', {
+												version: ref.version,
+												nodeId: ref.nodeId,
+											});
+										}
+									}
+
+									localTime = auditRecord.previousVersion;
+									nodeId = auditRecord.previousNodeId;
+								}
+								// Check if we need to scan additional audit refs from this record
+								nextRef = auditRefsToVisit.shift();
+								if (nextRef) {
+									localTime = auditedVersion = nextRef.localTime;
+									nodeId = nextRef.nodeId;
+									logger.debug?.('Following additional audit ref to continue scanning', { localTime, nodeId });
+								}
+							} while (nextRef);
 							if (!localTime) {
 								// if we reached the end of the audit trail, we can just apply the update
 								logger.debug?.(
@@ -1808,7 +1863,9 @@ export function makeTable(options) {
 							id,
 							storeRecord ? recordToStore : undefined,
 							storeRecord ? existingEntry : { ...existingEntry, value: undefined },
-							txnTime,
+							isRocksDB
+								? Math.max(txnTime, existingEntry?.version ?? 0) // RocksDB uses a singular version/local time, so it must be most recent
+								: txnTime,
 							omitLocalRecord ? INVALIDATED : 0,
 							audit,
 							{
@@ -1817,9 +1874,11 @@ export function makeTable(options) {
 								residencyId,
 								expiresAt,
 								nodeId: options?.nodeId,
+								viaNodeId: options?.viaNodeId,
 								originatingOperation: context?.originatingOperation,
 								transaction,
 								tableToTrack: databaseName === 'system' ? null : options?.replay ? null : tableName, // don't track analytics on system tables
+								additionalAuditRefs: additionalAuditRefs.length > 0 ? additionalAuditRefs : undefined,
 							},
 							type,
 							false,
@@ -1892,10 +1951,16 @@ export function makeTable(options) {
 							txnTime,
 							0,
 							audit,
-							{ user: context?.user, nodeId: options?.nodeId, transaction, tableToTrack: tableName },
+							{
+								user: context?.user,
+								nodeId: options?.nodeId,
+								viaNodeId: options?.viaNodeId,
+								transaction,
+								tableToTrack: tableName,
+							},
 							'delete'
 						);
-						if (!audit || primaryStore instanceof RocksDatabase) scheduleCleanup();
+						if (!audit || isRocksDB) scheduleCleanup();
 					} else {
 						removeEntry(primaryStore, existingEntry);
 					}
@@ -2815,6 +2880,7 @@ export function makeTable(options) {
 							residencyId: options?.residencyId,
 							expiresAt: context?.expiresAt,
 							nodeId: options?.nodeId,
+							viaNodeId: options?.viaNodeId,
 							transaction,
 							tableToTrack: tableName,
 						},
@@ -3029,7 +3095,7 @@ export function makeTable(options) {
 		 * @param options
 		 */
 		static getSize() {
-			if (primaryStore instanceof RocksDatabase) {
+			if (isRocksDB) {
 				return primaryStore.getDBIntProperty('rocksdb.estimate-live-data-size') ?? 0;
 			}
 			const stats = primaryStore.getStats();
@@ -3574,7 +3640,7 @@ export function makeTable(options) {
 		// to evaluate if prefetching is a good idea.
 		// First, the caller can tell us. If the record is in our local cache, we use that as indication
 		// that we can get the value very quickly without a page fault.
-		if (sync || primaryStore instanceof RocksDatabase) return whenPrefetched();
+		if (sync || isRocksDB) return whenPrefetched();
 		// Next, we allow for non-prefetch mode where we can execute some gets without prefetching,
 		// but we will limit the number before we do another prefetch
 		if (untilNextPrefetch > 0) {
@@ -3709,7 +3775,7 @@ export function makeTable(options) {
 	function txnForContext(context: Context) {
 		let transaction = context?.transaction;
 		if (transaction) {
-			if (!transaction.db && primaryStore instanceof RocksDatabase) {
+			if (!transaction.db && isRocksDB) {
 				// this is an uninitialized DatabaseTransaction, we can claim it
 				transaction.db = primaryStore;
 				if (context?.timestamp) transaction.timestamp = context.timestamp;
@@ -3722,18 +3788,14 @@ export function makeTable(options) {
 				const nextTxn = transaction.next;
 				if (!nextTxn) {
 					// no next one, then add our database
-					transaction = transaction.next =
-						primaryStore instanceof RocksDatabase ? new DatabaseTransaction() : new LMDBTransaction();
+					transaction = transaction.next = isRocksDB ? new DatabaseTransaction() : new LMDBTransaction();
 					transaction.db = primaryStore;
 					return transaction;
 				}
 				transaction = nextTxn;
 			} while (true);
 		} else {
-			transaction =
-				primaryStore instanceof RocksDatabase
-					? new ImmediateTransaction(primaryStore)
-					: new ImmediateLMDBTransaction(primaryStore);
+			transaction = isRocksDB ? new ImmediateTransaction(primaryStore) : new ImmediateLMDBTransaction(primaryStore);
 			if (context) {
 				context.transaction = transaction;
 				if (context.timestamp) transaction.timestamp = context.timestamp;
@@ -4199,7 +4261,7 @@ export function makeTable(options) {
 
 								try {
 									let count = 0;
-									let removeDeletedRecords = !audit || primaryStore instanceof RocksDatabase;
+									let removeDeletedRecords = !audit || isRocksDB;
 									// iterate through all entries to find expired records and deleted records
 									for (const entry of primaryStore.getRange({
 										start: false,
