@@ -465,7 +465,7 @@ const ALLOWED_NODE_BUILTIN_MODULES = new Set([
 function checkAllowedModulePath(moduleUrl: string, containingFolder: string): boolean {
 	if (moduleUrl.startsWith('file:')) {
 		const path = moduleUrl.slice(7);
-		if (path.startsWith(containingFolder)) {
+		if (!containingFolder || path.startsWith(containingFolder)) {
 			return true;
 		}
 		throw new Error(`Can not load module outside of application folder ${containingFolder}`);

@@ -266,6 +266,7 @@ export async function loadComponent(
 		} else {
 			config = DEFAULT_CONFIG;
 		}
+		applicationScope.config ??= config;
 
 		if (!isRoot) {
 			try {

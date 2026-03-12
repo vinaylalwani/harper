@@ -31,6 +31,7 @@ export class ApplicationScope {
 
 		this.mode = env.get(CONFIG_PARAMS.APPLICATIONS_CONTAINMENT) ?? 'vm';
 		this.dependencyContainment = Boolean(env.get(CONFIG_PARAMS.APPLICATIONS_DEPENDENCYCONTAINMENT));
+		this.verifyPath = verifyPath;
 	}
 
 	/**
