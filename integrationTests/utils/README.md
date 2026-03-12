@@ -68,33 +68,19 @@ suite('My test suite', (ctx: ContextWithHarper) => {
 
 Configuration options for `setupHarper()`.
 
-**Interface Definition:**
-
 ```typescript
 export interface SetupHarperOptions {
-	/**
-	 * Timeout in milliseconds to wait for Harper to start.
-	 * @default 30000
-	 */
 	startupTimeoutMs?: number;
-	/**
-	 * Additional configuration options to pass to the Harper CLI.
-	 */
 	config: any;
-	/**
-	 * Environment variables to set when running Harper.
-	 */
 	env: any;
 }
 ```
 
 **Properties:**
 
-30000 (5 seconds), or the value of the `HARPER_INTEGRATION_TEST_STARTUP_TIMEOUT_MS` environment variable if set.
-
 - **`config`** - `object` (optional) - Additional configuration options to pass to the Harper CLI.
 - **`env`** - `object` (optional) - Additional environment variables to set when starting Harper.
-- **`startupTimeoutMs`** - `number` (optional) - Timeout in milliseconds to wait for Harper to start. Defaults to
+- **`startupTimeoutMs`** - `number` (optional) - Timeout in milliseconds to wait for Harper to start. Defaults to 30000, or the value of the `HARPER_INTEGRATION_TEST_STARTUP_TIMEOUT_MS` environment variable if set.
 
 **Environment Variables:**
 
