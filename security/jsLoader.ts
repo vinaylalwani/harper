@@ -561,7 +561,7 @@ function acquirePidFileLock(pidFilePath: string, maxRetries = 100, retryDelay = 
 
 function createSpawn(spawnFunction: (...args: any) => child_process.ChildProcess, alwaysAllow?: boolean) {
 	const basePath = env.getHdbBasePath();
-	return function (command: string, args: any, options: any) {
+	return function (command: string, args?: any, options?: any, callback?: (...args: any[]) => void) {
 		if (!ALLOWED_COMMANDS.has(command.split(' ')[0]) && !alwaysAllow) {
 			throw new Error(`Command ${command} is not allowed`);
 		}
@@ -586,7 +586,7 @@ function createSpawn(spawnFunction: (...args: any) => child_process.ChildProcess
 		}
 
 		// We acquired the lock (file was created), spawn new process
-		const childProcess = spawnFunction(command, args, options);
+		const childProcess = spawnFunction(command, args, options, callback);
 
 		// Write PID to the file we just created
 		try {
