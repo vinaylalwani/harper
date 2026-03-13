@@ -439,6 +439,8 @@ export const CONFIG_PARAMS = {
 	APPLICATIONS_LOCKDOWN: 'applications_lockdown',
 	APPLICATIONS_DEPENDENCYCONTAINMENT: 'applications_dependencyContainment',
 	APPLICATIONS_PACKAGEMANAGERPREFIX: 'applications_packageManagerPrefix',
+	APPLICATIONS_ALLOWEDBUILTINMODULES: 'applications_allowedBuiltInModules',
+	APPLICATIONS_ALLOWEDSPAWNCOMMANDS: 'applications_allowedSpawnCommands',
 	THREADS: 'threads',
 	THREADS_COUNT: 'threads_count',
 	THREADS_DEBUG: 'threads_debug',
