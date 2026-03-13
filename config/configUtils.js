@@ -140,7 +140,7 @@ function createConfigFile(args, skipFsValidation = false) {
 	if (configDoc.errors?.length > 0) {
 		throw handleHDBError(
 			new Error(),
-			`Error parsing harperdb-config.yaml ${configDoc.errors}`,
+			`Error parsing ${configFilePath} ${configDoc.errors}`,
 			HTTP_STATUS_CODES.BAD_REQUEST,
 			undefined,
 			undefined,
