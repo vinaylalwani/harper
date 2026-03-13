@@ -30,7 +30,7 @@ export const processSpawnTest = {
 	get() {}, // make it look like a resource
 	testFork() {
 		// Fork should work (allowed command)
-		const child = fork('next', ['--version'], { name: 'test-next-process' });
+		const child = fork('npm', ['--version'], { name: 'test-npm-process' });
 		assert(child.pid, 'Fork should return a process with a PID');
 		return child;
 	},
