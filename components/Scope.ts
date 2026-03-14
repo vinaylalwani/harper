@@ -1,6 +1,7 @@
 import { type Logger } from '../utility/logging/logger.ts';
 import { loggerWithTag } from '../utility/logging/harper_logger.js';
 import { EventEmitter, once } from 'node:events';
+import { databaseEventsEmitter } from '../resources/databases.ts';
 import { server, type Server } from '../server/Server.ts';
 import { EntryHandler, type EntryHandlerEventMap, type onEntryEventHandler } from './EntryHandler.ts';
 import { OptionsWatcher, OptionsWatcherEventMap } from './OptionsWatcher.ts';
@@ -17,14 +18,22 @@ export class MissingDefaultFilesOptionError extends Error {
 	}
 }
 
+export type ScopeEventsMap = {
+	all: [...args: unknown[]];
+	close: [];
+	error: [error: unknown];
+	ready: [];
+	[record: string]: [...args: unknown[]];
+};
+
 /**
  * This class is what is passed to the `handleApplication` function of an extension.
  *
- * It is imperative that the instance is "ready" before its passed to the `handleApplication` function
+ * It is imperative that the instance is "ready" before it's passed to the `handleApplication` function
  * so that the developer can immediately start using `scope.options`, etc.
  *
  */
-export class Scope extends EventEmitter {
+export class Scope extends EventEmitter<ScopeEventsMap> {
 	#configFilePath: string;
 	#directory: string;
 	#name: string;
@@ -38,6 +47,8 @@ export class Scope extends EventEmitter {
 	resources?: Resources;
 	server?: Server;
 	ready: Promise<any[]>;
+	databaseEvents: typeof databaseEventsEmitter;
+
 	constructor(name: string, directory: string, configFilePath: string, applicationScope: ApplicationScope) {
 		super();
 
@@ -46,6 +57,7 @@ export class Scope extends EventEmitter {
 		this.#configFilePath = configFilePath;
 		this.#logger = loggerWithTag(this.#name);
 
+		this.databaseEvents = databaseEventsEmitter;
 		this.applicationScope = applicationScope;
 		this.resources = applicationScope?.resources ?? resources;
 		this.server = applicationScope?.server ?? server;

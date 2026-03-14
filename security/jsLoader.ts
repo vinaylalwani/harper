@@ -3,7 +3,6 @@ import { contextStorage, transaction } from '../resources/transaction.ts';
 import { RequestTarget } from '../resources/RequestTarget.ts';
 import { tables, databases } from '../resources/databases.ts';
 import { readFile } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
 import { dirname, isAbsolute } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { SourceTextModule, SyntheticModule, createContext, runInContext } from 'node:vm';
@@ -11,9 +10,13 @@ import { ApplicationScope } from '../components/ApplicationScope.ts';
 import logger from '../utility/logging/harper_logger.js';
 import { createRequire } from 'node:module';
 import * as env from '../utility/environment/environmentManager';
+import * as child_process from 'node:child_process';
 import { CONFIG_PARAMS } from '../utility/hdbTerms.ts';
 import { contentTypes } from '../server/serverHelpers/contentTypes.ts';
 import type { CompartmentOptions } from 'ses';
+import { mkdirSync, readFileSync, writeFileSync, unlinkSync, openSync, closeSync } from 'node:fs';
+import { join } from 'node:path';
+import { EventEmitter } from 'node:events';
 
 type Lockdown = 'none' | 'freeze' | 'ses';
 const APPLICATIONS_LOCKDOWN: Lockdown = env.get(CONFIG_PARAMS.APPLICATIONS_LOCKDOWN);
@@ -234,7 +237,7 @@ async function loadModuleWithVM(moduleUrl: string, scope: ApplicationScope) {
 		let module: SourceTextModule | SyntheticModule;
 
 		// Handle special built-in modules
-		if (url === 'harper') {
+		if (url === 'harper' || url === 'harperdb') {
 			let harperExports = getHarperExports(scope);
 			module = new SyntheticModule(
 				Object.keys(harperExports),
@@ -286,9 +289,9 @@ async function loadModuleWithVM(moduleUrl: string, scope: ApplicationScope) {
 				}
 			}
 		} else {
-			checkAllowedModulePath(url, scope.verifyPath);
+			const replacedModule = checkAllowedModulePath(url, scope.verifyPath);
 			// For Node.js built-in modules (node:) and npm packages, use dynamic import
-			const importedModule = await import(url);
+			const importedModule = replacedModule ?? (await import(url));
 			const exportNames = Object.keys(importedModule);
 
 			module = new SyntheticModule(
@@ -439,40 +442,198 @@ function getHarperExports(scope: ApplicationScope) {
 		contentTypes,
 	};
 }
-const ALLOWED_NODE_BUILTIN_MODULES = new Set([
-	'assert',
-	'http',
-	'https',
-	'path',
-	'url',
-	'util',
-	'stream',
-	'crypto',
-	'buffer',
-	'string_decoder',
-	'querystring',
-	'punycode',
-	'zlib',
-	'events',
-	'timers',
-	'process',
-	'async_hooks',
-	'console',
-	'perf_hooks',
-	'diagnostics_channel',
-	'fs',
-]);
+const ALLOWED_NODE_BUILTIN_MODULES = env.get(CONFIG_PARAMS.APPLICATIONS_ALLOWEDBUILTINMODULES)
+	? new Set(env.get(CONFIG_PARAMS.APPLICATIONS_ALLOWEDBUILTINMODULES))
+	: {
+			// if we don't have a list of allowed modules, allow everything
+			has() {
+				return true;
+			},
+		};
+const ALLOWED_COMMANDS = new Set(env.get(CONFIG_PARAMS.APPLICATIONS_ALLOWEDSPAWNCOMMANDS) ?? []);
+const REPLACED_BUILTIN_MODULES = {
+	child_process: {
+		exec: createSpawn(child_process.exec),
+		execFile: createSpawn(child_process.execFile),
+		fork: createSpawn(child_process.fork, true), // this is launching node, so deemed safe
+		spawn: createSpawn(child_process.spawn),
+	},
+};
+/**
+ * Creates a ChildProcess-like object for an existing process
+ */
+class ExistingProcessWrapper extends EventEmitter {
+	pid: number;
+	private checkInterval: NodeJS.Timeout;
+
+	constructor(pid: number) {
+		super();
+		this.pid = pid;
+
+		// Monitor process and emit exit event when it terminates
+		this.checkInterval = setInterval(() => {
+			try {
+				// Signal 0 checks if process exists without actually killing it
+				process.kill(pid, 0);
+			} catch {
+				// Process no longer exists
+				clearInterval(this.checkInterval);
+				this.emit('exit', null, null);
+			}
+		}, 1000);
+	}
+
+	// Kill the process
+	kill(signal?: NodeJS.Signals | number) {
+		try {
+			process.kill(this.pid, signal);
+			return true;
+		} catch {
+			return false;
+		}
+	}
+
+	// Clean up interval when wrapper is no longer needed
+	unref() {
+		clearInterval(this.checkInterval);
+		return this;
+	}
+}
+
+/**
+ * Checks if a process with the given PID is running
+ */
+function isProcessRunning(pid: number): boolean {
+	try {
+		// Signal 0 checks existence without killing
+		process.kill(pid, 0);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Acquires an exclusive lock using the PID file itself (synchronously with busy-wait)
+ */
+function acquirePidFileLock(pidFilePath: string, maxRetries = 100, retryDelay = 5): number | null {
+	for (let attempt = 0; attempt < maxRetries; attempt++) {
+		try {
+			// Try to open exclusively - 'wx' fails if file exists
+			const fd = openSync(pidFilePath, 'wx');
+			closeSync(fd);
+			return fd; // Successfully acquired lock (file created)
+		} catch (err) {
+			if (err.code === 'EEXIST') {
+				// File exists - check if it contains a valid running process
+				try {
+					const pidContent = readFileSync(pidFilePath, 'utf-8');
+					const existingPid = parseInt(pidContent.trim(), 10);
+
+					if (!isNaN(existingPid) && isProcessRunning(existingPid)) {
+						// Valid process is running, return its PID
+						return existingPid;
+					} else {
+						// Stale PID file, try to remove it
+						try {
+							unlinkSync(pidFilePath);
+						} catch {
+							// Another thread may have removed it, retry
+						}
+					}
+				} catch {
+					// Couldn't read file, another thread might be writing, retry
+				}
+
+				// Wait a bit before retrying
+				const start = Date.now();
+				while (Date.now() - start < retryDelay) {
+					// Busy wait
+				}
+			} else {
+				throw err;
+			}
+		}
+	}
+
+	throw new Error(`Failed to acquire PID file lock after ${maxRetries} attempts`);
+}
+
+function createSpawn(spawnFunction: (...args: any) => child_process.ChildProcess, alwaysAllow?: boolean) {
+	const basePath = env.getHdbBasePath();
+	return function (command: string, args?: any, options?: any, callback?: (...args: any[]) => void) {
+		if (!ALLOWED_COMMANDS.has(command.split(' ')[0]) && !alwaysAllow) {
+			throw new Error(`Command ${command} is not allowed`);
+		}
+		const processName = options?.name;
+		if (!processName)
+			throw new Error(
+				`Calling ${spawnFunction.name} in Harper must have a process "name" in the options to ensure that a single process is started and reused`
+			);
+
+		// Ensure PID directory exists
+		const pidDir = join(basePath, 'pids');
+		mkdirSync(pidDir, { recursive: true });
+
+		const pidFilePath = join(pidDir, `${processName}.pid`);
+
+		// Try to acquire lock - returns null if we got the lock, or PID if process exists
+		const existingPid = acquirePidFileLock(pidFilePath);
+
+		if (typeof existingPid === 'number' && existingPid > 0) {
+			// Existing process is running, return wrapper
+			return new ExistingProcessWrapper(existingPid);
+		}
+
+		// We acquired the lock (file was created), spawn new process
+		const childProcess = spawnFunction(command, args, options, callback);
+
+		// Write PID to the file we just created
+		try {
+			writeFileSync(pidFilePath, childProcess.pid.toString(), 'utf-8');
+		} catch (err) {
+			// Failed to write PID, clean up
+			try {
+				childProcess.kill();
+				unlinkSync(pidFilePath);
+			} catch {}
+			throw err;
+		}
+
+		// Clean up PID file when process exits
+		childProcess.on('exit', () => {
+			try {
+				unlinkSync(pidFilePath);
+			} catch {
+				// File may already be removed
+			}
+		});
+
+		return childProcess;
+	};
+}
+
+/**
+ * Validates whether a module can be loaded based on security restrictions and returns the module path or replacement.
+ * For file URLs, ensures the module is within the containing folder.
+ * For node built-in modules, checks against an allowlist and returns any replacements.
+ *
+ * @param {string} moduleUrl - The URL or identifier of the module to be loaded, which may be a file: URL, node: URL, or bare module specifier.
+ * @param {string} containingFolder - The absolute path of the folder that contains the application, used to validate file: URLs are within bounds.
+ * @return {any} Returns undefined for allowed file paths, or a replacement module identifier for allowed node built-in modules.
+ * @throws {Error} Throws an error if the module is outside the application folder or if the module is not in the allowed list.
+ */
 function checkAllowedModulePath(moduleUrl: string, containingFolder?: string): boolean {
 	if (moduleUrl.startsWith('file:')) {
 		const path = moduleUrl.slice(7);
 		if (!containingFolder || path.startsWith(containingFolder)) {
-			return true;
+			return;
 		}
 		throw new Error(`Can not load module outside of application folder ${containingFolder}`);
 	}
 	let simpleName = moduleUrl.startsWith('node:') ? moduleUrl.slice(5) : moduleUrl;
 	simpleName = simpleName.split('/')[0];
-	if (ALLOWED_NODE_BUILTIN_MODULES.has(simpleName)) return true;
+	if (ALLOWED_NODE_BUILTIN_MODULES.has(simpleName)) return REPLACED_BUILTIN_MODULES[simpleName];
 	throw new Error(`Module ${moduleUrl} is not allowed to be imported`);
 }
 
