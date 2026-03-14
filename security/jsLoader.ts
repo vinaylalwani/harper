@@ -520,11 +520,7 @@ function isProcessRunning(pid: number): boolean {
  * Acquires an exclusive lock using the PID file itself (synchronously with busy-wait)
  * Returns { locked: true } if lock was acquired, or { locked: false, pid: number } if process exists
  */
-function acquirePidFileLock(
-	pidFilePath: string,
-	maxRetries = 100,
-	retryDelay = 5
-): { locked: boolean; pid?: number } {
+function acquirePidFileLock(pidFilePath: string, maxRetries = 100, retryDelay = 5): { locked: boolean; pid?: number } {
 	for (let attempt = 0; attempt < maxRetries; attempt++) {
 		try {
 			// Try to open exclusively - 'wx' fails if file exists
