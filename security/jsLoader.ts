@@ -14,7 +14,7 @@ import * as child_process from 'node:child_process';
 import { CONFIG_PARAMS } from '../utility/hdbTerms.ts';
 import { contentTypes } from '../server/serverHelpers/contentTypes.ts';
 import type { CompartmentOptions } from 'ses';
-import { mkdirSync, readFileSync, writeFileSync, unlinkSync, openSync, closeSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, unlinkSync, openSync, closeSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { EventEmitter } from 'node:events';
 
@@ -488,6 +488,9 @@ const REPLACED_BUILTIN_MODULES = {
 		execFile: createSpawn(child_process.execFile),
 		fork: createSpawn(child_process.fork, true), // this is launching node, so deemed safe
 		spawn: createSpawn(child_process.spawn),
+		execSync: createSpawnSync(child_process.execSync),
+		execFileSync: createSpawnSync(child_process.execFileSync),
+		spawnSync: createSpawnSync(child_process.spawnSync),
 	},
 };
 /**
@@ -546,14 +549,19 @@ function isProcessRunning(pid: number): boolean {
 
 /**
  * Acquires an exclusive lock using the PID file itself (synchronously with busy-wait)
+ * Returns { locked: true } if lock was acquired, or { locked: false, pid: number } if process exists
  */
-function acquirePidFileLock(pidFilePath: string, maxRetries = 100, retryDelay = 5): number | null {
+function acquirePidFileLock(
+	pidFilePath: string,
+	maxRetries = 100,
+	retryDelay = 5
+): { locked: boolean; pid?: number } {
 	for (let attempt = 0; attempt < maxRetries; attempt++) {
 		try {
 			// Try to open exclusively - 'wx' fails if file exists
 			const fd = openSync(pidFilePath, 'wx');
 			closeSync(fd);
-			return fd; // Successfully acquired lock (file created)
+			return { locked: true }; // Successfully acquired lock (file created)
 		} catch (err) {
 			if (err.code === 'EEXIST') {
 				// File exists - check if it contains a valid running process
@@ -562,10 +570,19 @@ function acquirePidFileLock(pidFilePath: string, maxRetries = 100, retryDelay = 
 					const existingPid = parseInt(pidContent.trim(), 10);
 
 					if (!isNaN(existingPid) && isProcessRunning(existingPid)) {
-						// Valid process is running, return its PID
-						return existingPid;
+						// Valid process is running, return its PID immediately
+						return { locked: false, pid: existingPid };
+					}
+
+					// Invalid/empty PID - check file age to determine if it's stale or being written
+					const stats = statSync(pidFilePath);
+					const fileAge = Date.now() - stats.mtimeMs;
+
+					// If file is very new (less than 100ms) and empty/invalid, another thread is likely still writing to it
+					if (fileAge < 100) {
+						// Just wait and retry, don't try to remove
 					} else {
-						// Stale PID file, try to remove it
+						// Stale PID file (old and invalid), try to remove it
 						try {
 							unlinkSync(pidFilePath);
 						} catch {
@@ -573,7 +590,7 @@ function acquirePidFileLock(pidFilePath: string, maxRetries = 100, retryDelay = 
 						}
 					}
 				} catch {
-					// Couldn't read file, another thread might be writing, retry
+					// Couldn't read/stat file, another thread might be modifying it, retry
 				}
 
 				// Wait a bit before retrying
@@ -608,12 +625,12 @@ function createSpawn(spawnFunction: (...args: any) => child_process.ChildProcess
 
 		const pidFilePath = join(pidDir, `${processName}.pid`);
 
-		// Try to acquire lock - returns null if we got the lock, or PID if process exists
-		const existingPid = acquirePidFileLock(pidFilePath);
+		// Try to acquire lock
+		const lockResult = acquirePidFileLock(pidFilePath);
 
-		if (typeof existingPid === 'number' && existingPid > 0) {
+		if (!lockResult.locked) {
 			// Existing process is running, return wrapper
-			return new ExistingProcessWrapper(existingPid);
+			return new ExistingProcessWrapper(lockResult.pid);
 		}
 
 		// We acquired the lock (file was created), spawn new process
@@ -641,6 +658,24 @@ function createSpawn(spawnFunction: (...args: any) => child_process.ChildProcess
 		});
 
 		return childProcess;
+	};
+}
+
+function createSpawnSync(spawnSyncFunction: (...args: any) => any, alwaysAllow?: boolean) {
+	return function (command: string, args?: any, options?: any) {
+		// Handle different argument patterns - some sync functions take (command, options)
+		if (args && !Array.isArray(args)) {
+			options = args;
+			args = undefined;
+		}
+
+		if (!ALLOWED_COMMANDS.has(command.split(' ')[0]) && !alwaysAllow) {
+			throw new Error(`Command ${command} is not allowed`);
+		}
+
+		// Sync functions don't support process reuse since they block until completion
+		// Just execute directly after validation
+		return spawnSyncFunction(command, args, options);
 	};
 }
 
