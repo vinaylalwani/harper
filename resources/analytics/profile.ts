@@ -6,7 +6,7 @@ import { recordAction } from './write.ts';
 import { get as envGet, getHdbBasePath } from '../../utility/environment/environmentManager.js';
 import { CONFIG_PARAMS } from '../../utility/hdbTerms.js';
 import { PACKAGE_ROOT } from '../../utility/packageUtils.js';
-import { realpathSync, readFileSync } from 'node:fs';
+import { realpathSync, readFileSync, readdirSync } from 'node:fs';
 import { time as timeProfiler } from '@datadog/pprof';
 import { getWorkerIndex } from '../../server/threads/manageThreads.js';
 import * as log from '../../utility/logging/harper_logger.js';
@@ -34,6 +34,7 @@ const SAMPLING_INTERVAL_IN_MICROSECONDS = 50000;
 		}, PROFILE_PERIOD).unref();
 	}
 })();
+let lastChildCpuTime = 0;
 
 export async function captureProfile(
 	delayToNextCapture = (envGet(CONFIG_PARAMS.ANALYTICS_AGGREGATEPERIOD) ?? 60) * 1000
@@ -72,7 +73,8 @@ export async function captureProfile(
 			// Record child process CPU time
 			const childCpuTime = getChildProcessCpuTime();
 			if (childCpuTime !== null) {
-				recordAction(childCpuTime, 'cpu-usage', 'child-processes');
+				recordAction(childCpuTime - lastChildCpuTime, 'cpu-usage', 'user', 'child-processes');
+				lastChildCpuTime = childCpuTime;
 			}
 		}
 	} catch (error) {
@@ -117,23 +119,98 @@ export async function captureProfile(
 }
 
 /**
- * Get the total CPU time (in seconds) consumed by all child processes.
- * Reads from /proc/<pid>/stat to get cutime and cstime (child user and system time).
+ * Get the total CPU time (in seconds) consumed by all child/descendant processes.
+ * Recursively finds all descendants by traversing /proc and summing their CPU time.
+ * Also includes cutime/cstime from the current process for terminated children.
  * Only works on Linux.
  */
 function getChildProcessCpuTime(): number | null {
 	try {
-		const statContent = readFileSync(`/proc/${process.pid}/stat`, 'utf8');
-		// The stat file format: pid (comm) state ppid ... cutime cstime ...
-		// cutime is at index 15, cstime is at index 16 (0-indexed after splitting)
-		// These values are in clock ticks, need to convert to seconds
-		const statParts = statContent.split(') ')[1].split(' ');
-		const cutime = parseInt(statParts[13], 10); // child user time (index 15 - 2 for pid and comm)
-		const cstime = parseInt(statParts[14], 10); // child system time (index 16 - 2 for pid and comm)
-		const clockTicksPerSecond = 100; // Usually 100 on Linux (can also use os.constants or syscall)
-		return (cutime + cstime) / clockTicksPerSecond;
+		const currentPid = process.pid;
+		const descendants = findAllDescendants(currentPid);
+		let totalCpuTime = 0;
+		const clockTicksPerSecond = 100; // Usually 100 on Linux
+
+		// Get CPU time from currently running descendants
+		for (const pid of descendants) {
+			try {
+				const statContent = readFileSync(`/proc/${pid}/stat`, 'utf8');
+				// Parse stat file: pid (comm) state ppid ... utime stime ...
+				// Split by ') ' to handle process names with spaces/special chars
+				const statParts = statContent.split(') ')[1].split(' ');
+				const utime = parseInt(statParts[11], 10); // user time (index 13 - 2)
+				const stime = parseInt(statParts[12], 10); // system time (index 14 - 2)
+				totalCpuTime += (utime + stime) / clockTicksPerSecond;
+			} catch {
+				// Process may have terminated, skip it
+			}
+		}
+
+		// Add CPU time from terminated children (cutime + cstime from current process)
+		try {
+			const statContent = readFileSync(`/proc/${currentPid}/stat`, 'utf8');
+			const statParts = statContent.split(') ')[1].split(' ');
+			const cutime = parseInt(statParts[13], 10); // child user time (index 15 - 2)
+			const cstime = parseInt(statParts[14], 10); // child system time (index 16 - 2)
+			totalCpuTime += (cutime + cstime) / clockTicksPerSecond;
+		} catch {
+			// Ignore if we can't read our own stats
+		}
+
+		return totalCpuTime;
 	} catch (error) {
 		// Silently return null if /proc is not available (non-Linux) or read fails
 		return null;
 	}
+}
+
+/**
+ * Recursively find all descendant PIDs of the given parent PID.
+ */
+function findAllDescendants(parentPid: number): Set<number> {
+	const descendants = new Set<number>();
+
+	try {
+		// Get all entries in /proc
+		const procEntries = readdirSync('/proc');
+
+		// Build a map of pid -> parent pid
+		const pidToParent = new Map<number, number>();
+		for (const entry of procEntries) {
+			const pid = parseInt(entry, 10);
+			if (isNaN(pid)) continue;
+
+			try {
+				const statContent = readFileSync(`/proc/${pid}/stat`, 'utf8');
+				// Extract ppid (parent pid) - it's at index 3 after splitting by ') '
+				const statParts = statContent.split(') ')[1].split(' ');
+				const ppid = parseInt(statParts[1], 10); // ppid is at index 3 - 2
+				pidToParent.set(pid, ppid);
+			} catch {
+				// Process may have terminated, skip it
+			}
+		}
+
+		// Recursively find all descendants
+		const toProcess = [parentPid];
+		const processed = new Set<number>();
+
+		while (toProcess.length > 0) {
+			const currentPid = toProcess.pop()!;
+			if (processed.has(currentPid)) continue;
+			processed.add(currentPid);
+
+			// Find direct children of currentPid
+			for (const [pid, ppid] of pidToParent.entries()) {
+				if (ppid === currentPid && !processed.has(pid)) {
+					descendants.add(pid);
+					toProcess.push(pid);
+				}
+			}
+		}
+	} catch {
+		// /proc not available or other error
+	}
+
+	return descendants;
 }
