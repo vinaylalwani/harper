@@ -42,6 +42,7 @@ export async function captureProfile(
 	clearTimeout(profilerTimer);
 	const hitCountThreshold = 100;
 	const secondsPerHit = SAMPLING_INTERVAL_IN_MICROSECONDS / 1_000_000;
+	const CHILD_TIME_THRESHOLD = 0.001;
 	const locationById = new Map<number, any>();
 	const fileNameById = new Map<number, any>();
 	const samplesByLocationId = new Map<number, number>();
@@ -73,7 +74,9 @@ export async function captureProfile(
 			// Record child process CPU time
 			const childCpuTime = getChildProcessCpuTime();
 			if (childCpuTime !== null) {
-				recordAction(childCpuTime - lastChildCpuTime, 'cpu-usage', 'user', 'child-processes');
+				const childCpuTimeInInterval = childCpuTime - lastChildCpuTime;
+				if (childCpuTimeInInterval > CHILD_TIME_THRESHOLD)
+					recordAction(childCpuTimeInInterval, 'cpu-usage', 'user', 'child-processes');
 				lastChildCpuTime = childCpuTime;
 			}
 		}
@@ -158,7 +161,7 @@ function getChildProcessCpuTime(): number | null {
 		}
 
 		return totalCpuTime;
-	} catch (error) {
+	} catch {
 		// Silently return null if /proc is not available (non-Linux) or read fails
 		return null;
 	}
