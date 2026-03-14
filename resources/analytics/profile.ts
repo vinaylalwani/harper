@@ -6,8 +6,9 @@ import { recordAction } from './write.ts';
 import { get as envGet, getHdbBasePath } from '../../utility/environment/environmentManager.js';
 import { CONFIG_PARAMS } from '../../utility/hdbTerms.js';
 import { PACKAGE_ROOT } from '../../utility/packageUtils.js';
-import { realpathSync } from 'node:fs';
+import { realpathSync, readFileSync } from 'node:fs';
 import { time as timeProfiler } from '@datadog/pprof';
+import { getWorkerIndex } from '../../server/threads/manageThreads.js';
 import * as log from '../../utility/logging/harper_logger.js';
 
 type Profile = ReturnType<typeof timeProfiler.stop>;
@@ -67,6 +68,13 @@ export async function captureProfile(
 				recordAction(sampleCount * secondsPerHit, 'cpu-usage', locationName);
 			}
 		}
+		if (getWorkerIndex() === 0) {
+			// Record child process CPU time
+			const childCpuTime = getChildProcessCpuTime();
+			if (childCpuTime !== null) {
+				recordAction(childCpuTime, 'cpu-usage', 'child-processes');
+			}
+		}
 	} catch (error) {
 		log.error?.('analytics profiler error:', error);
 	} finally {
@@ -105,5 +113,27 @@ export async function captureProfile(
 				}
 			}
 		}
+	}
+}
+
+/**
+ * Get the total CPU time (in seconds) consumed by all child processes.
+ * Reads from /proc/<pid>/stat to get cutime and cstime (child user and system time).
+ * Only works on Linux.
+ */
+function getChildProcessCpuTime(): number | null {
+	try {
+		const statContent = readFileSync(`/proc/${process.pid}/stat`, 'utf8');
+		// The stat file format: pid (comm) state ppid ... cutime cstime ...
+		// cutime is at index 15, cstime is at index 16 (0-indexed after splitting)
+		// These values are in clock ticks, need to convert to seconds
+		const statParts = statContent.split(') ')[1].split(' ');
+		const cutime = parseInt(statParts[13], 10); // child user time (index 15 - 2 for pid and comm)
+		const cstime = parseInt(statParts[14], 10); // child system time (index 16 - 2 for pid and comm)
+		const clockTicksPerSecond = 100; // Usually 100 on Linux (can also use os.constants or syscall)
+		return (cutime + cstime) / clockTicksPerSecond;
+	} catch (error) {
+		// Silently return null if /proc is not available (non-Linux) or read fails
+		return null;
 	}
 }
