@@ -17,7 +17,6 @@ import type { CompartmentOptions } from 'ses';
 import { mkdirSync, readFileSync, writeFileSync, unlinkSync, openSync, closeSync } from 'node:fs';
 import { join } from 'node:path';
 import { EventEmitter } from 'node:events';
-import * as repl from 'node:repl';
 
 type Lockdown = 'none' | 'freeze' | 'ses';
 const APPLICATIONS_LOCKDOWN: Lockdown = env.get(CONFIG_PARAMS.APPLICATIONS_LOCKDOWN);
@@ -328,7 +327,7 @@ async function loadModuleWithVM(moduleUrl: string, scope: ApplicationScope) {
 					},
 					{ identifier: url, context }
 				);
-			} catch (err) {
+			} catch {
 				// Fall back to dynamic import for ESM packages
 				const importedModule = await import(url);
 				const exportNames = Object.keys(importedModule);

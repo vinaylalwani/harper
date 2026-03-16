@@ -12,3 +12,5 @@ assert(typeof globalVariableFromParent, 'undefined', 'Global variable from paren
 
 export class MyComponent extends Resource {}
 export { connect };
+
+assert.equal(testCircularExport(), MyComponent);
