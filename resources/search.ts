@@ -345,7 +345,7 @@ export function searchByIndex(
 							recordRead(entry);
 							result = entry;
 						}
-						if (this.isSync) return result;
+						if (true || this.isSync) return result;
 						return new Promise((resolve) => setImmediate(() => resolve(result)));
 					}
 		);
