@@ -6,6 +6,9 @@ module.exports = install;
 async function install() {
 	try {
 		await installer.install();
+
+		// TODO: Remove this once rocksdb-js 0.1.12 is released
+		process.exit(0);
 	} catch (err) {
 		console.error('There was an error during the install.');
 		console.error(err);
