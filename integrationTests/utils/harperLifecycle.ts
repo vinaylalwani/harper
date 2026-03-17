@@ -153,11 +153,6 @@ function runHarperCommand({ args, env, completionMessage, logDir }: RunHarperCom
 			stderr += data.toString();
 		});
 
-		proc.on('exit', () => {
-			stdoutStream?.end();
-			stderrStream?.end();
-		});
-
 		proc.on('error', (error) => {
 			reject(error);
 		});
@@ -167,11 +162,14 @@ function runHarperCommand({ args, env, completionMessage, logDir }: RunHarperCom
 				resolve(proc);
 			} else {
 				let errorMessage = `Harper process failed with exit code ${statusCode}`;
+				stderrStream?.write(errorMessage);
 				if (stderr) {
 					errorMessage += `\n\nstderr:\n${stderr}`;
 				}
 				reject(errorMessage);
 			}
+			stdoutStream?.end();
+			stderrStream?.end();
 		});
 	});
 }
@@ -236,7 +234,7 @@ export async function startHarper(ctx: ContextWithHarper, options?: SetupHarperO
 	}
 
 	// Point Harper's log directory to the suite log dir so hdb.log is preserved for upload
-	const config = { ...(options?.config || {}) };
+	const config = { ...options?.config };
 	if (logDir) {
 		config.logging = { ...config.logging, root: logDir };
 
@@ -262,6 +260,7 @@ export async function startHarper(ctx: ContextWithHarper, options?: SetupHarperO
 			`--HTTP_PORT=${loopbackAddress}:${HTTP_PORT}`,
 			`--OPERATIONSAPI_NETWORK_PORT=${loopbackAddress}:${OPERATIONS_API_PORT}`,
 			'--LOGGING_LEVEL=debug',
+			'--LOGGING_STDSTREAMS=false',
 			'--HARPER_SET_CONFIG=' + JSON.stringify(config),
 		],
 		env: options?.env || {},
@@ -286,6 +285,29 @@ export async function startHarper(ctx: ContextWithHarper, options?: SetupHarperO
 }
 
 /**
+ * Kill harper process (can be used for teardown, or killing it before a restart)
+ * @param ctx
+ */
+export async function killHarper(ctx: ContextWithHarper): Promise<void> {
+	await new Promise<void>((resolve) => {
+		let timer: NodeJS.Timeout;
+		ctx.harper.process.on('exit', () => {
+			resolve();
+			clearTimeout(timer);
+		});
+		ctx.harper.process.kill();
+		timer = setTimeout(() => {
+			try {
+				ctx.harper.process.kill('SIGKILL');
+			} catch {
+				// possible that the process terminated but the exit event hasn't fired yet
+			}
+			resolve();
+		}, 200);
+	});
+}
+
+/**
  * Tears down a Harper instance and cleans up all resources.
  *
  * This function stops the Harper instance, releases the loopback address,
@@ -306,22 +328,7 @@ export async function startHarper(ctx: ContextWithHarper, options?: SetupHarperO
  * ```
  */
 export async function teardownHarper(ctx: ContextWithHarper): Promise<void> {
-	await new Promise<void>((resolve) => {
-		let timer: NodeJS.Timeout;
-		ctx.harper.process.on('exit', () => {
-			resolve();
-			clearTimeout(timer);
-		});
-		ctx.harper.process.kill();
-		timer = setTimeout(() => {
-			try {
-				ctx.harper.process.kill('SIGKILL');
-			} catch {
-				// possible that the process terminated but the exit event hasn't fired yet
-			}
-			resolve();
-		}, 200);
-	});
+	await killHarper(ctx);
 
 	await releaseLoopbackAddress(ctx.harper.hostname);
 

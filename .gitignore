@@ -15,6 +15,8 @@ yarn.lock
 pnpm-lock.yaml
 npm-shrinkwrap.json
 
+/studio/
+/studio-src/
 # Test Outputs
 coverage
 *.lcov
@@ -43,3 +45,4 @@ commits-to-pick.txt
 
 # npm run package Outputs
 harperfast-harper-*.tgz
+harper-*.tgz

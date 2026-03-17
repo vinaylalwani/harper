@@ -38,7 +38,7 @@ import {
 	COERCIBLE_OPERATORS,
 	executeConditions,
 } from './search.ts';
-import logger from '../utility/logging/logger.js';
+import { logger } from '../utility/logging/logger.ts';
 import { Addition, assignTrackedAccessors, updateAndFreeze, hasChanges, GenericTrackedObject } from './tracked.ts';
 import { transaction, contextStorage } from './transaction.ts';
 import { MAXIMUM_KEY, writeKey, compareKeys } from 'ordered-binary';
@@ -71,11 +71,17 @@ const { validateAttribute } = lmdbProcessRows;
 
 export type Attribute = {
 	name: string;
-	type: string;
+	type: 'ID' | 'Int' | 'Float' | 'Long' | 'String' | 'Boolean' | 'Date' | 'Bytes' | 'Any' | 'BigInt' | 'Blob' | string;
 	assignCreatedTime?: boolean;
 	assignUpdatedTime?: boolean;
+	nullable?: boolean;
 	expiresAt?: boolean;
 	isPrimaryKey?: boolean;
+	indexed?: unknown;
+	relationship?: unknown;
+	computed?: unknown;
+	properties?: Array<Attribute>;
+	elements?: Attribute;
 };
 
 type MaybePromise<T> = T | Promise<T>;
@@ -106,7 +112,7 @@ export interface Table {
 	databasePath: string;
 	tableName: string;
 	databaseName: string;
-	attributes: any[];
+	attributes: Attribute[];
 	primaryKey: string;
 	splitSegments?: boolean;
 	replicate?: boolean;
@@ -141,7 +147,7 @@ export function makeTable(options) {
 	} = options;
 	let { expirationMS: expirationMs, evictionMS: evictionMs, audit, trackDeletes } = options;
 	evictionMs ??= 0;
-	let { attributes } = options;
+	let { attributes }: { attributes: Attribute[] } = options;
 	if (!attributes) attributes = [];
 	const updateRecord = recordUpdater(primaryStore, tableId, auditStore);
 	let sourceLoad: any; // if a source has a load function (replicator), record it here
@@ -2693,7 +2699,7 @@ export function makeTable(options) {
 									if (--count <= 0) break;
 								}
 							} catch (error) {
-								logger.error('Error getting history entry', auditRecord.localTime, error);
+								logger.error?.('Error getting history entry', auditRecord.localTime, error);
 							}
 							// TODO: Would like to do this asynchronously, but would need to catch up on anything published during iteration
 							//await rest(); // yield for fairness
@@ -2893,7 +2899,7 @@ export function makeTable(options) {
 		}
 		validate(record: any, patch?: boolean) {
 			let validationErrors;
-			const validateValue = (value, attribute, name) => {
+			const validateValue = (value, attribute: Attribute, name) => {
 				if (attribute.type && value != null) {
 					if (patch && value.__op__) value = value.value;
 					if (attribute.properties) {
@@ -3063,7 +3069,7 @@ export function makeTable(options) {
 		getUpdatedTime() {
 			return this.#version;
 		}
-		static async addAttributes(attributesToAdd) {
+		static async addAttributes(attributesToAdd: Attribute[]) {
 			const new_attributes = attributes.slice(0);
 			for (const attribute of attributesToAdd) {
 				if (!attribute.name) throw new ClientError('Attribute name is required');
@@ -3305,7 +3311,7 @@ export function makeTable(options) {
 						const userResolver = this.userResolvers[attribute.name];
 						if (userResolver) return userResolver(value, context, entry);
 						else {
-							logger.warn(
+							logger.warn?.(
 								`Computed attribute "${attribute.name}" does not have a function assigned to it. Please use setComputedAttribute('${attribute.name}', resolver) to assign a resolver function.`
 							);
 							// silence future warnings but just returning undefined
@@ -3927,7 +3933,12 @@ export function makeTable(options) {
 			// it should be resolved now and we can use the value it saved.
 			clearTimeout(timer);
 			const entry = primaryStore.getEntry(id);
-			if (!entry || !entry.value || entry.metadataFlags & (INVALIDATED | EVICTED))
+			if (
+				!entry ||
+				!entry.value ||
+				entry.metadataFlags & (INVALIDATED | EVICTED) ||
+				(entry.expiresAt != undefined && entry.expiresAt < Date.now())
+			)
 				// try again
 				whenResolved(getFromSource(source, id, primaryStore.getEntry(id), context));
 			else whenResolved(entry);

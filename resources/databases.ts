@@ -1,3 +1,4 @@
+import { EventEmitter } from 'node:events';
 import { initSync, getHdbBasePath, get as envGet } from '../utility/environment/environmentManager.js';
 import { INTERNAL_DBIS_NAME } from '../utility/lmdb/terms.js';
 import { open, compareKeys, type Database, type RootDatabase } from 'lmdb';
@@ -97,6 +98,14 @@ interface RocksRootDatabase extends RocksDatabaseEx {
 
 export type RootDatabaseKind = LMDBRootDatabase | RocksRootDatabase;
 
+export type DatabaseWatcherEventMap = {
+	updateTable: [table: Table, originIsNotCluster?: boolean];
+	dropTable: [tableName: string, databaseName: string];
+	dropDatabase: [databaseName: string];
+};
+
+export const databaseEventsEmitter = new EventEmitter<DatabaseWatcherEventMap>();
+
 export const tables: Tables = Object.create(null);
 export const databases: Databases = Object.create(null);
 
@@ -113,6 +122,7 @@ function openRocksDatabase(path: string, options: RocksDatabaseOptions & { dupSo
 		db = RocksDatabase.open(new RocksIndexStore(path, options)) as RocksDatabaseEx;
 	} else {
 		db = RocksDatabase.open(path, options) as RocksDatabaseEx;
+		db.encoder.name = options.name;
 	}
 	db.env = {};
 	return db;
@@ -126,8 +136,6 @@ _assignPackageExport('databases', databases);
 _assignPackageExport('tables', tables);
 
 const NEXT_TABLE_ID = Symbol.for('next-table-id');
-const tableListeners = [];
-const dbRemovalListeners = [];
 let loadedDatabases; // indicates if we have loaded databases from the file system yet
 
 // This is used to track all the databases that are found when iterating through the file system so that anything that is missing
@@ -576,9 +584,7 @@ function initStores(
 				})
 			);
 			table.schemaVersion = 1;
-			for (const listener of tableListeners) {
-				listener(table);
-			}
+			databaseEventsEmitter.emit('updateTable', table);
 		}
 	}
 	return rootStore;
@@ -599,7 +605,7 @@ export function resetDatabases() {
 				const table = db[tableName];
 				if (table.primaryStore.path === path) {
 					delete databases[store.databaseName];
-					dbRemovalListeners.forEach((listener) => listener(store.databaseName));
+					databaseEventsEmitter.emit('dropDatabase', store.databaseName);
 					break;
 				}
 			}
@@ -744,6 +750,7 @@ export async function dropDatabase(databaseName) {
 				await unlink(rootStore.path);
 			}
 		}
+		databaseEventsEmitter.emit('dropTable', tableName, databaseName);
 	}
 	if (!rootStore) {
 		rootStore = database({ database: databaseName, table: null });
@@ -761,7 +768,7 @@ export async function dropDatabase(databaseName) {
 		delete tables[DEFINED_TABLES];
 	}
 	delete databases[databaseName];
-	dbRemovalListeners.forEach((listener) => listener(databaseName));
+	databaseEventsEmitter.emit('dropDatabase', databaseName);
 	await deleteRootBlobPathsForDB(rootStore);
 }
 // opens an index, consulting with custom indexes that may use alternate store configuration
@@ -847,7 +854,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 		if (attribute.expiresAt) attribute.indexed = true;
 	}
 	let hasChanges;
-	let txnCommit;
+	let releaseExclusiveLock: () => void;
 	if (Table) {
 		primaryKey = Table.primaryKey;
 		if (Table.primaryStore.rootStore.status === 'closed') {
@@ -891,10 +898,10 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 			attributesDbi = rootStore.dbisDb = rootStore.openDB(INTERNAL_DBIS_NAME, internalDbiInit);
 		}
 
-		startTxn(); // get an exclusive lock on the database so we can verify that we are the only thread creating the table (and assigning the table id)
+		exclusiveLock(); // get an exclusive lock on the database so we can verify that we are the only thread creating the table (and assigning the table id)
 		if (attributesDbi.getSync(dbiName)) {
 			// table was created while we were setting up
-			if (txnCommit) txnCommit();
+			if (releaseExclusiveLock) releaseExclusiveLock();
 			resetDatabases();
 			return table(tableDefinition);
 		}
@@ -969,7 +976,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 		const attribute = attributes.find((attribute) => attribute.name === attribute_name);
 		const removeIndex = !attribute?.indexed && value.indexed && !value.isPrimaryKey;
 		if (!attribute || removeIndex) {
-			startTxn();
+			exclusiveLock();
 			hasChanges = true;
 			if (!attribute) attributesDbi.remove(key);
 			if (removeIndex) {
@@ -1012,7 +1019,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 					if (replicate !== undefined) updatedPrimaryAttribute.replicate = replicate;
 					if (attribute.type) updatedPrimaryAttribute.type = attribute.type;
 					hasChanges = true; // send out notification of the change
-					startTxn();
+					exclusiveLock();
 					attributesDbi.put(dbiKey, updatedPrimaryAttribute);
 				}
 
@@ -1038,7 +1045,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 					attributeDescriptor.restartNumber < workerData?.restartNumber
 				) {
 					hasChanges = true;
-					startTxn();
+					exclusiveLock();
 					attributeDescriptor = attributesDbi.getSync(dbiKey);
 					if (
 						changed ||
@@ -1068,12 +1075,12 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 				indices[attribute.name] = dbi;
 			} else if (changed) {
 				hasChanges = true;
-				startTxn();
+				exclusiveLock();
 				attributesDbi.put(dbiKey, attribute);
 			}
 		}
 	} finally {
-		if (txnCommit) txnCommit();
+		if (releaseExclusiveLock) releaseExclusiveLock();
 	}
 	if (hasChanges) {
 		Table.schemaVersion++;
@@ -1089,9 +1096,7 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 
 	Table.origin = origin;
 	if (hasChanges) {
-		for (const listener of tableListeners) {
-			listener(Table, origin !== 'cluster');
-		}
+		databaseEventsEmitter.emit('updateTable', Table, origin !== 'cluster');
 	}
 	if (expiration || eviction || scanInterval)
 		Table.setTTLExpiration({
@@ -1102,15 +1107,24 @@ export function table<TableResourceType>(tableDefinition: TableDefinition): Tabl
 	logger.trace(`${tableName} table loaded`);
 
 	return Table as TableResourceType;
-	function startTxn() {
-		if (txnCommit) return;
-		rootStore.transactionSync(() => {
-			return {
-				then(callback) {
-					txnCommit = callback;
-				},
+	// Acquire an exclusive lock for attribute updates
+	function exclusiveLock() {
+		if (releaseExclusiveLock) return;
+		if (rootStore instanceof RocksDatabase) {
+			while (!rootStore.tryLock('update-attributes')) {} // use a spin lock, we really need an synchronous exclusive lock here
+			releaseExclusiveLock = () => {
+				rootStore.unlock('update-attributes');
 			};
-		});
+		} else {
+			// we only need an exclusive transaction lock in lmdb
+			rootStore.transactionSync(() => {
+				return {
+					then(callback) {
+						releaseExclusiveLock = callback;
+					},
+				};
+			});
+		}
 	}
 }
 const MAX_OUTSTANDING_INDEXING = 1000;
@@ -1234,24 +1248,31 @@ export function dropTableMeta({ table: tableName, database: databaseName }) {
 	for (const key of dbisDb.getKeys({ start: tableName + '/', end: tableName + '0' })) {
 		removals.push(dbisDb.remove(key));
 	}
+	databaseEventsEmitter.emit('dropTable', tableName, databaseName);
 	return Promise.all(removals);
 }
 
-export function onUpdatedTable(listener) {
-	tableListeners.push(listener);
+export function onUpdatedTable(listener: (table: Table) => void) {
+	databaseEventsEmitter.on('updateTable', listener);
 	return {
 		remove() {
-			const index = tableListeners.indexOf(listener);
-			if (index > -1) tableListeners.splice(index, 1);
+			databaseEventsEmitter.off('updateTable', listener);
 		},
 	};
 }
-export function onRemovedDB(listener) {
-	dbRemovalListeners.push(listener);
+export function onRemovedTable(listener: (tableName: string, databaseName: string) => void) {
+	databaseEventsEmitter.on('dropTable', listener);
 	return {
 		remove() {
-			const index = dbRemovalListeners.indexOf(listener);
-			if (index > -1) dbRemovalListeners.splice(index, 1);
+			databaseEventsEmitter.off('dropTable', listener);
+		},
+	};
+}
+export function onRemovedDB(listener: (databaseName: string) => void) {
+	databaseEventsEmitter.on('dropDatabase', listener);
+	return {
+		remove() {
+			databaseEventsEmitter.off('dropDatabase', listener);
 		},
 	};
 }

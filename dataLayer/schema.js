@@ -13,7 +13,7 @@ const harperBridge = require('./harperBridge/harperBridge.js');
 const { handleHDBError, hdbErrors, ClientError } = require('../utility/errors/hdbError.js');
 const { HDB_ERROR_MSGS, HTTP_STATUS_CODES } = hdbErrors;
 const { SchemaEventMsg } = require('../server/threads/itc.js');
-const { getDatabases } = require('../resources/databases.ts');
+const { getDatabases, dropTableMeta } = require('../resources/databases.ts');
 const { transformReq } = require('../utility/common_utils.js');
 const { server } = require('../server/Server.ts');
 const { cleanupOrphans } = require('../resources/blob.ts');
@@ -96,7 +96,7 @@ async function createSchemaStructure(schemaCreateObject) {
 
 async function createTable(createTableObject) {
 	transformReq(createTableObject);
-	createTableObject.hash_attribute = createTableObject.primary_key ?? createTableObject.hash_attribute;
+	createTableObject.primary_key = createTableObject.primary_key ?? createTableObject.hash_attribute;
 	return await createTableStructure(createTableObject);
 }
 
@@ -108,7 +108,7 @@ async function createTableStructure(createTableObject) {
 			schema: DB_NAME_CONSTRAINTS,
 			table: TABLE_NAME_CONSTRAINTS,
 			residence: Joi.array().items(Joi.string().min(1)).optional(),
-			hash_attribute: PRIMARY_KEY_CONSTRAINTS,
+			primary_key: PRIMARY_KEY_CONSTRAINTS,
 		})
 	);
 	if (validation) throw new ClientError(validation.message);
@@ -132,7 +132,7 @@ async function createTableStructure(createTableObject) {
 		name: createTableObject.table,
 		schema: createTableObject.schema,
 		id: uuidV4(),
-		hash_attribute: createTableObject.hash_attribute,
+		primary_key: createTableObject.primary_key,
 	};
 
 	if (createTableObject.residence) {
@@ -219,6 +219,8 @@ async function dropTable(dropTableObject) {
 
 	await harperBridge.dropTable(dropTableObject);
 
+	await dropTableMeta({ table: dropTableObject.table, database: dropTableObject.schema });
+
 	let response = await server.replication.replicateOperation(dropTableObject);
 	response.message = `successfully deleted table '${dropTableObject.schema}.${dropTableObject.table}'`;
 	return response;
@@ -260,7 +262,7 @@ async function dropAttribute(dropAttributeObject) {
 
 	if (
 		dropAttributeObject.attribute ===
-		global.hdb_schema[dropAttributeObject.schema][dropAttributeObject.table].hash_attribute
+		global.hdb_schema[dropAttributeObject.schema][dropAttributeObject.table].primary_key
 	) {
 		throw handleHDBError(
 			new Error(),

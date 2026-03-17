@@ -3,17 +3,20 @@ import { contextStorage, transaction } from '../resources/transaction.ts';
 import { RequestTarget } from '../resources/RequestTarget.ts';
 import { tables, databases } from '../resources/databases.ts';
 import { readFile } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
 import { dirname, isAbsolute } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { SourceTextModule, SyntheticModule, createContext, runInContext } from 'node:vm';
-import { Scope } from '../components/Scope.ts';
+import { ApplicationScope } from '../components/ApplicationScope.ts';
 import logger from '../utility/logging/harper_logger.js';
 import { createRequire } from 'node:module';
 import * as env from '../utility/environment/environmentManager';
+import * as child_process from 'node:child_process';
 import { CONFIG_PARAMS } from '../utility/hdbTerms.ts';
 import { contentTypes } from '../server/serverHelpers/contentTypes.ts';
 import type { CompartmentOptions } from 'ses';
+import { mkdirSync, readFileSync, writeFileSync, unlinkSync, openSync, closeSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import { EventEmitter } from 'node:events';
 
 type Lockdown = 'none' | 'freeze' | 'ses';
 const APPLICATIONS_LOCKDOWN: Lockdown = env.get(CONFIG_PARAMS.APPLICATIONS_LOCKDOWN);
@@ -25,7 +28,7 @@ let lockedDown = false;
  * @param moduleUrl
  * @param scope
  */
-export async function scopedImport(filePath: string | URL, scope?: Scope) {
+export async function scopedImport(filePath: string | URL, scope?: ApplicationScope) {
 	if (!lockedDown && APPLICATIONS_LOCKDOWN && APPLICATIONS_LOCKDOWN !== 'none') {
 		lockedDown = true;
 		if (APPLICATIONS_LOCKDOWN === 'ses') {
@@ -76,7 +79,7 @@ export async function scopedImport(filePath: string | URL, scope?: Scope) {
 	}
 	const moduleUrl = (filePath instanceof URL ? filePath : pathToFileURL(filePath)).toString();
 	try {
-		const containmentMode = scope?.applicationContainment.mode;
+		const containmentMode = scope?.mode;
 		if (scope && containmentMode !== 'none') {
 			if (containmentMode === 'compartment') {
 				// use SES Compartments
@@ -110,8 +113,9 @@ export async function scopedImport(filePath: string | URL, scope?: Scope) {
 /**
  * Load a module using Node's vm.Module API with (not really secure) sandboxing
  */
-async function loadModuleWithVM(moduleUrl: string, scope: Scope) {
-	const moduleCache = new Map<string, Promise<SourceTextModule | SyntheticModule>>();
+async function loadModuleWithVM(moduleUrl: string, scope: ApplicationScope) {
+	const moduleCache = new Map<string, SourceTextModule | SyntheticModule>();
+	const linkingPromises = new Map<string, Promise<void>>();
 
 	// Create a secure context with limited globals
 	const contextObject = getGlobalObject(scope);
@@ -128,11 +132,16 @@ async function loadModuleWithVM(moduleUrl: string, scope: Scope) {
 		if (specifier.startsWith('file://')) {
 			return specifier;
 		}
-		const resolved = createRequire(referrer).resolve(specifier);
-		if (isAbsolute(resolved)) {
-			return pathToFileURL(resolved).toString();
+		// For relative paths, resolve to absolute file URL
+		if (specifier.startsWith('.')) {
+			const resolved = createRequire(referrer).resolve(specifier);
+			if (isAbsolute(resolved)) {
+				return pathToFileURL(resolved).toString();
+			}
+			return resolved;
 		}
-		return resolved;
+		// For package names and node: specifiers, keep as-is for proper require() handling
+		return specifier;
 	}
 
 	/**
@@ -167,7 +176,7 @@ async function loadModuleWithVM(moduleUrl: string, scope: Scope) {
 			filename: url,
 			async importModuleDynamically(specifier: string, script) {
 				const resolvedUrl = resolveModule(specifier, script.sourceURL);
-				const useContainment = specifier.startsWith('.') || scope.applicationContainment.dependencyContainment;
+				const useContainment = specifier.startsWith('.') || scope.dependencyContainment;
 				const dynamicModule = await loadModuleWithCache(resolvedUrl, useContainment);
 				return dynamicModule;
 			},
@@ -208,33 +217,54 @@ async function loadModuleWithVM(moduleUrl: string, scope: Scope) {
 	async function linker(specifier: string, referencingModule: SourceTextModule | SyntheticModule) {
 		const resolvedUrl = resolveModule(specifier, referencingModule.identifier);
 
-		// Check cache first
-		if (moduleCache.has(resolvedUrl)) {
-			return moduleCache.get(resolvedUrl)!;
-		}
-
-		const useContainment = specifier.startsWith('.') || scope.applicationContainment.dependencyContainment;
-		// Load the module
-		return await loadModuleWithCache(resolvedUrl, useContainment);
+		const useContainment = specifier.startsWith('.') || scope.dependencyContainment;
+		// Return the module immediately (even if not yet linked) to support circular dependencies
+		return await getOrCreateModule(resolvedUrl, useContainment);
 	}
 
-	function loadModuleWithCache(url: string, usePrivateGlobal: boolean): Promise<SourceTextModule | SyntheticModule> {
-		// Check cache
+	async function getOrCreateModule(
+		url: string,
+		usePrivateGlobal: boolean
+	): Promise<SourceTextModule | SyntheticModule> {
+		// Check cache first - return cached module immediately (even if not linked yet)
 		if (moduleCache.has(url)) {
 			return moduleCache.get(url)!;
 		}
-		const loadingModule = loadModule(url, usePrivateGlobal);
-		moduleCache.set(url, loadingModule);
-		return loadingModule;
+
+		// Create the module and cache it immediately (before linking)
+		const module = await createModule(url, usePrivateGlobal);
+		moduleCache.set(url, module);
+
+		return module;
+	}
+
+	async function loadModuleWithCache(
+		url: string,
+		usePrivateGlobal: boolean
+	): Promise<SourceTextModule | SyntheticModule> {
+		const module = await getOrCreateModule(url, usePrivateGlobal);
+
+		// Only link/evaluate once per module
+		if (!linkingPromises.has(url)) {
+			linkingPromises.set(
+				url,
+				module.link(linker).then(() => module.evaluate())
+			);
+		}
+
+		// Wait for linking to complete
+		await linkingPromises.get(url);
+
+		return module;
 	}
 	/**
-	 * Load a module from URL and create appropriate vm.Module
+	 * Create a module from URL without linking or evaluating
 	 */
-	async function loadModule(url: string, usePrivateGlobal: boolean): Promise<SourceTextModule | SyntheticModule> {
+	async function createModule(url: string, usePrivateGlobal: boolean): Promise<SourceTextModule | SyntheticModule> {
 		let module: SourceTextModule | SyntheticModule;
 
 		// Handle special built-in modules
-		if (url === 'harper') {
+		if (url === 'harper' || url === 'harperdb') {
 			let harperExports = getHarperExports(scope);
 			module = new SyntheticModule(
 				Object.keys(harperExports),
@@ -245,8 +275,8 @@ async function loadModuleWithVM(moduleUrl: string, scope: Scope) {
 				},
 				{ identifier: url, context }
 			);
-		} else if (usePrivateGlobal && url.startsWith('file://')) {
-			checkAllowedModulePath(url, scope.applicationContainment.verifyPath);
+		} else if (url.startsWith('file://')) {
+			checkAllowedModulePath(url, scope.verifyPath);
 			// Load source text from file
 			const source = await readFile(new URL(url), { encoding: 'utf-8' });
 
@@ -264,17 +294,8 @@ async function loadModuleWithVM(moduleUrl: string, scope: Scope) {
 						return dynamicModule;
 					},
 				});
-				// Cache the module
-				moduleCache.set(url, module);
-				// Link the module (resolve all imports)
-				await module.link(linker);
-
-				// Evaluate the module
-				await module.evaluate();
-				return module;
 			} catch (err) {
 				// If ESM parsing fails, try to load as CommonJS
-				// but first try the cache again
 				if (
 					err.message?.includes('require is not defined') ||
 					source.includes('module.exports') ||
@@ -286,27 +307,40 @@ async function loadModuleWithVM(moduleUrl: string, scope: Scope) {
 				}
 			}
 		} else {
-			checkAllowedModulePath(url, scope.applicationContainment.verifyPath);
-			// For Node.js built-in modules (node:) and npm packages, use dynamic import
-			const importedModule = await import(url);
-			const exportNames = Object.keys(importedModule);
-
-			module = new SyntheticModule(
-				exportNames,
-				function () {
-					for (const key of exportNames) {
-						this.setExport(key, importedModule[key]);
-					}
-				},
-				{ identifier: url, context }
-			);
+			const replacedModule = checkAllowedModulePath(url, scope.verifyPath);
+			// For Node.js built-in modules (node:) and npm packages
+			// Always try require first to properly handle CJS modules with named exports
+			try {
+				const cjsExports = replacedModule ?? require(url);
+				// It's a CJS module - expose all properties as named exports
+				const exportNames = Object.keys(cjsExports);
+				module = new SyntheticModule(
+					exportNames.length > 0 ? [...exportNames, 'default'] : ['default'],
+					function () {
+						if (exportNames.length > 0) {
+							for (const key of exportNames) {
+								this.setExport(key, cjsExports[key]);
+							}
+						}
+						this.setExport('default', cjsExports);
+					},
+					{ identifier: url, context }
+				);
+			} catch {
+				// Fall back to dynamic import for ESM packages
+				const importedModule = await import(url);
+				const exportNames = Object.keys(importedModule);
+				module = new SyntheticModule(
+					exportNames,
+					function () {
+						for (const key of exportNames) {
+							this.setExport(key, importedModule[key]);
+						}
+					},
+					{ identifier: url, context }
+				);
+			}
 		}
-
-		// Link the module (resolve all imports)
-		await module.link(linker);
-
-		// Evaluate the module
-		await module.evaluate();
 
 		return module;
 	}
@@ -318,7 +352,7 @@ async function loadModuleWithVM(moduleUrl: string, scope: Scope) {
 	return entryModule.namespace;
 }
 
-async function getCompartment(scope: Scope, globals) {
+async function getCompartment(scope: ApplicationScope, globals) {
 	const { StaticModuleRecord } = await import('@endo/static-module-record');
 	require('ses');
 	const compartment: CompartmentOptions = new (Compartment as typeof CompartmentOptions)(
@@ -351,7 +385,7 @@ async function getCompartment(scope: Scope, globals) {
 					const moduleText = await readFile(new URL(moduleSpecifier), { encoding: 'utf-8' });
 					return new StaticModuleRecord(moduleText, moduleSpecifier);
 				} else {
-					checkAllowedModulePath(moduleSpecifier, scope.applicationContainment.verifyPath);
+					checkAllowedModulePath(moduleSpecifier, scope.verifyPath);
 					const moduleExports = await import(moduleSpecifier);
 					return {
 						imports: [],
@@ -398,7 +432,7 @@ function getDefaultJSGlobalNames() {
 /**
  * Get the set of global variables that should be available to modules that run in scoped compartments/contexts.
  */
-function getGlobalObject(scope: Scope) {
+function getGlobalObject(scope: ApplicationScope) {
 	const appGlobal = {};
 	// create the new global object, assigning all the global variables from this global
 	// except those that will be natural intrinsics of the new VM
@@ -411,7 +445,7 @@ function getGlobalObject(scope: Scope) {
 		server: scope.server ?? server,
 		logger: scope.logger ?? logger,
 		resources: scope.resources,
-		config: scope.options.getRoot() ?? {},
+		config: scope.config ?? {},
 		fetch: APPLICATIONS_LOCKDOWN === 'ses' ? secureOnlyFetch : fetch,
 		console,
 		global: appGlobal,
@@ -419,12 +453,12 @@ function getGlobalObject(scope: Scope) {
 	});
 	return appGlobal;
 }
-function getHarperExports(scope: Scope) {
+function getHarperExports(scope: ApplicationScope) {
 	return {
 		server: scope.server ?? server,
 		logger: scope.logger ?? logger,
 		resources: scope.resources,
-		config: scope.options.getRoot() ?? {},
+		config: scope.config ?? {},
 		Resource,
 		tables,
 		databases,
@@ -439,40 +473,208 @@ function getHarperExports(scope: Scope) {
 		contentTypes,
 	};
 }
-const ALLOWED_NODE_BUILTIN_MODULES = new Set([
-	'assert',
-	'http',
-	'https',
-	'path',
-	'url',
-	'util',
-	'stream',
-	'crypto',
-	'buffer',
-	'string_decoder',
-	'querystring',
-	'punycode',
-	'zlib',
-	'events',
-	'timers',
-	'process',
-	'async_hooks',
-	'console',
-	'perf_hooks',
-	'diagnostics_channel',
-	'fs',
-]);
-function checkAllowedModulePath(moduleUrl: string, containingFolder: string): boolean {
+const ALLOWED_NODE_BUILTIN_MODULES = env.get(CONFIG_PARAMS.APPLICATIONS_ALLOWEDBUILTINMODULES)
+	? new Set(env.get(CONFIG_PARAMS.APPLICATIONS_ALLOWEDBUILTINMODULES))
+	: {
+			// if we don't have a list of allowed modules, allow everything
+			has() {
+				return true;
+			},
+		};
+const ALLOWED_COMMANDS = new Set(env.get(CONFIG_PARAMS.APPLICATIONS_ALLOWEDSPAWNCOMMANDS) ?? []);
+const REPLACED_BUILTIN_MODULES = {
+	child_process: {
+		exec: createSpawn(child_process.exec),
+		execFile: createSpawn(child_process.execFile),
+		fork: createSpawn(child_process.fork, true), // this is launching node, so deemed safe
+		spawn: createSpawn(child_process.spawn),
+	},
+};
+/**
+ * Creates a ChildProcess-like object for an existing process
+ */
+class ExistingProcessWrapper extends EventEmitter {
+	pid: number;
+	private checkInterval: NodeJS.Timeout;
+
+	constructor(pid: number) {
+		super();
+		this.pid = pid;
+
+		// Monitor process and emit exit event when it terminates
+		this.checkInterval = setInterval(() => {
+			try {
+				// Signal 0 checks if process exists without actually killing it
+				process.kill(pid, 0);
+			} catch {
+				// Process no longer exists
+				clearInterval(this.checkInterval);
+				this.emit('exit', null, null);
+			}
+		}, 1000);
+	}
+
+	// Kill the process
+	kill(signal?: NodeJS.Signals | number) {
+		try {
+			process.kill(this.pid, signal);
+			return true;
+		} catch {
+			return false;
+		}
+	}
+
+	// Clean up interval when wrapper is no longer needed
+	unref() {
+		clearInterval(this.checkInterval);
+		return this;
+	}
+}
+
+/**
+ * Checks if a process with the given PID is running
+ */
+function isProcessRunning(pid: number): boolean {
+	try {
+		// Signal 0 checks existence without killing
+		process.kill(pid, 0);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Acquires an exclusive lock using the PID file itself (synchronously with busy-wait)
+ * Returns 0 if lock was acquired (need to spawn new process), or the existing PID if process is running
+ */
+function acquirePidFileLock(pidFilePath: string, maxRetries = 100, retryDelay = 5): number {
+	for (let attempt = 0; attempt < maxRetries; attempt++) {
+		try {
+			// Try to open exclusively - 'wx' fails if file exists
+			const fd = openSync(pidFilePath, 'wx');
+			closeSync(fd);
+			return 0; // Successfully acquired lock (file created), caller should spawn process
+		} catch (err) {
+			if (err.code === 'EEXIST') {
+				// File exists - check if it contains a valid running process
+				try {
+					const pidContent = readFileSync(pidFilePath, 'utf-8');
+					const existingPid = parseInt(pidContent.trim(), 10);
+
+					if (!isNaN(existingPid) && isProcessRunning(existingPid)) {
+						// Valid process is running, return its PID immediately
+						return existingPid;
+					}
+
+					// Invalid/empty PID - check file age to determine if it's stale or being written
+					const stats = statSync(pidFilePath);
+					const fileAge = Date.now() - stats.mtimeMs;
+
+					// If file is very new (less than 100ms) and empty/invalid, another thread is likely still writing to it
+					if (fileAge < 100) {
+						// Just wait and retry, don't try to remove
+					} else {
+						// Stale PID file (old and invalid), try to remove it
+						try {
+							unlinkSync(pidFilePath);
+						} catch {
+							// Another thread may have removed it, retry
+						}
+					}
+				} catch {
+					// Couldn't read/stat file, another thread might be modifying it, retry
+				}
+
+				// Wait a bit before retrying
+				const start = Date.now();
+				while (Date.now() - start < retryDelay) {
+					// Busy wait
+				}
+			} else {
+				throw err;
+			}
+		}
+	}
+
+	throw new Error(`Failed to acquire PID file lock after ${maxRetries} attempts`);
+}
+
+function createSpawn(spawnFunction: (...args: any) => child_process.ChildProcess, alwaysAllow?: boolean) {
+	const basePath = env.getHdbBasePath();
+	return function (command: string, args?: any, options?: any, callback?: (...args: any[]) => void) {
+		if (!ALLOWED_COMMANDS.has(command.split(' ')[0]) && !alwaysAllow) {
+			throw new Error(`Command ${command} is not allowed`);
+		}
+		const processName = options?.name;
+		if (!processName)
+			throw new Error(
+				`Calling ${spawnFunction.name} in Harper must have a process "name" in the options to ensure that a single process is started and reused`
+			);
+
+		// Ensure PID directory exists
+		const pidDir = join(basePath, 'pids');
+		mkdirSync(pidDir, { recursive: true });
+
+		const pidFilePath = join(pidDir, `${processName}.pid`);
+
+		// Try to acquire lock - returns 0 if acquired, or existing PID
+		const existingPid = acquirePidFileLock(pidFilePath);
+
+		if (existingPid !== 0) {
+			// Existing process is running, return wrapper
+			return new ExistingProcessWrapper(existingPid);
+		}
+
+		// We acquired the lock (file was created), spawn new process
+		const childProcess = spawnFunction(command, args, options, callback);
+
+		// Write PID to the file we just created
+		try {
+			writeFileSync(pidFilePath, childProcess.pid.toString(), 'utf-8');
+		} catch (err) {
+			// Failed to write PID, clean up
+			try {
+				childProcess.kill();
+				unlinkSync(pidFilePath);
+			} catch {}
+			throw err;
+		}
+
+		// Clean up PID file when process exits
+		childProcess.on('exit', () => {
+			try {
+				unlinkSync(pidFilePath);
+			} catch {
+				// File may already be removed
+			}
+		});
+
+		return childProcess;
+	};
+}
+
+/**
+ * Validates whether a module can be loaded based on security restrictions and returns the module path or replacement.
+ * For file URLs, ensures the module is within the containing folder.
+ * For node built-in modules, checks against an allowlist and returns any replacements.
+ *
+ * @param {string} moduleUrl - The URL or identifier of the module to be loaded, which may be a file: URL, node: URL, or bare module specifier.
+ * @param {string} containingFolder - The absolute path of the folder that contains the application, used to validate file: URLs are within bounds.
+ * @return {any} Returns undefined for allowed file paths, or a replacement module identifier for allowed node built-in modules.
+ * @throws {Error} Throws an error if the module is outside the application folder or if the module is not in the allowed list.
+ */
+function checkAllowedModulePath(moduleUrl: string, containingFolder?: string): boolean {
 	if (moduleUrl.startsWith('file:')) {
 		const path = moduleUrl.slice(7);
-		if (path.startsWith(containingFolder)) {
-			return true;
+		if (!containingFolder || path.startsWith(containingFolder)) {
+			return;
 		}
-		throw new Error(`Can not load module outside of application folder`);
+		throw new Error(`Can not load module outside of application folder ${containingFolder}`);
 	}
 	let simpleName = moduleUrl.startsWith('node:') ? moduleUrl.slice(5) : moduleUrl;
 	simpleName = simpleName.split('/')[0];
-	if (ALLOWED_NODE_BUILTIN_MODULES.has(simpleName)) return true;
+	if (ALLOWED_NODE_BUILTIN_MODULES.has(simpleName)) return REPLACED_BUILTIN_MODULES[simpleName];
 	throw new Error(`Module ${moduleUrl} is not allowed to be imported`);
 }
 

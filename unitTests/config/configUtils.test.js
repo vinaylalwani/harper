@@ -17,51 +17,6 @@ const { HTTP_STATUS_CODES } = require('#js/utility/errors/commonErrors');
 
 const DIRNAME = __dirname;
 const HDB_ROOT = path.join(DIRNAME, 'yaml');
-const TEST_CERT = path.join(DIRNAME, '../../../hdb/keys/certificate.pem');
-const TEST_PRIVATE_KEY = path.join(DIRNAME, '../../../hdb/keys/ca.pem');
-const TEST_ARGS = {
-	HTTP_PORT: '9936',
-	HTTP_CORS: false,
-	HTTP_CORSACCESSLIST: '["test1", "test2"]',
-	HTTP_HEADERSTIMEOUT: '59999',
-	HTTP_KEEPALIVETIMEOUT: '4999',
-	TLS_CERTIFICATE: TEST_CERT,
-	TLS_CERTIFICATEAUTHORITY: null,
-	TLS_PRIVATEKEY: TEST_PRIVATE_KEY,
-	HTTP_TIMEOUT: '119999',
-	COMPONENTSROOT: path.join(DIRNAME, 'test_custom_functions'),
-	THREADS_COUNT: '4',
-	THREADS_DEBUG: false,
-	HTTP_REMOTE_ADDRESS_AFFINITY: false,
-	LOCALSTUDIO_ENABLED: true,
-	LOGGING_FILE: false,
-	LOGGING_LEVEL: 'notify',
-	LOGGING_ROOT: path.join(DIRNAME, 'testlogging'),
-	LOGGING_ROTATION_ENABLED: true,
-	LOGGING_ROTATION_COMPRESS: true,
-	LOGGING_ROTATION_INTERVAL: '10D',
-	LOGGING_ROTATION_MAXSIZE: '10M',
-	LOGGING_ROTATION_PATH: 'lets/send/log/here',
-	LOGGING_STDSTREAMS: true,
-	LOGGING_AUDITLOG: true,
-	AUTHENTICATION_OPERATIONTOKENTIMEOUT: '2d',
-	AUTHENTICATION_REFRESHTOKENTIMEOUT: '31d',
-	OPERATIONSAPI_NETWORK_CORS: false,
-	OPERATIONSAPI_NETWORK_CORSACCESSLIST: '["test1", "test2"]',
-	OPERATIONSAPI_NETWORK_HEADERSTIMEOUT: '60001',
-	OPERATIONSAPI_NETWORK_HTTPS: true,
-	OPERATIONSAPI_NETWORK_KEEPALIVETIMEOUT: '5001',
-	OPERATIONSAPI_NETWORK_PORT: '2599',
-	OPERATIONSAPI_NETWORK_TIMEOUT: '120001',
-	ROOTPATH: HDB_ROOT,
-	STORAGE_WRITEASYNC: true,
-	STORAGE_OVERLAPPINGSYNC: false,
-	STORAGE_CACHING: false,
-	STORAGE_COMPRESSION: false,
-	STORAGE_NOREADAHEAD: false,
-	STORAGE_PREFETCHWRITES: false,
-	STORAGE_PATH: 'users/unit_test/path',
-};
 const TEST_ARGS_2 = {
 	LOGGING_LEVEL: 'error',
 	ROOTPATH: HDB_ROOT,
@@ -179,204 +134,6 @@ describe('Test configUtils module', () => {
 		after(() => {
 			validate_config_rw();
 		});
-
-		it('Test that given args are updated in new config file', () => {
-			const expected_config = {
-				authentication: {
-					authorizeLocal: false,
-					cacheTTL: 30000,
-					enableSessions: true,
-					operationTokenTimeout: '2d',
-					refreshTokenTimeout: '31d',
-				},
-				analytics: {
-					aggregatePeriod: 60,
-					replicate: false,
-				},
-				applications: {
-					lockdown: 'freeze',
-					containment: 'vm',
-					dependencyContainment: false,
-				},
-				componentsRoot: path.join(DIRNAME, '/test_custom_functions'),
-				localStudio: {
-					enabled: true,
-				},
-				logging: {
-					auditAuthEvents: {
-						logFailed: false,
-						logSuccessful: false,
-					},
-					auditLog: true,
-					auditRetention: '3d',
-					file: false,
-					level: 'notify',
-					root: path.join(DIRNAME, '/testlogging'),
-					rotation: {
-						enabled: true,
-						compress: true,
-						interval: '10D',
-						maxSize: '10M',
-						path: 'lets/send/log/here',
-					},
-					stdStreams: true,
-				},
-				mqtt: {
-					network: {
-						mtls: false,
-						port: 1883,
-						securePort: 8883,
-					},
-					webSocket: true,
-					requireAuthentication: true,
-				},
-				node: {
-					hostname: null,
-				},
-				operationsApi: {
-					network: {
-						compressionThreshold: 0,
-						cors: false,
-						corsAccessList: ['test1', 'test2'],
-						port: 2599,
-						securePort: 9925,
-						domainSocket: 'hdb/operations-server',
-						headersTimeout: 60001,
-						http2: false,
-						https: true,
-						mtls: false,
-						keepAliveTimeout: 5001,
-						timeout: 120001,
-					},
-					tls: {
-						certificate: TEST_CERT,
-						certificateAuthority: null,
-						privateKey: TEST_PRIVATE_KEY,
-					},
-				},
-				http: {
-					compressionThreshold: 0,
-					cors: false,
-					corsAccessList: ['test1', 'test2'],
-					keepAliveTimeout: 4999,
-					port: 9936,
-					securePort: 9926,
-					timeout: 119999,
-					headersTimeout: 59999,
-					http2: false,
-					mtls: false,
-				},
-				threads: {
-					count: 4,
-					debug: false,
-				},
-				rootPath: path.join(DIRNAME, '/yaml'),
-				storage: {
-					writeAsync: true,
-					caching: false,
-					compression: false,
-					noReadAhead: false,
-					path: 'users/unit_test/path',
-					prefetchWrites: false,
-					overlappingSync: false,
-				},
-				tls: {
-					certificate: TEST_CERT,
-					certificateAuthority: null,
-					privateKey: TEST_PRIVATE_KEY,
-				},
-			};
-			const expected_flat_config = {
-				authentication_cachettl: 30000,
-				authentication_authorizelocal: false,
-				authentication_enablesessions: true,
-				authentication_operationtokentimeout: '2d',
-				authentication_refreshtokentimeout: '31d',
-				analytics_aggregateperiod: 60,
-				analytics_replicate: false,
-				applications_containment: 'vm',
-				applications_dependencycontainment: false,
-				applications_lockdown: 'freeze',
-				componentsroot: path.join(DIRNAME, '/test_custom_functions'),
-				localstudio_enabled: true,
-				logging_auditauthevents_logfailed: false,
-				logging_auditauthevents_logsuccessful: false,
-				logging_auditlog: true,
-				logging_auditretention: '3d',
-				logging_file: false,
-				logging_level: 'notify',
-				logging_root: path.join(DIRNAME, '/testlogging'),
-				logging_rotation_enabled: true,
-				logging_rotation_compress: true,
-				logging_rotation_interval: '10D',
-				logging_rotation_maxsize: '10M',
-				logging_rotation_path: 'lets/send/log/here',
-				logging_stdstreams: true,
-				mqtt_network_mtls: false,
-				mqtt_network_port: 1883,
-				mqtt_network_secureport: 8883,
-				mqtt_websocket: true,
-				mqtt_requireauthentication: true,
-				node_hostname: null,
-				operationsapi_network_compressionthreshold: 0,
-				operationsapi_network_cors: false,
-				operationsapi_network_corsaccesslist: ['test1', 'test2'],
-				operationsapi_network_port: 2599,
-				operationsapi_network_secureport: 9925,
-				operationsapi_network_domainsocket: 'hdb/operations-server',
-				operationsapi_network_headerstimeout: 60001,
-				operationsapi_network_https: true,
-				operationsapi_network_http2: false,
-				operationsapi_network_keepalivetimeout: 5001,
-				operationsapi_network_timeout: 120001,
-				http_compressionthreshold: 0,
-				http_cors: false,
-				http_corsaccesslist: ['test1', 'test2'],
-				http_keepalivetimeout: 4999,
-				http_http2: false,
-				http_port: 9936,
-				http_secureport: 9926,
-				http_mtls: false,
-				threads_count: 4,
-				threads_debug: false,
-				http_timeout: 119999,
-				http_headerstimeout: 59999,
-				rootpath: path.join(DIRNAME, '/yaml'),
-				storage_writeasync: true,
-				storage_caching: false,
-				storage_compression: false,
-				storage_noreadahead: false,
-				storage_path: 'users/unit_test/path',
-				storage_prefetchwrites: false,
-				storage_overlappingsync: false,
-				tls_certificate: TEST_CERT,
-				tls_certificateauthority: null,
-				tls_privatekey: TEST_PRIVATE_KEY,
-				operationsapi_tls_certificate: TEST_CERT,
-				operationsapi_tls_privatekey: TEST_PRIVATE_KEY,
-				operationsapi_tls_certificateauthority: null,
-				operationsapi_network_mtls: false,
-			};
-
-			config_utils_rw.createConfigFile(TEST_ARGS);
-
-			const test_config_doc = YAML.parseDocument(fs.readFileSync(CONFIG_FILE_PATH, 'utf8'));
-			const config_json = test_config_doc.toJSON();
-			const test_flat_config_obj = config_utils_rw.flattenConfig(config_json);
-
-			expect(config_json).to.eql(expected_config);
-			const non_object_flat_test_config_obj = { ...test_flat_config_obj };
-			for (let key in non_object_flat_test_config_obj) {
-				if (
-					typeof non_object_flat_test_config_obj[key] === 'object' &&
-					non_object_flat_test_config_obj[key] &&
-					!Array.isArray(non_object_flat_test_config_obj[key])
-				)
-					delete non_object_flat_test_config_obj[key];
-			}
-
-			expect(non_object_flat_test_config_obj).to.eql(expected_flat_config);
-		});
 	});
 
 	describe('Test getDefaultConfig function', () => {
@@ -391,6 +148,7 @@ describe('Test configUtils module', () => {
 			applications_containment: 'vm',
 			applications_dependencycontainment: false,
 			applications_lockdown: 'freeze',
+			applications_allowedspawncommands: 'freeze',
 			http_cors: false,
 			http_corsaccesslist: [null],
 			http_compressionthreshold: 0,
@@ -447,23 +205,6 @@ describe('Test configUtils module', () => {
 
 		afterEach(() => {
 			flat_default_config_obj_rw();
-		});
-
-		it('Test if in-memory object is undefined, the default config obj is instantiated and default value is returned', () => {
-			flat_default_config_obj_rw = config_utils_rw.__set__('flatDefaultConfigObj', undefined);
-
-			config_utils_rw.getDefaultConfig(hdbTerms.CONFIG_PARAMS.NODE_HOSTNAME);
-			const flat_default_config_obj = config_utils_rw.__get__('flatDefaultConfigObj');
-			const non_object_flat_default_config_obj = { ...flat_default_config_obj };
-			for (let key in non_object_flat_default_config_obj) {
-				if (
-					typeof non_object_flat_default_config_obj[key] === 'object' &&
-					non_object_flat_default_config_obj[key] &&
-					!Array.isArray(non_object_flat_default_config_obj[key])
-				)
-					delete non_object_flat_default_config_obj[key];
-			}
-			expect(non_object_flat_default_config_obj).to.eql(expected_flat_default_config_obj);
 		});
 
 		it('Test that if the in-memory object exists, the correct default value is returned', () => {

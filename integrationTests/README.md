@@ -118,6 +118,30 @@ This option is used by the CI workflow and is useful for executing the same subs
 
 This option can be overridden using the `HARPER_INTEGRATION_TEST_SHARD` environment variable.
 
+### Server Log Capture
+
+When `HARPER_INTEGRATION_TEST_LOG_DIR` is set, each Harper instance writes its logs (`hdb.log`, `stdout.log`, `stderr.log`) to a per-suite subdirectory under the specified path. Directory names are derived from the suite name and loopback address (e.g. `Operations_Server-127_0_0_2/`).
+
+This is primarily designed for CI, where Harper's child process output is not visible in the GitHub Actions UI. On test failure, the log directory is uploaded as an artifact for debugging.
+
+**Important:** When this setting is active, it overrides any `logging.root` value in the Harper config passed via `options.config`. The suite log directory takes precedence so that logs are captured in a known, per-suite location.
+
+Logs from passing suites are automatically cleaned up on process exit. Only logs from failed suites are preserved.
+
+```sh
+# Local usage
+HARPER_INTEGRATION_TEST_LOG_DIR=/tmp/harper-test-logs npm run test:integration
+
+# Inspect logs after a failure
+ls /tmp/harper-test-logs/
+# Operations_Server-127_0_0_2/
+#   hdb.log
+#   stdout.log
+#   stderr.log
+```
+
+---
+
 #### `--only`
 
 > Equivalent to Node.js Test Runner's [`--test-only`](https://nodejs.org/docs/latest-v24.x/api/cli.html#--test-only) option.
