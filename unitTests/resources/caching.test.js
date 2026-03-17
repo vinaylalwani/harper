@@ -5,7 +5,6 @@ const { table } = require('#src/resources/databases');
 const { Resource } = require('#src/resources/Resource');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
 const { RequestTarget } = require('#src/resources/RequestTarget');
-const { setTimeout: sleep } = require('node:timers/promises');
 
 describe('Caching', () => {
 	let CachingTable,
