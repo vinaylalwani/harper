@@ -5,6 +5,7 @@ const { table } = require('#src/resources/databases');
 const { Resource } = require('#src/resources/Resource');
 const { setMainIsWorker } = require('#js/server/threads/manageThreads');
 const { RequestTarget } = require('#src/resources/RequestTarget');
+const { setTimeout: sleep } = require('node:timers/promises');
 
 describe('Caching', () => {
 	let CachingTable,
@@ -321,8 +322,6 @@ describe('Caching', () => {
 		assert.equal(result.name, 'name ' + 23);
 		assert.equal(sourceRequests, 3);
 		assert.equal(events.length, 0);
-		result = await IndexedCachingTable.get(23);
-		console.log(result.getExpiresAt());
 	});
 
 	it('Bigger stampede is handled', async function () {
