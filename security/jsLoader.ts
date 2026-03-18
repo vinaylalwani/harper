@@ -111,6 +111,17 @@ export async function scopedImport(filePath: string | URL, scope?: ApplicationSc
 	}
 }
 
+let amaro: typeof import('amaro') | undefined;
+/**
+ * Strip TypeScript types using the amaro library (what Node.js uses internally)
+ * Falls back to regex-based stripping if amaro is not available
+ */
+async function stripTypeScriptTypes(source: string): Promise<string> {
+	// Use amaro - the library that Node.js uses internally for type stripping
+	amaro = await import('amaro');
+	return amaro.transformSync(source, { mode: 'strip-only' }).code;
+}
+
 /**
  * Load a module using Node's vm.Module API with (not really secure) sandboxing
  */
@@ -279,7 +290,12 @@ async function loadModuleWithVM(moduleUrl: string, scope: ApplicationScope) {
 		} else if (url.startsWith('file://')) {
 			checkAllowedModulePath(url, scope.verifyPath);
 			// Load source text from file
-			const source = await readFile(new URL(url), { encoding: 'utf-8' });
+			let source = await readFile(new URL(url), { encoding: 'utf-8' });
+
+			// Strip TypeScript types if this is a .ts file
+			if (url.endsWith('.ts') || url.endsWith('.tsx')) {
+				source = await stripTypeScriptTypes(source);
+			}
 
 			// Try to parse as ESM first
 			try {
