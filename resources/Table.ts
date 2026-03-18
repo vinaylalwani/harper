@@ -2436,17 +2436,15 @@ export function makeTable(options) {
 						if (entry?.then) return entry.then(transform.bind(this));
 						record = entry?.value;
 					}
-					if (
-						(checkLoaded && entry?.metadataFlags & (INVALIDATED | EVICTED)) || // invalidated or evicted should go to load from source
-						(entry?.expiresAt != undefined && entry?.expiresAt < Date.now())
-					) {
-						// should expiration really apply?
-						if (context.onlyIfCached) {
-							return {
-								[primaryKey]: entry.key,
-								message: 'This entry has expired',
-							};
-						}
+					if (entry?.expiresAt != undefined && entry?.expiresAt < Date.now() && context.onlyIfCached) {
+						return {
+							[primaryKey]: entry.key,
+							message: 'This entry has expired',
+						};
+					}
+					if (checkLoaded && entry?.metadataFlags & (INVALIDATED | EVICTED)) {
+						// invalidated or evicted should go to load from source; TTL-expired entries are
+						// returned as stale data during search — freshness is enforced by get(), not search()
 						const loadingFromSource = ensureLoadedFromSource(source, entry.key ?? entry, entry, context);
 						if (loadingFromSource?.then) {
 							return loadingFromSource.then(transform);
