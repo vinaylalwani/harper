@@ -490,11 +490,7 @@ export class ResourceBridge extends BridgeMethods {
 			if (tables) {
 				for (const table of Object.values(tables)) {
 					if (table.primaryStore instanceof RocksDatabase) {
-						logger.debug?.('Purging RocksDB logs for table', table.name);
-						logger.debug?.('Deleting logs before', deleteObj.timestamp);
 						const deleted = table.primaryStore.purgeLogs({ before });
-						logger.debug?.('Deleted', deleted.length, 'logs:');
-						logger.debug?.('Deleted logs:', deleted);
 						totalResults.transactions_deleted += deleted.length;
 					}
 				}
