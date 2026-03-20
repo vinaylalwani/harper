@@ -12,12 +12,12 @@ import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 
-import { setupHarper, teardownHarper, type ContextWithHarper } from '../utils/harperLifecycle.ts';
+import { startHarper, teardownHarper, type ContextWithHarper } from '../utils/harperLifecycle.ts';
 import { targz } from '../utils/targz.ts';
 
 suite('Local application deployment', (ctx: ContextWithHarper) => {
 	before(async () => {
-		await setupHarper(ctx);
+		await startHarper(ctx);
 	});
 
 	after(async () => {
@@ -48,8 +48,8 @@ suite('Local application deployment', (ctx: ContextWithHarper) => {
 		const body = await response.json();
 		deepStrictEqual(body, { message: 'Successfully deployed: test-application, restarting Harper' });
 		await sleep(5000);
-		ok(existsSync(join(ctx.harper.installDir, 'components', project)));
-		ok(existsSync(join(ctx.harper.installDir, 'harper-application-lock.json')));
+		ok(existsSync(join(ctx.harper.dataRootDir, 'components', project)));
+		ok(existsSync(join(ctx.harper.dataRootDir, 'harper-application-lock.json')));
 	});
 
 	test('access deployed application', async () => {

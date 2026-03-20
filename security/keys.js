@@ -459,7 +459,7 @@ async function getCertAuthority() {
 	let match;
 	for (let cert of allCerts) {
 		if (!cert.is_authority) continue;
-		const matchingPrivateKey = await getPrivateKeyByName(cert.private_key_name);
+		const matchingPrivateKey = getPrivateKeyByName(cert.private_key_name);
 		if (cert.private_key_name && matchingPrivateKey) {
 			const keyCheck = new X509Certificate(cert.certificate).checkPrivateKey(createPrivateKey(matchingPrivateKey));
 			if (keyCheck) {
@@ -665,7 +665,13 @@ function updateConfigCert() {
 			cliEnvArgs[conf.OPERATIONSAPI_TLS_CERTIFICATEAUTHORITY.toLowerCase()];
 	}
 
-	configUtils.updateConfigValue(undefined, undefined, newCerts, false, true);
+	// Filter out any cert config keys already set by HARPER_SET_CONFIG so we don't overwrite them
+	// with defaults. On first boot, HARPER_SET_CONFIG values are written to the config file during
+	// createConfigFile(), but updateConfigCert() runs afterward without re-applying HARPER_SET_CONFIG.
+	const { filterArgsAgainstRuntimeConfig } = require('../config/harperConfigEnvVars.ts');
+	const filteredCerts = filterArgsAgainstRuntimeConfig(newCerts);
+
+	configUtils.updateConfigValue(undefined, undefined, filteredCerts, false, true);
 }
 
 function readPEM(path) {
@@ -724,7 +730,7 @@ function createTLSSelector(type, mtlsOptions) {
 			server.secureContextsListeners = [];
 		}
 		return (SNICallback.ready = new Promise((resolve, reject) => {
-			async function updateTLS() {
+			function updateTLS() {
 				try {
 					secureContexts.clear();
 					caCerts.clear();
@@ -733,7 +739,7 @@ function createTLSSelector(type, mtlsOptions) {
 						resolve();
 						return;
 					}
-					for await (const cert of databases.system.hdb_certificate.search([])) {
+					for (const cert of databases.system.hdb_certificate.search([])) {
 						const certificate = cert.certificate;
 						const certParsed = new X509Certificate(certificate);
 						if (cert.is_authority) {
@@ -742,7 +748,7 @@ function createTLSSelector(type, mtlsOptions) {
 						}
 					}
 
-					for await (const cert of databases.system.hdb_certificate.search([])) {
+					for (const cert of databases.system.hdb_certificate.search([])) {
 						try {
 							if (cert.is_authority) {
 								continue;
@@ -751,7 +757,7 @@ function createTLSSelector(type, mtlsOptions) {
 							// prefer operations certificates for operations API
 							if (cert.uses?.includes(type)) quality += 1;
 
-							const private_key = await getPrivateKeyByName(cert.private_key_name);
+							const private_key = getPrivateKeyByName(cert.private_key_name);
 
 							let certificate = cert.certificate;
 							const certParsed = new X509Certificate(certificate);
@@ -875,10 +881,10 @@ function createTLSSelector(type, mtlsOptions) {
 	}
 }
 
-async function getPrivateKeyByName(private_key_name) {
+function getPrivateKeyByName(private_key_name) {
 	const private_key = privateKeys.get(private_key_name);
 	if (!private_key && private_key_name) {
-		return await fs.readFile(
+		return fs.readFileSync(
 			path.join(envManager.get(CONFIG_PARAMS.ROOTPATH), hdbTerms.LICENSE_KEY_DIR_NAME, private_key_name),
 			'utf8'
 		);

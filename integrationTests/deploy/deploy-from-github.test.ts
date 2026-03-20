@@ -5,7 +5,7 @@
  */
 import { suite, test, before, after } from 'node:test';
 import { deepStrictEqual, ok, strictEqual } from 'node:assert/strict';
-import { setupHarper, teardownHarper, type ContextWithHarper } from '../utils/harperLifecycle.ts';
+import { startHarper, teardownHarper, type ContextWithHarper } from '../utils/harperLifecycle.ts';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
@@ -13,7 +13,7 @@ import { parse } from 'yaml';
 
 suite('GitHub application deployment', (ctx: ContextWithHarper) => {
 	before(async () => {
-		await setupHarper(ctx);
+		await startHarper(ctx);
 	});
 
 	after(async () => {
@@ -55,16 +55,16 @@ suite('GitHub application deployment', (ctx: ContextWithHarper) => {
 			if (Date.now() > deadline) throw new Error('Timed out waiting for application to be ready after restart');
 			await new Promise((resolve) => setTimeout(resolve, 250));
 		}
-		ok(existsSync(join(ctx.harper.installDir, 'components', project)));
+		ok(existsSync(join(ctx.harper.dataRootDir, 'components', project)));
 
-		// const harperAppLock = await readFile(join(ctx.harper.installDir, 'harper-application-lock.json'), 'utf-8');
+		// const harperAppLock = await readFile(join(ctx.harper.dataRootDir, 'harper-application-lock.json'), 'utf-8');
 		// deepStrictEqual(JSON.parse(harperAppLock), {
 		// 	applications: {
 		// 		'test-application': {}
 		// 	}
 		// });
 
-		const harperConfig = await readFile(join(ctx.harper.installDir, 'harper-config.yaml'), 'utf-8');
+		const harperConfig = await readFile(join(ctx.harper.dataRootDir, 'harper-config.yaml'), 'utf-8');
 		const harperConfigObj = parse(harperConfig);
 		deepStrictEqual(harperConfigObj[project], { package: githubURL });
 	});

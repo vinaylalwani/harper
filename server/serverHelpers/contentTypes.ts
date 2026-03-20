@@ -3,7 +3,7 @@ import { pack, unpack, encodeIter } from 'msgpackr';
 import { decode, Encoder, EncoderStream } from 'cbor-x';
 import { createBrotliCompress, brotliCompress, constants } from 'zlib';
 import { ClientError } from '../../utility/errors/hdbError.js';
-import stream, { Readable } from 'stream';
+import stream, { Readable, Transform } from 'node:stream';
 import { server } from '../Server.ts';
 import { _assignPackageExport } from '../../globals.js';
 import envMgr from '../../utility/environment/environmentManager.js';
@@ -11,7 +11,6 @@ import { CONFIG_PARAMS } from '../../utility/hdbTerms.ts';
 import * as YAML from 'yaml';
 import { logger } from '../../utility/logging/logger.ts';
 import { Blob } from '../../resources/blob.ts';
-import { Transform } from 'json2csv';
 // TODO: Only load this if fastify is loaded
 import fp from 'fastify-plugin';
 const SERIALIZATION_BIGINT = envMgr.get(CONFIG_PARAMS.SERIALIZATION_BIGINT) !== false;
@@ -232,7 +231,6 @@ export function registerContentHandlers(app) {
 
 const registerFastifySerializers = fp(
 	function (fastify, opts, done) {
-		// eslint-disable-next-line require-await
 		fastify.addHook('preSerialization', async (request, reply) => {
 			const contentType = reply.raw.getHeader('content-type');
 			if (contentType) return;
@@ -623,15 +621,75 @@ function transformIterable(iterable, transform) {
 export function toCsvStream(data, columns) {
 	// ensure that we pass it an iterable
 	const readStream = stream.Readable.from(data?.[Symbol.iterator] || data?.[Symbol.asyncIterator] ? data : [data]);
-	const options = {};
-	if (columns)
-		options.fields = columns.map((column) => ({
-			label: column,
-			value: column,
-		}));
-	const transformOptions = { objectMode: true };
-	// Create a json2csv stream transform.
-	const json2csv = new Transform(options, transformOptions);
-	// Pipe the data read stream through json2csv which converts it to CSV
-	return readStream.pipe(json2csv);
+
+	let headerWritten = false;
+	let fields = columns || null;
+
+	// Create a transform stream to convert objects to CSV
+	const csvTransform = new Transform({
+		objectMode: true,
+		transform(chunk, encoding, callback) {
+			try {
+				// Extract fields from first object if not provided
+				if (!fields && typeof chunk === 'object' && chunk !== null) {
+					fields = Object.keys(chunk);
+				}
+
+				// Write header row on first chunk
+				if (!headerWritten && fields) {
+					this.push(escapeCsvRow(fields, true) + '\n');
+					headerWritten = true;
+				}
+
+				// Convert object to CSV row
+				if (fields) {
+					const values = fields.map((field) => {
+						const value = chunk[field];
+						if (value === null || value === undefined) {
+							return '';
+						}
+						// Serialize objects and arrays as JSON
+						if (typeof value === 'object') {
+							return JSON.stringify(value);
+						}
+						return value;
+					});
+					this.push(escapeCsvRow(values, false) + '\n');
+				}
+
+				callback();
+			} catch (error) {
+				callback(error);
+			}
+		},
+	});
+
+	// Pipe the data read stream through our CSV transform
+	return readStream.pipe(csvTransform);
+}
+
+/**
+ * Escapes and formats a row of CSV values
+ * @param values - Array of values to format
+ * @param quoteAll - If true, quote all values. If false, only quote strings (not numbers)
+ */
+function escapeCsvRow(values: any[], quoteAll: boolean = false): string {
+	return values
+		.map((value) => {
+			// Handle empty/null values
+			if (value === '' || value === null || value === undefined) {
+				return '';
+			}
+
+			// If it's a number and we're not quoting all, return it unquoted
+			if (typeof value === 'number' && !quoteAll) {
+				return String(value);
+			}
+
+			// For strings or when quoteAll is true, quote and escape
+			const stringValue = String(value);
+			// Escape quotes by doubling them and wrap in quotes
+			return '"' + stringValue.replace(/"/g, '""') + '"';
+		})
+		.join(',');
 }
