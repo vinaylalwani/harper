@@ -489,12 +489,12 @@ export class ResourceBridge extends BridgeMethods {
 				for (const table of Object.values(tables)) {
 					if (table.primaryStore instanceof RocksDatabase) {
 						const deleted = table.primaryStore.purgeLogs({ before });
-						totalResults.transactions_deleted += deleted.length;
+						totalResults.log_files_deleted += deleted.length;
 					}
 				}
 			}
 		} else if (table.primaryStore instanceof RocksDatabase) {
-			totalResults.transactions_deleted += table.primaryStore.purgeLogs({ before }).length;
+			totalResults.log_files_deleted += table.primaryStore.purgeLogs({ before }).length;
 		} else {
 			await table.deleteHistory(before, deleteObj.cleanup_deleted_records);
 		}

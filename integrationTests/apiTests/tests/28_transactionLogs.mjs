@@ -102,7 +102,7 @@ describe('28. Transaction Logs', () => {
 
 		const id = await getJobId(response.body);
 		const jobResponse = await checkJob(id, 15);
-		assert.equal(jobResponse.body[0].result.transactions_deleted, 0, jobResponse.text);
+		assert.equal(jobResponse.body[0].result.log_files_deleted, 0, jobResponse.text);
 	});
 
 	it('Delete records after additional inserts', async () => {
@@ -117,7 +117,7 @@ describe('28. Transaction Logs', () => {
 
 		const id = await getJobId(response.body);
 		const jobResponse = await checkJob(id, 15);
-		assert.equal(jobResponse.body[0].result.transactions_deleted, 1, jobResponse.text);
+		assert.equal(jobResponse.body[0].result.log_files_deleted, 1, jobResponse.text);
 	});
 
 	it('drop test_logs table', async () => {
