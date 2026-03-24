@@ -484,12 +484,15 @@ export class ResourceBridge extends BridgeMethods {
 		const table = getTable(deleteObj);
 		if (!table) {
 			// no table, check if any of the tables are RocksDB
+			// since all tables share the same transaction log store, we break after the first
+			// RocksDB table is found
 			const tables = getDatabases()[deleteObj.database];
 			if (tables) {
 				for (const table of Object.values(tables)) {
 					if (table.primaryStore instanceof RocksDatabase) {
 						const deleted = table.primaryStore.purgeLogs({ before });
 						totalResults.log_files_deleted += deleted.length;
+						break;
 					}
 				}
 			}
