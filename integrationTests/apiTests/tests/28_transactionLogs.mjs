@@ -1,6 +1,5 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { testData } from '../config/envConfig.mjs';
 import { checkJob, getJobId } from '../utils/jobs.mjs';
 import { setTimeout } from 'node:timers/promises';
 import { req } from '../utils/request.mjs';
