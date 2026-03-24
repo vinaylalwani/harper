@@ -8,7 +8,6 @@ const hdbTerms = require('../utility/hdbTerms.ts');
 const envMgr = require('../utility/environment/environmentManager.js');
 const { handleHDBError, hdbErrors } = require('../utility/errors/hdbError.js');
 const { HDB_ERROR_MSGS, HTTP_STATUS_CODES } = hdbErrors;
-const logger = require('../utility/logging/harper_logger.js');
 
 const SEARCH_TYPES = Object.values(hdbTerms.READ_AUDIT_LOG_SEARCH_TYPES_ENUM);
 const LOG_NOT_ENABLED_ERR = 'To use this operation audit log must be enabled in harperdb-config.yaml';
