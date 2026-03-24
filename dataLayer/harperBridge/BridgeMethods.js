@@ -73,6 +73,10 @@ class BridgeMethods {
 		throw new Error('deleteAuditLogsBefore bridge method is not defined');
 	}
 
+	async deleteTransactionLogsBefore(_deleteObj) {
+		throw new Error('deleteTransactionLogsBefore bridge method is not defined');
+	}
+
 	async readAuditLog(_readAuditLogObj) {
 		throw new Error('readAuditLog bridge method is not defined');
 	}

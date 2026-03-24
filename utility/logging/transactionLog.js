@@ -55,5 +55,5 @@ async function deleteTransactionLogsBefore(req) {
 	value.database = value.database ?? value.schema ?? 'data';
 
 	log.info('Delete transaction logs called for Plexus');
-	return harperBridge.deleteAuditLogsBefore(value);
+	return harperBridge.deleteTransactionLogsBefore(value);
 }

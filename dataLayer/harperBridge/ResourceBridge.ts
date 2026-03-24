@@ -25,10 +25,9 @@ import type {
 import { collapseData } from '../../resources/tracked.ts';
 import { errorToString } from '../../utility/logging/harper_logger.js';
 import { RocksDatabase } from '@harperfast/rocksdb-js';
-import DeleteAuditLogsBeforeResults from './lmdbBridge/lmdbMethods/DeleteAuditLogsBeforeResults.js';
 import BridgeMethods from './BridgeMethods.js';
 import lmdbGetBackup from './lmdbBridge/lmdbMethods/lmdbGetBackup.js';
-import logger from '../../utility/logging/harper_logger.js';
+import { DeleteTransactionLogsBeforeResults } from './DeleteTransactionLogsBeforeResults.ts';
 
 const { HDB_ERROR_MSGS } = hdbErrors;
 const DEFAULT_DATABASE = 'data';
@@ -468,18 +467,18 @@ export class ResourceBridge extends BridgeMethods {
 	}
 
 	/**
-	 * Deletes audit logs before a given timestamp.
+	 * Deletes transaction logs before a given timestamp.
 	 * @param deleteObj The request body
 	 * @returns
 	 */
-	async deleteAuditLogsBefore(deleteObj: {
-		schema?: string;
+	async deleteTransactionLogsBefore(deleteObj: {
+		schema?: string; // deprecated in favor of `database`
 		database?: string;
 		table?: string; // lmdb only
 		timestamp: Date | number | string;
 		cleanup_deleted_records?: boolean; // lmdb only
-	}): Promise<DeleteAuditLogsBeforeResults> {
-		let totalResults = new DeleteAuditLogsBeforeResults();
+	}): Promise<DeleteTransactionLogsBeforeResults> {
+		let totalResults = new DeleteTransactionLogsBeforeResults();
 		const before = deleteObj.timestamp instanceof Date ? deleteObj.timestamp.getTime()
 			: typeof deleteObj.timestamp === 'string' ? Number.parseInt(deleteObj.timestamp)
 			: deleteObj.timestamp;
