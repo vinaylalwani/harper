@@ -449,11 +449,7 @@ export class ResourceBridge extends BridgeMethods {
 		const map = new Map();
 		const table = getTable(searchObject);
 		const attrs = searchObject.get_attributes as Select | undefined;
-		if (
-			attrs &&
-			!attrs.includes(table.primaryKey) &&
-			attrs[0] !== '*'
-		)
+		if (attrs && !attrs.includes(table.primaryKey) && attrs[0] !== '*')
 			// ensure that we get the primary key so we can make a mapping
 			attrs.push(table.primaryKey);
 		for await (const record of this.searchByValue(searchObject, comparator)) {
@@ -479,9 +475,12 @@ export class ResourceBridge extends BridgeMethods {
 		cleanup_deleted_records?: boolean; // lmdb only
 	}): Promise<DeleteTransactionLogsBeforeResults> {
 		let totalResults = new DeleteTransactionLogsBeforeResults();
-		const before = deleteObj.timestamp instanceof Date ? deleteObj.timestamp.getTime()
-			: typeof deleteObj.timestamp === 'string' ? Number.parseInt(deleteObj.timestamp)
-			: deleteObj.timestamp;
+		const before =
+			deleteObj.timestamp instanceof Date
+				? deleteObj.timestamp.getTime()
+				: typeof deleteObj.timestamp === 'string'
+					? Number.parseInt(deleteObj.timestamp)
+					: deleteObj.timestamp;
 		const table = getTable(deleteObj);
 		if (!table) {
 			// no table, check if any of the tables are RocksDB
@@ -543,7 +542,12 @@ export class ResourceBridge extends BridgeMethods {
 		}
 	}
 
-	async getBackup(getBackupObj: { database?: string; schema?: string; table?: string; tables?: string[] }): Promise<Readable> {
+	async getBackup(getBackupObj: {
+		database?: string;
+		schema?: string;
+		table?: string;
+		tables?: string[];
+	}): Promise<Readable> {
 		return lmdbGetBackup(getBackupObj);
 	}
 }

@@ -147,7 +147,7 @@ export function openAuditStore(rootStore) {
 	function scheduleAuditCleanup(newCleanupDelay?: number): Promise<void> {
 		if (auditStore instanceof RocksTransactionLogStore) {
 			auditStore.rootStore.purgeLogs({
-				before: Date.now() - auditRetention / (1 + cleanupPriority * cleanupPriority)
+				before: Date.now() - auditRetention / (1 + cleanupPriority * cleanupPriority),
 			});
 			return;
 		}
