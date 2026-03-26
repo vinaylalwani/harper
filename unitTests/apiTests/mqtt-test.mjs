@@ -478,7 +478,7 @@ describe('test MQTT connections and commands', function () {
 			);
 		});
 		await new Promise((resolve) => {
-			client.on('message', (topic, payload) => {
+			client.once('message', (topic, payload) => {
 				JSON.parse(payload);
 				resolve();
 			});
@@ -493,7 +493,7 @@ describe('test MQTT connections and commands', function () {
 				}
 			);
 		});
-		client.end();
+		await client.end();
 	});
 	it('received binary/string messages', async function () {
 		let client = connect('mqtt://localhost:1883', {
@@ -526,7 +526,7 @@ describe('test MQTT connections and commands', function () {
 				qos: 1,
 			});
 		});
-		client.end();
+		await client.end();
 		client = connect('mqtt://localhost:1883', {
 			clean: true,
 			clientId: 'test-client-sub2',
@@ -551,6 +551,7 @@ describe('test MQTT connections and commands', function () {
 				}
 			);
 		});
+		await client.end();
 	});
 	it('subscribe and unsubscribe with mTLS', async function () {
 		let server;
