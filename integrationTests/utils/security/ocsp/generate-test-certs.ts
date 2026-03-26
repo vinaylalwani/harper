@@ -1,15 +1,23 @@
 /**
  * Generate test certificates for OCSP integration testing
- * This module generates a complete test CA and certificates for OCSP testing
+ *
+ * Uses pure Node.js (webcrypto + pkijs) — no openssl CLI dependency.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
+import * as pkijs from 'pkijs';
+import {
+	generateEd25519KeyPair,
+	createCertificate,
+	makeOCSPAIAExt,
+	makeExtKeyUsageExt,
+	certToPem,
+	OCSP_SIGNING_OID,
+	CLIENT_AUTH_OID,
+	type Ed25519KeyPair,
+} from '../certGenUtils.ts';
 
-/**
- * Certificate paths returned by OCSP certificate generation
- */
 export interface OcspCertificates {
 	/** Path to CA certificate */
 	ca: string;
@@ -34,139 +42,126 @@ export interface OcspCertificates {
 		/** Path to OCSP responder private key */
 		key: string;
 	};
-	/** Path to OCSP index.txt database file */
-	index: string;
+}
+
+/** In-memory cert data needed by the OCSP server */
+export interface OcspServerCerts {
+	caCert: pkijs.Certificate;
+	ocspKeyPair: Ed25519KeyPair;
+	ocspCert: pkijs.Certificate;
+	/** Maps decimal serial number string → status */
+	statusMap: Map<string, 'good' | 'revoked'>;
 }
 
 /**
- * Generate OCSP test certificates
+ * Generate OCSP test certificates using pure Node.js (no openssl CLI).
  *
- * @param outputDir - Directory where certificates will be generated
- * @param ocspHost - Hostname for OCSP responder URL
- * @param ocspPort - Port for OCSP responder URL
- * @returns Object containing paths to all generated certificates
+ * Serial numbers:
+ *   1 = CA
+ *   2 = OCSP responder
+ *   3 = valid client
+ *   4 = revoked client
+ *
+ * Returns both file paths (for test code) and in-memory objects (for OCSP server).
  */
-export function generateOcspCertificates(outputDir: string, ocspHost: string, ocspPort: number): OcspCertificates {
-	// Generate test CA
-	console.log('Generating test CA for OCSP testing...');
+export async function generateOcspCertificates(
+	outputDir: string,
+	ocspHost: string,
+	ocspPort: number
+): Promise<{ files: OcspCertificates; serverCerts: OcspServerCerts }> {
+	const ocspUrl = `http://${ocspHost}:${ocspPort}`;
 
+	// --- CA ---
+	const caKey = await generateEd25519KeyPair();
 	const caKeyPath = path.join(outputDir, 'harper-ca.key');
+	fs.writeFileSync(caKeyPath, caKey.privateKeyPem);
+
+	const caCert = await createCertificate({
+		serialNumber: 1,
+		subject: { CN: 'Harper Test CA', O: 'Harper OCSP Test' },
+		issuer: { CN: 'Harper Test CA', O: 'Harper OCSP Test' },
+		validDays: 365,
+		issuerKey: caKey.privateKey,
+		subjectPublicKey: caKey.publicKey,
+		isCA: true,
+	});
 	const caCertPath = path.join(outputDir, 'harper-ca.crt');
+	fs.writeFileSync(caCertPath, certToPem(caCert));
 
-	execSync(`openssl genpkey -algorithm ED25519 -out ${caKeyPath}`);
-	execSync(
-		`openssl req -new -x509 -key ${caKeyPath} -out ${caCertPath} -days 365 -subj "/CN=Harper Test CA/O=Harper OCSP Test"`
-	);
-
-	console.log('Test CA generated successfully');
-
-	// Generate OCSP responder certificate
-	console.log('\nGenerating OCSP responder certificate...');
+	// --- OCSP responder cert ---
+	const ocspKey = await generateEd25519KeyPair();
 	const ocspKeyPath = path.join(outputDir, 'ocsp.key');
+	fs.writeFileSync(ocspKeyPath, ocspKey.privateKeyPem);
+
+	const ocspCert = await createCertificate({
+		serialNumber: 2,
+		subject: { CN: 'OCSP Responder', O: 'Harper OCSP Test' },
+		issuer: { CN: 'Harper Test CA', O: 'Harper OCSP Test' },
+		validDays: 365,
+		issuerKey: caKey.privateKey,
+		subjectPublicKey: ocspKey.publicKey,
+		extensions: [makeExtKeyUsageExt([OCSP_SIGNING_OID])],
+	});
 	const ocspCertPath = path.join(outputDir, 'ocsp.crt');
+	fs.writeFileSync(ocspCertPath, certToPem(ocspCert));
 
-	execSync(`openssl genpkey -algorithm ED25519 -out ${ocspKeyPath}`);
-	execSync(
-		`openssl req -new -key ${ocspKeyPath} -out ${outputDir}/ocsp.csr -subj "/CN=OCSP Responder/O=Harper OCSP Test"`
-	);
-
-	// OCSP responder extensions
-	const ocspExt = `[v3_ocsp]
-basicConstraints = CA:FALSE
-keyUsage = nonRepudiation, digitalSignature, keyEncipherment
-extendedKeyUsage = OCSPSigning
-subjectKeyIdentifier = hash
-authorityKeyIdentifier = keyid,issuer`;
-
-	fs.writeFileSync(path.join(outputDir, 'ocsp.ext'), ocspExt);
-
-	execSync(
-		`openssl x509 -req -in ${outputDir}/ocsp.csr -CA ${caCertPath} -CAkey ${caKeyPath} -CAcreateserial -out ${ocspCertPath} -days 365 -extensions v3_ocsp -extfile ${outputDir}/ocsp.ext`
-	);
-	console.log('OCSP responder certificate created');
-
-	// Create OCSP chain (combine OCSP cert + CA cert for cross-platform compatibility)
-	// Use fs APIs instead of shell commands for Windows support
-	const ocspChain = fs.readFileSync(ocspCertPath, 'utf8') + fs.readFileSync(caCertPath, 'utf8');
-	fs.writeFileSync(path.join(outputDir, 'ocsp-chain.crt'), ocspChain);
-
-	// Generate client certificates
-	console.log('\nGenerating client certificates...');
-
-	// Valid client certificate
+	// --- Valid client cert ---
+	const validKey = await generateEd25519KeyPair();
 	const validKeyPath = path.join(outputDir, 'client-valid.key');
+	fs.writeFileSync(validKeyPath, validKey.privateKeyPem);
+
+	const validCert = await createCertificate({
+		serialNumber: 3,
+		subject: { CN: 'Valid Client', O: 'Harper OCSP Test' },
+		issuer: { CN: 'Harper Test CA', O: 'Harper OCSP Test' },
+		validDays: 365,
+		issuerKey: caKey.privateKey,
+		subjectPublicKey: validKey.publicKey,
+		extensions: [makeOCSPAIAExt(ocspUrl), makeExtKeyUsageExt([CLIENT_AUTH_OID])],
+	});
 	const validCertPath = path.join(outputDir, 'client-valid.crt');
+	fs.writeFileSync(validCertPath, certToPem(validCert));
 
-	execSync(`openssl genpkey -algorithm ED25519 -out ${validKeyPath}`);
+	const validChainPath = path.join(outputDir, 'client-valid-chain.crt');
+	fs.writeFileSync(validChainPath, certToPem(validCert) + certToPem(caCert));
 
-	const clientExt = `[v3_client]
-basicConstraints = CA:FALSE
-keyUsage = nonRepudiation, digitalSignature, keyEncipherment
-extendedKeyUsage = clientAuth
-subjectAltName = DNS:client.local
-authorityInfoAccess = OCSP;URI:http://${ocspHost}:${ocspPort},caIssuers;URI:http://${ocspHost}:${ocspPort}/ca.crt`;
-
-	fs.writeFileSync(path.join(outputDir, 'client.ext'), clientExt);
-
-	execSync(
-		`openssl req -new -key ${validKeyPath} -out ${outputDir}/client-valid.csr -subj "/CN=Valid Client/O=Harper OCSP Test"`
-	);
-	execSync(
-		`openssl x509 -req -in ${outputDir}/client-valid.csr -CA ${caCertPath} -CAkey ${caKeyPath} -CAcreateserial -out ${validCertPath} -days 365 -extensions v3_client -extfile ${outputDir}/client.ext`
-	);
-
-	// Create chain for valid cert (combine client cert + CA cert)
-	const validChain = fs.readFileSync(validCertPath, 'utf8') + fs.readFileSync(caCertPath, 'utf8');
-	fs.writeFileSync(path.join(outputDir, 'client-valid-chain.crt'), validChain);
-
-	// Revoked client certificate
+	// --- Revoked client cert ---
+	const revokedKey = await generateEd25519KeyPair();
 	const revokedKeyPath = path.join(outputDir, 'client-revoked.key');
+	fs.writeFileSync(revokedKeyPath, revokedKey.privateKeyPem);
+
+	const revokedCert = await createCertificate({
+		serialNumber: 4,
+		subject: { CN: 'Revoked Client', O: 'Harper OCSP Test' },
+		issuer: { CN: 'Harper Test CA', O: 'Harper OCSP Test' },
+		validDays: 365,
+		issuerKey: caKey.privateKey,
+		subjectPublicKey: revokedKey.publicKey,
+		extensions: [makeOCSPAIAExt(ocspUrl), makeExtKeyUsageExt([CLIENT_AUTH_OID])],
+	});
 	const revokedCertPath = path.join(outputDir, 'client-revoked.crt');
+	fs.writeFileSync(revokedCertPath, certToPem(revokedCert));
 
-	execSync(`openssl genpkey -algorithm ED25519 -out ${revokedKeyPath}`);
-	execSync(
-		`openssl req -new -key ${revokedKeyPath} -out ${outputDir}/client-revoked.csr -subj "/CN=Revoked Client/O=Harper OCSP Test"`
-	);
-	execSync(
-		`openssl x509 -req -in ${outputDir}/client-revoked.csr -CA ${caCertPath} -CAkey ${caKeyPath} -CAcreateserial -out ${revokedCertPath} -days 365 -extensions v3_client -extfile ${outputDir}/client.ext`
-	);
+	const revokedChainPath = path.join(outputDir, 'client-revoked-chain.crt');
+	fs.writeFileSync(revokedChainPath, certToPem(revokedCert) + certToPem(caCert));
 
-	// Create chain for revoked cert (combine client cert + CA cert)
-	const revokedChain = fs.readFileSync(revokedCertPath, 'utf8') + fs.readFileSync(caCertPath, 'utf8');
-	fs.writeFileSync(path.join(outputDir, 'client-revoked-chain.crt'), revokedChain);
-
-	console.log('Client certificates created');
-
-	// Create OCSP database
-	console.log('\nSetting up OCSP database...');
-
-	// Create index file
-	const validSerial = execSync(`openssl x509 -in ${validCertPath} -noout -serial`).toString().trim().split('=')[1];
-	const revokedSerial = execSync(`openssl x509 -in ${revokedCertPath} -noout -serial`).toString().trim().split('=')[1];
-
-	const indexContent = `V\t${new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().replace(/[-:]/g, '').slice(0, -5)}Z\t\t${validSerial}\tunknown\t/CN=Valid Client/O=Harper OCSP Test
-R\t${new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().replace(/[-:]/g, '').slice(0, -5)}Z\t${new Date().toISOString().replace(/[-:]/g, '').slice(0, -5)}Z\t${revokedSerial}\tunknown\t/CN=Revoked Client/O=Harper OCSP Test`;
-
-	const indexPath = path.join(outputDir, 'index.txt');
-	fs.writeFileSync(indexPath, indexContent);
-	fs.writeFileSync(path.join(outputDir, 'index.txt.attr'), 'unique_subject = no\n');
-
-	console.log('\nAll certificates generated successfully!');
+	const statusMap = new Map<string, 'good' | 'revoked'>([
+		['3', 'good'], // valid client serial
+		['4', 'revoked'], // revoked client serial
+	]);
 
 	return {
-		ca: caCertPath,
-		valid: {
-			cert: path.join(outputDir, 'client-valid-chain.crt'),
-			key: validKeyPath,
+		files: {
+			ca: caCertPath,
+			valid: { cert: validChainPath, key: validKeyPath },
+			revoked: { cert: revokedChainPath, key: revokedKeyPath },
+			ocsp: { cert: ocspCertPath, key: ocspKeyPath },
 		},
-		revoked: {
-			cert: path.join(outputDir, 'client-revoked-chain.crt'),
-			key: revokedKeyPath,
+		serverCerts: {
+			caCert,
+			ocspKeyPair: ocspKey,
+			ocspCert,
+			statusMap,
 		},
-		ocsp: {
-			cert: ocspCertPath,
-			key: ocspKeyPath,
-		},
-		index: indexPath,
 	};
 }

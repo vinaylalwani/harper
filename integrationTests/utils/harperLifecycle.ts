@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { spawn, ChildProcess } from 'node:child_process';
 import { createWriteStream, existsSync, rmSync, type WriteStream } from 'node:fs';
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
 import { tmpdir } from 'node:os';
-import { mkdtemp, mkdir, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, cp } from 'node:fs/promises';
 import { type SuiteContext, type TestContext } from 'node:test';
 import { getNextAvailableLoopbackAddress, releaseLoopbackAddress } from './loopbackAddressPool.ts';
 
@@ -222,6 +222,44 @@ function runHarperCommand({
  * });
  * ```
  */
+export async function setupHarper(ctx: ContextWithHarper, options?: StartHarperOptions): Promise<ContextWithHarper> {
+	return startHarper(ctx, options);
+}
+
+/**
+ * Sets up a Harper instance with a component pre-installed from a local directory.
+ *
+ * Copies `fixturePath` into `{dataRootDir}/components/{name}` before Harper starts,
+ * so the component is available on the first request without a post-startup deploy.
+ * Use this when tests need a known route available at startup (e.g. mTLS cert tests).
+ *
+ * @param ctx - The test context to populate with Harper instance details
+ * @param fixturePath - Absolute path to the component directory to pre-install
+ * @param options - Optional configuration for the setup process
+ */
+export async function setupHarperWithFixture(
+	ctx: ContextWithHarper,
+	fixturePath: string,
+	options?: StartHarperOptions
+): Promise<ContextWithHarper> {
+	const dataRootDirPrefix = join(
+		process.env.HARPER_INTEGRATION_TEST_INSTALL_PARENT_DIR || tmpdir(),
+		'harper-integration-test-'
+	);
+	const dataRootDir = await mkdtemp(dataRootDirPrefix);
+	await cp(fixturePath, join(dataRootDir, 'components', basename(fixturePath)), { recursive: true });
+	(ctx as any).harper = { dataRootDir };
+	return startHarper(ctx, options);
+}
+
+/**
+ * Starts a Harper instance that has been installed.
+ *
+ * This is a lower-level function called by `setupHarper()`.
+ * Most tests should use `setupHarper()` instead.
+ *
+ * @param ctx - The test context with Harper installation details
+ */
 export async function startHarper(ctx: ContextWithHarper, options?: StartHarperOptions): Promise<ContextWithHarper> {
 	// Create a directory for this Harper installation
 	// Use the system temp directory by default, or a custom parent directory if specified
@@ -268,7 +306,6 @@ export async function startHarper(ctx: ContextWithHarper, options?: StartHarperO
 		`--OPERATIONSAPI_NETWORK_PORT=${loopbackAddress}:${OPERATIONS_API_PORT}`,
 		'--LOGGING_LEVEL=debug',
 		'--LOGGING_STDSTREAMS=false',
-		'--HARPER_SET_CONFIG=' + JSON.stringify(config),
 	];
 
 	// Bind secure port if HTTPS is needed (mTLS or other TLS config present)
@@ -276,9 +313,16 @@ export async function startHarper(ctx: ContextWithHarper, options?: StartHarperO
 		args.push(`--HTTP_SECUREPORT=${loopbackAddress}:${HTTPS_PORT}`);
 	}
 
+	// HARPER_SET_CONFIG must be passed as an environment variable, not a CLI arg,
+	// because applyRuntimeEnvVarConfig reads from process.env.HARPER_SET_CONFIG
+	const harperEnv = {
+		HARPER_SET_CONFIG: JSON.stringify(config),
+		...options?.env,
+	};
+
 	const harperProcess = await runHarperCommand({
 		args,
-		env: options?.env || {},
+		env: harperEnv,
 		completionMessage: 'successfully started',
 		logDir,
 		harperBinPath: options?.harperBinPath,

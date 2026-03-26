@@ -14,16 +14,17 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import * as https from 'node:https';
 
-import { setupHarper, teardownHarper, type ContextWithHarper } from '../utils/harperLifecycle.ts';
+import { setupHarperWithFixture, teardownHarper, type ContextWithHarper } from '../utils/harperLifecycle.ts';
 import {
-	generateOcspCertificates,
 	setupOcspResponderWithCerts,
 	stopOcspResponder,
 	type OcspResponderContext,
 	type OcspCertificates,
 } from '../utils/securityServices.ts';
+import { generateOcspCertificates } from '../utils/security/ocsp/generate-test-certs.ts';
 
 const HTTPS_PORT = 9927;
+const FIXTURE_PATH = join(import.meta.dirname, 'fixture');
 
 // The last test stops the OCSP responder to verify caching, so tests must run sequentially.
 // Tests CANNOT run concurrently because the caching test stops the responder that earlier tests need.
@@ -41,11 +42,12 @@ suite(
 			// 2. Setup OCSP responder (picks port, generates certs, starts responder with retry)
 			ocspResponder = await setupOcspResponderWithCerts(certsPath);
 
-			// 3. Setup Harper with CA certificate configuration
-			await setupHarper(ctx, {
+			// 3. Setup Harper with fixture pre-installed and CA certificate configuration
+			await setupHarperWithFixture(ctx, FIXTURE_PATH, {
 				config: {
 					http: {
 						mtls: {
+							user: 'admin',
 							certificateVerification: {
 								failureMode: 'fail-closed',
 								ocsp: {
@@ -78,10 +80,8 @@ suite(
 
 		test('should accept valid certificate with OCSP check', async () => {
 			return new Promise<void>((resolve, reject) => {
-				// Hit a known non-existent route - the test validates TLS handshake success,
-				// not route existence. Test Harper has no routes configured, so we expect 404.
 				const req = https.request(
-					`https://${ctx.harper.hostname}:${HTTPS_PORT}/cert-test-nonexistent`,
+					`https://${ctx.harper.hostname}:${HTTPS_PORT}/`,
 					{
 						cert: readFileSync(ocspResponder!.certs.valid.cert),
 						key: readFileSync(ocspResponder!.certs.valid.key),
@@ -89,9 +89,8 @@ suite(
 						rejectUnauthorized: false, // Harper uses self-signed server cert
 					},
 					(res) => {
-						// TLS handshake succeeded - expect 404 since route doesn't exist
-						ok(res.statusCode === 404, `Expected 404 (TLS succeeded, route not found). Got: ${res.statusCode}`);
-						res.resume(); // Consume response data
+						res.resume();
+						ok(res.statusCode !== 401, `Expected non-401 for valid cert (cert accepted). Got: ${res.statusCode}`);
 						res.on('end', () => resolve());
 					}
 				);
@@ -113,14 +112,12 @@ suite(
 					},
 					(res) => {
 						res.resume();
-						// Expect application-level rejection (certificate verification in Harper)
 						ok(res.statusCode === 401, `Expected 401 for revoked cert, got: ${res.statusCode}`);
 						res.on('end', () => resolve());
 					}
 				);
 
 				req.on('error', (err: any) => {
-					// TLS-level errors mean our cert verification code wasn't reached
 					reject(new Error(`Expected application-level rejection (401), got TLS error: ${err.code || err.message}`));
 				});
 
@@ -128,8 +125,7 @@ suite(
 			});
 		});
 
-		test('should cache OCSP responses', async () => {
-			// Read certificates once before stopping responder
+		test('should cache OCSP responses and serve valid certificate after responder stops', async () => {
 			const validCert = readFileSync(ocspResponder!.certs.valid.cert);
 			const validKey = readFileSync(ocspResponder!.certs.valid.key);
 			const ca = readFileSync(ocspResponder!.certs.ca);
@@ -137,16 +133,10 @@ suite(
 			const makeRequest = () =>
 				new Promise<number>((resolve, reject) => {
 					const req = https.request(
-						`https://${ctx.harper.hostname}:${HTTPS_PORT}/cert-test-nonexistent`,
-						{
-							cert: validCert,
-							key: validKey,
-							ca,
-							rejectUnauthorized: false,
-						},
+						`https://${ctx.harper.hostname}:${HTTPS_PORT}/`,
+						{ cert: validCert, key: validKey, ca, rejectUnauthorized: false },
 						(res) => {
 							res.resume();
-							// statusCode is always defined on http.IncomingMessage for responses
 							res.on('end', () => resolve(res.statusCode!));
 						}
 					);
@@ -156,11 +146,10 @@ suite(
 
 			// First request - populates cache
 			const status1 = await makeRequest();
-			ok(status1 === 404, 'First request should succeed with 404 (TLS succeeded, route not found)');
+			ok(status1 !== 401, `First request should be accepted (not 401), got ${status1}`);
 
 			// Stop OCSP responder to prove caching works.
 			// Set to null so after() hook knows responder is already stopped.
-			// Cert cleanup still happens via certsPath tracked at suite level.
 			if (ocspResponder) {
 				await stopOcspResponder(ocspResponder);
 				ocspResponder = null;
@@ -168,7 +157,7 @@ suite(
 
 			// Second request - should succeed using cached OCSP response
 			const status2 = await makeRequest();
-			ok(status2 === 404, 'Second request should succeed with cache (OCSP responder stopped)');
+			ok(status2 !== 401, `Second request should be accepted with cached OCSP (not 401), got ${status2}`);
 		});
 	}
 );
@@ -179,21 +168,21 @@ suite('OCSP Certificate Verification - Disabled', (ctx: ContextWithHarper) => {
 
 	before(async () => {
 		certsPath = await mkdtemp(join(tmpdir(), 'harper-ocsp-disabled-'));
-		// Use placeholder port since OCSP is disabled and won't be accessed
-		certs = generateOcspCertificates(certsPath, '127.0.0.1', 58888);
+		// No OCSP responder started - OCSP is disabled and won't be accessed
+		certs = (await generateOcspCertificates(certsPath, '127.0.0.1', 58888)).files;
 
-		// Setup Harper with OCSP disabled
-		await setupHarper(ctx, {
+		await setupHarperWithFixture(ctx, FIXTURE_PATH, {
 			config: {
 				http: {
 					mtls: {
+						user: 'admin',
 						certificateVerification: {
 							failureMode: 'fail-closed',
 							crl: {
-								enabled: false, // Disable CRL (defaults to enabled, so must explicitly disable)
+								enabled: false,
 							},
 							ocsp: {
-								enabled: false, // Disable OCSP
+								enabled: false,
 							},
 						},
 					},
@@ -206,14 +195,14 @@ suite('OCSP Certificate Verification - Disabled', (ctx: ContextWithHarper) => {
 	});
 
 	after(async () => {
-		await rm(certsPath, { recursive: true, force: true, maxRetries: 3 });
 		await teardownHarper(ctx);
+		await rm(certsPath, { recursive: true, force: true, maxRetries: 3 });
 	});
 
 	test('should accept certificate when OCSP is disabled', async () => {
 		return new Promise<void>((resolve, reject) => {
 			const req = https.request(
-				`https://${ctx.harper.hostname}:${HTTPS_PORT}/cert-test-nonexistent`,
+				`https://${ctx.harper.hostname}:${HTTPS_PORT}/`,
 				{
 					cert: readFileSync(certs.valid.cert),
 					key: readFileSync(certs.valid.key),
@@ -221,10 +210,8 @@ suite('OCSP Certificate Verification - Disabled', (ctx: ContextWithHarper) => {
 					rejectUnauthorized: false,
 				},
 				(res) => {
-					// When OCSP is disabled, TLS handshake succeeds (validates cert chain only)
-					// Expect 404 since route doesn't exist (but TLS succeeded)
-					ok(res.statusCode === 404, `Expected 404 (TLS succeeded, route not found). Got: ${res.statusCode}`);
 					res.resume();
+					ok(res.statusCode !== 401, `Expected non-401 (OCSP disabled, cert accepted). Got: ${res.statusCode}`);
 					res.on('end', () => resolve());
 				}
 			);
@@ -240,19 +227,19 @@ suite('OCSP Certificate Verification - Fail-Open Mode', (ctx: ContextWithHarper)
 
 	before(async () => {
 		certsPath = await mkdtemp(join(tmpdir(), 'harper-ocsp-failopen-'));
-		// Use placeholder port since OCSP responder won't be started (testing fail-open behavior)
-		certs = generateOcspCertificates(certsPath, '127.0.0.1', 58888);
+		// No OCSP responder started - this will cause OCSP check to fail
+		certs = (await generateOcspCertificates(certsPath, '127.0.0.1', 58888)).files;
 
-		// Setup Harper with fail-open mode and very short timeout
-		await setupHarper(ctx, {
+		await setupHarperWithFixture(ctx, FIXTURE_PATH, {
 			config: {
 				http: {
 					mtls: {
+						user: 'admin',
 						certificateVerification: {
-							failureMode: 'fail-open', // Use fail-open mode
+							failureMode: 'fail-open',
 							ocsp: {
 								enabled: true,
-								timeout: 100, // Very short timeout to trigger failure
+								timeout: 1000, // Very short timeout to trigger failure
 								cacheTtl: 3600000,
 							},
 						},
@@ -263,18 +250,17 @@ suite('OCSP Certificate Verification - Fail-Open Mode', (ctx: ContextWithHarper)
 				},
 			},
 		});
-		// Note: No OCSP responder started - this will cause OCSP check to fail
 	});
 
 	after(async () => {
-		await rm(certsPath, { recursive: true, force: true, maxRetries: 3 });
 		await teardownHarper(ctx);
+		await rm(certsPath, { recursive: true, force: true, maxRetries: 3 });
 	});
 
 	test('should allow connection in fail-open mode when OCSP unavailable', async () => {
 		return new Promise<void>((resolve, reject) => {
 			const req = https.request(
-				`https://${ctx.harper.hostname}:${HTTPS_PORT}/cert-test-nonexistent`,
+				`https://${ctx.harper.hostname}:${HTTPS_PORT}/`,
 				{
 					cert: readFileSync(certs.valid.cert),
 					key: readFileSync(certs.valid.key),
@@ -282,9 +268,8 @@ suite('OCSP Certificate Verification - Fail-Open Mode', (ctx: ContextWithHarper)
 					rejectUnauthorized: false,
 				},
 				(res) => {
-					// In fail-open mode, TLS handshake succeeds even if OCSP unavailable
-					ok(res.statusCode === 404, `Expected 404 (TLS succeeded, route not found). Got: ${res.statusCode}`);
 					res.resume();
+					ok(res.statusCode !== 401, `Expected non-401 in fail-open mode (OCSP unavailable). Got: ${res.statusCode}`);
 					res.on('end', () => resolve());
 				}
 			);
@@ -300,19 +285,19 @@ suite('OCSP Certificate Verification - Fail-Closed with Timeout', (ctx: ContextW
 
 	before(async () => {
 		certsPath = await mkdtemp(join(tmpdir(), 'harper-ocsp-timeout-'));
-		// Use placeholder port since OCSP responder won't be started (testing fail-closed behavior)
-		certs = generateOcspCertificates(certsPath, '127.0.0.1', 58888);
+		// No OCSP responder started - this will cause OCSP check to fail
+		certs = (await generateOcspCertificates(certsPath, '127.0.0.1', 58888)).files;
 
-		// Setup Harper with fail-closed mode and very short timeout
-		await setupHarper(ctx, {
+		await setupHarperWithFixture(ctx, FIXTURE_PATH, {
 			config: {
 				http: {
 					mtls: {
+						user: 'admin',
 						certificateVerification: {
-							failureMode: 'fail-closed', // Use fail-closed mode
+							failureMode: 'fail-closed',
 							ocsp: {
 								enabled: true,
-								timeout: 100, // Very short timeout
+								timeout: 1000, // Very short timeout
 								cacheTtl: 3600000,
 							},
 						},
@@ -323,16 +308,15 @@ suite('OCSP Certificate Verification - Fail-Closed with Timeout', (ctx: ContextW
 				},
 			},
 		});
-		// Note: No OCSP responder started - this will cause OCSP check to fail
 	});
 
 	after(async () => {
-		await rm(certsPath, { recursive: true, force: true, maxRetries: 3 });
 		await teardownHarper(ctx);
+		await rm(certsPath, { recursive: true, force: true, maxRetries: 3 });
 	});
 
 	test('should reject connection in fail-closed mode when OCSP times out', async () => {
-		return new Promise<void>((resolve, reject) => {
+		return new Promise<void>((resolve) => {
 			const req = https.request(
 				`https://${ctx.harper.hostname}:${HTTPS_PORT}/`,
 				{
@@ -343,27 +327,15 @@ suite('OCSP Certificate Verification - Fail-Closed with Timeout', (ctx: ContextW
 				},
 				(res) => {
 					res.resume();
-					// In fail-closed mode with OCSP timeout, should reject with 401/403/503
-					// However, if OCSP check happens but returns unknown/timeout, the behavior
-					// depends on implementation - might still allow if cert chain is valid
-					if (res.statusCode === 401 || res.statusCode === 403 || res.statusCode === 503) {
-						res.on('end', () => resolve());
-					} else if (res.statusCode === 404 || res.statusCode === 200) {
-						// This might indicate the OCSP timeout doesn't fail-closed as expected,
-						// or the timeout is handled differently. Accept this as a valid outcome
-						// for now to measure actual behavior.
-						res.on('end', () => resolve());
-					} else {
-						reject(new Error(`Unexpected status in fail-closed mode: ${res.statusCode}`));
-					}
+					ok(res.statusCode === 401, `Expected 401 in fail-closed mode when OCSP times out. Got: ${res.statusCode}`);
+					res.on('end', () => resolve());
 				}
 			);
 			req.on('error', (err: any) => {
-				// Connection rejection is also valid
+				// Connection-level rejection is also acceptable
 				ok(
 					err.code === 'ECONNRESET' ||
 						err.code === 'EPROTO' ||
-						err.code === 'ECONNREFUSED' ||
 						err.message?.includes('socket hang up') ||
 						err.message?.includes('certificate') ||
 						err.message?.includes('closed'),
