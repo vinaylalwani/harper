@@ -3,6 +3,7 @@ import axios from 'axios';
 import { decode, encode } from 'cbor-x';
 import { setupTestApp } from './setupTestApp.mjs';
 import http from 'node:http';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { Request } from '#src/server/serverHelpers/Request';
 
 describe('test REST calls', () => {
@@ -384,10 +385,20 @@ describe('test REST calls', () => {
 		assert.equal(response.status, 200);
 		assert(response.headers['server-timing'].includes('miss'));
 		assert.equal(response.data.name, 'name3');
-		response = await axios('http://localhost:9926/SimpleCacheLoadAsInstance/3');
-		assert.equal(response.status, 200);
-		assert(!response.headers['server-timing'].includes('miss'));
-		assert.equal(response.data.name, 'name3');
+		// loadAsInstance cache write commits in the background after the response
+		// is returned, so poll briefly for the entry to be committed
+		let cached = false;
+		for (let i = 0; i < 10; i++) {
+			response = await axios('http://localhost:9926/SimpleCacheLoadAsInstance/3');
+			assert.equal(response.status, 200);
+			assert.equal(response.data.name, 'name3');
+			if (!response.headers['server-timing'].includes('miss')) {
+				cached = true;
+				break;
+			}
+			await sleep(20);
+		}
+		assert(cached, 'expected cache hit for loadAsInstance after background commit');
 	});
 	it('query from cache with errors', async () => {
 		// ensure that the error entry exists so we can query with it.
