@@ -396,7 +396,7 @@ describe('test REST calls', () => {
 				cached = true;
 				break;
 			}
-			await sleep(20);
+			await delay(20);
 		}
 		assert(cached, 'expected cache hit for loadAsInstance after background commit');
 	});
