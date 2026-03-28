@@ -17,6 +17,7 @@ import type { CompartmentOptions } from 'ses';
 import { mkdirSync, readFileSync, writeFileSync, unlinkSync, openSync, closeSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { EventEmitter } from 'node:events';
+import * as process from 'node:process';
 
 type Lockdown = 'none' | 'freeze' | 'ses';
 const APPLICATIONS_LOCKDOWN: Lockdown = env.get(CONFIG_PARAMS.APPLICATIONS_LOCKDOWN);
@@ -83,6 +84,7 @@ export async function scopedImport(filePath: string | URL, scope?: ApplicationSc
 				Object.freeze(Intrinsic.prototype);
 			}
 			Object.freeze(Function);
+			process.mainModule = undefined; // this has dangerous privileges that should not be accessed
 		}
 	}
 	const moduleUrl = (filePath instanceof URL ? filePath : pathToFileURL(filePath)).toString();
