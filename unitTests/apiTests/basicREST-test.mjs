@@ -3,7 +3,7 @@ import axios from 'axios';
 import { decode, encode } from 'cbor-x';
 import { setupTestApp } from './setupTestApp.mjs';
 import http from 'node:http';
-import { setTimeout as sleep } from 'node:timers/promises';
+import { setTimeout as delay } from 'node:timers/promises';
 import { Request } from '#src/server/serverHelpers/Request';
 
 describe('test REST calls', () => {
