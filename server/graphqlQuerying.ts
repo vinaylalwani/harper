@@ -3,6 +3,9 @@ import type { RequestParams } from 'graphql-http';
 import { getDeserializer } from './serverHelpers/contentTypes.ts';
 import { resources } from '../resources/Resources.ts';
 import logger from '../utility/logging/harper_logger.js';
+import { RequestTarget } from '../resources/RequestTarget.ts';
+import { transaction } from '../resources/transaction.ts';
+import type { Context } from '../resources/ResourceInterface.ts';
 
 // This code makes heavy use of the word "node" to refer to a node in the GraphQL AST.
 
@@ -312,17 +315,17 @@ async function processFieldNode(
 	}
 	const resource = entry.Resource;
 
-	const query = {
-		select: buildSelectQuery(fieldNode.selectionSet, fragments),
-		conditions: buildConditionsQuery(fieldNode.arguments, resolvedVariables),
-	};
-
 	const results = [];
-	// @ts-expect-error: `authorize` is a custom property on the request object.
-	request.authorize = true;
-	for await (const result of resource.search(query, request)) {
-		results.push(result);
-	}
+	await transaction(request as Context, async () => {
+		const query = new RequestTarget();
+		query.select = buildSelectQuery(fieldNode.selectionSet, fragments);
+		query.conditions = buildConditionsQuery(fieldNode.arguments, resolvedVariables);
+		query.checkPermission = true;
+
+		for await (const result of resource.search(query, request)) {
+			results.push(result);
+		}
+	});
 	return [fieldNode.name.value, results];
 }
 
