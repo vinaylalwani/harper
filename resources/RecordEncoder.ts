@@ -488,9 +488,7 @@ export function handleLocalTimeForGets(store, rootStore) {
 }
 const trackedTxns: WeakRef<any>[] = [];
 const configValue = envMngr.get(CONFIG_PARAMS.STORAGE_MAXREADTRANSACTIONOPENTIME) ?? 60000;
-let READ_TXN_TIMEOUT_TICKS = Math.round(
-	Math.min(Math.max(configValue, 15000), 300000) / 15000
-); // clamp between 15s and 5min
+let READ_TXN_TIMEOUT_TICKS = Math.round(Math.min(Math.max(configValue, 15000), 300000) / 15000); // clamp between 15s and 5min
 export function checkReadTxnTimeouts() {
 	for (let i = 0; i < trackedTxns.length; i++) {
 		const txn = trackedTxns[i].deref();
@@ -517,9 +515,7 @@ export function checkReadTxnTimeouts() {
 }
 setInterval(checkReadTxnTimeouts, 15000).unref();
 export function setReadTxnExpiration(ms: number) {
-	READ_TXN_TIMEOUT_TICKS = Math.round(
-		Math.min(Math.max(ms, 15000), 300000) / 15000
-	);
+	READ_TXN_TIMEOUT_TICKS = Math.round(Math.min(Math.max(ms, 15000), 300000) / 15000);
 }
 
 export function recordUpdater(store, tableId, auditStore) {
