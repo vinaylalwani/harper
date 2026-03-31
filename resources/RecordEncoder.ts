@@ -21,6 +21,8 @@ import { blobsWereEncoded, decodeFromDatabase, deleteBlobsInObject, encodeBlobsW
 import { recordAction } from './analytics/write.ts';
 import { RocksDatabase } from '@harperfast/rocksdb-js';
 import { when } from '../utility/when.ts';
+import { CONFIG_PARAMS } from '../utility/hdbTerms.ts';
+import * as envMngr from '../utility/environment/environmentManager.js';
 export type Entry = {
 	key: any;
 	value: any;
@@ -485,16 +487,20 @@ export function handleLocalTimeForGets(store, rootStore) {
 	return store;
 }
 const trackedTxns: WeakRef<any>[] = [];
-setInterval(() => {
+const configValue = envMngr.get(CONFIG_PARAMS.STORAGE_MAXREADTRANSACTIONOPENTIME) ?? 60000;
+let READ_TXN_TIMEOUT_TICKS = Math.round(
+	Math.min(Math.max(configValue, 15000), 300000) / 15000
+); // clamp between 15s and 5min
+export function checkReadTxnTimeouts() {
 	for (let i = 0; i < trackedTxns.length; i++) {
 		const txn = trackedTxns[i].deref();
 		if (!txn || txn.isDone || txn.isCommitted) trackedTxns.splice(i--, 1);
 		else if (txn.notCurrent) {
 			if (txn.openTimer) {
 				if (txn.openTimer > 3) {
-					if (txn.openTimer > 60) {
+					if (txn.openTimer > READ_TXN_TIMEOUT_TICKS) {
 						harperLogger.error(
-							'Read transaction detected that has been open too long (over 15 minutes), ending transaction',
+							`Read transaction detected that has been open too long (over ${Math.round(READ_TXN_TIMEOUT_TICKS * 15)} seconds), ending transaction`,
 							txn
 						);
 						txn.done();
@@ -508,7 +514,14 @@ setInterval(() => {
 			} else txn.openTimer = 1;
 		}
 	}
-}, 15000).unref();
+}
+setInterval(checkReadTxnTimeouts, 15000).unref();
+export function setReadTxnExpiration(ms: number) {
+	READ_TXN_TIMEOUT_TICKS = Math.round(
+		Math.min(Math.max(ms, 15000), 300000) / 15000
+	);
+}
+
 export function recordUpdater(store, tableId, auditStore) {
 	return function (
 		id,
