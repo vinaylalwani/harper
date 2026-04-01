@@ -580,10 +580,16 @@ export function makeTable(options) {
 							// dictates not to go to source
 							if (!this.doesExist()) throw new ServerError('Entry is not cached', 504);
 						} else if (resourceOptions?.ensureLoaded) {
-							const loadingFromSource = ensureLoadedFromSource(this.constructor.source, id, entry, request, this);
+							const loadingFromSource = ensureLoadedFromSource(
+								this.constructor.source,
+								id,
+								entry,
+								request,
+								this,
+								target
+							);
 							if (loadingFromSource) {
 								txn?.disregardReadTxn(); // this could take some time, so don't keep the transaction open if possible
-								target.loadedFromSource = true;
 								return when(loadingFromSource, (entry) => {
 									TableResource._updateResource(this, entry);
 									return this;
@@ -988,10 +994,16 @@ export function makeTable(options) {
 									// dictates not to go to source
 									if (!entry?.value) throw new ServerError('Entry is not cached', 504);
 								} else if (ensureLoaded) {
-									const loadingFromSource = ensureLoadedFromSource(constructor.source, id, entry, context, this);
+									const loadingFromSource = ensureLoadedFromSource(
+										constructor.source,
+										id,
+										entry,
+										context,
+										this,
+										target
+									);
 									if (loadingFromSource) {
 										txn?.disregardReadTxn(); // this could take some time, so don't keep the transaction open if possible
-										target.loadedFromSource = true;
 										return loadingFromSource.then((entry) => entry?.value);
 									}
 								}
@@ -3732,7 +3744,7 @@ export function makeTable(options) {
 		}
 	}
 
-	function ensureLoadedFromSource(source: typeof TableResource, id, entry, context, resource?) {
+	function ensureLoadedFromSource(source: typeof TableResource, id, entry, context, resource?, target?) {
 		if (hasSourceGet) {
 			let needsSourceData = false;
 			if (context.noCache) needsSourceData = true;
@@ -3751,7 +3763,7 @@ export function makeTable(options) {
 				recordActionBinary(!needsSourceData, 'cache-hit', tableName);
 			}
 			if (needsSourceData) {
-				const loadingFromSource = getFromSource(source, id, entry, context).then((entry) => {
+				const loadingFromSource = getFromSource(source, id, entry, context, target).then((entry) => {
 					if (entry?.value && entry?.value.getRecord?.())
 						logger.error?.('Can not assign a record that is already a resource');
 					if (context) {
@@ -3921,7 +3933,8 @@ export function makeTable(options) {
 		source: typeof TableResource,
 		id: Id,
 		existingEntry: Entry,
-		context: Context
+		context: Context,
+		target?
 	): Promise<Entry> {
 		const metadataFlags = existingEntry?.metadataFlags;
 
@@ -3943,9 +3956,13 @@ export function makeTable(options) {
 				entry.metadataFlags & (INVALIDATED | EVICTED) ||
 				(entry.expiresAt != undefined && entry.expiresAt < Date.now())
 			)
-				// try again
-				whenResolved(getFromSource(source, id, primaryStore.getEntry(id), context));
-			else whenResolved(entry);
+				// try again — entry still not valid, need to actually fetch from source
+				whenResolved(getFromSource(source, id, primaryStore.getEntry(id), context, target));
+			else {
+				// served from cache after waiting for another request to resolve
+				if (target) target.loadedFromSource = false;
+				whenResolved(entry);
+			}
 		};
 		const lockAcquired = primaryStore.tryLock(id, callback);
 
@@ -3957,6 +3974,8 @@ export function makeTable(options) {
 				}, LOCK_TIMEOUT);
 			});
 		}
+		// lock acquired — this request will actually load from source
+		if (target) target.loadedFromSource = true;
 
 		const existingRecord = existingEntry?.value;
 		// it is important to remember that this is _NOT_ part of the current transaction; nothing is changing
