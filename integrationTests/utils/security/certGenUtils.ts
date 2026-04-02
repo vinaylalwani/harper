@@ -32,7 +32,8 @@ export interface Ed25519KeyPair {
 }
 
 export async function generateEd25519KeyPair(): Promise<Ed25519KeyPair> {
-	const keyPair = (await webcrypto.subtle.generateKey({ name: 'Ed25519' } as any, true, [
+	// Ed25519 is supported at runtime (Node 20+) but @types/node lacks dedicated types for it
+	const keyPair = (await webcrypto.subtle.generateKey({ name: 'Ed25519' } as Algorithm, true, [
 		'sign',
 		'verify',
 	])) as CryptoKeyPair;
