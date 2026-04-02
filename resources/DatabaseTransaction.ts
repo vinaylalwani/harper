@@ -215,7 +215,6 @@ export class DatabaseTransaction implements Transaction {
 			}
 			this.open = TRANSACTION_STATE.CLOSED;
 			let commitResolution: MaybePromise<void>;
-			trackedTxns.delete(this);
 			if (--this.readTxnsUsed > 0) {
 				// we still have outstanding iterators using the transaction, we can't just commit/abort it, we will still
 				// need to use it
@@ -235,6 +234,7 @@ export class DatabaseTransaction implements Transaction {
 				*/
 			} else {
 				// no more reads need to be performed, just commit/abort based if there are any writes
+				trackedTxns.delete(this);
 				this.transaction = null; // clear transaction so any further operations operate immediately
 				if (transaction) {
 					if (this.writes.length > 0) {
