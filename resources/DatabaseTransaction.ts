@@ -117,8 +117,13 @@ export class DatabaseTransaction implements Transaction {
 		if (!this.transaction) return;
 		if (--this.readTxnsUsed === 0) {
 			trackedTxns.delete(this);
-			this.transaction?.abort();
-			this.transaction = null;
+			if (this.open === TRANSACTION_STATE.LINGERING) {
+				// if we have lingering writes, we have to call commit to finish them
+				this.commit();
+			} else {
+				this.transaction?.abort();
+				this.transaction = null;
+			}
 		}
 	}
 
@@ -207,7 +212,14 @@ export class DatabaseTransaction implements Transaction {
 			if (--this.readTxnsUsed > 0) {
 				// we still have outstanding iterators using the transaction, we can't just commit/abort it, we will still
 				// need to use it
-				/* TODO: we need to handle the case where we have outstanding reads, we should try to commit and keep the transaction usable
+				if (this.writes.length > 0) {
+					// if there are outstanding writes, we have to call commit later to finish them
+					this.open = TRANSACTION_STATE.LINGERING;
+					/* TODO: This is not really the intended behavior though, we want to immediately commit writes, but continue to use
+					 * the transaction, as there is likely existing references to the transaction in other parts of the codebase,
+					 * particularly in the query iterator */
+				}
+				/*
 				commitResolution =
 					this.writes.length > 0
 						? transaction?.commit({ renewAfterCommit: true }) // Try to use RocksDB's CommitAndTryCreateSnapshot
