@@ -177,13 +177,18 @@ export class DatabaseTransaction implements Transaction {
 		if (reloadEntry || operation.entry === undefined) {
 			operation.entry = operation.store.getEntry(operation.key, { transaction });
 		}
-		operation.saved = true;
-		// immediately execute in this transaction
-		if (operation.validate?.(txnTime) === false) return;
-		let result: Promise<void> = operation.before?.() as Promise<void>;
-		if (result?.then) this.completions.push(result);
-		result = operation.beforeIntermediate?.() as Promise<void>;
-		if (result?.then) this.completions.push(result);
+		if (!operation.saved) {
+			operation.saved = true;
+			// immediately execute in this transaction
+			if (operation.validate?.(txnTime) === false) {
+				operation.commit = () => {}; // noop if we try again
+				return;
+			}
+			let result: Promise<void> = operation.before?.() as Promise<void>;
+			if (result?.then) this.completions.push(result);
+			result = operation.beforeIntermediate?.() as Promise<void>;
+			if (result?.then) this.completions.push(result);
+		}
 		operation.commit(txnTime, operation.entry, this.retries > 0, transaction);
 		if (immediateCommit) {
 			return this.commit({ transaction }); // immediately commit if the harper transaction is closed
