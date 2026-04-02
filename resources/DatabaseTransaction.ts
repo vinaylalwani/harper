@@ -201,7 +201,9 @@ export class DatabaseTransaction implements Transaction {
 			this.save(operation, transaction, i < this.validated);
 		}
 		this.validated = this.writes.length;
-		return when(this.completions.length > 0 ? Promise.all(this.completions) : null, () => {
+		const completions = this.completions;
+		if (completions.length > 0) this.completions = []; // reset
+		return when(completions.length > 0 ? Promise.all(completions) : null, () => {
 			if (this.writes.length > this.validated) {
 				// check just in case we got any more transactions while we were waiting, if so just recursively continue to finish the additional writes now
 				return this.commit(options);
