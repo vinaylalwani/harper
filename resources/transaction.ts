@@ -59,6 +59,7 @@ export function transaction<T>(
 	return onComplete(result);
 	// when the transaction function completes, run this to commit the transaction
 	function onComplete(result) {
+		context.transaction = undefined;
 		const committed = transaction.commit({ doneWriting: true });
 		if (committed.then) {
 			return committed.then(() => {
