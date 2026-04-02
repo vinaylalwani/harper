@@ -222,10 +222,6 @@ function runHarperCommand({
  * });
  * ```
  */
-export async function setupHarper(ctx: ContextWithHarper, options?: StartHarperOptions): Promise<ContextWithHarper> {
-	return startHarper(ctx, options);
-}
-
 /**
  * Sets up a Harper instance with a component pre-installed from a local directory.
  *
@@ -253,12 +249,9 @@ export async function setupHarperWithFixture(
 }
 
 /**
- * Starts a Harper instance that has been installed.
+ * Sets up and starts a Harper instance for testing.
  *
- * This is a lower-level function called by `setupHarper()`.
- * Most tests should use `setupHarper()` instead.
- *
- * @param ctx - The test context with Harper installation details
+ * @param ctx - The test context to populate with Harper instance details
  */
 export async function startHarper(ctx: ContextWithHarper, options?: StartHarperOptions): Promise<ContextWithHarper> {
 	// Create a directory for this Harper installation
