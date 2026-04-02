@@ -56,6 +56,9 @@ export async function scopedImport(filePath: string | URL, scope?: ApplicationSc
 			}
 			overridableProperty(Promise.prototype, 'then');
 			overridableProperty(Date, 'now');
+			for (let name of ['get', 'set', 'has', 'delete', 'clear', 'forEach', 'entries', 'keys', 'values']) {
+				overridableProperty(Map.prototype, name);
+			}
 			for (let Intrinsic of [
 				Object,
 				Array,
@@ -148,6 +151,7 @@ function parseJsonModule(source: string, url: string): any {
 async function loadModuleWithVM(moduleUrl: string, scope: ApplicationScope) {
 	const moduleCache = new Map<string, Promise<SourceTextModule | SyntheticModule>>();
 	const linkingPromises = new Map<string, Promise<void>>();
+	const cjsCache = new Map<string, { exports: any }>();
 
 	// Create a secure context with limited globals
 	const contextObject = getGlobalObject(scope);
@@ -165,6 +169,9 @@ async function loadModuleWithVM(moduleUrl: string, scope: ApplicationScope) {
 			// block harper/* for now (reserving for potential future use)
 			throw new Error(`Module ${specifier} is not allowed, may only access the 'harper' module`);
 		}
+		if (parts[0] === 'file:') {
+			return specifier;
+		}
 		const resolved = createRequire(referrer).resolve(specifier);
 		if (isAbsolute(resolved)) {
 			return pathToFileURL(resolved).toString();
@@ -176,7 +183,16 @@ async function loadModuleWithVM(moduleUrl: string, scope: ApplicationScope) {
 	 * Load a CommonJS module in our private context
 	 */
 	function loadCJS(url: string, source: string): { exports: any } {
+		// Check cache first to handle circular dependencies
+		if (cjsCache.has(url)) {
+			return cjsCache.get(url)!;
+		}
+
+		// Create module object and cache it immediately (before execution)
+		// This allows circular dependencies to get a reference to the incomplete module
 		const cjsModule = { exports: {} };
+		cjsCache.set(url, cjsModule);
+
 		if (url.endsWith('.json')) {
 			cjsModule.exports = parseJsonModule(source, url);
 			return cjsModule;
@@ -204,7 +220,7 @@ async function loadModuleWithVM(moduleUrl: string, scope: ApplicationScope) {
 			filename: url,
 			async importModuleDynamically(specifier: string, script) {
 				const resolvedUrl = resolveModule(specifier, script.sourceURL);
-				const useContainment = specifier.startsWith('.') || scope.dependencyContainment;
+				const useContainment = specifier.startsWith('.') || scope.dependencyContainment !== false;
 				const dynamicModule = await loadModuleWithCache(resolvedUrl, useContainment);
 				return dynamicModule;
 			},
@@ -221,16 +237,18 @@ async function loadModuleWithVM(moduleUrl: string, scope: ApplicationScope) {
 	}
 	function loadCJSModule(url: string, source: string, usePrivateGlobal: boolean): SyntheticModule {
 		const cjsModule = usePrivateGlobal ? loadCJS(url, source) : { exports: require(url) };
-		const exportNames = Object.keys(cjsModule.exports);
+		let exports = cjsModule.exports;
+		if (exports.default === undefined) {
+			// provide the default export for compatibility
+			exports = { default: exports, ...exports };
+		}
+		const exportNames = Object.keys(exports);
+
 		const synModule = new SyntheticModule(
-			exportNames.length > 0 ? exportNames : ['default'],
+			exportNames,
 			function () {
-				if (exportNames.length > 0) {
-					for (const key of exportNames) {
-						this.setExport(key, cjsModule.exports[key]);
-					}
-				} else {
-					this.setExport('default', cjsModule.exports);
+				for (const key of exportNames) {
+					this.setExport(key, exports[key]);
 				}
 			},
 			{ identifier: url, context }
@@ -240,12 +258,67 @@ async function loadModuleWithVM(moduleUrl: string, scope: ApplicationScope) {
 	}
 
 	/**
+	 * Check if a package (or any of its dependencies) depends on harper
+	 * Expects a file URL like: file:///path/to/node_modules/package-name/dist/index.js
+	 */
+	function packageDependsOnHarper(fileUrl: string): boolean {
+		try {
+			// Convert file:// URL to path
+			const filePath = fileURLToPath(fileUrl);
+
+			// Find the node_modules directory and package name
+			// Example: /path/to/node_modules/package-name/dist/index.js
+			// or: /path/to/node_modules/@scope/package-name/dist/index.js
+			const nodeModulesMarker = '/node_modules/';
+			const nodeModulesIndex = filePath.lastIndexOf(nodeModulesMarker);
+			if (nodeModulesIndex === -1) return false;
+
+			// Get the part after /node_modules/
+			const afterNodeModules = filePath.substring(nodeModulesIndex + nodeModulesMarker.length);
+			const parts = afterNodeModules.split('/');
+
+			// Handle scoped packages (@scope/package-name) vs regular packages (package-name)
+			const beforeNodeModules = filePath.substring(0, nodeModulesIndex);
+			const packageRoot = parts[0].startsWith('@')
+				? join(beforeNodeModules, 'node_modules', parts[0], parts[1])
+				: join(beforeNodeModules, 'node_modules', parts[0]);
+
+			// Read package.json from the package root
+			const packageJsonPath = join(packageRoot, 'package.json');
+			const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+
+			const deps = {
+				...packageJson.dependencies,
+				...packageJson.devDependencies,
+				...packageJson.peerDependencies,
+			};
+
+			// Check if harper is a direct dependency
+			return Object.keys(deps).some((dep) => HARPER_MODULE_IDS.has(dep));
+		} catch {
+			return false;
+		}
+	}
+
+	/**
 	 * Linker function for module resolution during instantiation
 	 */
 	async function linker(specifier: string, referencingModule: SourceTextModule | SyntheticModule) {
 		const resolvedUrl = resolveModule(specifier, referencingModule.identifier);
 
-		const useContainment = specifier.startsWith('.') || scope.dependencyContainment;
+		// Determine if we should use VM containment for this module
+		let useContainment = specifier.startsWith('.'); // Always contain relative imports
+
+		if (!useContainment && scope.dependencyContainment !== false) {
+			// For npm packages, check if they depend on harper
+			if (resolvedUrl.startsWith('file://') && resolvedUrl.includes('node_modules')) {
+				useContainment = packageDependsOnHarper(resolvedUrl);
+			} else {
+				// Non-file URLs (bare specifiers) - use default behavior
+				useContainment = scope.dependencyContainment === true;
+			}
+		}
+
 		// Return the module immediately (even if not yet linked) to support circular dependencies
 		return await getOrCreateModule(resolvedUrl, useContainment);
 	}
@@ -351,38 +424,25 @@ async function loadModuleWithVM(moduleUrl: string, scope: ApplicationScope) {
 			}
 		} else {
 			const replacedModule = checkAllowedModulePath(url, scope.verifyPath);
-			// For Node.js built-in modules (node:) and npm packages
+			// For Node.js built-in modules (node:) and npm packages without dependency containment
 			// Always try require first to properly handle CJS modules with named exports
-			try {
-				const cjsExports = replacedModule ?? require(url);
-				// It's a CJS module - expose all properties as named exports
-				const exportNames = Object.keys(cjsExports);
-				module = new SyntheticModule(
-					exportNames.length > 0 ? [...exportNames, 'default'] : ['default'],
-					function () {
-						if (exportNames.length > 0) {
-							for (const key of exportNames) {
-								this.setExport(key, cjsExports[key]);
-							}
-						}
-						this.setExport('default', cjsExports);
-					},
-					{ identifier: url, context }
-				);
-			} catch {
-				// Fall back to dynamic import for ESM packages
-				const importedModule = await import(url);
-				const exportNames = Object.keys(importedModule);
-				module = new SyntheticModule(
-					exportNames,
-					function () {
-						for (const key of exportNames) {
-							this.setExport(key, importedModule[key]);
-						}
-					},
-					{ identifier: url, context }
-				);
+			// Fall back to dynamic import for ESM packages
+			let importedModule = replacedModule ?? (await import(url));
+			const cjsModule = importedModule['module.exports'];
+			if (cjsModule) {
+				// back-compat import
+				importedModule = importedModule.default ? { default: importedModule.default, ...cjsModule } : cjsModule;
 			}
+			const exportNames = Object.keys(importedModule);
+			module = new SyntheticModule(
+				exportNames,
+				function () {
+					for (const key of exportNames) {
+						this.setExport(key, importedModule[key]);
+					}
+				},
+				{ identifier: url, context }
+			);
 		}
 
 		return module;
@@ -533,6 +593,25 @@ function getHarperExports(scope: ApplicationScope) {
 		authenticateUser: server.authenticateUser,
 		operation: server.operation,
 		contentTypes,
+		Attribute: undefined,
+		Config: undefined,
+		ConfigValue: undefined,
+		Context: undefined,
+		FileAndURLPathConfig: undefined,
+		FilesOption: undefined,
+		FilesOptionObject: undefined,
+		IterableEventQueue: undefined,
+		Logger: undefined,
+		Query: undefined,
+		RecordObject: undefined,
+		RequestTargetOrId: undefined,
+		ResourceInterface: undefined,
+		Scope: undefined,
+		Session: undefined,
+		SourceContext: undefined,
+		SubscriptionRequest: undefined,
+		Table: undefined,
+		User: undefined,
 	};
 }
 const ALLOWED_NODE_BUILTIN_MODULES = env.get(CONFIG_PARAMS.APPLICATIONS_ALLOWEDBUILTINMODULES)
@@ -544,13 +623,18 @@ const ALLOWED_NODE_BUILTIN_MODULES = env.get(CONFIG_PARAMS.APPLICATIONS_ALLOWEDB
 			},
 		};
 const ALLOWED_COMMANDS = new Set(env.get(CONFIG_PARAMS.APPLICATIONS_ALLOWEDSPAWNCOMMANDS) ?? []);
-const REPLACED_BUILTIN_MODULES = {
-	child_process: {
-		exec: createSpawn(child_process.exec),
-		execFile: createSpawn(child_process.execFile),
-		fork: createSpawn(child_process.fork, true), // this is launching node, so deemed safe
-		spawn: createSpawn(child_process.spawn),
+const child_processConstrained = {
+	exec: createSpawn(child_process.exec),
+	execFile: createSpawn(child_process.execFile),
+	fork: createSpawn(child_process.fork, true), // this is launching node, so deemed safe
+	spawn: createSpawn(child_process.spawn),
+	execSync: function () {
+		throw new Error('execSync is not allowed');
 	},
+};
+child_processConstrained.default = child_processConstrained;
+const REPLACED_BUILTIN_MODULES = {
+	child_process: child_processConstrained,
 };
 /**
  * Creates a ChildProcess-like object for an existing process
