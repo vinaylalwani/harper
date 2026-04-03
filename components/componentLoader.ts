@@ -513,7 +513,7 @@ export async function loadComponent(
 		if ((config.extensionModule || config.pluginModule) && (!isMainThread || config.runOnMainThread)) {
 			const extensionModule = await scopedImport(
 				join(componentDirectory, config.extensionModule || config.pluginModule),
-				applicationScope
+				config.pluginModule ? applicationScope : undefined
 			);
 			loadedPaths.set(resolvedFolder, extensionModule);
 			return extensionModule;
