@@ -37,7 +37,7 @@ VOLUME /home/harperdb/harper
 
 # Install Harper globally
 RUN <<-EOF
-  npm install --global harper-*.tgz
+  npm install --ignore-scripts --global harper-*.tgz
   rm harper-*.tgz
   mkdir -p /home/harperdb/harper
   chown harperdb:harperdb /home/harperdb/harper
