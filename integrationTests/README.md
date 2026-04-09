@@ -25,7 +25,7 @@ These tests have their own unique configuration and setup requirements that diff
 >
 > Linux Ubuntu systems generally have 127.0.0.1 - 127.255.255.255 enabled by default, but MacOS and Windows does not.
 >
-> Use the included script `integrationTests/utils/scripts/setup-loopback.sh` to quickly enable the required set of loopback addresses.
+> Use the script from `@harperfast/integration-testing-framework` to quickly enable the required set of loopback addresses: `npx harper-integration-test-setup-loopback`
 >
 > This script does require `sudo` permissions. We recommend reviewing the source before executing.
 >
@@ -193,7 +193,7 @@ The most commonly used utilities are:
 
 ```ts
 import { suite, test, before, after } from 'node:test';
-import { startHarper, teardownHarper, type ContextWithHarper } from './utils/harperLifecycle.ts';
+import { startHarper, teardownHarper, type ContextWithHarper } from '@harperfast/integration-testing-framework';
 
 suite('test suite', (ctx: ContextWithHarper) => {
 	before(async () => {
@@ -227,8 +227,7 @@ Copy and paste the following content to get started:
  */
 import { suite, test, before, after } from 'node:test';
 import { strictEqual } from 'node:assert/strict';
-// Note: adjust the relative path accordingly (e.g., '../utils/harperLifecycle.ts')
-import { startHarper, teardownHarper, type ContextWithHarper } from './utils/harperLifecycle.ts';
+import { startHarper, teardownHarper, type ContextWithHarper } from '@harperfast/integration-testing-framework';
 
 suite('short description of tests', (ctx: ContextWithHarper) => {
 	before(async () => {

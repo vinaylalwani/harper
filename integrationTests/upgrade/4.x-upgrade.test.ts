@@ -9,7 +9,7 @@ import {
 	sendOperation,
 	type ContextWithHarper,
 	killHarper,
-} from '../utils/harperLifecycle.ts';
+} from '@harperfast/integration-testing-framework';
 import { ok } from 'node:assert';
 import { join } from 'node:path';
 

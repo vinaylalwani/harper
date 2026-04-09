@@ -115,6 +115,7 @@
 		".": "./dist/index.js"
 	},
 	"devDependencies": {
+		"@harperfast/integration-testing-framework": "*",
 		"@harperdb/code-guidelines": "^0.0.6",
 		"@types/fs-extra": "^11.0.4",
 		"@types/gunzip-maybe": "^1.4.3",
