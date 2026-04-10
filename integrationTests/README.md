@@ -35,8 +35,8 @@ npm run test:integration:all
 Run a specific file or glob pattern:
 
 ```sh
-npm run test:integration -- "integrationTests/deploy/deploy-from-source.test.mts"
-npm run test:integration -- "integrationTests/deploy/*.test.mts"
+npm run test:integration -- "integrationTests/deploy/deploy-from-source.test.ts"
+npm run test:integration -- "integrationTests/deploy/*.test.ts"
 ```
 
 Run sequentially (no loopback pool required — useful for quick debugging):
@@ -44,7 +44,7 @@ Run sequentially (no loopback pool required — useful for quick debugging):
 ```sh
 npm run test:integration -- --isolation=none integrationTests/**/*.test.ts
 # or for a specific file:
-npm run test:integration -- --isolation=none "integrationTests/deploy/deploy-from-source.test.mts"
+npm run test:integration -- --isolation=none "integrationTests/deploy/deploy-from-source.test.ts"
 ```
 
 ### Reproducing a CI Failure
@@ -71,9 +71,10 @@ This is how CI captures logs for failed jobs — the log directory is uploaded a
 ### Requirements
 
 - Files must use the Node.js `node:test` API (`suite`, `test`, `before`, `after`, etc.) with assertions from `node:assert/strict`
-- Files must end in `.test.mts` (ESM TypeScript)
+- Files must end in `.test.ts`
+- Files must be implemented in ESM TypeScript
 - Each file must begin with a JSDoc comment describing exactly what it tests — include relevant GitHub issue or PR links if they exist
-- File names should be short, hyphen-separated words: `install.test.mts`, `application-restart.test.mts`
+- File names should be short, hyphen-separated words: `install.test.ts`, `application-restart.test.ts`
 
 ### File independence
 
