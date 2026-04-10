@@ -93,18 +93,18 @@ import { strictEqual } from 'node:assert/strict';
 import { startHarper, teardownHarper, type ContextWithHarper } from '@harperfast/integration-testing';
 
 suite('short description', (ctx: ContextWithHarper) => {
-  before(async () => {
-    await startHarper(ctx);
-  });
+	before(async () => {
+		await startHarper(ctx);
+	});
 
-  after(async () => {
-    await teardownHarper(ctx);
-  });
+	after(async () => {
+		await teardownHarper(ctx);
+	});
 
-  test('test description', async () => {
-    const response = await fetch(ctx.harper.httpURL);
-    strictEqual(response.status, 200);
-  });
+	test('test description', async () => {
+		const response = await fetch(ctx.harper.httpURL);
+		strictEqual(response.status, 200);
+	});
 });
 ```
 
@@ -114,7 +114,11 @@ By default, tests within a suite run sequentially. A suite can opt into concurre
 
 ```ts
 suite('concurrent suite', { concurrency: true }, () => {
-  test('test a', async () => { /* ... */ });
-  test('test b', async () => { /* ... */ });
+	test('test a', async () => {
+		/* ... */
+	});
+	test('test b', async () => {
+		/* ... */
+	});
 });
 ```
