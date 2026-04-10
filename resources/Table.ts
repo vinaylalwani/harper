@@ -1666,8 +1666,9 @@ export function makeTable(options) {
 					const type = fullUpdate ? 'put' : 'patch';
 					let residencyId: number | undefined;
 					if (options?.residencyId != undefined) residencyId = options.residencyId;
-					const expiresAt = context?.expiresAt ?? (expirationMs ? expirationMs + Date.now() : -1);
-					let additionalAuditRefs: Array<{ version: number; nodeId: number }> = []; // track additional audit refs to store
+					const expiresAt: number =
+						context?.expiresAt > 0 ? context.expiresAt : expirationMs ? expirationMs + Date.now() : -1;
+					const additionalAuditRefs: Array<{ version: number; nodeId: number }> = []; // track additional audit refs to store
 
 					if (precedesExisting <= 0) {
 						// This block is to handle the case of saving an update where the transaction timestamp is older than the
@@ -1857,7 +1858,7 @@ export function makeTable(options) {
 					}
 					logger.trace?.(
 						`Saving record with id: ${id}, timestamp: ${new Date(txnTime).toISOString()}${
-							expiresAt ? ', expires at: ' + new Date(expiresAt).toISOString() : ''
+							expiresAt > 0 ? ', expires at: ' + new Date(expiresAt).toISOString() : ''
 						}${
 							existingEntry?.version
 								? ', replaces entry from: ' + new Date(existingEntry.version).toISOString()
