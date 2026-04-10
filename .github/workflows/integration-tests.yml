@@ -70,8 +70,8 @@ jobs:
           path: |
             dist/
             static/
+            node_modules/
             package.json
-            package-lock.json
           retention-days: 1
 
   run-integration-apiTests:
@@ -161,8 +161,8 @@ jobs:
         with:
           name: harper-build-artifacts-node-${{ matrix.node-version }}
 
-      - name: Install dependencies
-        run: npm install
+      - name: Relink bin scripts
+        run: npm install --ignore-scripts
 
       - name: Install harperdb@4 for legacy tests
         run: |
