@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 
-import { startHarper, teardownHarper, targz, type ContextWithHarper } from '@harperfast/integration-testing-framework';
+import { startHarper, teardownHarper, targz, type ContextWithHarper } from '@harperfast/integration-testing';
 
 suite('Local application deployment', (ctx: ContextWithHarper) => {
 	before(async () => {

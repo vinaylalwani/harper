@@ -8,7 +8,7 @@
 import { suite, test, before, after } from 'node:test';
 import { strictEqual } from 'node:assert/strict';
 
-import { startHarper, teardownHarper, type ContextWithHarper } from '@harperfast/integration-testing-framework';
+import { startHarper, teardownHarper, type ContextWithHarper } from '@harperfast/integration-testing';
 
 suite('Thread Management', (ctx: ContextWithHarper) => {
 	before(async () => {

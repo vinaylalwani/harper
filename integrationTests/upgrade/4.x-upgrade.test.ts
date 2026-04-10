@@ -9,7 +9,7 @@ import {
 	sendOperation,
 	type ContextWithHarper,
 	killHarper,
-} from '@harperfast/integration-testing-framework';
+} from '@harperfast/integration-testing';
 import { ok } from 'node:assert';
 import { join } from 'node:path';
 

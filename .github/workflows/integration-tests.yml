@@ -171,7 +171,7 @@ jobs:
           HARPER_INTEGRATION_TEST_LOG_DIR: /tmp/harper-integration-test-logs
           HARPER_LEGACY_VERSION_PATH: /tmp/harperdb-legacy/node_modules/harperdb
         run: |
-          npm run test:integration -- --shard=${{ matrix.shard }}/4
+          npm run test:integration:all -- --shard=${{ matrix.shard }}/4
 
       - name: Upload Harper server logs
         if: failure()
