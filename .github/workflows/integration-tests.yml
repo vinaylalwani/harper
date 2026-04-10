@@ -70,8 +70,8 @@ jobs:
           path: |
             dist/
             static/
-            node_modules/
             package.json
+            package-lock.json
           retention-days: 1
 
   run-integration-apiTests:
