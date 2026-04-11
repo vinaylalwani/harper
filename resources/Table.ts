@@ -1654,8 +1654,7 @@ export function makeTable(options) {
 					const type = fullUpdate ? 'put' : 'patch';
 					let residencyId: number | undefined;
 					if (options?.residencyId != undefined) residencyId = options.residencyId;
-					const expiresAt: number =
-						context?.expiresAt >= 0 ? context.expiresAt : expirationMs ? expirationMs + Date.now() : -1;
+					const expiresAt: number = context?.expiresAt ?? (expirationMs ? expirationMs + Date.now() : -1);
 					const additionalAuditRefs: Array<{ version: number; nodeId: number }> = []; // track additional audit refs to store
 
 					if (precedesExisting <= 0) {
