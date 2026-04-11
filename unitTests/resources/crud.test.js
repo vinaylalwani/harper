@@ -239,8 +239,14 @@ describe('CRUD operations with the Resource API', () => {
 				let createdId = await CRUDTable.post({ relatedId: 1, name: 'constructed via post with auto-id' });
 				let retrieved = await CRUDTable.get(createdId);
 				assert.equal(retrieved.name, 'constructed via post with auto-id');
-				assert(retrieved.createdAt >= start);
-				assert(retrieved.updatedAt >= start);
+				assert(
+					retrieved.createdAt >= start,
+					`Expected createdAt to be >= ${start.toISOString()}, got ${retrieved.createdAt.toISOString()}`
+				);
+				assert(
+					retrieved.updatedAt >= start,
+					`Expected updatedAt to be >= ${start.toISOString()}, got ${retrieved.updatedAt.toISOString()}`
+				);
 			}
 		});
 		it('create in transaction', async function () {
