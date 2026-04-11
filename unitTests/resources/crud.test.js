@@ -234,7 +234,7 @@ describe('CRUD operations with the Resource API', () => {
 			assert.equal(retrieved.name, 'constructed with auto-id');
 		});
 		it('create via post with auto-id, check timestamps', async function () {
-			let start = new Date();
+			let start = new Date(Date.now() - 100);
 			for (let i = 0; i < 20; i++) {
 				let createdId = await CRUDTable.post({ relatedId: 1, name: 'constructed via post with auto-id' });
 				let retrieved = await CRUDTable.get(createdId);
