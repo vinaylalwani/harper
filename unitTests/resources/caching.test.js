@@ -24,7 +24,12 @@ describe('Caching', () => {
 		CachingTable = table({
 			table: 'CachingTable',
 			database: 'test',
-			attributes: [{ name: 'id', isPrimaryKey: true }, { name: 'name' }],
+			attributes: [
+				{ name: 'id', isPrimaryKey: true },
+				{ name: 'name' },
+				{ name: 'createdAt', type: 'Date', assignCreatedTime: true },
+				{ name: 'updatedAt', type: 'Date', assignUpdatedTime: true },
+			],
 		});
 		IndexedCachingTable = table({
 			table: 'IndexedCachingTable',
@@ -94,11 +99,14 @@ describe('Caching', () => {
 	it('Can load cached data', async function () {
 		sourceRequests = 0;
 		events = [];
+		const start = new Date();
 		CachingTable.setTTLExpiration(0.01);
 		await CachingTable.invalidate(23);
 		let result = await CachingTable.get(23);
 		assert.equal(result.id, 23);
 		assert.equal(result.name, 'name ' + 23);
+		assert(result.createdAt >= start);
+		assert(result.updatedAt >= start);
 		assert.equal(sourceRequests, 1);
 		await delay(5);
 		let target23 = new RequestTarget();
@@ -117,6 +125,8 @@ describe('Caching', () => {
 		//assert.equal(events.length, 0);
 		await CachingTable.put(23, { name: 'expires in past' }, { expiresAt: 0 });
 		result = await CachingTable.get(target23);
+		assert(result.createdAt >= start);
+		assert(result.updatedAt >= start);
 		assert.equal(sourceRequests, 3);
 		assert.equal(target23.loadedFromSource, true);
 	});
