@@ -40,6 +40,8 @@ describe('CRUD operations with the Resource API', () => {
 						{ name: 'name', type: 'String' },
 					],
 				},
+				{ name: 'createdAt', type: 'Date', assignCreatedTime: true },
+				{ name: 'updatedAt', type: 'Date', assignUpdatedTime: true },
 			],
 		});
 		CRUDTable.loadAsInstance = false;
@@ -231,10 +233,15 @@ describe('CRUD operations with the Resource API', () => {
 			let retrieved = await CRUDTable.get(created.id);
 			assert.equal(retrieved.name, 'constructed with auto-id');
 		});
-		it('create via post with auto-id', async function () {
-			let createdId = await CRUDTable.post({ relatedId: 1, name: 'constructed via post with auto-id' });
-			let retrieved = await CRUDTable.get(createdId);
-			assert.equal(retrieved.name, 'constructed via post with auto-id');
+		it('create via post with auto-id, check timestamps', async function () {
+			let start = new Date();
+			for (let i = 0; i < 20; i++) {
+				let createdId = await CRUDTable.post({ relatedId: 1, name: 'constructed via post with auto-id' });
+				let retrieved = await CRUDTable.get(createdId);
+				assert.equal(retrieved.name, 'constructed via post with auto-id');
+				assert(retrieved.createdAt >= start);
+				assert(retrieved.updatedAt >= start);
+			}
 		});
 		it('create in transaction', async function () {
 			let context = {};
