@@ -4130,6 +4130,27 @@ export function makeTable(options) {
 								let auditRecord: any;
 								let omitLocalRecord = false;
 								let residencyId: number;
+								if (updatedTimeProperty) {
+									updatedRecord[updatedTimeProperty.name] =
+										updatedTimeProperty.type === 'Date'
+											? new Date(txnTime)
+											: updatedTimeProperty.type === 'String'
+												? new Date(txnTime).toISOString()
+												: txnTime;
+								}
+								if (createdTimeProperty && updatedRecord[createdTimeProperty.name] == null) {
+									const existingCreatedTime = existingEntry?.value?.[createdTimeProperty.name];
+									if (existingCreatedTime != null) {
+										updatedRecord[createdTimeProperty.name] = existingCreatedTime;
+									} else {
+										updatedRecord[createdTimeProperty.name] =
+											createdTimeProperty.type === 'Date'
+												? new Date(txnTime)
+												: createdTimeProperty.type === 'String'
+													? new Date(txnTime).toISOString()
+													: txnTime;
+									}
+								}
 								const residency = residencyFromFunction(TableResource.getResidency(updatedRecord, context));
 								if (residency) {
 									if (!residency.includes(server.hostname)) {
@@ -4148,6 +4169,11 @@ export function makeTable(options) {
 												}
 												// if there are any indices, we need to preserve a partial invalidated record to ensure we can still do searches
 												updatedRecord[name] = auditRecord[name];
+											}
+											if (createdTimeProperty && auditRecord[createdTimeProperty.name] != null) {
+												// preserve the created timestamp in the partial record so it isn't lost when we don't have residency
+												if (!updatedRecord) updatedRecord = {};
+												updatedRecord[createdTimeProperty.name] = auditRecord[createdTimeProperty.name];
 											}
 										}
 									}
