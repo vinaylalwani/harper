@@ -1433,18 +1433,6 @@ export function makeTable(options) {
 			if (hasSourceGet) {
 				// if there is a resolution in-progress, abandon the eviction
 				if (primaryStore.hasLock(id, entry.version)) return;
-				// if there is a source, we are not "deleting" the record, just removing our local copy, but preserving what we need for indexing
-				let partialRecord;
-				for (const name in indices) {
-					// if there are any indices, we need to preserve a partial evicted record to ensure we can still do searches
-					if (!partialRecord) partialRecord = {};
-					partialRecord[name] = existingRecord[name];
-				}
-				// if we are evicting and not deleting, need to preserve the partial record
-				if (partialRecord) {
-					// treat this as a record resolution (so previous version is checked) with no audit record
-					return updateRecord(id, partialRecord, entry, existingVersion, EVICTED, null, null, null, true);
-				}
 			}
 			primaryStore.ifVersion?.(id, existingVersion, () => {
 				updateIndices(id, existingRecord, null);
@@ -1845,6 +1833,11 @@ export function makeTable(options) {
 										}
 										// if there are any indices, we need to preserve a partial invalidated record to ensure we can still do searches
 										recordToStore[name] = auditRecordToStore[name];
+									}
+									if (createdTimeProperty && auditRecordToStore[createdTimeProperty.name] != null) {
+										// preserve the created timestamp in the partial record so it isn't lost when we don't have residency
+										if (!recordToStore) recordToStore = {};
+										recordToStore[createdTimeProperty.name] = auditRecordToStore[createdTimeProperty.name];
 									}
 								}
 							}
@@ -3492,7 +3485,7 @@ export function makeTable(options) {
 	if (expirationMs) TableResource.setTTLExpiration(expirationMs / 1000);
 	if (expiresAtProperty) runRecordExpirationEviction();
 	return TableResource;
-	function updateIndices(id: any, existingRecord: any, record: any, options: any) {
+	function updateIndices(id: any, existingRecord: any, record: any, options?: any) {
 		let hasChanges;
 		// iterate the entries from the record
 		// for-in is about 5x as fast as for-of Object.entries, and this is extremely time sensitive since it can be
