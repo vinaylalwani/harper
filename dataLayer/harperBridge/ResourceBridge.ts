@@ -266,7 +266,8 @@ export class ResourceBridge extends LMDBBridge {
 		if (deleteObj.replicateTo) context.replicateTo = deleteObj.replicateTo;
 		if (deleteObj.replicatedConfirmation) context.replicatedConfirmation = deleteObj.replicatedConfirmation;
 		return transaction(context, async (transaction) => {
-			const ids: Id[] = deleteObj.hash_values || deleteObj.records.map((record) => record[Table.primaryKey]);
+			const ids: Id[] =
+				deleteObj.ids || deleteObj.hash_values || deleteObj.records.map((record) => record[Table.primaryKey]);
 			const deleted = [];
 			const skipped = [];
 			for (const id of ids) {
@@ -315,7 +316,7 @@ export class ResourceBridge extends LMDBBridge {
 			const deleteRes = await this.deleteRecords({
 				schema: deleteObj.schema,
 				table: deleteObj.table,
-				hash_values: ids,
+				ids,
 			});
 			deletedIds.push(...deleteRes.deleted_hashes);
 			skippedIds.push(...deleteRes.skipped_hashes);
@@ -471,7 +472,7 @@ export class ResourceBridge extends LMDBBridge {
 							operation,
 							timestamp: auditRecord.version,
 							user_name: auditRecord.user,
-							hash_values: [id],
+							ids: [id],
 							records: [auditRecord.value],
 						};
 					});
@@ -609,7 +610,7 @@ async function* groupRecordsInHistory(table, start?, end?, limit?) {
 		if (operation === 'put') operation = 'upsert';
 		const { id, version: timestamp, value } = entry;
 		if (enqueued?.timestamp === timestamp) {
-			enqueued.hash_values.push(id);
+			enqueued.ids.push(id);
 			enqueued.records.push(value);
 		} else {
 			if (enqueued) {
@@ -624,7 +625,7 @@ async function* groupRecordsInHistory(table, start?, end?, limit?) {
 				operation,
 				user_name: entry.user,
 				timestamp,
-				hash_values: [id],
+				ids: [id],
 				records: [value],
 			};
 		}
