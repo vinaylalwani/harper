@@ -19,14 +19,7 @@ import { appendHeader, Headers } from './serverHelpers/Headers.ts';
 import { Blob } from '../resources/blob.ts';
 import { recordAction, recordActionBinary } from '../resources/analytics/write.ts';
 import { Readable } from 'node:stream';
-import {
-	server,
-	type ServerOptions,
-	type HttpOptions,
-	type HttpListener,
-	type UpgradeOptions,
-	UpgradeListener,
-} from './Server.ts';
+import { server, type ServerOptions, type HttpOptions, type UpgradeOptions, UpgradeListener } from './Server.ts';
 import { setPortServerMap, SERVERS } from './serverRegistry.ts';
 import { getComponentName } from '../components/componentLoader.ts';
 import { throttle } from './throttle.ts';
