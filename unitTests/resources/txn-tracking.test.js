@@ -106,6 +106,6 @@ describe('Read Txn Expiration', () => {
 	});
 
 	after(function () {
-		setReadTxnExpiration(60000);
+		setReadTxnExpiration(300000);
 	});
 });
