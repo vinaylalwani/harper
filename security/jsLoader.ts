@@ -908,6 +908,7 @@ export function preventFunctionConstructor() {
 function freezeIntrinsics() {
 	overridableProperty(Object.prototype, 'toString');
 	overridableProperty(Object.prototype, 'valueOf');
+	overridableProperty(Object.prototype, 'hasOwnProperty');
 	overridableProperty(Object.prototype, 'constructor');
 	overridableProperty(Promise.prototype, 'then');
 	overridableProperty(Date, 'now');
